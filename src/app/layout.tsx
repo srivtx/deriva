@@ -1,0 +1,47 @@
+import type { Metadata, Viewport } from "next"
+import "./globals.css"
+import AppShell from "@/components/app-shell"
+import ServiceWorkerRegister from "@/components/sw-register"
+
+export const metadata: Metadata = {
+  title: "Deriva — Derive the Algorithm",
+  description: "Learn DSA, System Design (HLD), and Low-Level Design through first-principles reasoning. 780 problems, 7-stage scaffolding, in-browser Python.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Deriva",
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-180.png",
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: "#d62976",
+  width: "device-width",
+  initialScale: 1,
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&family=Newsreader:ital,wght@0,400;0,700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body>
+        <AppShell />
+        {children}
+        <ServiceWorkerRegister />
+      </body>
+    </html>
+  )
+}

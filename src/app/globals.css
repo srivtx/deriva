@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/* ── Design Tokens (09 §4) ── */
+
+:root {
+  /* Paper theme (light) */
+  --paper:        #FAF9F6;
+  --paper-raised: #FFFFFF;
+  --ink:          #1A1D21;
+  --ink-soft:     #5C6470;
+  --line:         #E4E1DA;
+
+  --accent:       #2E5AAC;
+  --accent-soft:  #E3EBF7;
+
+  /* Viz state grammar */
+  --viz-untouched: #9AA3AD;
+  --viz-active:   #2E5AAC;
+  --viz-settled:  #2F8F5B;
+  --viz-cached:   #B07C24;
+  --viz-pruned:   #C34A3D;
+  --viz-pointer:  #7A4FA3;
+
+  /* Motion */
+  --dur-fast: 150ms;
+  --dur-med: 250ms;
+  --dur-slow: 400ms;
+  --ease-standard: cubic-bezier(.2, 0, 0, 1);
+
+  /* Space */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-6: 24px; --sp-8: 32px;
+
+  --radius: 10px;
+  --shadow-raised: 0 1px 2px rgb(26 29 33 / .06), 0 4px 16px rgb(26 29 33 / .06);
+}
+
+/* Dark theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:        #14161A;
+    --paper-raised: #1C1F24;
+    --ink:          #E8E6E1;
+    --ink-soft:     #9AA3AD;
+    --line:         #2A2D33;
+    --accent-soft:  #1C2A4A;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Base ── */
+html { font-family: "Inter", system-ui, sans-serif; }
+body { background: var(--paper); color: var(--ink); margin: 0; }
+
+/* Typography */
+:root {
+  --font-narrative: "Newsreader", Georgia, serif;
+  --font-ui:        "Inter", system-ui, sans-serif;
+  --font-mono:      "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+.narrative { font-family: var(--font-narrative); }
+code, pre { font-family: var(--font-mono); }
+
+/* Viz state utility classes */
+.viz-untouched { color: var(--viz-untouched); }
+.viz-active   { color: var(--viz-active); fill: var(--viz-active); }
+.viz-settled   { color: var(--viz-settled); fill: var(--viz-settled); }
+.viz-cached    { color: var(--viz-cached); fill: var(--viz-cached); }
+.viz-pruned    { color: var(--viz-pruned); fill: var(--viz-pruned); }
+.viz-pointer   { color: var(--viz-pointer); fill: var(--viz-pointer); }
