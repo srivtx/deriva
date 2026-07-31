@@ -42,11 +42,11 @@ export const GAME_ENGINES: GameEngine[] = [
   },
   {
     id: "frontier-runner",
-    title: "Frontier Runner",
+    title: "Bike Route Runner",
     verb: "move the boundary",
     description: "Push a frontier through a graph and learn when layers, costs, or events change the next move.",
-    patterns: ["The Two Walks", "Layer Argument", "Frontier Maintenance", "Greedy Frontier", "Relaxation Rounds", "Sweep Line", "Elimination-of-Sources"],
-    status: "next",
+    patterns: ["Layer Argument", "Frontier Maintenance", "Greedy Frontier", "Relaxation Rounds"],
+    status: "playable",
     href: "/games/frontier-runner",
   },
   {

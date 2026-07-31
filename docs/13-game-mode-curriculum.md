@@ -80,7 +80,7 @@ match that label:
 | Stack Climber | Stateful recursion simulation with prediction, action, stack motion, and return flow | Playable |
 | Algorithm Relay | Five static choice rooms with a shared scene | Prototype |
 | Invariant Inspector | Three generic choice cards | Next |
-| Frontier Runner | Three generic choice cards | Next |
+| Bike Route Runner | Stateful 3D graph route with prediction, BFS layers, and weighted frontier | Playable |
 | Decision Garden | Three generic choice cards | Next |
 | State Forge | Three generic choice cards | Next |
 | Compression Workshop | Three generic choice cards | Next |
