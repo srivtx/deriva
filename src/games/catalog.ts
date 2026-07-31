@@ -19,8 +19,8 @@ export const GAME_ENGINES: GameEngine[] = [
     verb: "compose the system",
     description: "Carry one solution through representation, invariant, frontier, state, and proof rooms.",
     patterns: ["Representation Choice", "Invariant-Driven Structure", "Greedy Frontier", "State Design", "Exchange Argument"],
-    status: "prototype",
-    href: "/games/pattern-relay",
+    status: "playable",
+    href: "/games/algorithm-relay",
   },
   {
     id: "stack-climber",
@@ -37,7 +37,7 @@ export const GAME_ENGINES: GameEngine[] = [
     verb: "protect the rule",
     description: "Watch a structure break, locate the first illegal state, and repair the operation that caused it.",
     patterns: ["Invariant-Driven Structure", "Downward Constraints", "Pointer Surgery", "Sentinel Thinking", "Representative Trees"],
-    status: "next",
+    status: "playable",
     href: "/games/invariant-inspector",
   },
   {
@@ -50,12 +50,21 @@ export const GAME_ENGINES: GameEngine[] = [
     href: "/games/frontier-runner",
   },
   {
+    id: "subway-switch-runner",
+    title: "Subway Switch Runner",
+    verb: "remember the route",
+    description: "Switch through a looping subway, get trapped once, then learn why graph searches remember visited stations.",
+    patterns: ["Visited/Canonical Form", "Cycle Detection"],
+    status: "playable",
+    href: "/games/subway-switch-runner",
+  },
+  {
     id: "decision-garden",
     title: "Decision Garden",
     verb: "choose and prune",
     description: "Grow a decision tree, undo choices cleanly, and cut branches only when you can prove they cannot work.",
     patterns: ["Decision Tree", "Choose-Explore-Unchoose", "Pruning", "Visited/Canonical Form", "Bit-as-Membership Enumeration"],
-    status: "next",
+    status: "playable",
     href: "/games/decision-garden",
   },
   {
@@ -64,7 +73,7 @@ export const GAME_ENGINES: GameEngine[] = [
     verb: "remember what matters",
     description: "Design the smallest state that keeps a future answer recoverable, then compress the table around it.",
     patterns: ["Overlap → Memoization", "State Design (amnesia test)", "Ending at i", "Table-as-Product", "Cancellation Algebra (XOR → mod-k)"],
-    status: "next",
+    status: "playable",
     href: "/games/state-forge",
   },
   {
@@ -73,7 +82,7 @@ export const GAME_ENGINES: GameEngine[] = [
     verb: "store the useful frontier",
     description: "Replace repeated scanning with structures that remember exactly the operations the problem asks for.",
     patterns: ["Structure-as-Compression (Trie)", "Local-Rules-Global-Answer (Heap)", "Masks & Stencils", "Elimination"],
-    status: "next",
+    status: "playable",
     href: "/games/compression-workshop",
   },
   {
@@ -82,7 +91,7 @@ export const GAME_ENGINES: GameEngine[] = [
     verb: "challenge the shortcut",
     description: "Construct counterexamples, compare naive and optimal traces, and earn an optimization only when it is safe.",
     patterns: ["Exchange Argument", "Invariance-Preserving Reduction (Euclid)", "Halve-the-Work (Squaring)"],
-    status: "next",
+    status: "playable",
     href: "/games/proof-arena",
   },
 ]

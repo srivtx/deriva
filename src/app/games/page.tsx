@@ -1,11 +1,13 @@
 "use client"
 
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { STACK_CLIMBER } from "@/games/stack-climber"
 import { GAME_ENGINES } from "@/games/catalog"
 import { useEffect, useState } from "react"
 import { loadGameProgress, type GameProgress } from "@/persistence/game-progress"
-import ConceptGalaxy from "@/components/concept-galaxy"
+
+const ConceptGalaxy = dynamic(() => import("@/components/concept-galaxy"), { ssr: false })
 
 function GameCardArt({ engineId }: { engineId: string }) {
   return (
@@ -18,6 +20,28 @@ function GameCardArt({ engineId }: { engineId: string }) {
       <span className="art-piece piece-c" />
     </div>
   )
+}
+
+function EngineCard({ engine }: { engine: (typeof GAME_ENGINES)[number] }) {
+  const content = (
+    <>
+      <GameCardArt engineId={engine.id} />
+      <div>
+        <span className="game-engine-verb">{engine.verb}</span>
+        <h2>{engine.title}</h2>
+        <p>{engine.description}</p>
+      </div>
+      <div className="game-patterns">
+        {engine.patterns.map(pattern => <span key={pattern}>{pattern}</span>)}
+      </div>
+      <span className="game-coming">{engine.status === "playable" ? "Play engine →" : engine.status === "prototype" ? "Prototype in progress" : "Next engine"}</span>
+    </>
+  )
+
+  if (engine.status === "playable" && engine.href) {
+    return <Link href={engine.href} className="game-engine-card playable">{content}</Link>
+  }
+  return <article className="game-engine-card">{content}</article>
 }
 
 export default function GamesPage() {
@@ -52,20 +76,7 @@ export default function GamesPage() {
 
       <section className="game-engine-list">
         <div className="game-section-label">The concept map</div>
-        {GAME_ENGINES.filter(engine => engine.id !== STACK_CLIMBER.id).map(engine => (
-          <Link key={engine.id} href={engine.status === "next" ? "/games" : engine.href || "/games"} className={`game-engine-card ${engine.status !== "next" ? "playable" : ""}`}>
-            <GameCardArt engineId={engine.id} />
-            <div>
-              <span className="game-engine-verb">{engine.verb}</span>
-              <h2>{engine.title}</h2>
-              <p>{engine.description}</p>
-            </div>
-            <div className="game-patterns">
-              {engine.patterns.map(pattern => <span key={pattern}>{pattern}</span>)}
-            </div>
-            <span className="game-coming">{engine.status === "playable" ? "Play engine →" : engine.status === "prototype" ? "Prototype →" : "Next engine"}</span>
-          </Link>
-        ))}
+        {GAME_ENGINES.filter(engine => engine.id !== STACK_CLIMBER.id).map(engine => <EngineCard key={engine.id} engine={engine} />)}
       </section>
 
       <div className="game-design-note">

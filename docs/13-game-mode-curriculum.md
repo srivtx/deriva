@@ -70,26 +70,26 @@ continuous state machine:
 The player should see those transitions move on screen. Static choice cards do not
 qualify as a finished game interaction.
 
-## Implementation Audit — 2026-07-31
+## Implementation Audit — 2026-08-01
 
-The original catalog marked every engine as `playable`, but the implementation did not
-match that label:
+The catalog now marks an engine `playable` only when it has a dedicated route and a
+prediction/action state machine:
 
 | Engine | Current implementation | Honest status |
 |---|---|---|
 | Stack Climber | Stateful recursion simulation with prediction, action, stack motion, and return flow | Playable |
-| Algorithm Relay | Five static choice rooms with a shared scene | Prototype |
-| Invariant Inspector | Three generic choice cards | Next |
+| Algorithm Relay | Five-room prediction/action relay with a moving route scene | Playable |
+| Invariant Inspector | Four state repairs across ranges, pointers, sentinels, and tree links | Playable |
 | Bike Route Runner | Stateful 3D graph route with prediction, BFS layers, and weighted frontier | Playable |
-| Decision Garden | Three generic choice cards | Next |
-| State Forge | Three generic choice cards | Next |
-| Compression Workshop | Three generic choice cards | Next |
-| Proof Arena | Three generic choice cards | Next |
+| Subway Switch Runner | Stateful 3D track switching with a failure loop and visited station stamps | Playable |
+| Decision Garden | Four branch rounds with choose, explore, unchoose, and proof-based pruning | Playable |
+| State Forge | Four DP state rounds with amnesia, overlap, dependencies, and coordinates | Playable |
+| Compression Workshop | Four structure rounds across tries, heaps, masks, and elimination | Playable |
+| Proof Arena | Four evidence rounds across counterexamples, reductions, halving, and exchange | Playable |
 
-The generic engines mention useful ideas, but they do not yet satisfy the game laws above:
-they do not let the player manipulate the structure, predict a concrete next state, see a
-real failure, or transfer the learned move to a lesson. They are labeled as future engines
-rather than pretending that the pattern family is already mastered.
+Each engine now repeats one primary move across concrete rounds, shows a visible before and
+after state, records wrong predictions, and ends with a transfer link. The games remain
+deliberately narrower than the full pattern map; the lessons provide implementation depth.
 
 ## Scope Decision
 
@@ -109,20 +109,27 @@ The first useful set is:
 8. Compress repeated work with the right representation.
 9. Attack a shortcut with a counterexample or proof.
 
+The next graph game is `Subway Switch Runner`. Its single primary move is **remember
+visited states to stop cycles**. The player first runs without memory and gets trapped by
+a repeated station, then replays the route with station stamps that block repeated work.
+DFS/BFS comparison and backtracking remain separate follow-up modes so this game does not
+teach three new moves at once.
+
 Each future engine must repeat its move across several concrete rounds, include prediction
 before manipulation, show a visible failure state, and end with a transfer link. The full
 named patterns remain in the curriculum lessons, where they can receive the depth and
 implementation practice they require.
 
-## Progression
+## Suggested Progression
 
-Game Mode unlocks engines by pattern evidence, not by problem count:
+Game Mode presents engines in this learning order. Progression is by pattern evidence, not
+by problem count:
 
 ```text
 Stack Climber → Invariant Inspector → Decision Garden
                ↘ Frontier Runner → State Forge → Proof Arena
 ```
 
-Compression Workshop becomes available after the player has manipulated at least one
-structure and one state machine. A future engine may have multiple levels, but the
-first level of each engine must be short enough to replay in under five minutes.
+Compression Workshop follows structure and state work in the suggested sequence. Each
+engine has multiple short rounds, and its first run is designed to replay in under five
+minutes.

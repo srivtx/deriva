@@ -1,14 +1,16 @@
 "use client"
 
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { STACK_CLIMBER } from "@/games/stack-climber"
+import { GAME_ENGINES } from "@/games/catalog"
 import { loadGameProgress, recordGameRun } from "@/persistence/game-progress"
-import StackClimberScene from "@/components/stack-climber-scene"
-import PatternGame from "@/components/pattern-game"
 import GameSoundToggle from "@/components/game-sound-toggle"
 import { triggerGameFeedback } from "@/games/feedback"
+
+const StackClimberScene = dynamic(() => import("@/components/stack-climber-scene"), { ssr: false })
 
 type Phase = "contract" | "descend" | "base" | "return" | "done"
 type DecisionMode = "predict" | "act"
@@ -46,7 +48,15 @@ export default function StackClimberPage() {
   */
 
   if (params.game !== STACK_CLIMBER.id) {
-    return <PatternGame gameId={params.game as string} />
+    const engine = GAME_ENGINES.find(item => item.id === params.game)
+    return (
+      <main className="game-missing">
+        <span className="stage-kicker">{engine?.status === "prototype" ? "Prototype in progress" : "Next engine"}</span>
+        <h1>{engine?.title || "Game engine"}</h1>
+        <p>{engine ? "This engine is mapped in the curriculum, but its mechanic is not ready to teach correctly yet." : "This game route does not exist yet."}</p>
+        <Link href="/games" className="btn-primary as-link">Back to Game Mode →</Link>
+      </main>
+    )
   }
 
   const chooseContract = (value: string) => {

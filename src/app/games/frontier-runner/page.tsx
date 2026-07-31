@@ -1,12 +1,14 @@
 "use client"
 
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { useState } from "react"
 import { FRONTIER_RUNNER, type FrontierStep } from "@/games/frontier-runner"
-import FrontierRunnerScene from "@/components/frontier-runner-scene"
 import GameSoundToggle from "@/components/game-sound-toggle"
 import { triggerGameFeedback } from "@/games/feedback"
 import { recordGameRun } from "@/persistence/game-progress"
+
+const FrontierRunnerScene = dynamic(() => import("@/components/frontier-runner-scene"), { ssr: false })
 
 type Phase = "bfs" | "dijkstra" | "done"
 type Mode = "predict" | "ride"

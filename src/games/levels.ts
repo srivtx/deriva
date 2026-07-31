@@ -1,6 +1,5 @@
-// Three short, state-changing levels for every non-recursion game engine.
-// The runtime turns these into tap interactions; current question-bank content
-// is never imported or modified.
+// Draft level banks for future engine work. Dedicated routes are required before
+// an engine becomes playable; unfinished engines must not use this generic UI.
 
 export type PatternGameLevel = {
   prompt: string

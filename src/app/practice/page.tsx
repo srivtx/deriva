@@ -16,6 +16,7 @@ export default function PracticePage() {
   const [running, setRunning] = useState(false)
   const [pyReady, setPyReady] = useState(false)
   const [pyLoading, setPyLoading] = useState(false)
+  const [isPhone, setIsPhone] = useState(false)
   const pyRef = useRef<any>(null)
 
   const topic = TOPICS[topicId] || TOPIC_LIST[0]
@@ -27,6 +28,11 @@ export default function PracticePage() {
   const currentHint = tHints[currentId] || 0
   const currentRevealed = tRevealed[currentId] || false
   const currentCode = tCode[currentId] || problem.starterCode
+  const chatGptPrompt = `I am practicing data structures and algorithms in Deriva. Act as a Socratic coach: do not give me the final code or solution immediately. Help me derive the next reasoning step by asking one focused question at a time.\n\nTopic: ${topic.name}\nProblem: ${problem.title}\nPattern: ${problem.pattern}\nStatement:\n${problem.statement}`
+  const encodedChatGptPrompt = encodeURIComponent(chatGptPrompt)
+  const chatGptWebHref = `https://chatgpt.com/?q=${encodedChatGptPrompt}`
+  // The native scheme keeps phone taps inside the installed ChatGPT app.
+  const chatGptHref = isPhone ? `chatgpt://?q=${encodedChatGptPrompt}` : chatGptWebHref
 
   useEffect(() => {
     try {
@@ -56,6 +62,9 @@ export default function PracticePage() {
   }, [])
 
   useEffect(() => { setHydrated(true) }, [])
+  useEffect(() => {
+    setIsPhone(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent))
+  }, [])
   useEffect(() => { localStorage.setItem("deriva-completed-v2", JSON.stringify(Object.fromEntries(Object.entries(completed).map(([k,v]) => [k, [...new Set(v)]])))) }, [completed])
   useEffect(() => { localStorage.setItem("deriva-code-v2", JSON.stringify(savedCode)) }, [savedCode])
   useEffect(() => { localStorage.setItem("deriva-hints-v2", JSON.stringify(hintLevel)) }, [hintLevel])
@@ -192,6 +201,13 @@ export default function PracticePage() {
             {problem.examples.map((ex, i) => (
               <div key={i} className="ex-box"><strong>Example {i+1}:</strong> Input: {ex.input}<br/>Output: {ex.output}{ex.explain && <><br/><span className="mu">{ex.explain}</span></>}</div>
             ))}
+            <div className="chatgpt-assist">
+              <div>
+                <strong>Need a second perspective?</strong>
+                <span>{isPhone ? "Open this exact problem in the ChatGPT app." : "Open this exact problem in ChatGPT with a Socratic coaching prompt."}</span>
+              </div>
+              <a href={chatGptHref} className="chatgpt-link" aria-label={`${isPhone ? "Open ChatGPT app" : "Ask ChatGPT"} about ${problem.title}`}>{isPhone ? "Open ChatGPT app ↗" : "Ask ChatGPT ↗"}</a>
+            </div>
           </div>
         </div>
 
@@ -277,8 +293,14 @@ export default function PracticePage() {
         .card-h3 { margin: 0 0 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-soft); }
         .stmt { font-size: 15px; line-height: 1.7; font-family: var(--font-narrative); }
         .ex-grid { margin-top: 12px; display: grid; gap: 8px; }
-        .ex-box { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; }
-        .mu { color: var(--ink-soft); }
+         .ex-box { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; }
+         .mu { color: var(--ink-soft); }
+         .chatgpt-assist { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--accent-soft); }
+         .chatgpt-assist strong, .chatgpt-assist span { display: block; }
+         .chatgpt-assist strong { color: var(--ink); font-size: 13px; }
+         .chatgpt-assist span { margin-top: 3px; color: var(--ink-soft); font-size: 12px; line-height: 1.4; }
+         .chatgpt-link { flex: 0 0 auto; padding: 9px 12px; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--paper-raised); color: var(--accent); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+         .chatgpt-link:hover { background: var(--accent); color: #fff; }
 
         .why { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; font-size: 14px; line-height: 1.7; font-family: var(--font-narrative); }
         .why-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); display: block; margin-bottom: 4px; }
@@ -330,7 +352,9 @@ export default function PracticePage() {
           .pbar-label { min-width: 72px; text-align: right; font-size: 11px; }
           .card { padding: var(--sp-4); margin-bottom: var(--sp-3); }
           .stmt { margin: 0; font-size: 18px; line-height: 1.55; }
-          .ex-box { padding: var(--sp-3); overflow-wrap: anywhere; }
+           .ex-box { padding: var(--sp-3); overflow-wrap: anywhere; }
+           .chatgpt-assist { align-items: stretch; flex-direction: column; }
+           .chatgpt-link { text-align: center; }
           .why { padding: var(--sp-4); font-size: 16px; line-height: 1.55; }
           .ed { min-height: 280px; max-height: none; padding: var(--sp-3); font-size: 13px; line-height: 1.6; }
           .acts { position: sticky; bottom: 0; z-index: 10; margin: var(--sp-3) calc(var(--sp-4) * -1) 0; padding: var(--sp-2) var(--sp-4) calc(var(--sp-2) + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--paper-raised) 94%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 20px rgb(26 29 33 / .05); }
