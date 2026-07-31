@@ -6,8 +6,9 @@ import { Suspense, type ReactNode } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
 import { useState, useEffect } from "react"
 import Logo from "./logo"
+import { applyPreferences, loadPreferences } from "@/persistence/preferences"
 
-type AppIconName = "home" | "practice" | "progress" | "design"
+type AppIconName = "home" | "practice" | "progress" | "design" | "settings"
 
 function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number }) {
   const paths: Record<AppIconName, ReactNode> = {
@@ -15,6 +16,7 @@ function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number }) {
     practice: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h4" /></>,
     progress: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></>,
     design: <><circle cx="6" cy="6" r="3" /><circle cx="18" cy="6" r="3" /><circle cx="12" cy="18" r="3" /><path d="m8.5 8.3 2.1 6.8M15.5 8.3l-2.1 6.8" /></>,
+    settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.08 2.08-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20.3h-3v-.12A1.7 1.7 0 0 0 10.76 18.6a1.7 1.7 0 0 0-1.88.34l-.06.06-2.08-2.08.06-.06A1.7 1.7 0 0 0 7.14 15a1.7 1.7 0 0 0-1.56-1.03H5.5v-3h.08A1.7 1.7 0 0 0 7.14 9.94a1.7 1.7 0 0 0-.34-1.88L6.74 8 8.82 5.92l.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.56V4.68h3v.08a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.84 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.03h.08v3H21a1.7 1.7 0 0 0-1.6 1.03Z" /></>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
@@ -81,12 +83,14 @@ function ProgressBadge({ className = "" }: { className?: string }) {
 
 export default function AppShell() {
   const pathname = usePathname()
-  const mobileTitle = pathname === "/practice" ? "Practice" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : "Deriva"
+  useEffect(() => { applyPreferences(loadPreferences()) }, [])
+  const mobileTitle = pathname === "/practice" ? "Practice" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
   const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
     { label: "Home", href: "/", icon: "home", active: pathname === "/" || pathname.startsWith("/topic/") },
     { label: "Practice", href: "/practice", icon: "practice", active: pathname === "/practice" },
     { label: "Progress", href: "/dashboard", icon: "progress", active: pathname === "/dashboard" },
     { label: "Design", href: "/design", icon: "design", active: pathname === "/design" || pathname === "/lld" },
+    { label: "Settings", href: "/settings", icon: "settings", active: pathname === "/settings" },
   ]
 
   return (
@@ -134,7 +138,7 @@ export default function AppShell() {
           .mobile-progress { min-width: 44px; min-height: 44px; display: flex; justify-content: flex-end; align-items: center; }
           .mobile-progress .progress-badge > div { width: 30px !important; }
           .mobile-progress .progress-badge > span { display: none; }
-          .mobile-tabbar { position: fixed; z-index: 50; inset: auto 0 0; display: grid; grid-template-columns: repeat(4, 1fr); min-height: calc(60px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 96%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgb(26 29 33 / .07); }
+          .mobile-tabbar { position: fixed; z-index: 50; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: calc(60px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 96%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgb(26 29 33 / .07); }
           .mobile-tab { min-height: 60px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 3px; color: var(--ink-soft); text-decoration: none; font-family: var(--font-ui); font-size: 10px; font-weight: 600; }
           .mobile-tab.active { color: var(--accent); }
           .mobile-tab.active svg { stroke-width: 2.4; }

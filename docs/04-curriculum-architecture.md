@@ -522,3 +522,36 @@ the pattern count is the product.
 | Bit Manipulation | 7 | 6–8 | Bit-playground (8-bit rows, live ops) |
 | Math | 7 | 6–8 | Simulation sandbox (iterate-a-function) |
 | **Total** | **~93 stages** | **~110–130 problems** | ≈ the size of a dense university course |
+
+## 6. Delivery Audit — What Must Exist Before This Is a Curriculum Product
+
+The topic spines above are the **course design**. A problem bank with stage labels is
+not yet the course. v0 must close the following delivery gaps in this order:
+
+1. **Nine-stage lesson shell.** Each canonical problem must run through Understand →
+   Play → Reason → Discover → Design → Implement → Execute → Reflect → Generalize.
+   The code editor is absent until the Design artifact passes. This is the single most
+   important product gap; it protects Concepts → Reasoning → Patterns → Implementation.
+2. **One authored discovery interaction per beat.** A beat needs a sandbox, constrained
+   construction, counterexample, or trace-counting interaction that lets the learner
+   *feel* its claim before the prose names it. Generic hints and solution reveal buttons
+   do not satisfy Rule B2.
+3. **Naive/optimized paired evidence.** Wherever a naive solution exists, persist and
+   replay both student traces side-by-side. Stage 8 asks the learner to name the exact
+   repeated work that disappeared. This is the evidence for Rule A3, not a complexity
+   label displayed after the fact.
+4. **Pattern journal and retrieval loop.** Completing a lesson deposits one of the 36
+   named patterns with the learner's own reflection. The next related lesson asks for a
+   prediction or invariant before help is available; this turns Stage 9 from a link list
+   into transfer practice.
+5. **Mastery probes, not click-through.** A respectful "test me out" route may compact
+   familiar material only after a trace prediction, invariant statement, or constructed
+   return-type answer demonstrates ownership. Completion must never mean merely opening
+   a card.
+
+### Mobile authoring constraint
+
+Every discovery interaction has a phone form: one task at a time, a reachable primary
+action above the bottom navigation, and in-app sheets rather than browser-native menus.
+The phone flow carries the same cognitive sequence as desktop; it may stack surfaces,
+but it may not collapse stages or reveal implementation early.

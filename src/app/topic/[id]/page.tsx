@@ -33,6 +33,8 @@ export default function TopicHubPage() {
   const total = topic.problems.length
   const done = completed.size
   const pct = Math.round((done / total) * 100)
+  const nextProblem = topic.problems.find(problem => !completed.has(problem.id)) || topic.problems[topic.problems.length - 1]
+  const nextStage = topic.stages.find(stage => stage.id === nextProblem.stage)
 
   return (
     <div style={{ minHeight: "calc(100vh - 52px)", background: "var(--paper)", fontFamily: "var(--font-ui)", padding: "clamp(20px, 5vw, 40px) clamp(16px, 5vw, 48px)" }}>
@@ -45,10 +47,14 @@ export default function TopicHubPage() {
           <div style={{ width: `${pct}%`, height: "100%", background: "var(--accent)", transition: "width 0.4s" }} />
         </div>
 
-        <Link href={`/practice?topic=${id}`} style={{
-          display: "inline-block", padding: "12px 28px", background: "var(--accent)", color: "#fff",
-          borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none", marginBottom: 40,
-        }}>Continue Practice →</Link>
+        <section className="topic-next-step">
+          <span>YOUR NEXT DERIVATION</span>
+          <h2>{nextProblem.title}</h2>
+          <p>{nextStage?.name} · {nextStage?.desc}</p>
+          <Link href={`/practice?topic=${id}&problem=${nextProblem.id}`}>
+            {done === total ? "Revisit this pattern →" : "Continue the path →"}
+          </Link>
+        </section>
 
         <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 1.5, color: "var(--ink-soft)", marginBottom: 20 }}>The Scaffolding Path</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -57,7 +63,7 @@ export default function TopicHubPage() {
             const spDone = sp.filter(p => completed.has(p.id)).length
             const spPct = sp.length > 0 ? Math.round((spDone / sp.length) * 100) : 0
             return (
-              <Link key={stage.id} href={`/practice?topic=${id}`}
+              <Link key={stage.id} href={`/practice?topic=${id}&problem=${sp.find(problem => !completed.has(problem.id))?.id || sp[0]?.id}`}
                 style={{
                   display: "flex", alignItems: "center", gap: 16, padding: "16px 20px",
                   background: "var(--paper-raised)", border: "1px solid var(--line)",
@@ -82,6 +88,7 @@ export default function TopicHubPage() {
             )
           })}
         </div>
+      <style>{`.topic-next-step { margin: 28px 0 40px; padding: 20px; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--accent-soft); }.topic-next-step > span { color: var(--accent); font: 700 10px var(--font-ui); letter-spacing: .1em; }.topic-next-step h2 { margin: 5px 0 3px; font: 700 24px var(--font-narrative); }.topic-next-step p { margin: 0 0 16px; color: var(--ink-soft); font-size: 13px; }.topic-next-step a { display: inline-block; min-height: 44px; box-sizing: border-box; padding: 12px 16px; border-radius: var(--radius); background: var(--accent); color: var(--paper-raised); font: 700 13px var(--font-ui); text-decoration: none; }`}</style>
       </div>
     </div>
   )

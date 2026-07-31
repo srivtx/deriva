@@ -33,9 +33,11 @@ export default function PracticePage() {
       // Read ?topic= param from URL
       const params = new URLSearchParams(window.location.search)
       const topicParam = params.get("topic")
+      const problemParam = Number(params.get("problem"))
       if (topicParam && TOPICS[topicParam]) {
         setTopicId(topicParam)
-        setCurrentId(TOPICS[topicParam].problems[0].id)
+        const requestedProblem = TOPICS[topicParam].problems.find(problem => problem.id === problemParam)
+        setCurrentId(requestedProblem?.id || TOPICS[topicParam].problems[0].id)
       } else {
         const stored = localStorage.getItem("deriva-topic-v1")
         if (stored && TOPICS[stored]) {
