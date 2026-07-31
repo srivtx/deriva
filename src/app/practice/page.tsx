@@ -16,7 +16,6 @@ export default function PracticePage() {
   const [running, setRunning] = useState(false)
   const [pyReady, setPyReady] = useState(false)
   const [pyLoading, setPyLoading] = useState(false)
-  const [isPhone, setIsPhone] = useState(false)
   const pyRef = useRef<any>(null)
 
   const topic = TOPICS[topicId] || TOPIC_LIST[0]
@@ -31,8 +30,7 @@ export default function PracticePage() {
   const chatGptPrompt = `I am practicing data structures and algorithms in Deriva. Act as a Socratic coach: do not give me the final code or solution immediately. Help me derive the next reasoning step by asking one focused question at a time.\n\nTopic: ${topic.name}\nProblem: ${problem.title}\nPattern: ${problem.pattern}\nStatement:\n${problem.statement}`
   const encodedChatGptPrompt = encodeURIComponent(chatGptPrompt)
   const chatGptWebHref = `https://chatgpt.com/?q=${encodedChatGptPrompt}`
-  // The native scheme keeps phone taps inside the installed ChatGPT app.
-  const chatGptHref = isPhone ? `chatgpt://?q=${encodedChatGptPrompt}` : chatGptWebHref
+  const chatGptHref = chatGptWebHref
 
   useEffect(() => {
     try {
@@ -62,9 +60,6 @@ export default function PracticePage() {
   }, [])
 
   useEffect(() => { setHydrated(true) }, [])
-  useEffect(() => {
-    setIsPhone(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent))
-  }, [])
   useEffect(() => { localStorage.setItem("deriva-completed-v2", JSON.stringify(Object.fromEntries(Object.entries(completed).map(([k,v]) => [k, [...new Set(v)]])))) }, [completed])
   useEffect(() => { localStorage.setItem("deriva-code-v2", JSON.stringify(savedCode)) }, [savedCode])
   useEffect(() => { localStorage.setItem("deriva-hints-v2", JSON.stringify(hintLevel)) }, [hintLevel])
@@ -204,9 +199,9 @@ export default function PracticePage() {
             <div className="chatgpt-assist">
               <div>
                 <strong>Need a second perspective?</strong>
-                <span>{isPhone ? "Open this exact problem in the ChatGPT app." : "Open this exact problem in ChatGPT with a Socratic coaching prompt."}</span>
+                <span>Open this exact problem in ChatGPT with a Socratic coaching prompt.</span>
               </div>
-              <a href={chatGptHref} className="chatgpt-link" aria-label={`${isPhone ? "Open ChatGPT app" : "Ask ChatGPT"} about ${problem.title}`}>{isPhone ? "Open ChatGPT app ↗" : "Ask ChatGPT ↗"}</a>
+              <a href={chatGptHref} className="chatgpt-link" aria-label={`Ask ChatGPT about ${problem.title}`}>Ask ChatGPT ↗</a>
             </div>
           </div>
         </div>
