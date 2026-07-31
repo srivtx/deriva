@@ -13,7 +13,7 @@ deriva/
 │   ├── app/                           # Routes only. Zero logic — pages compose features.
 │   │   ├── page.tsx                   #   / — curriculum map (the story, visualized)
 │   │   ├── learn/[topic]/[lesson]/    #   the 9-stage lesson experience (the product)
-│   │   ├── patterns/                  #   the pattern library (journal)
+│   │   ├── patterns/                  #   pattern directory, quiz, and earned journal
 │   │   ├── practice/                  #   daily queue (v0: simple; v1: spaced)
 │   │   └── layout.tsx                 #   design-system shell, fonts, theme
 │   │

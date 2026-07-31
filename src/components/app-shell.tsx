@@ -47,6 +47,9 @@ function Breadcrumbs() {
     parts.push({ label: "Expedition", href: "/expedition" })
   } else if (pathname.startsWith("/games")) {
     parts.push({ label: "Game Mode", href: "/games" })
+  } else if (pathname.startsWith("/patterns/")) {
+    parts.push({ label: "Pattern Directory", href: "/patterns" })
+    parts.push({ label: "Quiz Mode", href: pathname })
   } else if (pathname === "/patterns") {
     parts.push({ label: "Pattern Journal", href: "/patterns" })
   }
@@ -93,9 +96,9 @@ function ProgressBadge({ className = "" }: { className?: string }) {
 export default function AppShell() {
   const pathname = usePathname()
   useEffect(() => { applyPreferences(loadPreferences()) }, [])
-  const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname === "/patterns" ? "Patterns" : pathname === "/practice" ? "Practice" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
+  const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Practice" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
   const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
-    { label: "Home", href: "/", icon: "home", active: pathname === "/" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") || pathname === "/patterns" },
+    { label: "Home", href: "/", icon: "home", active: pathname === "/" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") },
     { label: "Practice", href: "/practice", icon: "practice", active: pathname === "/practice" },
     { label: "Progress", href: "/dashboard", icon: "progress", active: pathname === "/dashboard" },
     { label: "Design", href: "/design", icon: "design", active: pathname === "/design" || pathname === "/lld" },
@@ -150,7 +153,7 @@ export default function AppShell() {
           .mobile-progress { min-width: 44px; min-height: 44px; display: flex; justify-content: flex-end; align-items: center; }
           .mobile-progress .progress-badge > div { width: 30px !important; }
           .mobile-progress .progress-badge > span { display: none; }
-          .mobile-tabbar { position: fixed; z-index: 50; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: calc(60px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 96%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgb(26 29 33 / .07); }
+           .mobile-tabbar { position: fixed; z-index: 50; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: calc(60px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 96%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgb(26 29 33 / .07); }
           .mobile-tab { min-height: 60px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 3px; color: var(--ink-soft); text-decoration: none; font-family: var(--font-ui); font-size: 10px; font-weight: 600; }
           .mobile-tab.active { color: var(--accent); }
           .mobile-tab.active svg { stroke-width: 2.4; }

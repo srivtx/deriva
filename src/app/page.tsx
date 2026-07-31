@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { TOPIC_LIST } from "@/data"
 import Logo from "@/components/logo"
 import GameModeButton from "@/components/game-mode-button"
+import PatternModeButton from "@/components/pattern-mode-button"
 import { loadLessonProgress, type LessonProgress } from "@/persistence/lesson-progress"
 
 const TOPIC_STYLES = [
@@ -61,11 +62,12 @@ export default function HomePage() {
           <Link href="/design" style={{ padding: "12px 28px", background: "#7c3aed", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
             System Design (HLD) →
           </Link>
-          <Link href="/lld" style={{ padding: "12px 28px", background: "#16a34a", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
-            Low-Level Design →
-          </Link>
-          <GameModeButton />
-        </div>
+           <Link href="/lld" style={{ padding: "12px 28px", background: "#16a34a", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+             Low-Level Design →
+           </Link>
+           <PatternModeButton />
+           <GameModeButton />
+         </div>
       </header>
 
       <main className="landing-main" style={{ flex: 1, padding: "clamp(24px, 5vw, 40px) clamp(20px, 5vw, 48px) 60px", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
