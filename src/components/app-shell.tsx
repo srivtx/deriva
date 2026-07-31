@@ -40,6 +40,15 @@ function Breadcrumbs() {
     parts.push({ label: "LLD", href: "/lld" })
   } else if (pathname === "/dashboard") {
     parts.push({ label: "Dashboard", href: "/dashboard" })
+  } else if (pathname.startsWith("/learn/")) {
+    parts.push({ label: "Trees", href: "/topic/trees" })
+    parts.push({ label: "Guided Lesson", href: pathname })
+  } else if (pathname.startsWith("/expedition")) {
+    parts.push({ label: "Expedition", href: "/expedition" })
+  } else if (pathname.startsWith("/games")) {
+    parts.push({ label: "Game Mode", href: "/games" })
+  } else if (pathname === "/patterns") {
+    parts.push({ label: "Pattern Journal", href: "/patterns" })
   }
 
   if (parts.length === 0) return null
@@ -84,9 +93,9 @@ function ProgressBadge({ className = "" }: { className?: string }) {
 export default function AppShell() {
   const pathname = usePathname()
   useEffect(() => { applyPreferences(loadPreferences()) }, [])
-  const mobileTitle = pathname === "/practice" ? "Practice" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
+  const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname === "/patterns" ? "Patterns" : pathname === "/practice" ? "Practice" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
   const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
-    { label: "Home", href: "/", icon: "home", active: pathname === "/" || pathname.startsWith("/topic/") },
+    { label: "Home", href: "/", icon: "home", active: pathname === "/" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") || pathname === "/patterns" },
     { label: "Practice", href: "/practice", icon: "practice", active: pathname === "/practice" },
     { label: "Progress", href: "/dashboard", icon: "progress", active: pathname === "/dashboard" },
     { label: "Design", href: "/design", icon: "design", active: pathname === "/design" || pathname === "/lld" },
@@ -108,6 +117,9 @@ export default function AppShell() {
             <Link href="/design" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>HLD</Link>
             <Link href="/lld" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>LLD</Link>
             <Link href="/practice" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>DSA</Link>
+            <Link href="/patterns" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>Patterns</Link>
+            <Link href="/expedition" className="nav-link" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none", fontWeight: 700 }}>Expedition</Link>
+            <Link href="/games" className="nav-link" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none", fontWeight: 700 }}>Games</Link>
             <ProgressBadge />
           </div>
         </div>

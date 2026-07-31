@@ -1,9 +1,13 @@
 "use client"
 
-import { useStageMachine, StageNames, StageName } from "./stage-machine"
-import { StageNameToNumber } from "./stage-machine"
+// The stage rail — the product's compass (09 §2). Desktop: vertical rail with
+// pattern strip. Phone: horizontal gate-aware stepper under the app bar.
+// Locked stages explain themselves; nothing is a dead end.
 
-// Stage display names and descriptions
+import { useState } from "react"
+import { useStageMachine, StageNames, StageName, StageNameToNumber } from "./stage-machine"
+import { gateRequirement } from "./gates"
+
 const StageMeta: Record<StageName, { label: string; short: string }> = {
   understand:  { label: "Understand",   short: "Read & predict" },
   play:        { label: "Play",         short: "Touch the data" },
@@ -16,92 +20,97 @@ const StageMeta: Record<StageName, { label: string; short: string }> = {
   generalize:  { label: "Generalize",   short: "Where it appears" },
 }
 
-export function StageRail() {
+function GateIcon({ locked, completed, active, viaProbe, num }: {
+  locked: boolean; completed: boolean; active: boolean; viaProbe: boolean; num: number
+}) {
+  return (
+    <span className={`gate-icon ${completed ? "completed" : active ? "active" : locked ? "locked" : ""}`}>
+      {completed ? (viaProbe ? "⏭" : "✓") : num}
+    </span>
+  )
+}
+
+// ── Desktop rail ──
+export function StageRail({ patternName }: { patternName?: string }) {
   const { currentStage, stages, enterStage } = useStageMachine()
 
   return (
-    <nav style={{
-      width: 220,
-      borderRight: "1px solid var(--line)",
-      padding: "1.5rem 1rem",
-      display: "flex",
-      flexDirection: "column",
-      gap: "0.25rem",
-      height: "100%",
-    }}>
-      <div style={{ marginBottom: "1.5rem" }}>
-        <h3 style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--ink-soft)", margin: 0 }}>
-          The Journey
-        </h3>
-      </div>
-
+    <nav className="stage-rail" aria-label="The nine-stage journey">
+      <h3 className="rail-heading">The Journey</h3>
       {StageNames.map((stage) => {
         const gate = stages[stage]
         const meta = StageMeta[stage]
         const isActive = currentStage === stage
-        const isCompleted = gate.completed
-        const isLocked = gate.locked
-        const stageNum = StageNameToNumber[stage]
-
         return (
           <button
             key={stage}
-            onClick={() => !isLocked && enterStage(stage)}
-            disabled={isLocked}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              padding: "0.5rem 0.75rem",
-              borderRadius: "var(--radius)",
-              border: "none",
-              background: isActive ? "var(--accent-soft)" : "transparent",
-              color: isLocked ? "var(--viz-untouched)" : isActive ? "var(--accent)" : "var(--ink)",
-              cursor: isLocked ? "default" : "pointer",
-              textAlign: "left",
-              fontSize: "0.9rem",
-              width: "100%",
-              opacity: isLocked ? 0.5 : 1,
-            }}
+            className={`rail-item ${isActive ? "active" : ""}`}
+            onClick={() => !gate.locked && enterStage(stage)}
+            disabled={gate.locked}
+            title={gate.locked ? gateRequirement(stage) : undefined}
           >
-            {/* Status indicator */}
-            <span style={{
-              width: 20,
-              height: 20,
-              borderRadius: "50%",
-              border: `2px solid ${isCompleted ? "var(--viz-settled)" : isActive ? "var(--accent)" : "var(--line)"}`,
-              background: isCompleted ? "var(--viz-settled)" : isActive ? "var(--accent)" : "transparent",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "0.7rem",
-              color: "#fff",
-              flexShrink: 0,
-            }}>
-              {isCompleted ? "✓" : stageNum}
+            <GateIcon locked={gate.locked} completed={gate.completed} active={isActive} viaProbe={gate.viaProbe} num={StageNameToNumber[stage]} />
+            <span className="rail-label">
+              <span className="rail-name">{meta.label}</span>
+              {isActive && <span className="rail-short">{meta.short}</span>}
+              {gate.locked && <span className="rail-gate">{gateRequirement(stage)}</span>}
             </span>
-
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: isActive ? 600 : 400 }}>{meta.label}</div>
-              {isActive && (
-                <div style={{ fontSize: "0.75rem", color: "var(--ink-soft)", marginTop: 2 }}>
-                  {meta.short}
-                </div>
-              )}
-            </div>
           </button>
         )
       })}
-
-      {/* Pattern strip placeholder */}
-      <div style={{ marginTop: "auto", paddingTop: "1.5rem", borderTop: "1px solid var(--line)" }}>
-        <h3 style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--ink-soft)", margin: "0 0 0.5rem" }}>
-          Patterns Earned
-        </h3>
-        <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
-          (none yet)
+      <div className="rail-patterns">
+        <h3 className="rail-heading">Pattern</h3>
+        <div className="rail-pattern-strip">
+          {patternName ? <span className="pattern-chip">{patternName}</span> : <span className="rail-none">earned at Stage 8</span>}
         </div>
       </div>
     </nav>
+  )
+}
+
+// ── Phone stepper — horizontal, gate-aware (12 §Scope) ──
+export function StageStepper() {
+  const { currentStage, stages, enterStage } = useStageMachine()
+  const [gateMsg, setGateMsg] = useState<string | null>(null)
+  const completedCount = StageNames.filter(s => stages[s].completed).length
+
+  const tap = (stage: StageName) => {
+    const gate = stages[stage]
+    if (gate.locked) {
+      setGateMsg(gateRequirement(stage))
+      return
+    }
+    setGateMsg(null)
+    enterStage(stage)
+  }
+
+  return (
+    <div className="stage-stepper-wrap">
+      <div className="stage-stepper" role="navigation" aria-label="Lesson stages">
+        {StageNames.map((stage, i) => {
+          const gate = stages[stage]
+          const isActive = currentStage === stage
+          return (
+            <div key={stage} className="stepper-cell">
+              {i > 0 && <span className={`stepper-connector ${gate.completed || isActive ? "done" : ""}`} />}
+              <button
+                className={`stepper-dot ${isActive ? "active" : ""} ${gate.completed ? "completed" : ""} ${gate.locked ? "locked" : ""}`}
+                onClick={() => tap(stage)}
+                aria-label={`${StageMeta[stage].label}${gate.locked ? " — locked" : ""}`}
+                aria-current={isActive ? "step" : undefined}
+              >
+                {gate.completed ? (gate.viaProbe ? "⏭" : "✓") : StageNameToNumber[stage]}
+              </button>
+              <span className={`stepper-label ${isActive ? "active" : ""}`}>{StageMeta[stage].label}</span>
+            </div>
+          )
+        })}
+      </div>
+      <div className="stepper-status">
+        {gateMsg
+          ? <span className="stepper-gate">🔒 {gateMsg}</span>
+          : <span>{completedCount} of 9 stages complete</span>}
+      </div>
+    </div>
   )
 }

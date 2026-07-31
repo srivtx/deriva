@@ -1,55 +1,156 @@
 "use client"
 
-import { StageRail } from "@/learning/flow/stage-rail"
-import { useStageMachine } from "@/learning/flow/stage-machine"
-import { StageName } from "@/learning/flow/stage-machine"
+// /learn/[topic]/[lesson] — the 9-stage lesson experience (the product).
+// Phone-first: horizontal stepper, one task per screen, primary action pinned
+// above the tab bar. Progress + artifacts persist locally; resume anywhere.
 
-// Placeholder stage components — to be built incrementally
-function StageContent({ stage }: { stage: StageName }) {
-  const { completeStage } = useStageMachine()
+import { useEffect, useMemo } from "react"
+import Link from "next/link"
+import { useParams } from "next/navigation"
+import { getLessonByRoute } from "@/curriculum"
+import { useStageMachine, StageNames, type StageName, type StageArtifacts } from "@/learning/flow/stage-machine"
+import { StageRail, StageStepper } from "@/learning/flow/stage-rail"
+import { loadLessonProgress, saveLessonProgress, recordProbeAttempt } from "@/persistence/lesson-progress"
+import { UnderstandStage } from "@/learning/stages/understand"
+import { PlayStage } from "@/learning/stages/play"
+import { ReasonStage } from "@/learning/stages/reason"
+import { DiscoverStage } from "@/learning/stages/discover"
+import { DesignStage } from "@/learning/stages/design"
+import { ImplementStage } from "@/learning/stages/implement"
+import { ExecuteStage } from "@/learning/stages/execute"
+import { ReflectStage } from "@/learning/stages/reflect"
+import { GeneralizeStage } from "@/learning/stages/generalize"
+
+export default function LessonPage() {
+  const params = useParams()
+  const topic = params.topic as string
+  const slug = params.lesson as string
+  const lesson = useMemo(() => getLessonByRoute(topic, slug), [topic, slug])
+
+  const machine = useStageMachine()
+  const { currentStage, stages, init, completeStage, setArtifact, enterStage } = machine
+
+  // Hydrate once per lesson
+  useEffect(() => {
+    if (!lesson) return
+    const saved = loadLessonProgress(lesson.id)
+    init(lesson.id, saved ? { currentStage: saved.currentStage, stages: saved.stages } : undefined)
+  }, [lesson, init])
+
+  // Persist on every change
+  useEffect(() => {
+    if (!lesson || machine.lessonKey !== lesson.id) return
+    const progressStages: Record<string, { completed: boolean; viaProbe: boolean; artifacts?: StageArtifacts[StageName] }> = {}
+    for (const name of StageNames) {
+      const g = stages[name]
+      progressStages[name] = { completed: g.completed, viaProbe: g.viaProbe, artifacts: g.artifacts }
+    }
+    const reflect = stages.reflect.artifacts as StageArtifacts["reflect"]
+    saveLessonProgress(lesson.id, {
+      currentStage,
+      stages: progressStages,
+      probeAttempts: loadLessonProgress(lesson.id)?.probeAttempts ?? 0,
+      patternDeposit: stages.reflect.completed && reflect?.ownWords
+        ? {
+            patternId: lesson.stages.reflect.pattern.id as string,
+            name: lesson.stages.reflect.pattern.name,
+            ownWords: reflect.ownWords,
+            lessonId: lesson.id,
+            earnedAt: new Date().toISOString(),
+          }
+        : loadLessonProgress(lesson.id)?.patternDeposit,
+      finishedAt: stages.generalize.completed ? new Date().toISOString() : undefined,
+    })
+  }, [lesson, machine.lessonKey, currentStage, stages])
+
+  if (!lesson) {
+    return (
+      <div className="lesson-missing">
+        <h2>Lesson not found</h2>
+        <Link href="/">← Back to the curriculum</Link>
+      </div>
+    )
+  }
+
+  const advance = (stage: StageName, artifacts?: StageArtifacts[StageName]) => {
+    completeStage(stage, artifacts)
+    const idx = StageNames.indexOf(stage)
+    if (idx + 1 < StageNames.length) enterStage(StageNames[idx + 1])
+  }
+
+  const probePass = (stage: StageName) => {
+    recordProbeAttempt(lesson.id)
+    completeStage(stage, undefined, true)
+    const idx = StageNames.indexOf(stage)
+    if (idx + 1 < StageNames.length) enterStage(StageNames[idx + 1])
+  }
+
+  const art = <K extends StageName>(s: K) => stages[s].artifacts as StageArtifacts[K]
+  const patternName = lesson.stages.reflect.pattern.name
+  const finished = stages.generalize.completed
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 720 }}>
-      <h2 style={{ fontFamily: "Newsreader, Georgia, serif", fontSize: "1.8rem", fontWeight: 400 }}>
-        Stage: {stage}
-      </h2>
-      <p style={{ color: "var(--ink-soft)", marginTop: "0.5rem" }}>
-        This stage is being built. Click "Complete" to advance.
-      </p>
-      <button
-        onClick={() => completeStage(stage)}
-        style={{
-          marginTop: "2rem",
-          padding: "0.6rem 1.5rem",
-          background: "var(--accent)",
-          color: "#fff",
-          border: "none",
-          borderRadius: "var(--radius)",
-          cursor: "pointer",
-          fontSize: "1rem",
-        }}
-      >
-        Complete Stage →
-      </button>
-    </div>
-  )
-}
-
-export default function LessonPage({
-  params,
-}: {
-  params: { topic: string; lesson: string }
-}) {
-  const { currentStage } = useStageMachine()
-
-  return (
-    <div style={{ display: "flex", height: "100vh" }}>
-      {/* Stage Rail — left nav */}
-      <StageRail />
-
-      {/* Main content area — textbook/workbench split */}
-      <div style={{ flex: 1, overflow: "auto" }}>
-        <StageContent stage={currentStage} />
+    <div className="lesson-page">
+      <StageStepper />
+      <div className="lesson-body">
+        <StageRail patternName={stages.reflect.completed ? patternName : undefined} />
+        <main className="lesson-surface">
+          {finished && currentStage === "generalize" ? (
+            <div className="lesson-complete">
+              <span className="discovery-kicker">✦ Lesson complete</span>
+              <h1 className="stage-title">The recursion reflex is yours.</h1>
+              <p className="narrative">
+                You predicted, touched, reasoned, constructed, specified, coded, watched,
+                and named. Tomorrow&rsquo;s you meets this leap again — in factorial, and
+                then in every tree you&rsquo;ll ever climb.
+              </p>
+              <div className="lesson-complete-actions">
+                <Link href="/patterns" className="btn-primary as-link">See your pattern journal →</Link>
+                <Link href="/topic/trees" className="btn-ghost as-link">Continue Trees practice</Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              {currentStage === "understand" && (
+                <UnderstandStage lesson={lesson} saved={art("understand")}
+                  onComplete={(a) => advance("understand", a)} onProbePass={() => probePass("understand")} />
+              )}
+              {currentStage === "play" && (
+                <PlayStage lesson={lesson} saved={art("play")}
+                  onComplete={(a) => advance("play", a)} onProbePass={() => probePass("play")} />
+              )}
+              {currentStage === "reason" && (
+                <ReasonStage lesson={lesson} saved={art("reason")}
+                  onComplete={(a) => advance("reason", a)} onProbePass={() => probePass("reason")} />
+              )}
+              {currentStage === "discover" && (
+                <DiscoverStage lesson={lesson} saved={art("discover")}
+                  onComplete={(a) => advance("discover", a)} onProbePass={() => probePass("discover")} />
+              )}
+              {currentStage === "design" && (
+                <DesignStage lesson={lesson} saved={art("design")}
+                  onComplete={(a) => advance("design", a)} onProbePass={() => probePass("design")} />
+              )}
+              {currentStage === "implement" && (
+                <ImplementStage lesson={lesson} saved={art("implement")} design={art("design")}
+                  onComplete={(a) => advance("implement", a)}
+                  onDraft={(a) => setArtifact("implement", a)} />
+              )}
+              {currentStage === "execute" && (
+                <ExecuteStage lesson={lesson} implement={art("implement")}
+                  onComplete={(a) => advance("execute", a)} />
+              )}
+              {currentStage === "reflect" && (
+                <ReflectStage lesson={lesson} design={art("design")} saved={art("reflect")}
+                  onComplete={(a) => advance("reflect", a)} />
+              )}
+              {currentStage === "generalize" && (
+                <GeneralizeStage lesson={lesson} reflect={art("reflect")}
+                  onComplete={(a) => completeStage("generalize", a)} />
+              )}
+            </>
+          )}
+        </main>
       </div>
     </div>
   )

@@ -1,22 +1,22 @@
-// Curriculum registry — auto-discovers topic folders
-// In v0: static imports. In v1+: dynamic import() with manifest.
+// Curriculum registry — static imports; every module self-validates via
+// defineLesson() at module scope, so an invalid lesson fails `pnpm build` (C1).
 
 import type { LessonModule } from "./schema/lesson"
+import sum1toN from "./topics/trees/00-recursion-reflex/sum-1-to-n"
 
-// Placeholder — lesss are authored into this registry as they are created.
-export const lessonRegistry: Record<string, () => Promise<{ default: LessonModule }>> = {}
+const lessons: LessonModule[] = [sum1toN]
 
-export function registerLesson(id: string, loader: () => Promise<{ default: LessonModule }>) {
-  lessonRegistry[id] = loader
+const byId = new Map(lessons.map(l => [l.id as string, l]))
+const byRoute = new Map(lessons.map(l => [`${l.topic}/${l.routeSlug}`, l]))
+
+export function listLessons(): LessonModule[] {
+  return lessons
 }
 
-export async function getLesson(id: string): Promise<LessonModule | undefined> {
-  const loader = lessonRegistry[id]
-  if (!loader) return undefined
-  const mod = await loader()
-  return mod.default
+export function getLessonByRoute(topic: string, slug: string): LessonModule | undefined {
+  return byRoute.get(`${topic}/${slug}`)
 }
 
-export function listLessonsByTopic(topic: string): string[] {
-  return Object.keys(lessonRegistry).filter(id => id.startsWith(topic + "/"))
+export function getLessonById(id: string): LessonModule | undefined {
+  return byId.get(id)
 }

@@ -100,10 +100,11 @@ Each problem is typed data with the same shape:
 - [x] HLD track — 45 problems with React Flow architecture canvas
 - [x] LLD track — 35 problems with test-driven OOP design
 - [x] PWA — installable, offline shell
+- [x] Reference nine-stage guided lesson — Trees recursion reflex (`/learn/trees/sum-1-to-n`): derive the contract before the editor exists
+- [ ] Port remaining topics into nine-stage lesson modules
 - [ ] CS fundamentals track (OS / DB / networking / concurrency)
 - [ ] Mock interview mode — timed random problems across tracks
-- [ ] Pattern library — cross-topic mental models
-- [ ] Trace-based visualizations (animate your own code's execution)
+- [ ] Trace-based visualizations for all structure families
 
 ## License
 

@@ -56,7 +56,25 @@ export default function TopicHubPage() {
           </Link>
         </section>
 
-        <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 1.5, color: "var(--ink-soft)", marginBottom: 20 }}>The Scaffolding Path</h2>
+        {id === "trees" && (
+          <Link href="/learn/trees/sum-1-to-n" style={{
+            display: "block", marginTop: 16, padding: "16px 20px",
+            background: "var(--accent-soft)", border: "1px solid var(--accent)",
+            borderRadius: "var(--radius)", textDecoration: "none", color: "var(--ink)",
+          }}>
+            <span style={{ color: "var(--accent)", fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" }}>
+              New · Guided nine-stage lesson
+            </span>
+            <div style={{ fontWeight: 700, fontSize: 16, marginTop: 4, fontFamily: "var(--font-narrative)" }}>
+              The Recursion Reflex — derive the idea before you ever see code
+            </div>
+            <div style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 2 }}>
+              Understand → Play → Reason → Discover → Design → Implement → Execute → Reflect → Generalize
+            </div>
+          </Link>
+        )}
+
+        <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 1.5, color: "var(--ink-soft)", marginBottom: 20, marginTop: 32 }}>The Scaffolding Path</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {topic.stages.map((stage) => {
             const sp = topic.problems.filter(p => p.stage === stage.id)

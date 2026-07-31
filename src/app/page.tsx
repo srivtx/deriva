@@ -1,8 +1,11 @@
 "use client"
 
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import { TOPIC_LIST } from "@/data"
 import Logo from "@/components/logo"
+import GameModeButton from "@/components/game-mode-button"
+import { loadLessonProgress, type LessonProgress } from "@/persistence/lesson-progress"
 
 const TOPIC_STYLES = [
   { bg: "#eff6ff", border: "#bfdbfe", accent: "#2563eb", dot: "var(--accent)" },
@@ -22,10 +25,22 @@ const TOPIC_STYLES = [
 ] as const
 
 export default function HomePage() {
+  const [guidedProgress, setGuidedProgress] = useState<LessonProgress | undefined>()
+
+  useEffect(() => {
+    setGuidedProgress(loadLessonProgress("trees/00-recursion-reflex/sum-1-to-n"))
+  }, [])
+
+  const guidedHref = "/learn/trees/sum-1-to-n"
+  const guidedStage = guidedProgress?.currentStage || "understand"
+  const guidedStages = ["understand", "play", "reason", "discover", "design", "implement", "execute", "reflect", "generalize"]
+  const guidedIndex = guidedStages.indexOf(guidedStage)
+  const guidedDone = guidedProgress?.stages.generalize?.completed
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--paper)", color: "var(--ink)", fontFamily: "var(--font-ui)" }}>
       <header className="landing-header" style={{ padding: "clamp(24px, 5vw, 48px) clamp(20px, 5vw, 48px) clamp(20px, 4vw, 32px)", borderBottom: "1px solid var(--line)", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <div className="landing-brandline" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <Logo size={44} />
           <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "var(--ink-soft)" }}>
             Deriva · Learn DSA from first principles
@@ -39,7 +54,7 @@ export default function HomePage() {
           DSA (700 problems) · System Design HLD (45) · LLD (35). Every topic follows 7-stage slow scaffolding —
           each stage adds exactly one new mental model. In-browser Python. No install. Just think.
         </p>
-        <div style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
+        <div className="landing-actions" style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
           <Link href="/practice" style={{ padding: "12px 28px", background: "var(--accent)", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
             DSA Practice →
           </Link>
@@ -49,10 +64,43 @@ export default function HomePage() {
           <Link href="/lld" style={{ padding: "12px 28px", background: "#16a34a", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
             Low-Level Design →
           </Link>
+          <GameModeButton />
         </div>
       </header>
 
-      <main style={{ flex: 1, padding: "clamp(24px, 5vw, 40px) clamp(20px, 5vw, 48px) 60px", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
+      <main className="landing-main" style={{ flex: 1, padding: "clamp(24px, 5vw, 40px) clamp(20px, 5vw, 48px) 60px", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
+        <Link href={guidedHref} className="continue-derivation" style={{
+          display: "block", marginBottom: 32, padding: "20px 24px", border: "1px solid var(--accent)",
+          borderRadius: "var(--radius)", background: "var(--accent-soft)", color: "var(--ink)", textDecoration: "none",
+        }}>
+          <div className="continue-derivation-head" style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "baseline" }}>
+            <span style={{ color: "var(--accent)", fontSize: 10, fontWeight: 800, letterSpacing: 1.3, textTransform: "uppercase" }}>
+              {guidedDone ? "Pattern earned · revisit" : guidedProgress ? "Your unfinished derivation" : "Start with one idea"}
+            </span>
+            <span style={{ color: "var(--accent)", fontSize: 13, fontWeight: 700 }}>Open lesson →</span>
+          </div>
+          <h2 style={{ margin: "8px 0 4px", fontFamily: "var(--font-narrative)", fontSize: 24 }}>
+            The Recursion Reflex
+          </h2>
+          <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: 14, lineHeight: 1.5 }}>
+            {guidedDone
+              ? "You named the leap. Revisit it before it fades, then transfer it to a tree."
+              : guidedProgress
+                ? `You are at Stage ${guidedIndex + 1} of 9: ${guidedStage}. The next move is still waiting for you.`
+                : "A 10-minute guided derivation. No editor until you have invented the contract."}
+          </p>
+          <div className="continue-derivation-rail" aria-label={`${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}>
+            <span style={{ width: `${guidedDone ? 100 : Math.max(5, ((guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0)) / 9) * 100)}%` }} />
+          </div>
+        </Link>
+
+        <Link href="/expedition" className="expedition-callout">
+          <span className="discovery-kicker">New · Pattern journeys</span>
+          <b>Go deeper than the problem bank</b>
+          <span>Retrieve an idea, break it, transfer it, and leave with your own theory.</span>
+          <strong>Enter the Expedition →</strong>
+        </Link>
+
         <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", marginBottom: 32 }}>
           <Link href="/design" className="topic-card" style={{
             background: "linear-gradient(135deg, #f5f3ff, #ede9fe)", border: "1px solid #ddd6fe", borderRadius: "var(--radius)",

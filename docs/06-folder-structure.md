@@ -35,17 +35,19 @@ deriva/
 │   │   ├── flow/
 │   │   │   ├── stage-machine.ts       #   zustand store: stage, gates, artifacts
 │   │   │   ├── gates.ts               #   transition validators + "test me out" probes
-│   │   │   └── stage-shell.tsx        #   layout per stage (textbook/workbench, 09 §3)
+│   │   │   └── stage-rail.tsx         #   compass rail (desktop) + stepper (phone)
+│   │   ├── stages/                    #   ★ the nine stage surfaces (docs/12 reference)
+│   │   │   ├── shell.tsx              #   shared grammar: kicker, move chip, pinned CTA, ProbeCard
+│   │   │   ├── understand.tsx … generalize.tsx
 │   │   ├── socratic/
-│   │   │   ├── ladder-runner.ts       #   walks SocraticNode graph; never asserts early
-│   │   │   ├── constructed-answer.tsx #   slot-builder UI (Discover stage, Rule B5)
-│   │   │   └── hint-ladder.tsx        #   question-first hints (Rule B3)
+│   │   │   └── (lives in stages/reason.tsx — one question at a time, pump-before-tell)
 │   │   ├── contract/
-│   │   │   └── checker.ts             #   Stage 5 design validation w/ Socratic feedback
+│   │   │   └── (lives in stages/design.tsx — signature/base/step/complexity checker)
 │   │   └── reflect/
-│   │       └── journal.ts             #   pattern deposits, reflection notes
+│   │       └── (lives in stages/reflect.tsx — pattern deposit, own words)
 │   │
 │   ├── execution/                     # ★ Sandbox + trace (05 §2, §4.2)
+│   │   ├── pyodide-client.ts          #   v0 main-thread client: runTests + runTraced (D12)
 │   │   ├── bridge/
 │   │   │   ├── worker-client.ts       #   postMessage protocol, warm pool, respawn
 │   │   │   └── sandbox.worker.ts      #   Pyodide bootstrap, budget, terminate policy
@@ -79,8 +81,10 @@ deriva/
 │   │   ├── guided-regions.ts          #   read-only boilerplate + fill regions (optional)
 │   │   └── hints/                     #   inline hint UI bound to hint-ladder
 │   │
-│   ├── persistence/                   # ★ Local-first data (08)
-│   │   ├── db.ts                      #   Dexie schema + versioned migrations
+│   ├── persistence/                   # ★ Local-first data (08) — ONLY dir touching localStorage
+│   │   ├── preferences.ts             #   theme / motion / text-scale prefs
+│   │   ├── lesson-progress.ts         #   9-stage progress, artifacts, pattern journal
+│   │   ├── db.ts                      #   Dexie schema + versioned migrations (planned)
 │   │   ├── repos/
 │   │   │   ├── progress-repo.ts       #   stage completion, attempts, mastery probes
 │   │   │   ├── draft-repo.ts          #   code drafts per lesson

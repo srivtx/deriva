@@ -5,11 +5,13 @@ import Link from "next/link"
 import { TOPIC_LIST } from "@/data"
 import { PROBLEMS_DESIGN } from "@/data/system-design"
 import { PROBLEMS_LLD } from "@/data/lld"
+import { loadLessonProgress } from "@/persistence/lesson-progress"
 
 export default function DashboardPage() {
   const [dsa, setDsa] = useState<Record<string, number[]>>({})
   const [hld, setHld] = useState<number[]>([])
   const [lld, setLld] = useState<number[]>([])
+  const [guided, setGuided] = useState<ReturnType<typeof loadLessonProgress>>()
 
   useEffect(() => {
     try {
@@ -19,6 +21,7 @@ export default function DashboardPage() {
       if (d) setHld(JSON.parse(d))
       const l = localStorage.getItem("deriva-lld-completed")
       if (l) setLld(JSON.parse(l))
+      setGuided(loadLessonProgress("trees/00-recursion-reflex/sum-1-to-n"))
     } catch {}
   }, [])
 
@@ -44,6 +47,26 @@ export default function DashboardPage() {
         <div style={{ height: 10, background: "var(--line)", borderRadius: 5, overflow: "hidden", marginBottom: 40 }}>
           <div style={{ width: `${grandPct}%`, height: "100%", background: "var(--accent)", transition: "width 0.5s" }} />
         </div>
+
+        <Link href="/learn/trees/sum-1-to-n" className="dashboard-focus" style={{
+          display: "flex", alignItems: "center", gap: 18, marginBottom: 32, padding: "18px 20px",
+          border: "1px solid var(--accent)", borderRadius: "var(--radius)", background: "var(--accent-soft)",
+          color: "var(--ink)", textDecoration: "none",
+        }}>
+          <div style={{ width: 44, height: 44, display: "grid", placeItems: "center", flexShrink: 0, borderRadius: "50%", background: "var(--accent)", color: "#fff", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+            {guided?.stages.generalize?.completed ? "✓" : "→"}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "var(--accent)", fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase" }}>
+              {guided?.stages.generalize?.completed ? "Pattern ready for retrieval" : "Your next thinking move"}
+            </div>
+            <div style={{ marginTop: 4, fontFamily: "var(--font-narrative)", fontSize: 20, fontWeight: 700 }}>Recursive Leap of Faith</div>
+            <div style={{ marginTop: 2, color: "var(--ink-soft)", fontSize: 13 }}>
+              {guided ? `Resume at ${guided.currentStage}. The next move is waiting.` : "Start the reference lesson before opening another problem."}
+            </div>
+          </div>
+          <span style={{ color: "var(--accent)", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }}>Continue →</span>
+        </Link>
 
         <div style={{ display: "grid", gap: 12, marginBottom: 48 }}>
           {sections.map(s => {

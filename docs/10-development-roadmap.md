@@ -1,5 +1,14 @@
 # 10 — Development Roadmap
 
+> **Status 2026-07-31:** the docs/12 reference lesson is delivered — one complete,
+> phone-first nine-stage lesson (`/learn/trees/sum-1-to-n`): typed + zod-validated
+> lesson module, stage machine with gates + mastery-probe escape, peel-strip
+> discovery sandbox, contract builder, design-contract gate, Pyodide execution
+> with sys.settrace replay, pattern deposit (*Recursive Leap of Faith*), pattern
+> journal at `/patterns`, curriculum-rule tests (A1/A3/B1/B3/C2) + golden-trace
+> fold tests. Remaining M0 gaps: worker-based execution (D12), tree sandbox,
+> Dexie persistence, porting the rest of Trees into lesson modules.
+
 **Strategy: one vertical slice proves the thesis; then scale the machine.**
 We never build "all infrastructure, then all content" (the slice validates nothing until
 the end) nor "all Trees UI, then all topics' UI" (re-learning viz lessons 14 times).

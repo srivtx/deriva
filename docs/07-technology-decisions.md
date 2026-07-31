@@ -141,3 +141,21 @@ Full treatment in 08. Summary: Dexie migrations mirror a future Postgres schema;
 Any decision that *revisits or adds* to this document must be appended as `D12+` with
 the same four-part structure and a link to the roadmap milestone that motivated it.
 This document is append-mostly: reversals require naming the trade-off that changed.
+
+## D12. v0 execution runs main-thread; worker bridge remains the seam (M0, 2026-07-31)
+
+**Decision:** the reference nine-stage lesson (`trees/00-recursion-reflex/sum-1-to-n`)
+and `/practice` execute Pyodide on the main thread via `src/execution/pyodide-client.ts`,
+loading from CDN. The Web Worker bridge (`src/execution/bridge/`) stays as the designed
+seam, documented in 05 §4.2.
+
+**Context:** the reference lesson's pedagogical weight is in stages 1–5; trace inputs
+are tiny (n ≤ 8, ≤500 events) so main-thread blocking is imperceptible. A worker
+rewrite would have doubled the reference lesson's delivery time without changing the
+learning flow being validated.
+
+**Consequences:** trace budgets stay small by curriculum rule (lessons declare inputs
+that keep traces under budget); infinite loops are caught by the event budget +
+RecursionError, not by worker kill. Migration path: swap `pyodide-client` internals for
+`worker-client` when (a) trace budgets grow past ~5k events, or (b) a second topic
+ships. Vitest added as the test runner (tests/curriculum, tests/viz) per D9's intent.
