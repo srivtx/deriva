@@ -2,10 +2,22 @@
 
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
-import { Suspense } from "react"
+import { Suspense, type ReactNode } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
 import { useState, useEffect } from "react"
 import Logo from "./logo"
+
+type AppIconName = "home" | "practice" | "progress" | "design"
+
+function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number }) {
+  const paths: Record<AppIconName, ReactNode> = {
+    home: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z" /></>,
+    practice: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h4" /></>,
+    progress: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></>,
+    design: <><circle cx="6" cy="6" r="3" /><circle cx="18" cy="6" r="3" /><circle cx="12" cy="18" r="3" /><path d="m8.5 8.3 2.1 6.8M15.5 8.3l-2.1 6.8" /></>,
+  }
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
+}
 
 function Breadcrumbs() {
   const pathname = usePathname()
@@ -45,7 +57,7 @@ function Breadcrumbs() {
   )
 }
 
-function ProgressBadge() {
+function ProgressBadge({ className = "" }: { className?: string }) {
   const [pct, setPct] = useState(0)
   useEffect(() => {
     try {
@@ -58,7 +70,7 @@ function ProgressBadge() {
     } catch {}
   }, [])
   return (
-    <Link href="/dashboard" className="progress-badge" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+    <Link href="/dashboard" className={`progress-badge ${className}`} style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
       <div style={{ width: 64, height: 6, background: "var(--line)", borderRadius: 3, overflow: "hidden" }}>
         <div style={{ width: `${pct}%`, height: "100%", background: "var(--accent)", transition: "width 0.4s" }} />
       </div>
@@ -68,36 +80,66 @@ function ProgressBadge() {
 }
 
 export default function AppShell() {
+  const pathname = usePathname()
+  const mobileTitle = pathname === "/practice" ? "Practice" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : "Deriva"
+  const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
+    { label: "Home", href: "/", icon: "home", active: pathname === "/" || pathname.startsWith("/topic/") },
+    { label: "Practice", href: "/practice", icon: "practice", active: pathname === "/practice" },
+    { label: "Progress", href: "/dashboard", icon: "progress", active: pathname === "/dashboard" },
+    { label: "Design", href: "/design", icon: "design", active: pathname === "/design" || pathname === "/lld" },
+  ]
+
   return (
-    <header style={{
-      height: 52, borderBottom: "1px solid var(--line)", background: "var(--paper-raised)",
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "0 16px", position: "sticky", top: 0, zIndex: 50,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
-          <Logo size={26} />
-          <span style={{ fontWeight: 800, fontFamily: "var(--font-narrative)", fontSize: 17, color: "var(--ink)" }}>Deriva</span>
-        </Link>
-        <Suspense fallback={null}>
-          <Breadcrumbs />
-        </Suspense>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-        <Link href="/design" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>HLD</Link>
-        <Link href="/lld" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>LLD</Link>
-        <Link href="/practice" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>DSA</Link>
-        <ProgressBadge />
-      </div>
+    <>
+      <header className="app-shell-header">
+        <div className="desktop-shell" style={{ alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
+            <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
+              <Logo size={26} />
+              <span style={{ fontWeight: 800, fontFamily: "var(--font-narrative)", fontSize: 17, color: "var(--ink)" }}>Deriva</span>
+            </Link>
+            <Suspense fallback={null}><Breadcrumbs /></Suspense>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+            <Link href="/design" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>HLD</Link>
+            <Link href="/lld" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>LLD</Link>
+            <Link href="/practice" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>DSA</Link>
+            <ProgressBadge />
+          </div>
+        </div>
+        <div className="mobile-shell">
+          <Link href="/" className="mobile-brand" aria-label="Deriva home"><Logo size={24} /></Link>
+          <span className="mobile-page-title">{mobileTitle}</span>
+          <ProgressBadge className="mobile-progress" />
+        </div>
+      </header>
+      <nav className="mobile-tabbar" aria-label="Primary navigation">
+        {tabs.map(tab => (
+          <Link key={tab.href} href={tab.href} className={`mobile-tab${tab.active ? " active" : ""}`} aria-current={tab.active ? "page" : undefined}>
+            <AppIcon name={tab.icon} />
+            <span>{tab.label}</span>
+          </Link>
+        ))}
+      </nav>
       <style>{`
+        .app-shell-header { height: 52px; border-bottom: 1px solid var(--line); background: var(--paper-raised); display: flex; align-items: center; padding: 0 16px; position: sticky; top: 0; z-index: 50; }
+        .desktop-shell { display: flex; }
+        .mobile-shell, .mobile-tabbar { display: none; }
         @media (max-width: 700px) {
-          .crumbs { display: none !important; }
-          .progress-badge > div { width: 40px !important; }
-        }
-        @media (max-width: 420px) {
-          .progress-badge { display: none !important; }
+          .app-shell-header { height: calc(56px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) var(--sp-4) 0; }
+          .desktop-shell { display: none !important; }
+          .mobile-shell { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; width: 100%; height: 56px; }
+          .mobile-brand { color: var(--ink); display: flex; align-items: center; }
+          .mobile-page-title { text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-narrative); font-weight: 700; font-size: 18px; }
+          .mobile-progress { min-width: 44px; min-height: 44px; display: flex; justify-content: flex-end; align-items: center; }
+          .mobile-progress .progress-badge > div { width: 30px !important; }
+          .mobile-progress .progress-badge > span { display: none; }
+          .mobile-tabbar { position: fixed; z-index: 50; inset: auto 0 0; display: grid; grid-template-columns: repeat(4, 1fr); min-height: calc(60px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 96%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgb(26 29 33 / .07); }
+          .mobile-tab { min-height: 60px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 3px; color: var(--ink-soft); text-decoration: none; font-family: var(--font-ui); font-size: 10px; font-weight: 600; }
+          .mobile-tab.active { color: var(--accent); }
+          .mobile-tab.active svg { stroke-width: 2.4; }
         }
       `}</style>
-    </header>
+    </>
   )
 }

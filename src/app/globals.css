@@ -12,6 +12,8 @@
 
   --accent:       #2E5AAC;
   --accent-soft:  #E3EBF7;
+  --success-soft: #E8F5ED;
+  --success-line: #B8DEC8;
 
   /* Viz state grammar */
   --viz-untouched: #9AA3AD;
@@ -44,6 +46,8 @@
     --ink-soft:     #9AA3AD;
     --line:         #2A2D33;
     --accent-soft:  #1C2A4A;
+    --success-soft: #183426;
+    --success-line: #2F8F5B;
   }
 }
 
@@ -58,6 +62,14 @@
 /* ── Base ── */
 html { font-family: "Inter", system-ui, sans-serif; }
 body { background: var(--paper); color: var(--ink); margin: 0; }
+
+@media (max-width: 700px) {
+  body { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
+}
+
+@media (prefers-color-scheme: dark) {
+  .topic-card { background: var(--paper-raised) !important; border-color: var(--line) !important; }
+}
 
 /* Typography */
 :root {
@@ -75,3 +87,27 @@ code, pre { font-family: var(--font-mono); }
 .viz-cached    { color: var(--viz-cached); fill: var(--viz-cached); }
 .viz-pruned    { color: var(--viz-pruned); fill: var(--viz-pruned); }
 .viz-pointer   { color: var(--viz-pointer); fill: var(--viz-pointer); }
+
+/* Phone pickers replace platform-native select sheets with one deliberate surface. */
+.mobile-picker { min-width: 0; }
+.mobile-picker-trigger { width: 100%; min-height: 58px; display: grid; grid-template-columns: 1fr auto; grid-template-areas: "kicker chevron" "value chevron"; gap: 2px 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink); text-align: left; font-family: var(--font-ui); box-shadow: var(--shadow-raised); }
+.mobile-picker-kicker, .mobile-sheet-kicker { grid-area: kicker; color: var(--ink-soft); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.mobile-picker-value { grid-area: value; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 650; }
+.mobile-picker-chevron { grid-area: chevron; align-self: center; color: var(--accent); font-size: 20px; }
+.mobile-sheet-backdrop { position: fixed; z-index: 100; inset: 0; display: flex; align-items: flex-end; background: rgb(26 29 33 / .42); }
+.mobile-sheet { width: 100%; max-height: min(76dvh, 680px); overflow: hidden; padding: var(--sp-2) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; background: var(--paper-raised); color: var(--ink); box-shadow: 0 -12px 32px rgb(26 29 33 / .18); animation: sheet-enter var(--dur-med) var(--ease-standard); }
+.mobile-sheet-handle { width: 36px; height: 4px; margin: 0 auto var(--sp-3); border-radius: 4px; background: var(--line); }
+.mobile-sheet-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
+.mobile-sheet-heading h2 { margin: 3px 0 0; font-family: var(--font-narrative); font-size: 24px; line-height: 1.1; }
+.mobile-sheet-close { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 50%; background: var(--paper); color: var(--ink-soft); font: 300 26px/1 var(--font-ui); }
+.mobile-sheet-list { max-height: calc(min(76dvh, 680px) - 118px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: var(--sp-2); }
+.mobile-sheet-group { margin: var(--sp-4) 0 var(--sp-2); }
+.mobile-sheet-group > span { display: block; margin: 0 0 var(--sp-2); color: var(--ink-soft); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.mobile-sheet-row { width: 100%; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-3); border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: var(--ink); text-align: left; font: 500 14px var(--font-ui); }
+.mobile-sheet-row > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-sheet-row > span:last-child { flex-shrink: 0; color: var(--ink-soft); font: 11px var(--font-mono); }
+.mobile-sheet-row b { display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; margin-right: var(--sp-2); border-radius: 50%; background: var(--accent-soft); color: var(--accent); font: 700 11px var(--font-mono); }
+.mobile-sheet-row.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+@keyframes sheet-enter { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+@media (min-width: 801px) { .mobile-picker { display: none; } }

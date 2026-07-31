@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "Deriva",
   },
   icons: {
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#d62976",
+  themeColor: "#FAF9F6",
   width: "device-width",
   initialScale: 1,
 }

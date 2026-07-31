@@ -207,7 +207,7 @@ export default function LLDPage() {
         .prob-h2 { margin: 0; font-size: 22px; font-family: var(--font-narrative); }
         .tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-family: var(--font-mono); }
         .tp { color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); }
-        .ts { color: var(--viz-settled); background: #e8f5ed; border: 1px solid var(--viz-settled); }
+        .ts { color: var(--viz-settled); background: var(--success-soft); border: 1px solid var(--success-line); }
         .pbar { display: flex; align-items: center; margin-bottom: 20px; }
         .pbar-track { flex: 1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
         .pbar-fill { height: 100%; background: var(--accent); transition: width 0.4s; }
@@ -232,7 +232,7 @@ export default function LLDPage() {
         .btn:hover:not(:disabled) { border-color: var(--accent); }
         .btn:disabled { opacity: 0.4; cursor: default; }
         .btn-p { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
-        .btn-s { background: #e8f5ed; color: var(--viz-settled); border-color: var(--viz-settled); }
+        .btn-s { background: var(--success-soft); color: var(--viz-settled); border-color: var(--success-line); }
         .out { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; min-height: 50px; max-height: 250px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 14px; }
         .hint-row { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; font-size: 13px; }
         .hint-b { background: var(--accent); color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }

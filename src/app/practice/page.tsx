@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
-import MobileProblemNav from "@/components/mobile-problem-nav"
+import MobileProblemNav, { MobileTopicPicker } from "@/components/mobile-problem-nav"
 
 export default function PracticePage() {
   const [topicId, setTopicId] = useState("trees")
@@ -156,7 +156,8 @@ export default function PracticePage() {
       </nav>
 
       <main className="main">
-        <div className="mobile-only">
+        <div className="mobile-only mobile-context">
+          <MobileTopicPicker topics={TOPIC_LIST} currentId={topicId} onSelect={switchTopic} />
           <MobileProblemNav
             stages={topic.stages}
             problems={topic.problems}
@@ -164,28 +165,23 @@ export default function PracticePage() {
             done={tCompleted}
             onSelect={(id) => { setCurrentId(id); setOutput("") }}
           />
-          <select value={topicId} onChange={e => switchTopic(e.target.value)} className="topic-dropdown" style={{ width: "100%", marginBottom: 14 }}>
-            {TOPIC_LIST.map(t => (
-              <option key={t.id} value={t.id}>{t.name} ({t.problems.length})</option>
-            ))}
-          </select>
         </div>
         <header className="prob-header">
-          <span className="prob-num">{currentId}</span>
+          <span className="prob-num" aria-label={`Problem ${currentId}`}>{currentId}</span>
           <div style={{ flex: 1 }}>
             <h2 className="prob-h2">{problem.title}</h2>
-            <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+            <div className="problem-tags" style={{ display: "flex", gap: 6, marginTop: 4 }}>
               <span className="tag tp">{problem.pattern}</span>
               <span className="tag ts">{problem.skill}</span>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => navigate(-1)} disabled={currentId <= topic.problems[0].id} className="btn">←</button>
-            <button onClick={() => navigate(1)} disabled={currentId >= topic.problems[topic.problems.length-1].id} className="btn">→</button>
+          <div className="problem-pager" style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => navigate(-1)} disabled={currentId <= topic.problems[0].id} className="btn" aria-label="Previous problem">←</button>
+            <button onClick={() => navigate(1)} disabled={currentId >= topic.problems[topic.problems.length-1].id} className="btn" aria-label="Next problem">→</button>
           </div>
         </header>
 
-        <div className="pbar"><div className="pbar-track"><div className="pbar-fill" style={{ width: pct+"%" }} /></div><span className="pbar-label">{done}/{total}</span></div>
+        <div className="pbar"><div className="pbar-track"><div className="pbar-fill" style={{ width: pct+"%" }} /></div><span className="pbar-label">{done}/{total} complete</span></div>
 
         <div className="card">
           <h3 className="card-h3">Problem</h3>
@@ -204,14 +200,26 @@ export default function PracticePage() {
           <textarea value={currentCode} onChange={e => { setSavedCode({ ...savedCode, [topicId]: { ...tCode, [currentId]: e.target.value } }) }} className="ed" spellCheck={false} />
         </div>
 
-        <div className="acts">
-          <button onClick={runCode} disabled={running} className="btn btn-p">{running ? "Running..." : "▶ Run Code"}</button>
+        <div className="acts" aria-label="Code actions">
+          <button onClick={runCode} disabled={running} className="btn btn-p primary-run">{running ? "Running..." : "▶ Run Code"}</button>
           <button onClick={() => { const h = { ...tHints, [currentId]: Math.min(currentHint+1, 3) }; setHintLevel({ ...hintLevel, [topicId]: h }) }} disabled={currentHint>=3} className="btn">Hint ({currentHint}/3)</button>
           <button onClick={() => { const r = { ...tRevealed, [currentId]: !currentRevealed }; setRevealed({ ...revealed, [topicId]: r }) }} className={`btn${currentRevealed?" btn-s":""}`}>{currentRevealed?"Hide":"Show"} Solution</button>
           <button onClick={() => { setSavedCode({ ...savedCode, [topicId]: { ...tCode, [currentId]: problem.starterCode } }); setOutput("") }} className="btn">Reset</button>
         </div>
 
         {output && <pre className="out">{output}</pre>}
+
+        {tCompleted.has(currentId) && (
+          <aside className="completion-card" aria-label="Learning checkpoint">
+            <span className="completion-mark">✓</span>
+            <div>
+              <span className="completion-kicker">Learning checkpoint</span>
+              <strong>Keep the pattern, not the answer.</strong>
+              <p>You used <em>{problem.pattern}</em>. On the next problem, look for the same reasoning move under a different surface.</p>
+            </div>
+            {currentId < topic.problems[topic.problems.length - 1].id && <button className="completion-next" onClick={() => navigate(1)}>Next →</button>}
+          </aside>
+        )}
 
         {currentHint > 0 && (
           <div className="card" style={{ marginTop: 14 }}>
@@ -235,7 +243,7 @@ export default function PracticePage() {
       </main>
 
       <style>{`
-        .practice-wrap { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 48px); background: var(--paper); color: var(--ink); overflow: hidden; font-family: var(--font-ui); }
+        .practice-wrap { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 52px); background: var(--paper); color: var(--ink); overflow: hidden; font-family: var(--font-ui); }
         .sidebar { border-right: 1px solid var(--line); background: var(--paper-raised); overflow-y: auto; padding: 0; }
         .topic-select { padding: 12px; border-bottom: 1px solid var(--line); }
         .topic-dropdown { width: 100%; padding: 8px 10px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); font-size: 13px; color: var(--ink); font-family: var(--font-ui); cursor: pointer; }
@@ -250,13 +258,13 @@ export default function PracticePage() {
         .prob-row.done .dot { background: var(--viz-settled); border-color: var(--viz-settled); color: #fff; }
         .prob-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        .main { overflow-y: auto; padding: 24px 32px 60px; }
+        .main { overflow-y: auto; padding: 24px clamp(20px, 4vw, 48px) 60px; }
         .prob-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
         .prob-num { font-size: 28px; font-family: var(--font-mono); font-weight: 800; color: var(--accent); }
         .prob-h2 { margin: 0; font-size: 22px; font-family: var(--font-narrative); }
         .tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-family: var(--font-mono); }
         .tp { color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); }
-        .ts { color: var(--viz-settled); background: #e8f5ed; border: 1px solid var(--viz-settled); }
+        .ts { color: var(--viz-settled); background: var(--success-soft); border: 1px solid var(--success-line); }
 
         .pbar { display: flex; align-items: center; margin-bottom: 20px; }
         .pbar-track { flex: 1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
@@ -282,14 +290,20 @@ export default function PracticePage() {
         .ed { width: 100%; min-height: 220px; max-height: 450px; background: var(--paper); color: var(--ink); border: none; outline: none; resize: vertical; padding: 12px 16px; font-family: var(--font-mono); font-size: 14px; line-height: 1.65; tab-size: 4; white-space: pre; overflow: auto; }
 
         .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; margin-bottom: 14px; }
-        .btn { background: var(--paper-raised); color: var(--ink); border: 1px solid var(--line); padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: var(--font-ui); }
+        .btn { background: var(--paper-raised); color: var(--ink); border: 1px solid var(--line); min-height: 40px; padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: var(--font-ui); }
         .btn:hover:not(:disabled) { border-color: var(--accent); }
         .btn:disabled { opacity: 0.4; cursor: default; }
         .btn-p { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
         .btn-p:hover:not(:disabled) { opacity: 0.9; }
-        .btn-s { background: #e8f5ed; color: var(--viz-settled); border-color: var(--viz-settled); }
+        .btn-s { background: var(--success-soft); color: var(--viz-settled); border-color: var(--success-line); }
 
         .out { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; min-height: 50px; max-height: 250px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 14px; }
+        .completion-card { display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-3); align-items: start; padding: var(--sp-4); margin-bottom: var(--sp-4); border: 1px solid var(--success-line); border-radius: var(--radius); background: var(--success-soft); font-family: var(--font-ui); }
+        .completion-mark { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--viz-settled); color: var(--paper-raised); font-weight: 800; }
+        .completion-kicker { display: block; margin-bottom: 2px; color: var(--viz-settled); font: 700 10px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
+        .completion-card strong { display: block; font-family: var(--font-narrative); font-size: 18px; }
+        .completion-card p { margin: 4px 0 0; color: var(--ink-soft); font: 14px/1.45 var(--font-narrative); }
+        .completion-next { min-height: 36px; padding: 6px 10px; border: 1px solid var(--success-line); border-radius: var(--radius); background: var(--paper-raised); color: var(--viz-settled); font: 700 12px var(--font-ui); }
 
         .hint-row { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; font-size: 13px; }
         .hint-b { background: var(--accent); color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }
@@ -299,13 +313,32 @@ export default function PracticePage() {
         .kbd { text-align: center; color: var(--ink-soft); font-size: 11px; margin-top: 16px; font-family: var(--font-mono); }
 
         @media (max-width: 800px) {
-          .practice-wrap { grid-template-columns: 1fr; }
+          .practice-wrap { display: block; height: auto; min-height: calc(100dvh - 56px - env(safe-area-inset-top)); overflow: visible; }
           .sidebar { display: none; }
-          .main { padding: 14px 14px 60px; }
+          .main { overflow: visible; padding: var(--sp-4) var(--sp-4) calc(144px + env(safe-area-inset-bottom)); }
           .mobile-only { display: block; }
-          .prob-num { font-size: 22px; }
-          .prob-h2 { font-size: 18px; }
-          .ed { min-height: 180px; font-size: 13px; }
+          .mobile-context { display: grid; grid-template-columns: 1fr; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+          .prob-header { align-items: flex-start; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+          .prob-num { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; background: var(--accent-soft); font-size: 16px; }
+          .prob-h2 { font-size: 22px; line-height: 1.15; }
+          .problem-tags { flex-wrap: wrap; }
+          .problem-pager { width: 100%; padding-left: 46px; }
+          .problem-pager .btn { flex: 1; }
+          .pbar { margin-bottom: var(--sp-4); }
+          .pbar-label { min-width: 72px; text-align: right; font-size: 11px; }
+          .card { padding: var(--sp-4); margin-bottom: var(--sp-3); }
+          .stmt { margin: 0; font-size: 18px; line-height: 1.55; }
+          .ex-box { padding: var(--sp-3); overflow-wrap: anywhere; }
+          .why { padding: var(--sp-4); font-size: 16px; line-height: 1.55; }
+          .ed { min-height: 280px; max-height: none; padding: var(--sp-3); font-size: 13px; line-height: 1.6; }
+          .acts { position: sticky; bottom: 0; z-index: 10; margin: var(--sp-3) calc(var(--sp-4) * -1) 0; padding: var(--sp-2) var(--sp-4) calc(var(--sp-2) + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--paper-raised) 94%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 20px rgb(26 29 33 / .05); }
+          .acts .btn { min-height: 44px; padding-inline: 12px; }
+          .primary-run { flex: 1 1 100%; font-size: 14px; }
+          .acts .btn:not(.primary-run) { flex: 1 1 calc(33.333% - 6px); font-size: 12px; }
+          .out { margin-top: var(--sp-4); overflow-wrap: anywhere; }
+          .completion-card { grid-template-columns: auto 1fr; }
+          .completion-next { grid-column: 2; justify-self: start; }
+          .kbd { display: none; }
         }
         @media (min-width: 801px) {
           .mobile-only { display: none; }

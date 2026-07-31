@@ -72,6 +72,26 @@ Desktop: resizable split (textbook 40% / workbench 60%, draggable seam, remember
 stage). Mobile (<768px): stacked, workbench first for Play/Execute stages, textbook
 first otherwise; the rail collapses to a horizontal stepper.
 
+### 3.1 Mobile PWA delivery contract
+
+The installed phone experience is an app surface, not a squeezed desktop page:
+
+- A safe-area-aware app bar holds only the current destination, a home affordance, and
+  a compact progress signal. Desktop utility links never appear in this bar.
+- Primary destinations live in a persistent bottom tab bar. The active destination is
+  the only accented tab; labels remain visible so icons are never the sole cue.
+- Native `<select>` menus are not used for curriculum navigation on phones. Topic and
+  problem choice open an in-app bottom sheet, grouped by curriculum beat, with the
+  current item and completed work visible before selection.
+- The primary stage action stays above the tab bar and respects the device safe area.
+  On implementation screens, Run is the full-width first action; secondary actions
+  remain available without competing with it.
+- Completion must create a learning checkpoint, not merely a green pass state: name
+  the reusable pattern and orient the learner to the next variation. This makes the
+  curriculum's repeat-the-thinking rule visible in daily use.
+- Dark mode swaps every surface through semantic tokens. No light-only card fills or
+  low-contrast secondary text may be introduced in a component.
+
 ## 4. Tokens
 
 ```css
