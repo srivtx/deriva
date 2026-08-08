@@ -736,6 +736,7 @@ code, pre { font-family: var(--font-mono); }
 .pattern-card-state.review { background: color-mix(in srgb, var(--viz-pruned) 13%, var(--paper-raised)); color: var(--viz-pruned); }
 .pattern-directory-card.needs-review { border-color: color-mix(in srgb, var(--viz-pruned) 48%, var(--line)); }
 .pattern-directory-card.recognized { border-color: color-mix(in srgb, var(--viz-settled) 35%, var(--line)); }
+.pattern-directory-card.current { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-raised); }
 .pattern-directory-card .pattern-family { order: 1; }
 .pattern-index { order: 3; color: var(--viz-untouched); font: 12px var(--font-mono); }
 .pattern-directory-card h3 { margin: 0; font: 700 20px/1.15 var(--font-narrative); }

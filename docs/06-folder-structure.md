@@ -43,8 +43,9 @@ deriva/
 │   │   │   └── (lives in stages/reason.tsx — one question at a time, pump-before-tell)
 │   │   ├── contract/
 │   │   │   └── (lives in stages/design.tsx — signature/base/step/complexity checker)
-│   │   └── reflect/
+│   │   ├── reflect/
 │   │       └── (lives in stages/reflect.tsx — pattern deposit, own words)
+│   │   └── next-actions.ts             #   one derived resume queue for Home + inbox
 │   │
 │   ├── execution/                     # ★ Sandbox + trace (05 §2, §4.2)
 │   │   ├── pyodide-client.ts          #   v0 main-thread client: runTests + runTraced (D12)
@@ -87,6 +88,8 @@ deriva/
 │   │   ├── practice-progress.ts       #   last-open problem per DSA topic
 │   │   ├── app-notifications.ts       #   derived next-move inbox + read state
 │   │   ├── pattern-mastery.ts         #   recognized and missed pattern signals
+│   │   ├── pattern-desk-progress.ts   #   last-open pattern card
+│   │   ├── workbench-progress.ts      #   current problem + completion for HLD/LLD
 │   │   ├── db.ts                      #   Dexie schema + versioned migrations (planned)
 │   │   ├── repos/
 │   │   │   ├── progress-repo.ts       #   stage completion, attempts, mastery probes

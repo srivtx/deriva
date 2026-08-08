@@ -9,6 +9,7 @@ import { listPatternDeposits, type PatternDeposit } from "@/persistence/lesson-p
 import { loadPatternQuizProgress, type PatternQuizProgress } from "@/persistence/pattern-quiz"
 import { loadPracticeCompletion } from "@/persistence/practice-progress"
 import { loadPatternMastery, recordPatternTransfer, type PatternMastery } from "@/persistence/pattern-mastery"
+import { loadPatternDeskProgress, savePatternDeskPosition } from "@/persistence/pattern-desk-progress"
 import { PATTERN_DIRECTORY, PATTERN_LEARNING_PATH, PATTERN_QUIZ, type PatternFamily } from "@/data/patterns"
 import { TOPICS } from "@/data"
 
@@ -19,6 +20,7 @@ export default function PatternsPage() {
   const [quizProgress, setQuizProgress] = useState<PatternQuizProgress>()
   const [practiceCompletion, setPracticeCompletion] = useState<Record<string, number[]>>({})
   const [mastery, setMastery] = useState<PatternMastery>({ recognized: [], missed: [], transferred: [] })
+  const [currentPatternId, setCurrentPatternId] = useState<string>()
   const [bossChoice, setBossChoice] = useState<number | null>(null)
   const [bossSubmitted, setBossSubmitted] = useState(false)
   const [query, setQuery] = useState("")
@@ -29,7 +31,18 @@ export default function PatternsPage() {
     setQuizProgress(loadPatternQuizProgress())
     setPracticeCompletion(loadPracticeCompletion())
     setMastery(loadPatternMastery())
+    const savedPatternId = loadPatternDeskProgress().currentPatternId
+    setCurrentPatternId(savedPatternId)
+    if (savedPatternId && !window.location.hash) {
+      window.history.replaceState(null, "", `#${savedPatternId}`)
+      window.setTimeout(() => document.getElementById(savedPatternId)?.scrollIntoView({ block: "center" }), 0)
+    }
   }, [])
+
+  const rememberPattern = (patternId: string) => {
+    setCurrentPatternId(patternId)
+    savePatternDeskPosition(patternId)
+  }
 
   const visiblePatterns = PATTERN_DIRECTORY.filter(pattern => {
     const matchesFamily = family === "All" || pattern.family === family
@@ -98,8 +111,8 @@ export default function PatternsPage() {
               <p className="pattern-path-why">{step.whyNow}</p>
               <div className="pattern-path-progress"><span style={{ width: `${totalCount ? Math.min(100, (completedCount / totalCount) * 100) : 0}%` }} /></div>
               <div className="pattern-path-patterns">
-                <div><span>Learn now</span>{newPatterns.length > 0 ? newPatterns.map(pattern => <Link key={pattern!.id} href={`/patterns#${pattern!.id}`}>{pattern!.name}</Link>) : <em>Transfer the earlier moves to interval problems.</em>}</div>
-                <div><span>Revisit</span>{revisitPatterns.map(pattern => <Link key={pattern!.id} href={`/patterns#${pattern!.id}`}>{pattern!.name}</Link>)}</div>
+                <div><span>Learn now</span>{newPatterns.length > 0 ? newPatterns.map(pattern => <Link key={pattern!.id} href={`/patterns#${pattern!.id}`} onClick={() => rememberPattern(pattern!.id)}>{pattern!.name}</Link>) : <em>Transfer the earlier moves to interval problems.</em>}</div>
+                <div><span>Revisit</span>{revisitPatterns.map(pattern => <Link key={pattern!.id} href={`/patterns#${pattern!.id}`} onClick={() => rememberPattern(pattern!.id)}>{pattern!.name}</Link>)}</div>
               </div>
               <Link href={`/practice?topic=${step.topicId}`} className="pattern-path-link">{complete ? "Review topic →" : completedCount > 0 ? `Continue topic · ${completedCount}/${totalCount} complete →` : "Start topic →"}</Link>
             </article>
@@ -118,7 +131,7 @@ export default function PatternsPage() {
       {missedPatterns.length > 0 && <section className="pattern-review-queue" aria-labelledby="review-heading">
         <div className="pattern-section-heading"><div><span className="discovery-kicker">Personal review queue</span><h2 id="review-heading">Turn misses into instinct</h2></div><span className="pattern-count">{missedPatterns.length} to revisit</span></div>
         <p>These patterns were recently missed in retrieval. Read the cue once, then return to the quiz when you are ready.</p>
-        <div className="pattern-review-list">{missedPatterns.map(pattern => <Link key={pattern.id} href={`/patterns#${pattern.id}`}><span>{pattern.name}</span><small>Review cue →</small></Link>)}</div>
+        <div className="pattern-review-list">{missedPatterns.map(pattern => <Link key={pattern.id} href={`/patterns#${pattern.id}`} onClick={() => rememberPattern(pattern.id)}><span>{pattern.name}</span><small>Review cue →</small></Link>)}</div>
       </section>}
 
       <section className="pattern-directory" aria-labelledby="directory-heading">
@@ -140,7 +153,7 @@ export default function PatternsPage() {
         </div>
         <div className="pattern-directory-grid">
           {visiblePatterns.map(pattern => (
-            <article key={pattern.id} id={pattern.id} className={`pattern-directory-card${mastery.missed.includes(pattern.id) ? " needs-review" : mastery.recognized.includes(pattern.id) ? " recognized" : ""}`}>
+            <article key={pattern.id} id={pattern.id} className={`pattern-directory-card${currentPatternId === pattern.id ? " current" : mastery.missed.includes(pattern.id) ? " needs-review" : mastery.recognized.includes(pattern.id) ? " recognized" : ""}`}>
               <div className="pattern-card-top"><span className="pattern-family">{pattern.family}</span><span className={`pattern-card-state${mastery.transferred.includes(pattern.id) ? " transfer" : mastery.missed.includes(pattern.id) ? " review" : mastery.recognized.includes(pattern.id) ? " known" : ""}`}>{mastery.transferred.includes(pattern.id) ? "Transferred" : mastery.missed.includes(pattern.id) ? "Review" : mastery.recognized.includes(pattern.id) ? "Recognized" : "New"}</span><span className="pattern-index">{String(PATTERN_DIRECTORY.indexOf(pattern) + 1).padStart(2, "0")}</span></div>
               <h3>{pattern.name}</h3>
               <p className="pattern-cue"><b>Use it when</b> {pattern.cue}</p>

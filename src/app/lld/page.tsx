@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { STAGES_LLD, PROBLEMS_LLD } from "@/data/lld"
 import MobileProblemNav from "@/components/mobile-problem-nav"
+import { loadWorkbenchProgress, saveWorkbenchProgress } from "@/persistence/workbench-progress"
 
 export default function LLDPage() {
   const [currentId, setCurrentId] = useState(1)
   const [completed, setCompleted] = useState<number[]>([])
+  const [hydrated, setHydrated] = useState(false)
   const [savedCode, setSavedCode] = useState<Record<number, string>>({})
   const [hintLevel, setHintLevel] = useState<Record<number, number>>({})
   const [revealed, setRevealed] = useState<Record<number, boolean>>({})
@@ -23,14 +25,28 @@ export default function LLDPage() {
   const currentCode = savedCode[currentId] || problem.starterCode
 
   useEffect(() => {
+    const saved = loadWorkbenchProgress("lld")
+    const requested = Number(new URLSearchParams(window.location.search).get("problem"))
+    const nextId = PROBLEMS_LLD.some(problem => problem.id === requested)
+      ? requested
+      : PROBLEMS_LLD.some(problem => problem.id === saved.currentId)
+        ? saved.currentId
+        : PROBLEMS_LLD[0].id
+    setCurrentId(nextId)
+    setCompleted(saved.completed.filter(id => PROBLEMS_LLD.some(problem => problem.id === id)))
+    setHydrated(true)
+  }, [])
+  useEffect(() => {
+    if (!hydrated) return
+    saveWorkbenchProgress("lld", { currentId, completed })
+  }, [completed, currentId, hydrated])
+
+  useEffect(() => {
     try {
-      const c = localStorage.getItem("deriva-lld-completed")
-      if (c) setCompleted(JSON.parse(c))
       const s = localStorage.getItem("deriva-lld-code")
       if (s) setSavedCode(JSON.parse(s))
     } catch {}
   }, [])
-  useEffect(() => { localStorage.setItem("deriva-lld-completed", JSON.stringify(completed)) }, [completed])
   useEffect(() => { localStorage.setItem("deriva-lld-code", JSON.stringify(savedCode)) }, [savedCode])
 
   const initPyodide = useCallback(async () => {

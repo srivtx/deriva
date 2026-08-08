@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { STAGES_DESIGN, PROBLEMS_DESIGN, DesignProblem } from "@/data/system-design"
 import MobileProblemNav from "@/components/mobile-problem-nav"
+import { loadWorkbenchProgress, saveWorkbenchProgress } from "@/persistence/workbench-progress"
 import {
   ReactFlow, Background, Controls, addEdge, useNodesState, useEdgesState,
   Handle, Position, type Node, type Edge, type Connection, type NodeProps,
@@ -202,6 +203,7 @@ function Estimation({ problem, onPass }: { problem: DesignProblem; onPass: () =>
 export default function DesignPage() {
   const [currentId, setCurrentId] = useState(1)
   const [completed, setCompleted] = useState<number[]>([])
+  const [hydrated, setHydrated] = useState(false)
   const [hintLevel, setHintLevel] = useState<Record<number, number>>({})
   const [showWalkthrough, setShowWalkthrough] = useState<Record<number, boolean>>({})
 
@@ -210,12 +212,21 @@ export default function DesignPage() {
   const walk = showWalkthrough[currentId] || false
 
   useEffect(() => {
-    try {
-      const c = localStorage.getItem("deriva-design-completed")
-      if (c) setCompleted(JSON.parse(c))
-    } catch {}
+    const saved = loadWorkbenchProgress("design")
+    const requested = Number(new URLSearchParams(window.location.search).get("problem"))
+    const nextId = PROBLEMS_DESIGN.some(problem => problem.id === requested)
+      ? requested
+      : PROBLEMS_DESIGN.some(problem => problem.id === saved.currentId)
+        ? saved.currentId
+        : PROBLEMS_DESIGN[0].id
+    setCurrentId(nextId)
+    setCompleted(saved.completed.filter(id => PROBLEMS_DESIGN.some(problem => problem.id === id)))
+    setHydrated(true)
   }, [])
-  useEffect(() => { localStorage.setItem("deriva-design-completed", JSON.stringify(completed)) }, [completed])
+  useEffect(() => {
+    if (!hydrated) return
+    saveWorkbenchProgress("design", { currentId, completed })
+  }, [completed, currentId, hydrated])
 
   const markDone = useCallback(() => {
     setCompleted(prev => prev.includes(currentId) ? prev : [...prev, currentId])

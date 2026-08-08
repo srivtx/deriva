@@ -35,7 +35,7 @@ describe("pattern directory", () => {
   it("always exposes a useful open next action", () => {
     const notifications = loadAppNotifications()
 
-    expect(notifications.map(notification => notification.kind)).toEqual(["path", "practice", "quiz"])
+    expect(notifications.map(notification => notification.kind)).toEqual(["practice", "patterns", "design", "lld", "quiz"])
     expect(notifications.every(notification => notification.href.length > 0)).toBe(true)
   })
 })

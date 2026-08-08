@@ -16,6 +16,7 @@ single, typed sync seam for v1 (Supabase). No backend database in v0.**
 | **Reflection notes** | free text per lesson | on Stage 8 | reflect stage, journal | small |
 | **Saved traces** | recent N per lesson (N=3, capped bytes) | on run | Stage 7 reload, "compare traces" (v1) | **largest** — must be capped |
 | **Preferences** | theme, motion, font scale, keyboard hints | on change | app boot | bytes |
+| **Resume pointers** | current DSA problem per topic, Pattern Desk card, HLD/LLD problem | on navigation | Home + route boot | tiny |
 
 Two properties jump out: everything is **per-user siloed**, and only traces have size
 risk. Both point to the same design.

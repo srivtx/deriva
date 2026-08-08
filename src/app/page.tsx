@@ -3,17 +3,15 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
-import { PATTERN_DIRECTORY, PATTERN_LEARNING_PATH } from "@/data/patterns"
+import { PATTERN_LEARNING_PATH } from "@/data/patterns"
 import Logo from "@/components/logo"
 import GameModeButton from "@/components/game-mode-button"
 import PatternModeButton from "@/components/pattern-mode-button"
 import { loadLessonProgress, type LessonProgress } from "@/persistence/lesson-progress"
-import { loadPracticeCompletion, loadPracticePositions, loadPracticeTopic } from "@/persistence/practice-progress"
-import { loadPatternMastery } from "@/persistence/pattern-mastery"
-import { loadPatternQuizProgress } from "@/persistence/pattern-quiz"
+import { loadPracticeCompletion } from "@/persistence/practice-progress"
+import { getNextActions, type NextAction } from "@/learning/next-actions"
 
-type NextMove = { topicId: string; topicName: string; problemId: number; problemTitle: string; completed: number; total: number }
-type HomeMomentum = NextMove & { practiceDone: number; practiceTotal: number; patternRecognized: number; patternReview: number; quizAnswered: number; quizCompleted: boolean; pathDone: number; nextPathTopicId: string; nextPathTopicName: string }
+type HomeMomentum = { practiceDone: number; practiceTotal: number; pathDone: number }
 
 const TOPIC_STYLES = [
   { bg: "#eff6ff", border: "#bfdbfe", accent: "#2563eb", dot: "var(--accent)" },
@@ -35,23 +33,16 @@ const TOPIC_STYLES = [
 export default function HomePage() {
   const [guidedProgress, setGuidedProgress] = useState<LessonProgress | undefined>()
   const [momentum, setMomentum] = useState<HomeMomentum>()
+  const [nextActions, setNextActions] = useState<NextAction[]>([])
 
   useEffect(() => {
     setGuidedProgress(loadLessonProgress("trees/00-recursion-reflex/sum-1-to-n"))
-    const topicId = loadPracticeTopic() || TOPIC_LIST[0].id
-    const topic = TOPICS[topicId] || TOPIC_LIST[0]
-    const positions = loadPracticePositions()
-    const rememberedId = positions[topic.id]
-    const problem = topic.problems.find(item => item.id === rememberedId) || topic.problems[0]
     const allCompletion = loadPracticeCompletion()
-    const completed = allCompletion[topic.id] || []
     const practiceDone = Object.values(allCompletion).reduce((sum, values) => sum + values.length, 0)
     const practiceTotal = TOPIC_LIST.reduce((sum, item) => sum + item.problems.length, 0)
     const pathDone = PATTERN_LEARNING_PATH.filter(step => (allCompletion[step.topicId] || []).length >= (TOPICS[step.topicId]?.problems.length || 1)).length
-    const nextPath = PATTERN_LEARNING_PATH.find(step => (allCompletion[step.topicId] || []).length < (TOPICS[step.topicId]?.problems.length || 1)) || PATTERN_LEARNING_PATH[PATTERN_LEARNING_PATH.length - 1]
-    const mastery = loadPatternMastery()
-    const quiz = loadPatternQuizProgress()
-    setMomentum({ topicId: topic.id, topicName: topic.name, problemId: problem.id, problemTitle: problem.title, completed: completed.length, total: topic.problems.length, practiceDone, practiceTotal, patternRecognized: PATTERN_DIRECTORY.filter(pattern => mastery.recognized.includes(pattern.id)).length, patternReview: PATTERN_DIRECTORY.filter(pattern => mastery.missed.includes(pattern.id)).length, quizAnswered: quiz.answered, quizCompleted: quiz.completed, pathDone, nextPathTopicId: nextPath.topicId, nextPathTopicName: nextPath.topicName })
+    setNextActions(getNextActions())
+    setMomentum({ practiceDone, practiceTotal, pathDone })
   }, [])
 
   const guidedHref = "/learn/trees/sum-1-to-n"
@@ -119,17 +110,17 @@ export default function HomePage() {
         </Link>
 
         {momentum && <section className="home-momentum" aria-labelledby="momentum-heading">
-          <div className="home-momentum-head"><div><span className="discovery-kicker">Your momentum</span><h2 id="momentum-heading">One clear next move.</h2></div><span className="home-momentum-total">{momentum.practiceDone}/{momentum.practiceTotal} problems</span></div>
+          <div className="home-momentum-head"><div><span className="discovery-kicker">Your momentum</span><h2 id="momentum-heading">One coherent finish path.</h2></div><span className="home-momentum-total">{momentum.practiceDone}/{momentum.practiceTotal} DSA problems</span></div>
           <div className="home-momentum-grid">
-            <Link href={`/practice?topic=${momentum.topicId}&problem=${momentum.problemId}`} className="home-momentum-card primary">
-              <span className="home-momentum-label">Resume DSA</span><b>{momentum.topicName}</b><span>Problem {momentum.problemId} · {momentum.problemTitle}</span><strong>{momentum.completed}/{momentum.total} topic problems →</strong>
-            </Link>
-            <Link href="/patterns/quiz" className="home-momentum-card quiz">
-              <span className="home-momentum-label">Pattern block</span><b>{momentum.quizCompleted ? "Deck complete" : momentum.quizAnswered ? "Continue the quiz" : "Start the quiz"}</b><span>{momentum.quizCompleted ? "Review your recognized moves." : `${momentum.quizAnswered}/35 answered · five questions is one block.`}</span><strong>{momentum.quizCompleted ? "Review →" : "Continue →"}</strong>
-            </Link>
-            <Link href="/patterns" className="home-momentum-card path">
-              <span className="home-momentum-label">Pattern Desk</span><b>{momentum.nextPathTopicName}</b><span>{momentum.pathDone}/14 topic stops complete · {momentum.patternRecognized}/35 recognized</span><strong>{momentum.patternReview > 0 ? `${momentum.patternReview} to review →` : "Open the route →"}</strong>
-            </Link>
+            {nextActions.map((action, index) => {
+              const cardTone = index === 0 ? "primary" : action.kind === "patterns" ? "path" : action.kind
+              return <Link key={action.id} href={action.href} className={`home-momentum-card ${cardTone}`}>
+                <span className="home-momentum-label">{action.eyebrow}</span>
+                <b>{action.title}</b>
+                <span>{action.description}</span>
+                <strong>{action.progress ? `${action.progress.completed}/${action.progress.total} complete · ` : ""}{action.cta} →</strong>
+              </Link>
+            })}
           </div>
           <div className="home-finish-line"><div><span>Finish line</span><b>{momentum.pathDone}/14 stops complete</b></div><div className="home-finish-track"><span style={{ width: `${(momentum.pathDone / PATTERN_LEARNING_PATH.length) * 100}%` }} /></div></div>
         </section>}
