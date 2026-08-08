@@ -6,6 +6,7 @@ import { Suspense, type ReactNode } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
 import { useState, useEffect } from "react"
 import Logo from "./logo"
+import NotificationCenter from "./notification-center"
 import { applyPreferences, loadPreferences } from "@/persistence/preferences"
 
 type AppIconName = "home" | "practice" | "progress" | "design" | "settings"
@@ -123,13 +124,14 @@ export default function AppShell() {
             <Link href="/patterns" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>Patterns</Link>
             <Link href="/expedition" className="nav-link" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none", fontWeight: 700 }}>Expedition</Link>
             <Link href="/games" className="nav-link" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none", fontWeight: 700 }}>Games</Link>
+            <NotificationCenter />
             <ProgressBadge />
           </div>
         </div>
         <div className="mobile-shell">
           <Link href="/" className="mobile-brand" aria-label="Deriva home"><Logo size={24} /></Link>
           <span className="mobile-page-title">{mobileTitle}</span>
-          <ProgressBadge className="mobile-progress" />
+           <div className="mobile-header-actions"><NotificationCenter /><ProgressBadge className="mobile-progress" /></div>
         </div>
       </header>
       <nav className="mobile-tabbar" aria-label="Primary navigation">
@@ -147,12 +149,13 @@ export default function AppShell() {
         @media (max-width: 700px) {
           .app-shell-header { height: calc(56px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) var(--sp-4) 0; }
           .desktop-shell { display: none !important; }
-          .mobile-shell { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; width: 100%; height: 56px; }
+           .mobile-shell { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; width: 100%; height: 56px; }
           .mobile-brand { color: var(--ink); display: flex; align-items: center; }
           .mobile-page-title { text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-narrative); font-weight: 700; font-size: 18px; }
           .mobile-progress { min-width: 44px; min-height: 44px; display: flex; justify-content: flex-end; align-items: center; }
           .mobile-progress .progress-badge > div { width: 30px !important; }
-          .mobile-progress .progress-badge > span { display: none; }
+           .mobile-progress .progress-badge > span { display: none; }
+           .mobile-header-actions { display: flex; align-items: center; gap: 2px; }
            .mobile-tabbar { position: fixed; z-index: 50; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: calc(60px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 96%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgb(26 29 33 / .07); }
           .mobile-tab { min-height: 60px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 3px; color: var(--ink-soft); text-decoration: none; font-family: var(--font-ui); font-size: 10px; font-weight: 600; }
           .mobile-tab.active { color: var(--accent); }

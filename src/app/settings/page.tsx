@@ -11,9 +11,19 @@ const themes: { value: ThemePreference; title: string; body: string }[] = [
 
 export default function SettingsPage() {
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">("default")
 
-  useEffect(() => { setPreferences(loadPreferences()) }, [])
+  useEffect(() => {
+    setPreferences(loadPreferences())
+    setNotificationPermission("Notification" in window ? Notification.permission : "unsupported")
+  }, [])
   const update = (next: Preferences) => { setPreferences(next); savePreferences(next); applyPreferences(next) }
+  const enableNotifications = async () => {
+    if (!("Notification" in window)) return
+    const permission = await Notification.requestPermission()
+    setNotificationPermission(permission)
+    if (permission === "granted") new Notification("Deriva is ready", { body: "Your next move is waiting in the notification center." })
+  }
 
   return (
     <main className="settings-page">
@@ -31,6 +41,11 @@ export default function SettingsPage() {
         <PreferenceRow label="Larger learning text" description="Increase reading comfort for explanations and prompts." checked={preferences.textScale === "large"} onChange={checked => update({ ...preferences, textScale: checked ? "large" : "standard" })} />
         <PreferenceRow label="Reduce motion" description="Use instant transitions and quiet state changes." checked={preferences.reducedMotion} onChange={checked => update({ ...preferences, reducedMotion: checked })} />
         <PreferenceRow label="Show keyboard hints" description="Keep desktop shortcuts visible when a keyboard is connected." checked={preferences.keyboardHints} onChange={checked => update({ ...preferences, keyboardHints: checked })} />
+      </section>
+
+      <section className="settings-section" aria-labelledby="notifications-heading">
+        <h2 id="notifications-heading">Notifications</h2>
+        <div className="notification-setting"><div><strong>Next-move reminders</strong><p>The in-app notification center always works. Optional browser notifications can remind you when you return to Deriva.</p></div><button className="btn-ghost" onClick={enableNotifications} disabled={notificationPermission === "granted" || notificationPermission === "unsupported"}>{notificationPermission === "granted" ? "Enabled" : notificationPermission === "unsupported" ? "Unavailable" : "Enable"}</button></div>
       </section>
 
       <section className="settings-note"><strong>Learning preference</strong><p>Deriva keeps progress calm: no streaks, points, or urgency. Your record is the patterns you can derive again.</p></section>

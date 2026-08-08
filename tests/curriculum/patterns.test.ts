@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { PATTERN_DIRECTORY, PATTERN_LEARNING_PATH, PATTERN_QUIZ } from "../../src/data/patterns"
 import { GAME_ENGINES } from "../../src/games/catalog"
+import { loadAppNotifications } from "../../src/persistence/app-notifications"
 
 describe("pattern directory", () => {
   const directoryIds = new Set(PATTERN_DIRECTORY.map(pattern => pattern.id))
@@ -29,5 +30,12 @@ describe("pattern directory", () => {
     ])
     expect(PATTERN_LEARNING_PATH.every(step => step.newPatternIds.every(id => directoryIds.has(id)))).toBe(true)
     expect(PATTERN_LEARNING_PATH.every(step => step.revisitPatternIds.every(id => directoryIds.has(id)))).toBe(true)
+  })
+
+  it("always exposes a useful open next action", () => {
+    const notifications = loadAppNotifications()
+
+    expect(notifications.map(notification => notification.kind)).toEqual(["path", "practice", "quiz"])
+    expect(notifications.every(notification => notification.href.length > 0)).toBe(true)
   })
 })

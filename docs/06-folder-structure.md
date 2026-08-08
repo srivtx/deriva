@@ -85,6 +85,7 @@ deriva/
 │   │   ├── preferences.ts             #   theme / motion / text-scale prefs
 │   │   ├── lesson-progress.ts         #   9-stage progress, artifacts, pattern journal
 │   │   ├── practice-progress.ts       #   last-open problem per DSA topic
+│   │   ├── app-notifications.ts       #   derived next-move inbox + read state
 │   │   ├── db.ts                      #   Dexie schema + versioned migrations (planned)
 │   │   ├── repos/
 │   │   │   ├── progress-repo.ts       #   stage completion, attempts, mastery probes
