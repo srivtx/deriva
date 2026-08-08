@@ -18,11 +18,12 @@ export function StageShell({
   children: ReactNode
 }) {
   return (
-    <div className="stage-shell">
+    <div className={`stage-shell stage-${stage}`}>
       <header className="stage-head">
-        <span className="stage-kicker">
-          Stage {StageNameToNumber[stage]} of 9 · {stageVerb(stage)}
-        </span>
+        <div className="stage-head-meta">
+          <span className="stage-kicker">Stage {StageNameToNumber[stage]} of 9 · {stageVerb(stage)}</span>
+          <span className="stage-head-tag">{stage === "generalize" ? "transfer checkpoint" : "one focused move"}</span>
+        </div>
         <h1 className="stage-title">{title}</h1>
         <p className="stage-move">Today&rsquo;s one move: <b>{move}</b></p>
       </header>

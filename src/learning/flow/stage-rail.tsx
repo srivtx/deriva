@@ -50,7 +50,7 @@ export function StageRail({ patternName, lessonTitle, topic }: { patternName?: s
         return (
           <button
             key={stage}
-            className={`rail-item ${isActive ? "active" : ""}`}
+            className={`rail-item stage-${stage} ${isActive ? "active" : ""}`}
             onClick={() => !gate.locked && enterStage(stage)}
             disabled={gate.locked}
             title={gate.locked ? gateRequirement(stage) : undefined}
@@ -97,7 +97,7 @@ export function StageStepper() {
           const gate = stages[stage]
           const isActive = currentStage === stage
           return (
-            <div key={stage} className="stepper-cell">
+            <div key={stage} className={`stepper-cell stage-${stage}`}>
               {i > 0 && <span className={`stepper-connector ${gate.completed || isActive ? "done" : ""}`} />}
               <button
                 className={`stepper-dot ${isActive ? "active" : ""} ${gate.completed ? "completed" : ""} ${gate.locked ? "locked" : ""}`}
