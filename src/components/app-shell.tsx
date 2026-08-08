@@ -160,7 +160,9 @@ export default function AppShell() {
            .mobile-tabbar { position: fixed; z-index: 50; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: calc(68px + env(safe-area-inset-bottom)); padding: 5px 6px env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 90%, transparent); backdrop-filter: blur(18px); border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent); box-shadow: 0 -12px 30px rgb(26 29 33 / .1); }
            .mobile-tab { min-height: 56px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; border-radius: 15px; color: var(--ink-soft); text-decoration: none; font-family: var(--font-ui); font-size: 10px; font-weight: 650; transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast); }
            .mobile-tab:active { transform: scale(.96); }
-           .mobile-tab.active { background: var(--accent-soft); color: var(--accent); }
+           .mobile-tab.active { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent); }
+           .mobile-tab.active::before { content: ""; width: 18px; height: 2px; position: absolute; top: 4px; border-radius: 999px; background: var(--accent); }
+           .mobile-tab { position: relative; }
            .mobile-tab.active svg { stroke-width: 2.4; }
         }
       `}</style>

@@ -911,18 +911,36 @@ code, pre { font-family: var(--font-mono); }
   .home-momentum-grid { grid-template-columns: 1fr; gap: 8px; }
   .home-momentum-card { min-height: 132px; border-radius: 15px; }
   .home-momentum-card.primary { min-height: 150px; }
+  .home-momentum-card:not(.primary) { min-height: 104px; padding: 14px; }
+  .home-momentum-card:not(.primary) b { font-size: 18px; }
+  .home-momentum-card:not(.primary) strong { font-size: 11px; }
   .home-finish-line { margin-top: 14px; }
   .mastery-momentum { grid-template-columns: 1fr; }
   .learning-checkpoint { grid-template-columns: auto 1fr; border-radius: 16px; }
   .learning-checkpoint .completion-next { grid-column: 2; justify-self: start; }
   .theory-card { border-radius: 16px; padding: 15px; }
   .expedition-callout { margin: 0 0 24px; padding: 16px; }
-  .patterns-page, .pattern-quiz-page { padding-top: 24px; }
+  .patterns-page, .pattern-quiz-page { gap: 28px; padding-top: 24px; }
+  .pattern-desk-hero { grid-template-columns: 1fr; gap: 18px; padding: 18px; border-radius: 20px; }
+  .pattern-desk-hero .stage-title { font-size: clamp(35px, 11vw, 48px); }
+  .pattern-desk-hero .stage-move { font-size: 15px; }
+  .pattern-desk-launch { width: 100%; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; margin-top: 12px; }
+  .pattern-desk-stats { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .pattern-desk-stats > div { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px; border-radius: 12px; }
+  .pattern-desk-stats b { font-size: 22px; }
+  .pattern-desk-stats span { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+  .pattern-desk-stats small { font-size: 9px; line-height: 1.2; }
   .pattern-quiz-banner { border-radius: 20px; padding: 20px; box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 14%, transparent); }
   .pattern-learning-path, .pattern-directory-card, .pattern-journal-section .pattern-card { border-radius: 18px; }
+  .pattern-learning-path { padding: 15px; }
   .pattern-path-step { border-radius: 16px; padding: 15px; }
+  .pattern-path-step-head { grid-template-columns: 30px minmax(0, 1fr); gap: 9px; }
+  .pattern-path-step h3 { font-size: 18px; }
+  .pattern-path-patterns { grid-template-columns: 1fr; gap: 9px; }
   .pattern-path-status { grid-column: 2; grid-row: 2; justify-self: start; }
   .pattern-path-link { grid-column: 2; grid-row: 3; }
+  .pattern-guide-next { grid-template-columns: 1fr; gap: 4px; }
+  .pattern-directory-card { padding: 15px; box-shadow: none; }
   .pattern-quiz-act .stage-title { font-size: clamp(29px, 9vw, 38px); letter-spacing: -.03em; }
   .pattern-quiz-context { border-radius: 0 14px 14px 0; padding: 15px; }
   .pattern-quiz-option { min-height: 64px; align-items: center; padding: 15px; border-radius: 16px; font-size: 15px; }
