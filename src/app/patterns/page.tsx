@@ -8,7 +8,8 @@ import Link from "next/link"
 import { listPatternDeposits, type PatternDeposit } from "@/persistence/lesson-progress"
 import { loadPatternQuizProgress, type PatternQuizProgress } from "@/persistence/pattern-quiz"
 import { loadPracticeCompletion } from "@/persistence/practice-progress"
-import { PATTERN_DIRECTORY, PATTERN_LEARNING_PATH, type PatternFamily } from "@/data/patterns"
+import { loadPatternMastery, recordPatternTransfer, type PatternMastery } from "@/persistence/pattern-mastery"
+import { PATTERN_DIRECTORY, PATTERN_LEARNING_PATH, PATTERN_QUIZ, type PatternFamily } from "@/data/patterns"
 import { TOPICS } from "@/data"
 
 const FAMILIES: (PatternFamily | "All")[] = ["All", "Foundations", "Structures", "Graphs", "Choices", "State", "Compression", "Proof"]
@@ -17,6 +18,9 @@ export default function PatternsPage() {
   const [deposits, setDeposits] = useState<PatternDeposit[]>([])
   const [quizProgress, setQuizProgress] = useState<PatternQuizProgress>()
   const [practiceCompletion, setPracticeCompletion] = useState<Record<string, number[]>>({})
+  const [mastery, setMastery] = useState<PatternMastery>({ recognized: [], missed: [], transferred: [] })
+  const [bossChoice, setBossChoice] = useState<number | null>(null)
+  const [bossSubmitted, setBossSubmitted] = useState(false)
   const [query, setQuery] = useState("")
   const [family, setFamily] = useState<PatternFamily | "All">("All")
 
@@ -24,6 +28,7 @@ export default function PatternsPage() {
     setDeposits(listPatternDeposits())
     setQuizProgress(loadPatternQuizProgress())
     setPracticeCompletion(loadPracticeCompletion())
+    setMastery(loadPatternMastery())
   }, [])
 
   const visiblePatterns = PATTERN_DIRECTORY.filter(pattern => {
@@ -33,26 +38,38 @@ export default function PatternsPage() {
   })
   const quizLabel = quizProgress?.completed ? "Retake the quiz →" : quizProgress?.answered ? "Continue the quiz →" : "Enter Quiz Mode →"
   const firstIncompleteIndex = PATTERN_LEARNING_PATH.findIndex(step => (practiceCompletion[step.topicId] || []).length < (TOPICS[step.topicId]?.problems.length || 1))
+  const missedPatterns = PATTERN_DIRECTORY.filter(pattern => mastery.missed.includes(pattern.id))
+  const recognizedCount = PATTERN_DIRECTORY.filter(pattern => mastery.recognized.includes(pattern.id)).length
+  const transferredCount = PATTERN_DIRECTORY.filter(pattern => mastery.transferred.includes(pattern.id)).length
+  const bossStep = PATTERN_LEARNING_PATH[firstIncompleteIndex >= 0 ? firstIncompleteIndex : PATTERN_LEARNING_PATH.length - 1]
+  const bossQuestion = PATTERN_QUIZ.find(question => question.patternId === (bossStep.newPatternIds[0] || bossStep.revisitPatternIds[0])) || PATTERN_QUIZ[0]
+  const bossPattern = PATTERN_DIRECTORY.find(pattern => pattern.id === bossQuestion.patternId)
+  const bossCorrect = bossChoice === bossQuestion.answer
+
+  const submitBoss = () => {
+    if (bossChoice === null || bossSubmitted) return
+    setBossSubmitted(true)
+    if (bossCorrect) {
+      recordPatternTransfer(bossQuestion.patternId)
+      setMastery(loadPatternMastery())
+    }
+  }
 
   return (
     <main className="patterns-page">
-      <header className="patterns-head">
-        <span className="stage-kicker">The real course outline</span>
-        <h1 className="stage-title">Pattern Directory</h1>
-        <p className="stage-move">
-          Learn the mental moves behind the problems: when a pattern fits, what it
-          preserves, and what makes the tempting alternative fail.
-        </p>
-      </header>
-
-      <section className="pattern-quiz-banner">
-        <div>
-          <span className="discovery-kicker">7 sessions · 5 questions each</span>
-          <h2>Can you recognize the move before the code?</h2>
-          <p>Choose the pattern, invariant, state, or proof that makes each situation click. Your place saves after every answer.</p>
+      <header className="pattern-desk-hero">
+        <div className="patterns-head">
+          <span className="stage-kicker">Pattern Desk · open curriculum</span>
+          <h1 className="stage-title">Build the instinct.</h1>
+          <p className="stage-move">A guided route through 35 mental moves. Learn the cue, use it in a problem, then prove you can recognize it somewhere new.</p>
+          <Link href="/patterns/quiz" className="pattern-desk-launch">{quizLabel}</Link>
         </div>
-        <Link href="/patterns/quiz" className="btn-primary as-link">{quizLabel}</Link>
-      </section>
+        <div className="pattern-desk-stats" aria-label="Pattern progress">
+          <div><b>{recognizedCount}</b><span>recognized</span><small>of 35 patterns</small></div>
+          <div><b>{missedPatterns.length}</b><span>to review</span><small>from quiz answers</small></div>
+          <div><b>{transferredCount}</b><span>transferred</span><small>proved in new terrain</small></div>
+        </div>
+      </header>
 
       <section className="pattern-learning-path" aria-labelledby="pattern-path-heading">
         <div className="pattern-section-heading">
@@ -92,6 +109,18 @@ export default function PatternsPage() {
         <div className="pattern-guide-next"><b>How much</b><span>Stay on one topic until its core problems feel familiar, then take one five-question quiz block. The quiz is mixed on purpose: it tests whether you can recognize the move outside the original story. You can always jump ahead.</span></div>
       </section>
 
+      {bossPattern && <section className="pattern-boss" aria-labelledby="boss-heading">
+        <div className="pattern-section-heading"><div><span className="discovery-kicker">Transfer challenge</span><h2 id="boss-heading">Prove the move outside its home topic.</h2></div><span className="pattern-count">{bossStep.topicName}</span></div>
+        <p className="pattern-boss-intro">This is the next pattern the route wants you to carry. No lock, no penalty: just a quick test of whether the cue survives a new surface.</p>
+        <div className="pattern-boss-card"><span className="pattern-family">{bossPattern.name}</span><h3>{bossQuestion.prompt}</h3><div className="pattern-boss-options">{bossQuestion.options.map((option, index) => <button key={option} className={bossSubmitted ? index === bossQuestion.answer ? "correct" : index === bossChoice ? "wrong" : "" : bossChoice === index ? "selected" : ""} onClick={() => !bossSubmitted && setBossChoice(index)} disabled={bossSubmitted}><span>{String.fromCharCode(65 + index)}</span>{option}</button>)}</div>{bossSubmitted && <div className={`pattern-boss-feedback ${bossCorrect ? "correct" : "wrong"}`}><b>{bossCorrect ? "Transferred. The move survived the new surface." : `Revisit ${bossPattern.name}, then try this challenge again.`}</b><p>{bossQuestion.explanation}</p></div>}{!bossSubmitted ? <button className="btn-primary" onClick={submitBoss} disabled={bossChoice === null}>Check transfer →</button> : <div className="pattern-boss-actions"><button className="btn-ghost" onClick={() => { setBossSubmitted(false); setBossChoice(null) }}>Try again</button><Link href={`/patterns#${bossPattern.id}`} className="btn-ghost as-link">Review {bossPattern.name}</Link></div>}</div>
+      </section>}
+
+      {missedPatterns.length > 0 && <section className="pattern-review-queue" aria-labelledby="review-heading">
+        <div className="pattern-section-heading"><div><span className="discovery-kicker">Personal review queue</span><h2 id="review-heading">Turn misses into instinct</h2></div><span className="pattern-count">{missedPatterns.length} to revisit</span></div>
+        <p>These patterns were recently missed in retrieval. Read the cue once, then return to the quiz when you are ready.</p>
+        <div className="pattern-review-list">{missedPatterns.map(pattern => <Link key={pattern.id} href={`/patterns#${pattern.id}`}><span>{pattern.name}</span><small>Review cue →</small></Link>)}</div>
+      </section>}
+
       <section className="pattern-directory" aria-labelledby="directory-heading">
         <div className="pattern-section-heading">
           <div>
@@ -111,8 +140,8 @@ export default function PatternsPage() {
         </div>
         <div className="pattern-directory-grid">
           {visiblePatterns.map(pattern => (
-            <article key={pattern.id} id={pattern.id} className="pattern-directory-card">
-              <div className="pattern-card-top"><span className="pattern-family">{pattern.family}</span><span className="pattern-index">{String(PATTERN_DIRECTORY.indexOf(pattern) + 1).padStart(2, "0")}</span></div>
+            <article key={pattern.id} id={pattern.id} className={`pattern-directory-card${mastery.missed.includes(pattern.id) ? " needs-review" : mastery.recognized.includes(pattern.id) ? " recognized" : ""}`}>
+              <div className="pattern-card-top"><span className="pattern-family">{pattern.family}</span><span className={`pattern-card-state${mastery.transferred.includes(pattern.id) ? " transfer" : mastery.missed.includes(pattern.id) ? " review" : mastery.recognized.includes(pattern.id) ? " known" : ""}`}>{mastery.transferred.includes(pattern.id) ? "Transferred" : mastery.missed.includes(pattern.id) ? "Review" : mastery.recognized.includes(pattern.id) ? "Recognized" : "New"}</span><span className="pattern-index">{String(PATTERN_DIRECTORY.indexOf(pattern) + 1).padStart(2, "0")}</span></div>
               <h3>{pattern.name}</h3>
               <p className="pattern-cue"><b>Use it when</b> {pattern.cue}</p>
               <p><b>The move</b> {pattern.move}</p>

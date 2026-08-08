@@ -272,7 +272,7 @@ export default function DesignPage() {
             onSelect={(id) => setCurrentId(id)}
           />
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
+        <div className="design-problem-header" style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
           <span style={{ fontSize: 28, fontFamily: "var(--font-mono)", fontWeight: 800, color: "var(--accent)" }}>{currentId}</span>
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: 0, fontSize: 22, fontFamily: "var(--font-narrative)" }}>{problem.title}</h2>
@@ -287,24 +287,24 @@ export default function DesignPage() {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", marginBottom: 20 }}>
+        <div className="design-progress" style={{ display: "flex", alignItems: "center", marginBottom: 20 }}>
           <div style={{ flex: 1, height: 6, background: "var(--line)", borderRadius: 3, overflow: "hidden" }}>
             <div style={{ width: `${pct}%`, height: "100%", background: "var(--accent)", transition: "width 0.4s" }} />
           </div>
           <span style={{ fontSize: 12, color: "var(--ink-soft)", fontFamily: "var(--font-mono)", marginLeft: 10 }}>{completed.length}/{PROBLEMS_DESIGN.length}</span>
         </div>
 
-        <div style={{ background: "var(--paper-raised)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "16px 20px", marginBottom: 14 }}>
+        <div className="design-problem-card" style={{ background: "var(--paper-raised)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "16px 20px", marginBottom: 14 }}>
           <h3 style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--ink-soft)" }}>Problem</h3>
           <p style={{ fontSize: 15, lineHeight: 1.7, fontFamily: "var(--font-narrative)", margin: 0 }}>{problem.statement}</p>
         </div>
 
-        <div style={{ background: "var(--accent-soft)", border: "1px solid var(--accent)", borderRadius: "var(--radius)", padding: 14, marginBottom: 14, fontSize: 14, lineHeight: 1.7, fontFamily: "var(--font-narrative)" }}>
+        <div className="design-why-card" style={{ background: "var(--accent-soft)", border: "1px solid var(--accent)", borderRadius: "var(--radius)", padding: 14, marginBottom: 14, fontSize: 14, lineHeight: 1.7, fontFamily: "var(--font-narrative)" }}>
           <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--accent)", display: "block", marginBottom: 4 }}>Why this matters</span>
           {problem.why}
         </div>
 
-        <div style={{ marginBottom: 14 }}>
+        <div className="design-workbench" style={{ marginBottom: 14 }}>
           {problem.kind === "canvas" && <DesignCanvas problem={problem} onPass={markDone} />}
           {problem.kind === "requirements" && problem.checklist && <Checklist problem={problem} onPass={markDone} />}
           {problem.kind === "estimation" && <Estimation problem={problem} onPass={markDone} />}
@@ -312,7 +312,7 @@ export default function DesignPage() {
           {problem.kind === "critique" && problem.estimation && <Estimation problem={problem} onPass={markDone} />}
         </div>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <div className="design-actions" style={{ display: "flex", gap: 8, marginBottom: 14 }}>
           <button onClick={() => setHintLevel({ ...hintLevel, [currentId]: Math.min(hints + 1, problem.hints.length) })}
             disabled={hints >= problem.hints.length}
             style={{ padding: "8px 16px", border: "1px solid var(--line)", background: "var(--paper-raised)", borderRadius: "var(--radius)", fontSize: 13, cursor: "pointer" }}>
@@ -347,7 +347,15 @@ export default function DesignPage() {
         @media (max-width: 800px) {
           .design-grid { grid-template-columns: 1fr !important; }
           .design-sidebar { display: none; }
-          .design-main { padding: 14px 14px 60px !important; }
+           .design-main { padding: 14px 14px calc(132px + env(safe-area-inset-bottom)) !important; }
+           .design-problem-header { padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-raised); box-shadow: var(--shadow-raised); }
+           .design-problem-header > div:last-child { width: 100%; padding-left: 0; }
+           .design-problem-header > div:last-child button { flex: 1; min-height: 44px; }
+           .design-progress { margin-bottom: 14px !important; }
+           .design-problem-card, .design-why-card { border-radius: 18px !important; padding: 16px !important; }
+           .design-workbench { padding: 12px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-raised); }
+           .design-actions { position: static; display: grid !important; grid-template-columns: 1fr 1fr; margin: 0 0 14px; padding: 0; background: transparent; border: none; box-shadow: none; backdrop-filter: none; }
+           .design-actions button { min-height: 46px; }
           .mobile-only { display: block; }
         }
         @media (min-width: 801px) {

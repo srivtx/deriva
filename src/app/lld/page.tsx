@@ -242,11 +242,18 @@ export default function LLDPage() {
         @media (max-width: 800px) {
           .lld-wrap { grid-template-columns: 1fr; }
           .sidebar { display: none; }
-          .main { padding: 14px 14px 60px; }
-          .mobile-only { display: block; }
-          .prob-num { font-size: 22px; }
-          .prob-h2 { font-size: 18px; }
-          .ed { min-height: 180px; font-size: 13px; }
+           .main { padding: 14px 14px calc(132px + env(safe-area-inset-bottom)); }
+           .mobile-only { display: block; }
+           .prob-header { padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-raised); box-shadow: var(--shadow-raised); }
+           .prob-header > div:last-child { width: 100%; }
+           .prob-header > div:last-child .btn { flex: 1; min-height: 44px; }
+           .prob-num { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--accent-soft); font-size: 16px; }
+           .prob-h2 { font-size: 18px; }
+           .card, .why { border-radius: 18px; }
+           .ed { min-height: 180px; font-size: 13px; }
+           .acts { position: sticky; bottom: calc(68px + env(safe-area-inset-bottom)); z-index: 12; display: grid; grid-template-columns: 1fr 1fr; margin: 10px -14px 14px; padding: 9px 14px; background: color-mix(in srgb, var(--paper-raised) 94%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 20px rgb(26 29 33 / .06); backdrop-filter: blur(12px); }
+           .acts .btn { min-height: 46px; }
+           .acts .btn-p { grid-column: 1 / -1; }
         }
         @media (min-width: 801px) {
           .mobile-only { display: none; }

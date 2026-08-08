@@ -4,6 +4,7 @@
 import { TOPICS, TOPIC_LIST } from "../data"
 import { PATTERN_LEARNING_PATH } from "../data/patterns"
 import { loadPatternQuizProgress } from "./pattern-quiz"
+import { loadPatternMastery } from "./pattern-mastery"
 import { loadPracticeCompletion, loadPracticePositions, loadPracticeTopic } from "./practice-progress"
 
 export type AppNotification = {
@@ -11,7 +12,7 @@ export type AppNotification = {
   title: string
   body: string
   href: string
-  kind: "path" | "practice" | "quiz"
+  kind: "path" | "practice" | "quiz" | "review"
 }
 
 const READ_KEY = "deriva-notifications-read-v1"
@@ -25,6 +26,9 @@ export function loadAppNotifications(): AppNotification[] {
   const problem = topic.problems.find(item => item.id === problemId) || topic.problems[0]
   const nextPath = PATTERN_LEARNING_PATH.find(step => (completion[step.topicId] || []).length < (TOPICS[step.topicId]?.problems.length || 1))
   const quiz = loadPatternQuizProgress()
+  const mastery = loadPatternMastery()
+  const reviewId = mastery.missed[0]
+  const reviewPattern = PATTERN_LEARNING_PATH.flatMap(step => [...step.newPatternIds, ...step.revisitPatternIds]).find(id => id === reviewId)
 
   return [
     ...(nextPath ? [{
@@ -47,6 +51,13 @@ export function loadAppNotifications(): AppNotification[] {
       body: quiz.answered ? `${quiz.answered} of 35 questions answered. Your next block is ready.` : "Five questions is one complete session.",
       href: "/patterns/quiz",
       kind: "quiz" as const,
+    }] : []),
+    ...(reviewPattern ? [{
+      id: `review:${reviewPattern}`,
+      title: "Review one missed pattern",
+      body: "A short revisit now will make the next recognition question easier.",
+      href: `/patterns#${reviewPattern}`,
+      kind: "review" as const,
     }] : []),
   ]
 }

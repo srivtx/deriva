@@ -38,8 +38,8 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div style={{ minHeight: "calc(100vh - 52px)", background: "var(--paper)", fontFamily: "var(--font-ui)", padding: "clamp(20px, 5vw, 40px) clamp(16px, 5vw, 48px)" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+    <div className="dashboard-page" style={{ minHeight: "calc(100vh - 52px)", background: "var(--paper)", fontFamily: "var(--font-ui)", padding: "clamp(20px, 5vw, 40px) clamp(16px, 5vw, 48px)" }}>
+      <div className="dashboard-inner" style={{ maxWidth: 900, margin: "0 auto" }}>
         <h1 style={{ fontSize: 32, fontFamily: "var(--font-narrative)", margin: "0 0 8px" }}>Your Progress</h1>
         <p style={{ color: "var(--ink-soft)", fontSize: 14, margin: "0 0 24px" }}>
           {grandDone} of {grandTotal} problems across all tracks · {grandPct}%
@@ -72,7 +72,7 @@ export default function DashboardPage() {
           {sections.map(s => {
             const pct = Math.round((s.done / s.total) * 100)
             return (
-              <Link key={s.name} href={s.href} style={{
+               <Link key={s.name} href={s.href} className="dashboard-track-card" style={{
                 display: "flex", alignItems: "center", gap: 16, padding: "18px 22px",
                 background: "var(--paper-raised)", border: "1px solid var(--line)",
                 borderRadius: "var(--radius)", textDecoration: "none", color: "var(--ink)",
@@ -98,7 +98,7 @@ export default function DashboardPage() {
             const total = t.problems.length
             const pct = Math.round((done / total) * 100)
             return (
-              <Link key={t.id} href={`/topic/${t.id}`} style={{
+               <Link key={t.id} href={`/topic/${t.id}`} className="dashboard-topic-card" style={{
                 padding: "14px 16px", background: "var(--paper-raised)", border: "1px solid var(--line)",
                 borderRadius: "var(--radius)", textDecoration: "none", color: "var(--ink)",
               }}>

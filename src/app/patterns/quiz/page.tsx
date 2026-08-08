@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { PATTERN_DIRECTORY, PATTERN_QUIZ, type PatternQuestionKind } from "@/data/patterns"
 import { loadPatternQuizProgress, resetPatternQuizProgress, savePatternQuizProgress } from "@/persistence/pattern-quiz"
+import { recordPatternAnswer } from "@/persistence/pattern-mastery"
 
 const KIND_LABEL: Record<PatternQuestionKind, string> = {
   recognize: "Recognize the situation",
@@ -47,6 +48,7 @@ export default function PatternQuizPage() {
     setSubmitted(true)
     setScore(nextScore)
     setAnswered(nextAnswered)
+    recordPatternAnswer(question.patternId, correct)
     savePatternQuizProgress({ currentIndex, score: nextScore, answered: nextAnswered, completed: false })
   }
 
