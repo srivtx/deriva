@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { STAGES_LLD, PROBLEMS_LLD } from "@/data/lld"
 import MobileProblemNav from "@/components/mobile-problem-nav"
 import { loadWorkbenchProgress, saveWorkbenchProgress } from "@/persistence/workbench-progress"
 import { loadTheoryNote, saveTheoryNote } from "@/persistence/theory-notes"
+import { runScript } from "@/execution/pyodide-client"
 
 export default function LLDPage() {
   const [currentId, setCurrentId] = useState(1)
@@ -16,15 +17,15 @@ export default function LLDPage() {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({})
   const [output, setOutput] = useState("")
   const [running, setRunning] = useState(false)
-  const [pyReady, setPyReady] = useState(false)
-  const [pyLoading, setPyLoading] = useState(false)
-  const pyRef = useRef<any>(null)
+  const executionRef = useRef<AbortController | null>(null)
 
   const problem = PROBLEMS_LLD.find(p => p.id === currentId) || PROBLEMS_LLD[0]
   const doneSet = new Set(completed)
   const hints = hintLevel[currentId] || 0
   const isRevealed = revealed[currentId] || false
   const currentCode = savedCode[currentId] || problem.starterCode
+
+  useEffect(() => () => executionRef.current?.abort(), [])
 
   useEffect(() => {
     const saved = loadWorkbenchProgress("lld")
@@ -55,49 +56,24 @@ export default function LLDPage() {
   }, [])
   useEffect(() => { localStorage.setItem("deriva-lld-code", JSON.stringify(savedCode)) }, [savedCode])
 
-  const initPyodide = useCallback(async () => {
-    if (pyRef.current) return true
-    if (pyLoading) return false
-    setPyLoading(true)
-    try {
-      if (!(window as any).loadPyodide) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement("script")
-          script.src = "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"
-          script.onload = () => resolve()
-          script.onerror = () => reject(new Error("Failed to load Pyodide"))
-          document.head.appendChild(script)
-        })
-      }
-      const py = await (window as any).loadPyodide()
-      pyRef.current = py
-      setPyReady(true)
-      return true
-    } catch (e) {
-      setOutput("Error loading Pyodide: " + (e as Error).message)
-      return false
-    } finally { setPyLoading(false) }
-  }, [pyLoading])
-
   const runCode = async () => {
-    setRunning(true); setOutput("Running...")
-    const ready = await initPyodide()
-    if (!ready) { setRunning(false); return }
+    setRunning(true); setOutput("Running in a protected worker…")
+    const controller = new AbortController()
+    executionRef.current?.abort()
+    executionRef.current = controller
     try {
-      const py = pyRef.current
-      // Inject prior-stage dependencies so later problems compose
-      py.runPython(`import sys,io\n__lld_out=io.StringIO()\nsys.stdout=__lld_out\nsys.stderr=__lld_out`)
-      // Preload entity classes from earlier stages that solutions reference
-      py.runPython(DEPS)
-      py.runPython(currentCode)
-      py.runPython(problem.testCode)
-      const out = py.runPython("__lld_out.getvalue()")
-      setOutput(out || "No output.")
-      if (out.includes("All tests passed!")) {
+      const result = await runScript(currentCode, problem.testCode, DEPS, { signal: controller.signal })
+      if (result.error) setOutput(`Error: ${result.error}`)
+      else setOutput(result.output)
+      if (!result.error && result.output.includes("All tests passed!")) {
         setCompleted(prev => prev.includes(currentId) ? prev : [...prev, currentId])
       }
-    } catch (e: any) { setOutput("Error: " + e.message) }
-    setRunning(false)
+    } catch (e: any) {
+      if (!controller.signal.aborted) setOutput("Error: " + e.message)
+    } finally {
+      if (executionRef.current === controller) executionRef.current = null
+      setRunning(false)
+    }
   }
 
   const navigate = (dir: 1 | -1) => {
@@ -113,7 +89,7 @@ export default function LLDPage() {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runCode() }
     }
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h)
-  }, [currentId, currentCode, pyReady])
+  }, [currentId, currentCode])
 
   const pct = Math.round((completed.length / PROBLEMS_LLD.length) * 100)
   const nextProblem = PROBLEMS_LLD[PROBLEMS_LLD.findIndex(item => item.id === currentId) + 1]
@@ -184,7 +160,7 @@ export default function LLDPage() {
         </div>
 
         <div className="ed-wrap">
-          <div className="ed-bar"><span className="ed-lang">Python</span><span className="ed-file">design.py</span>{pyLoading && <span className="loading">Loading Pyodide...</span>}{pyReady && <span className="ready">Ready</span>}</div>
+           <div className="ed-bar"><span className="ed-lang">Python</span><span className="ed-file">design.py</span><span className="ready">Worker sandbox</span></div>
           <textarea value={currentCode} onChange={e => setSavedCode({ ...savedCode, [currentId]: e.target.value })} className="ed" spellCheck={false} />
         </div>
 
@@ -286,7 +262,7 @@ export default function LLDPage() {
            .prob-h2 { font-size: 18px; }
            .card, .why { border-radius: 18px; }
            .ed { min-height: 180px; font-size: 13px; }
-           .acts { position: sticky; bottom: calc(68px + env(safe-area-inset-bottom)); z-index: 12; display: grid; grid-template-columns: 1fr 1fr; margin: 10px -14px 14px; padding: 9px 14px; background: color-mix(in srgb, var(--paper-raised) 94%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 20px rgb(26 29 33 / .06); backdrop-filter: blur(12px); }
+           .acts { display: grid; grid-template-columns: 1fr 1fr; margin: 10px 0 14px; padding: 0; background: transparent; border-top: 0; box-shadow: none; }
            .acts .btn { min-height: 46px; }
            .acts .btn-p { grid-column: 1 / -1; }
         }

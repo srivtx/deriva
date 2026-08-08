@@ -21,7 +21,7 @@ export function UnderstandStage({ lesson, saved, onComplete, onDraft, onProbePas
   const s = lesson.stages.understand
   const [lead, ...remainingProse] = s.prose
   const [picked, setPicked] = useState<string | null>(saved?.prediction ?? null)
-  const [locked, setLocked] = useState(saved?.locked ?? !!saved)
+  const [locked, setLocked] = useState(saved?.locked ?? false)
   const [revealedExamples, setRevealedExamples] = useState<Set<string>>(new Set(saved?.revealedExamples ?? []))
   const correct = locked && picked === s.prediction.correct
 

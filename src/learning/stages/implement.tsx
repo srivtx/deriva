@@ -47,6 +47,11 @@ export function ImplementStage({ lesson, saved, design, onComplete, onDraft }: P
       const { results, syntaxError } = await runTests(code, impl.tests, { signal: controller.signal })
       setResults(results)
       setSyntaxError(syntaxError ?? null)
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setResults(null)
+        setSyntaxError(`Could not run the tests. ${error instanceof Error ? error.message : "Try again."}`)
+      }
     } finally {
       if (executionRef.current === controller) executionRef.current = null
       setRunning(false)
@@ -66,7 +71,7 @@ export function ImplementStage({ lesson, saved, design, onComplete, onDraft }: P
       {design && (
         <div className="contract-recap">
           <span className="experiment-kicker">Your Stage-5 contract</span>
-          <p><code>{design.name}({design.param})</code> — base case, recursive step, O(n). You promised; now transcribe.</p>
+           <p><code>{design.name}({design.param})</code> — base case, recursive step, <b>{design.complexity}</b> as your hypothesis. You promised; now transcribe.</p>
         </div>
       )}
 

@@ -82,6 +82,11 @@ export default function LessonPage() {
   }
 
   const advance = (stage: StageName, artifacts?: StageArtifacts[StageName]) => {
+    if (stages[stage].completed) {
+      const frontier = StageNames.find(name => !stages[name].completed && !stages[name].locked)
+      if (frontier) enterStage(frontier)
+      return
+    }
     completeStage(stage, artifacts)
     const idx = StageNames.indexOf(stage)
     if (idx + 1 < StageNames.length) enterStage(StageNames[idx + 1])
@@ -158,8 +163,8 @@ export default function LessonPage() {
                   onComplete={(a) => advance("reflect", a)} onDraft={(a) => setArtifact("reflect", a)} />
               )}
               {currentStage === "generalize" && (
-                <GeneralizeStage lesson={lesson} reflect={art("reflect")}
-                  onComplete={(a) => completeStage("generalize", a)} />
+                <GeneralizeStage lesson={lesson} reflect={art("reflect")} saved={art("generalize")}
+                  onComplete={(a) => advance("generalize", a)} onDraft={(a) => setArtifact("generalize", a)} />
               )}
             </>
           )}

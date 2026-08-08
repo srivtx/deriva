@@ -5,7 +5,7 @@ import ServiceWorkerRegister from "@/components/sw-register"
 
 export const metadata: Metadata = {
   title: "Deriva — Derive the Algorithm",
-  description: "Learn DSA, System Design (HLD), and Low-Level Design through first-principles reasoning. 780 problems, 7-stage scaffolding, in-browser Python.",
+  description: "Learn DSA, System Design (HLD), and Low-Level Design through first-principles reasoning. Nine-stage derivations, in-browser Python.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -45,7 +45,7 @@ export default function RootLayout({
       </head>
       <body>
         <AppShell />
-        {children}
+        <div className="app-content">{children}</div>
         <ServiceWorkerRegister />
       </body>
     </html>

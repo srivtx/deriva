@@ -21,6 +21,15 @@ export async function runTests(
   return { results: response.results, syntaxError: response.syntaxError }
 }
 
+export async function runScript(
+  code: string,
+  testCode: string,
+  setup?: string,
+  options?: ExecutionOptions,
+) {
+  return workerBridge.runScript(code, testCode, setup, options?.signal)
+}
+
 export interface TraceRun {
   trace: Trace
   result: unknown

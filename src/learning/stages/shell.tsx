@@ -71,6 +71,7 @@ export function OptionRow({ selected, state, onClick, children }: {
     <button
       className={`opt-card${selected ? " selected" : ""}${state === "correct" ? " correct" : ""}${state === "wrong" ? " wrong" : ""}`}
       onClick={onClick}
+      aria-pressed={selected}
     >
       {children}
     </button>

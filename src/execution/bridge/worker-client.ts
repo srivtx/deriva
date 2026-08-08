@@ -14,6 +14,7 @@ export interface WorkerTestResult {
 
 type WorkerRequest =
   | { type: "runTests"; code: string; tests: { call: string; expect: unknown }[] }
+  | { type: "runScript"; code: string; setup?: string; testCode: string }
   | { type: "runTrace"; code: string; entryPoint: string; arg: number; budget: number }
   | { type: "warmup" }
 
@@ -21,6 +22,7 @@ export type WorkerMessage = WorkerRequest & { id: string }
 
 export type WorkerResponse =
   | { type: "test-result"; id: string; results: WorkerTestResult[]; syntaxError?: string }
+  | { type: "script-result"; id: string; output: string; error: string | null }
   | { type: "trace"; id: string; trace: Trace; result: unknown; error: string | null }
   | { type: "error"; id?: string; message: string }
   | { type: "ready"; id?: string }
@@ -111,6 +113,12 @@ class WorkerBridge {
   async runTests(code: string, tests: { call: string; expect: unknown }[], signal?: AbortSignal) {
     const response = await this.request({ type: "runTests", code, tests }, DEFAULT_TIMEOUT_MS, signal)
     if (response.type !== "test-result") throw new Error("Worker returned an invalid test response")
+    return response
+  }
+
+  async runScript(code: string, testCode: string, setup?: string, signal?: AbortSignal) {
+    const response = await this.request({ type: "runScript", code, testCode, setup }, DEFAULT_TIMEOUT_MS, signal)
+    if (response.type !== "script-result") throw new Error("Worker returned an invalid script response")
     return response
   }
 

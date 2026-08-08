@@ -38,6 +38,20 @@ def __deriva_run_tests(tests_json, ns):
     return json.dumps(out)
 `
 
+async function runScript(msg: Extract<WorkerMessage, { type: "runScript" }>) {
+  const py = await loadPyodide()
+  const source = [msg.setup, msg.code, msg.testCode].filter(Boolean).join("\n\n")
+  py.runPython(`import io, sys\n__deriva_out = io.StringIO()\nsys.stdout = __deriva_out\nsys.stderr = __deriva_out`)
+  try {
+    py.runPython(source)
+    const output = py.runPython("__deriva_out.getvalue()") as string
+    ctx.postMessage({ type: "script-result", id: msg.id, output: output || "No output.", error: null } satisfies WorkerResponse)
+  } catch (error) {
+    const output = py.runPython("__deriva_out.getvalue()") as string
+    ctx.postMessage({ type: "script-result", id: msg.id, output, error: String(error) } satisfies WorkerResponse)
+  }
+}
+
 const TRACER = `
 import sys, json
 
@@ -128,6 +142,8 @@ ctx.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       ctx.postMessage({ type: "ready", id: msg.id } satisfies WorkerResponse)
     } else if (msg.type === "runTests") {
       await runTests(msg)
+    } else if (msg.type === "runScript") {
+      await runScript(msg)
     } else if (msg.type === "runTrace") {
       await runTrace(msg)
     }

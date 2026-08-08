@@ -27,7 +27,7 @@ export function ReflectStage({ lesson, design, saved, onComplete, onDraft }: Pro
       {design && (
         <div className="contract-recap">
           <span className="experiment-kicker">You said this in Stage 5 — before you could code it</span>
-          <p><code>{design.name}({design.param})</code>: base case at the floor, step that shrinks, O(n) by counting the chain.</p>
+           <p><code>{design.name}({design.param})</code>: base case at the floor, step that shrinks, and a complexity hypothesis checked against the trace.</p>
         </div>
       )}
 

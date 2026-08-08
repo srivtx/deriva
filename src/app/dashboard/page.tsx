@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const [hld, setHld] = useState<number[]>([])
   const [lld, setLld] = useState<number[]>([])
   const [guided, setGuided] = useState<ReturnType<typeof loadLessonProgress>>()
+  const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
     try {
@@ -22,8 +23,13 @@ export default function DashboardPage() {
       const l = localStorage.getItem("deriva-lld-completed")
       if (l) setLld(JSON.parse(l))
       setGuided(loadLessonProgress("trees/00-recursion-reflex/sum-1-to-n"))
-    } catch {}
+      setHydrated(true)
+    } catch {} finally {
+      setHydrated(true)
+    }
   }, [])
+
+  if (!hydrated) return <div className="page-loading" role="status">Loading your progress…</div>
 
   const dsaDone = Object.values(dsa).reduce((a, b) => a + b.length, 0)
   const dsaTotal = TOPIC_LIST.reduce((a, t) => a + t.problems.length, 0)
@@ -44,7 +50,7 @@ export default function DashboardPage() {
         <p style={{ color: "var(--ink-soft)", fontSize: 14, margin: "0 0 24px" }}>
           {grandDone} of {grandTotal} problems across all tracks · {grandPct}%
         </p>
-        <div style={{ height: 10, background: "var(--line)", borderRadius: 5, overflow: "hidden", marginBottom: 40 }}>
+         <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={grandPct} aria-label={`${grandPct}% complete`} style={{ height: 10, background: "var(--line)", borderRadius: 5, overflow: "hidden", marginBottom: 40 }}>
           <div style={{ width: `${grandPct}%`, height: "100%", background: "var(--accent)", transition: "width 0.5s" }} />
         </div>
 

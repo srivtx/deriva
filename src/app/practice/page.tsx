@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
 import MobileProblemNav, { MobileTopicPicker } from "@/components/mobile-problem-nav"
 import { loadPracticePositions, savePracticePosition, type PracticePositions } from "@/persistence/practice-progress"
 import { loadTheoryNote, saveTheoryNote } from "@/persistence/theory-notes"
+import { runScript } from "@/execution/pyodide-client"
 
 export default function PracticePage() {
   const [topicId, setTopicId] = useState("trees")
@@ -18,9 +19,7 @@ export default function PracticePage() {
   const [theoryNote, setTheoryNote] = useState("")
   const [output, setOutput] = useState("")
   const [running, setRunning] = useState(false)
-  const [pyReady, setPyReady] = useState(false)
-  const [pyLoading, setPyLoading] = useState(false)
-  const pyRef = useRef<any>(null)
+  const executionRef = useRef<AbortController | null>(null)
 
   const topic = TOPICS[topicId] || TOPIC_LIST[0]
   const problem = topic.problems.find(p => p.id === currentId) || topic.problems[0]
@@ -35,6 +34,8 @@ export default function PracticePage() {
   const encodedChatGptPrompt = encodeURIComponent(chatGptPrompt)
   const chatGptWebHref = `https://chatgpt.com/?q=${encodedChatGptPrompt}`
   const chatGptHref = chatGptWebHref
+
+  useEffect(() => () => executionRef.current?.abort(), [])
 
   useEffect(() => {
     try {
@@ -64,7 +65,9 @@ export default function PracticePage() {
       const h = localStorage.getItem("deriva-hints-v2");
       if (h) setHintLevel(JSON.parse(h));
       setHydrated(true)
-    } catch {}
+    } catch {} finally {
+      setHydrated(true)
+    }
   }, [])
 
   useEffect(() => { localStorage.setItem("deriva-completed-v2", JSON.stringify(Object.fromEntries(Object.entries(completed).map(([k,v]) => [k, [...new Set(v)]])))) }, [completed])
@@ -81,50 +84,27 @@ export default function PracticePage() {
     setTheoryNote(loadTheoryNote(`practice:${topicId}:${currentId}`))
   }, [currentId, hydrated, topicId])
 
-  const initPyodide = useCallback(async () => {
-    if (pyRef.current) return true
-    if (pyLoading) return false
-    setPyLoading(true)
-    try {
-      if (!(window as any).loadPyodide) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement("script")
-          script.src = "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"
-          script.onload = () => resolve()
-          script.onerror = () => reject(new Error("Failed to load Pyodide"))
-          document.head.appendChild(script)
-        })
-      }
-      const py = await (window as any).loadPyodide()
-      pyRef.current = py
-      setPyReady(true)
-      return true
-    } catch (e) {
-      setOutput("Error loading Pyodide: " + (e as Error).message)
-      return false
-    } finally { setPyLoading(false) }
-  }, [pyLoading])
-
   const runCode = async () => {
-    setRunning(true); setOutput("Running...")
-    const ready = await initPyodide()
-    if (!ready) { setRunning(false); return }
+    setRunning(true); setOutput("Running in a protected worker…")
+    const controller = new AbortController()
+    executionRef.current?.abort()
+    executionRef.current = controller
     try {
-      const py = pyRef.current
-      if (topic.buildCode) py.runPython(topic.buildCode)
-      py.runPython(`import sys,io\n__deriva_out=io.StringIO()\nsys.stdout=__deriva_out\nsys.stderr=__deriva_out`)
-      py.runPython(currentCode)
-      py.runPython(problem.testCode)
-      const out = py.runPython("__deriva_out.getvalue()")
-      setOutput(out || "No output.")
-      if (out.includes("All tests passed!")) {
+      const result = await runScript(currentCode, problem.testCode, topic.buildCode, { signal: controller.signal })
+      if (result.error) setOutput(`Error: ${result.error}`)
+      else setOutput(result.output)
+      if (!result.error && result.output.includes("All tests passed!")) {
         setCompleted(prev => {
           const cur = new Set(prev[topicId] || []); cur.add(currentId)
           return { ...prev, [topicId]: [...cur] }
         })
       }
-    } catch (e: any) { setOutput("Error: " + e.message) }
-    setRunning(false)
+    } catch (e: any) {
+      if (!controller.signal.aborted) setOutput("Error: " + e.message)
+    } finally {
+      if (executionRef.current === controller) executionRef.current = null
+      setRunning(false)
+    }
   }
 
   const navigate = (dir: 1 | -1) => {
@@ -146,7 +126,7 @@ export default function PracticePage() {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runCode() }
     }
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h)
-  }, [currentId, currentCode, topicId, pyReady])
+  }, [currentId, currentCode, topicId])
 
   const done = (completed[topicId] || []).length
   const total = topic.problems.length
@@ -189,6 +169,10 @@ export default function PracticePage() {
             done={tCompleted}
             onSelect={(id) => { setCurrentId(id); setOutput("") }}
           />
+        </div>
+        <div className="drill-mode-banner">
+          <div><span>Drill mode</span><strong>Code-first practice for a known problem</strong></div>
+          <a href="/learn/trees/sum-1-to-n">Derive the idea first →</a>
         </div>
         <header className="prob-header">
           <span className="prob-num" aria-label={`Problem ${currentId}`}>{currentId}</span>
@@ -233,7 +217,7 @@ export default function PracticePage() {
         </div>
 
         <div className="ed-wrap">
-          <div className="ed-bar"><span className="ed-lang">Python</span><span className="ed-file">solution.py</span>{pyLoading && <span className="loading">Loading Pyodide...</span>}{pyReady && <span className="ready">Ready</span>}</div>
+           <div className="ed-bar"><span className="ed-lang">Python</span><span className="ed-file">solution.py</span><span className="ready">Worker sandbox</span></div>
           <textarea value={currentCode} onChange={e => { setSavedCode({ ...savedCode, [topicId]: { ...tCode, [currentId]: e.target.value } }) }} className="ed" spellCheck={false} />
         </div>
 
@@ -360,8 +344,9 @@ export default function PracticePage() {
           .sidebar { display: none; }
          .main { overflow: visible; padding: var(--sp-4) var(--sp-4) calc(144px + env(safe-area-inset-bottom)); }
           .mobile-only { display: block; }
-          .mobile-context { position: sticky; top: calc(60px + env(safe-area-inset-top)); z-index: 60; display: grid; grid-template-columns: 1fr; gap: var(--sp-2); margin: calc(var(--sp-2) * -1) 0 var(--sp-4); padding: var(--sp-2) 0; background: var(--paper); }
-          .mobile-context > * { box-shadow: 0 4px 14px rgb(26 29 33 / .05); }
+           .mobile-context { position: static; display: grid; grid-template-columns: 1fr; gap: var(--sp-2); margin: 0 0 var(--sp-4); padding: 0; background: transparent; }
+         .mobile-context > * { box-shadow: none; }
+           .drill-mode-banner { align-items: stretch; flex-direction: column; gap: 8px; }
           .prob-header { align-items: flex-start; gap: var(--sp-3); margin-bottom: var(--sp-3); padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-raised); box-shadow: var(--shadow-raised); }
           .prob-num { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; background: var(--accent-soft); font-size: 16px; }
           .prob-h2 { font-size: 22px; line-height: 1.15; }
@@ -377,7 +362,7 @@ export default function PracticePage() {
            .chatgpt-link { text-align: center; }
           .why { padding: var(--sp-4); font-size: 16px; line-height: 1.55; }
           .ed { min-height: 280px; max-height: none; padding: var(--sp-3); font-size: 13px; line-height: 1.6; }
-           .acts { position: sticky; bottom: calc(68px + env(safe-area-inset-bottom)); z-index: 20; margin: var(--sp-3) calc(var(--sp-4) * -1) 0; padding: var(--sp-2) var(--sp-4); background: color-mix(in srgb, var(--paper-raised) 94%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 20px rgb(26 29 33 / .05); backdrop-filter: blur(12px); }
+           .acts { margin: var(--sp-3) 0 0; padding: 0; background: transparent; border-top: 0; box-shadow: none; }
            .acts .btn { min-height: 44px; padding-inline: 12px; }
           .primary-run { flex: 1 1 100%; font-size: 14px; }
           .acts .btn:not(.primary-run) { flex: 1 1 calc(33.333% - 6px); font-size: 12px; }
@@ -386,6 +371,11 @@ export default function PracticePage() {
           .completion-next { grid-column: 2; justify-self: start; }
           .kbd { display: none; }
         }
+        .drill-mode-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink-soft); font-size: 12px; }
+        .drill-mode-banner div { display: flex; align-items: baseline; gap: 8px; }
+        .drill-mode-banner span { color: var(--accent); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+        .drill-mode-banner strong { color: var(--ink); font-weight: 600; }
+        .drill-mode-banner a { color: var(--accent); font-weight: 700; text-decoration: none; white-space: nowrap; }
         @media (min-width: 801px) {
           .mobile-only { display: none; }
         }

@@ -27,7 +27,7 @@ export interface StageArtifacts {
   implement?: { code: string; hintLevel: number; solutionRevealed: boolean; testsPassed: number }
   execute?: { watchedToEnd: boolean }
   reflect?: { ownWords: string }
-  generalize?: { confirmed: boolean }
+  generalize?: { confirmed: boolean; selectedRelated?: string }
 }
 
 export interface StageGate {
@@ -90,7 +90,10 @@ export function artifactIsComplete(stage: StageName, artifact: StageArtifacts[St
     }
     case "execute": return (artifact as NonNullable<StageArtifacts["execute"]>).watchedToEnd
     case "reflect": return (artifact as NonNullable<StageArtifacts["reflect"]>).ownWords.trim().length >= 12
-    case "generalize": return (artifact as NonNullable<StageArtifacts["generalize"]>).confirmed
+    case "generalize": {
+      const value = artifact as NonNullable<StageArtifacts["generalize"]>
+      return value.confirmed && Boolean(value.selectedRelated)
+    }
   }
 }
 

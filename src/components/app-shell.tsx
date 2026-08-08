@@ -9,7 +9,7 @@ import Logo from "./logo"
 import NotificationCenter from "./notification-center"
 import { applyPreferences, loadPreferences } from "@/persistence/preferences"
 
-type AppIconName = "home" | "practice" | "progress" | "design" | "settings"
+type AppIconName = "home" | "practice" | "progress" | "design" | "settings" | "more"
 
 function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number }) {
   const paths: Record<AppIconName, ReactNode> = {
@@ -17,6 +17,7 @@ function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number }) {
     practice: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h4" /></>,
     progress: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></>,
     design: <><circle cx="6" cy="6" r="3" /><circle cx="18" cy="6" r="3" /><circle cx="12" cy="18" r="3" /><path d="m8.5 8.3 2.1 6.8M15.5 8.3l-2.1 6.8" /></>,
+    more: <><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" /></>,
     settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.08 2.08-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20.3h-3v-.12A1.7 1.7 0 0 0 10.76 18.6a1.7 1.7 0 0 0-1.88.34l-.06.06-2.08-2.08.06-.06A1.7 1.7 0 0 0 7.14 15a1.7 1.7 0 0 0-1.56-1.03H5.5v-3h.08A1.7 1.7 0 0 0 7.14 9.94a1.7 1.7 0 0 0-.34-1.88L6.74 8 8.82 5.92l.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.56V4.68h3v.08a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.84 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.03h.08v3H21a1.7 1.7 0 0 0-1.6 1.03Z" /></>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
@@ -96,14 +97,15 @@ function ProgressBadge({ className = "" }: { className?: string }) {
 
 export default function AppShell() {
   const pathname = usePathname()
+  const [moreOpen, setMoreOpen] = useState(false)
   useEffect(() => { applyPreferences(loadPreferences()) }, [])
-  const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Practice" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
+  const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
+  const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings"
   const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
-    { label: "Home", href: "/", icon: "home", active: pathname === "/" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") },
-    { label: "Practice", href: "/practice", icon: "practice", active: pathname === "/practice" },
-    { label: "Progress", href: "/dashboard", icon: "progress", active: pathname === "/dashboard" },
-    { label: "Design", href: "/design", icon: "design", active: pathname === "/design" || pathname === "/lld" },
-    { label: "Settings", href: "/settings", icon: "settings", active: pathname === "/settings" },
+    { label: "Home", href: "/", icon: "home", active: pathname === "/" },
+    { label: "Learn", href: "/learn/trees/sum-1-to-n", icon: "practice", active: pathname === "/practice" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") },
+    { label: "Patterns", href: "/patterns", icon: "progress", active: pathname.startsWith("/patterns") },
+    { label: "Progress", href: "/dashboard", icon: "design", active: pathname === "/dashboard" },
   ]
 
   return (
@@ -117,15 +119,20 @@ export default function AppShell() {
             </Link>
             <Suspense fallback={null}><Breadcrumbs /></Suspense>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-            <Link href="/design" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>HLD</Link>
-            <Link href="/lld" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>LLD</Link>
-            <Link href="/practice" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>DSA</Link>
-            <Link href="/patterns" className="nav-link" style={{ fontSize: 12, color: "var(--ink-soft)", textDecoration: "none", fontWeight: 600 }}>Patterns</Link>
-            <Link href="/expedition" className="nav-link" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none", fontWeight: 700 }}>Expedition</Link>
-            <Link href="/games" className="nav-link" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none", fontWeight: 700 }}>Games</Link>
+          <div className="desktop-nav-actions">
+            <Link href="/learn/trees/sum-1-to-n" className={`nav-link${pathname === "/practice" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") ? " active" : ""}`}>Learn</Link>
+            <Link href="/patterns" className={`nav-link${pathname.startsWith("/patterns") ? " active" : ""}`}>Patterns</Link>
+            <Link href="/dashboard" className={`nav-link${pathname === "/dashboard" ? " active" : ""}`}>Progress</Link>
+            <button className={`nav-more${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>More <span aria-hidden="true">⌄</span></button>
             <NotificationCenter />
             <ProgressBadge />
+            {moreOpen && <div className="desktop-more-menu" role="menu">
+              <Link href="/design" onClick={() => setMoreOpen(false)}>System Design (HLD)</Link>
+              <Link href="/lld" onClick={() => setMoreOpen(false)}>Low-Level Design</Link>
+              <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition</Link>
+              <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode</Link>
+              <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings</Link>
+            </div>}
           </div>
         </div>
         <div className="mobile-shell">
@@ -134,21 +141,53 @@ export default function AppShell() {
            <div className="mobile-header-actions"><NotificationCenter /><ProgressBadge className="mobile-progress" /></div>
         </div>
       </header>
-      <nav className="mobile-tabbar" aria-label="Primary navigation">
-        {tabs.map(tab => (
+       <nav className="mobile-tabbar" aria-label="Primary navigation">
+         {tabs.map(tab => (
           <Link key={tab.href} href={tab.href} className={`mobile-tab${tab.active ? " active" : ""}`} aria-current={tab.active ? "page" : undefined}>
             <AppIcon name={tab.icon} />
-            <span>{tab.label}</span>
-          </Link>
-        ))}
-      </nav>
-      <style>{`
-        .app-shell-header { height: 52px; border-bottom: 1px solid var(--line); background: var(--paper-raised); display: flex; align-items: center; padding: 0 16px; position: sticky; top: 0; z-index: 50; }
-        .desktop-shell { display: flex; }
-        .mobile-shell, .mobile-tabbar { display: none; }
-        @media (max-width: 700px) {
-           .app-shell-header { height: calc(60px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) var(--sp-3) 0; background: color-mix(in srgb, var(--paper-raised) 88%, transparent); backdrop-filter: blur(18px); box-shadow: 0 8px 22px rgb(26 29 33 / .05); }
-          .desktop-shell { display: none !important; }
+             <span>{tab.label}</span>
+           </Link>
+         ))}
+         <button className={`mobile-tab${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>
+           <AppIcon name="more" />
+           <span>More</span>
+         </button>
+       </nav>
+       {moreOpen && <div className="mobile-more-backdrop" role="presentation" onClick={() => setMoreOpen(false)}>
+         <section className="mobile-more-sheet" role="dialog" aria-modal="true" aria-label="More destinations" onClick={event => event.stopPropagation()}>
+           <div className="mobile-sheet-handle" />
+           <div className="mobile-more-heading"><span className="notification-kicker">More destinations</span><button onClick={() => setMoreOpen(false)} aria-label="Close more destinations">×</button></div>
+           <div className="mobile-more-links">
+             <Link href="/design" onClick={() => setMoreOpen(false)}>System Design <span>HLD</span></Link>
+             <Link href="/lld" onClick={() => setMoreOpen(false)}>Low-Level Design <span>LLD</span></Link>
+             <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition <span>Retrieval</span></Link>
+             <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode <span>Play</span></Link>
+             <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings <span>Preferences</span></Link>
+           </div>
+         </section>
+       </div>}
+       <style>{`
+         .app-shell-header { height: var(--app-header-height); border-bottom: 1px solid var(--line); background: var(--paper-raised); display: flex; align-items: center; padding: 0 16px; position: sticky; top: 0; z-index: 50; }
+         .desktop-shell { display: flex; }
+         .mobile-shell, .mobile-tabbar { display: none; }
+         .desktop-nav-actions { position: relative; display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+         .nav-link, .nav-more { border: 0; background: transparent; color: var(--ink-soft); font: 600 12px var(--font-ui); text-decoration: none; cursor: pointer; }
+         .nav-link.active, .nav-more.active { color: var(--accent); }
+         .nav-more { display: inline-flex; align-items: center; gap: 4px; padding: 5px 0; }
+         .desktop-more-menu { position: absolute; top: 34px; right: 62px; z-index: 120; display: flex; min-width: 210px; flex-direction: column; gap: 2px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-raised); box-shadow: var(--shadow-raised); }
+         .desktop-more-menu a { padding: 10px 12px; border-radius: 8px; color: var(--ink); font: 600 12px var(--font-ui); text-decoration: none; }
+         .desktop-more-menu a:hover { background: var(--accent-soft); color: var(--accent); }
+         .mobile-more-backdrop { position: fixed; z-index: 110; inset: 0; display: flex; align-items: flex-end; background: rgb(26 29 33 / .25); }
+         .mobile-more-sheet { width: 100%; padding: 10px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: var(--paper-raised); box-shadow: 0 -12px 34px rgb(26 29 33 / .16); }
+         .mobile-more-heading { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 12px; }
+         .mobile-more-heading button { width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); font-size: 22px; }
+         .mobile-more-links { display: flex; flex-direction: column; gap: 6px; }
+         .mobile-more-links a { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); font: 600 14px var(--font-ui); text-decoration: none; }
+         .mobile-more-links a span { color: var(--ink-soft); font: 11px var(--font-mono); }
+         @media (max-width: 700px) {
+           .app-shell-header { position: fixed; inset: 0 0 auto; height: var(--mobile-header-height); padding: env(safe-area-inset-top) var(--sp-3) 0; background: color-mix(in srgb, var(--paper-raised) 94%, transparent); backdrop-filter: blur(18px); box-shadow: 0 8px 22px rgb(26 29 33 / .05); }
+           .desktop-shell { display: none !important; }
+           .desktop-nav-actions { display: none; }
            .mobile-shell { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; width: 100%; height: 60px; }
            .mobile-brand { color: var(--ink); display: flex; align-items: center; padding: 8px; border-radius: 14px; }
            .mobile-brand:active { background: var(--accent-soft); }
@@ -157,7 +196,7 @@ export default function AppShell() {
           .mobile-progress .progress-badge > div { width: 30px !important; }
            .mobile-progress .progress-badge > span { display: none; }
            .mobile-header-actions { display: flex; align-items: center; gap: 2px; }
-           .mobile-tabbar { position: fixed; z-index: 50; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: calc(68px + env(safe-area-inset-bottom)); padding: 5px 6px env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 90%, transparent); backdrop-filter: blur(18px); border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent); box-shadow: 0 -12px 30px rgb(26 29 33 / .1); }
+            .mobile-tabbar { position: fixed; z-index: 100; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: var(--mobile-tabbar-height); padding: 5px 6px env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 96%, transparent); backdrop-filter: blur(18px); border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent); box-shadow: 0 -12px 30px rgb(26 29 33 / .1); }
            .mobile-tab { min-height: 56px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; border-radius: 15px; color: var(--ink-soft); text-decoration: none; font-family: var(--font-ui); font-size: 10px; font-weight: 650; transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast); }
            .mobile-tab:active { transform: scale(.96); }
            .mobile-tab.active { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent); }

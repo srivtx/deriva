@@ -110,7 +110,7 @@ export default function PatternQuizPage() {
   return (
     <main className="pattern-quiz-page">
       <div className="pattern-quiz-top"><Link href="/patterns" className="expedition-back">← Pattern Directory</Link><span>{currentIndex + 1} of {PATTERN_QUIZ.length}</span></div>
-      <div className="pattern-quiz-progress" aria-label={`${currentIndex} of ${PATTERN_QUIZ.length} questions viewed`}><span style={{ width: `${progressPercent}%` }} /></div>
+      <div className="pattern-quiz-progress" role="progressbar" aria-valuemin={0} aria-valuemax={PATTERN_QUIZ.length} aria-valuenow={currentIndex} aria-label={`${currentIndex} of ${PATTERN_QUIZ.length} questions viewed`}><span style={{ width: `${progressPercent}%` }} /></div>
       <p className="pattern-quiz-session-note"><b>Session target: 5 questions.</b> Your answer and position save automatically, so you can stop after this block.</p>
       <section className="pattern-quiz-act">
         <div className="pattern-quiz-meta"><span className="stage-kicker">{KIND_LABEL[question.kind]}</span><span className="pattern-quiz-score">{score} correct</span></div>

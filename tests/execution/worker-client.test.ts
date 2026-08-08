@@ -22,6 +22,8 @@ class FakeWorker {
       }
       if (message.type === "runTests") {
         this.onmessage?.({ data: { type: "test-result", id: message.id, results: [] } } as unknown as MessageEvent<WorkerResponse>)
+      } else if (message.type === "runScript") {
+        this.onmessage?.({ data: { type: "script-result", id: message.id, output: "All tests passed!", error: null } } as unknown as MessageEvent<WorkerResponse>)
       } else if (message.type === "runTrace") {
         this.onmessage?.({ data: {
           type: "trace",
@@ -50,6 +52,9 @@ describe("worker execution bridge", () => {
   it("routes tests and traces through a worker response", async () => {
     const tests = await workerBridge.runTests("def f(n): return n", [{ call: "f(1)", expect: 1 }])
     expect(tests.results).toEqual([])
+
+    const script = await workerBridge.runScript("def f(): return 1", "print('All tests passed!')")
+    expect(script.output).toContain("All tests passed!")
 
     const trace = await workerBridge.runTrace("def f(n): return n", "f", 3, 50)
     expect(trace.result).toBe(3)

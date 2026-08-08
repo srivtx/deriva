@@ -16,23 +16,24 @@ type HomeMomentum = { practiceDone: number; practiceTotal: number; pathDone: num
 type MasteryMomentum = { recognized: number; transferred: number; review: number }
 
 const TOPIC_STYLES = [
-  { bg: "#eff6ff", border: "#bfdbfe", accent: "#2563eb", dot: "var(--accent)" },
-  { bg: "#f0fdf4", border: "#bbf7d0", accent: "#16a34a", dot: "var(--viz-settled)" },
-  { bg: "#fefce8", border: "#fde68a", accent: "#ca8a04", dot: "#ca8a04" },
-  { bg: "#fdf2f8", border: "#fbcfe8", accent: "#db2777", dot: "#db2777" },
-  { bg: "#f5f3ff", border: "#ddd6fe", accent: "#7c3aed", dot: "#7c3aed" },
-  { bg: "#ecfeff", border: "#a5f3fc", accent: "#0891b2", dot: "#0891b2" },
-  { bg: "#fff7ed", border: "#fed7aa", accent: "#ea580c", dot: "#ea580c" },
-  { bg: "#f1f5f9", border: "#cbd5e1", accent: "#475569", dot: "#475569" },
-  { bg: "#fef2f2", border: "#fecaca", accent: "#dc2626", dot: "#dc2626" },
-  { bg: "#f0f9ff", border: "#bae6fd", accent: "#0369a1", dot: "#0369a1" },
-  { bg: "#faf5ff", border: "#e9d5ff", accent: "#9333ea", dot: "#9333ea" },
-  { bg: "#fffbeb", border: "#fde68a", accent: "#b45309", dot: "#b45309" },
-  { bg: "#ecfdf5", border: "#a7f3d0", accent: "#047857", dot: "#047857" },
-  { bg: "#fff1f2", border: "#fecdd3", accent: "#be123c", dot: "#be123c" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
+  { bg: "var(--paper-raised)", border: "var(--line)", accent: "var(--accent)", dot: "var(--accent)" },
 ] as const
 
 export default function HomePage() {
+  const [hydrated, setHydrated] = useState(false)
   const [guidedProgress, setGuidedProgress] = useState<LessonProgress | undefined>()
   const [momentum, setMomentum] = useState<HomeMomentum>()
   const [nextActions, setNextActions] = useState<NextAction[]>([])
@@ -52,7 +53,10 @@ export default function HomePage() {
       review: PATTERN_DIRECTORY.filter(pattern => mastery.missed.includes(pattern.id)).length,
     })
     setMomentum({ practiceDone, practiceTotal, pathDone })
+    setHydrated(true)
   }, [])
+
+  if (!hydrated) return <div className="page-loading" role="status">Loading your learning path…</div>
 
   const guidedHref = "/learn/trees/sum-1-to-n"
   const guidedStage = guidedProgress?.currentStage || "understand"
@@ -74,17 +78,20 @@ export default function HomePage() {
           <span style={{ color: "var(--accent)" }}>Don't memorize it.</span>
         </h1>
         <p style={{ marginTop: 16, color: "var(--ink-soft)", maxWidth: 600, fontSize: 17, lineHeight: 1.6, fontFamily: "var(--font-narrative)" }}>
-          DSA (700 problems) · System Design HLD (45) · LLD (35). Every topic follows 7-stage slow scaffolding —
+           DSA (700 problems) · System Design HLD (45) · LLD (35). Every topic follows a nine-stage derivation —
           each stage adds exactly one new mental model. In-browser Python. No install. Just think.
         </p>
         <div className="landing-actions" style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
-          <Link href="/practice" style={{ padding: "12px 28px", background: "var(--accent)", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
-            DSA Practice →
-          </Link>
-          <Link href="/design" style={{ padding: "12px 28px", background: "#7c3aed", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
-            System Design (HLD) →
-          </Link>
-           <Link href="/lld" style={{ padding: "12px 28px", background: "#16a34a", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+           <Link href={guidedHref} style={{ padding: "12px 28px", background: "var(--accent)", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+             Start guided learning →
+           </Link>
+           <Link href="/practice" className="landing-secondary-action" style={{ padding: "12px 28px", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+             Drill problems →
+           </Link>
+           <Link href="/design" className="landing-secondary-action" style={{ padding: "12px 28px", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+             System Design (HLD) →
+           </Link>
+            <Link href="/lld" className="landing-secondary-action" style={{ padding: "12px 28px", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
              Low-Level Design →
            </Link>
            <PatternModeButton />
@@ -113,7 +120,7 @@ export default function HomePage() {
                 ? `You are at Stage ${guidedIndex + 1} of 9: ${guidedStage}. The next move is still waiting for you.`
                 : "A 10-minute guided derivation. No editor until you have invented the contract."}
           </p>
-          <div className="continue-derivation-rail" aria-label={`${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}>
+           <div className="continue-derivation-rail" role="progressbar" aria-valuemin={0} aria-valuemax={9} aria-valuenow={Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} aria-label={`${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}>
             <span style={{ width: `${guidedDone ? 100 : Math.max(5, ((guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0)) / 9) * 100)}%` }} />
           </div>
         </Link>
@@ -148,11 +155,11 @@ export default function HomePage() {
 
         <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", marginBottom: 32 }}>
           <Link href="/design" className="topic-card" style={{
-            background: "linear-gradient(135deg, #f5f3ff, #ede9fe)", border: "1px solid #ddd6fe", borderRadius: "var(--radius)",
+             background: "var(--paper-raised)", border: "1px solid var(--line)", borderRadius: "var(--radius)",
             padding: "24px 28px", display: "flex", flexDirection: "column", textDecoration: "none", color: "var(--ink)",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#7c3aed", flexShrink: 0 }} />
+               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)", flexShrink: 0 }} />
               <h2 style={{ fontSize: 16, fontFamily: "var(--font-narrative)", fontWeight: 700, margin: 0 }}>System Design (HLD)</h2>
               <span style={{ fontSize: 12, color: "var(--ink-soft)", fontFamily: "var(--font-mono)", marginLeft: "auto" }}>45</span>
             </div>
@@ -161,11 +168,11 @@ export default function HomePage() {
             </p>
           </Link>
           <Link href="/lld" className="topic-card" style={{
-            background: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "1px solid #bbf7d0", borderRadius: "var(--radius)",
+             background: "var(--paper-raised)", border: "1px solid var(--line)", borderRadius: "var(--radius)",
             padding: "24px 28px", display: "flex", flexDirection: "column", textDecoration: "none", color: "var(--ink)",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", flexShrink: 0 }} />
+               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)", flexShrink: 0 }} />
               <h2 style={{ fontSize: 16, fontFamily: "var(--font-narrative)", fontWeight: 700, margin: 0 }}>Low-Level Design (OOP)</h2>
               <span style={{ fontSize: 12, color: "var(--ink-soft)", fontFamily: "var(--font-mono)", marginLeft: "auto" }}>35</span>
             </div>
@@ -174,7 +181,7 @@ export default function HomePage() {
             </p>
           </Link>
         </div>
-        <h3 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 1.5, color: "var(--ink-soft)", marginBottom: 16 }}>DSA Topics — 700 Problems</h3>
+         <h3 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 1.5, color: "var(--ink-soft)", marginBottom: 16 }}>DSA Topics — 700 Problems</h3>
         <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
           {TOPIC_LIST.map((topic, i) => {
             const s = TOPIC_STYLES[i % TOPIC_STYLES.length]
@@ -198,7 +205,7 @@ export default function HomePage() {
                   {stageNames.map((name, j) => (
                     <span key={j} style={{
                       fontSize: 10, padding: "2px 8px", borderRadius: 10,
-                      background: `${s.accent}14`, color: s.accent, border: `1px solid ${s.accent}33`,
+                       background: "var(--accent-soft)", color: "var(--accent)", border: "1px solid var(--line)",
                       fontFamily: "var(--font-mono)",
                     }}>{name}</span>
                   ))}

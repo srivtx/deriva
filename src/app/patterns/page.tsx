@@ -16,6 +16,7 @@ import { TOPICS } from "@/data"
 const FAMILIES: (PatternFamily | "All")[] = ["All", "Foundations", "Structures", "Graphs", "Choices", "State", "Compression", "Proof"]
 
 export default function PatternsPage() {
+  const [hydrated, setHydrated] = useState(false)
   const [deposits, setDeposits] = useState<PatternDeposit[]>([])
   const [quizProgress, setQuizProgress] = useState<PatternQuizProgress>()
   const [practiceCompletion, setPracticeCompletion] = useState<Record<string, number[]>>({})
@@ -37,7 +38,10 @@ export default function PatternsPage() {
       window.history.replaceState(null, "", `#${savedPatternId}`)
       window.setTimeout(() => document.getElementById(savedPatternId)?.scrollIntoView({ block: "center" }), 0)
     }
+    setHydrated(true)
   }, [])
+
+  if (!hydrated) return <div className="page-loading" role="status">Loading your pattern journal…</div>
 
   const rememberPattern = (patternId: string) => {
     setCurrentPatternId(patternId)
@@ -57,6 +61,8 @@ export default function PatternsPage() {
   const bossStep = PATTERN_LEARNING_PATH[firstIncompleteIndex >= 0 ? firstIncompleteIndex : PATTERN_LEARNING_PATH.length - 1]
   const bossQuestion = PATTERN_QUIZ.find(question => question.patternId === (bossStep.newPatternIds[0] || bossStep.revisitPatternIds[0])) || PATTERN_QUIZ[0]
   const bossPattern = PATTERN_DIRECTORY.find(pattern => pattern.id === bossQuestion.patternId)
+  const nextMoveHref = firstIncompleteIndex === 0 ? "/learn/trees/sum-1-to-n" : `/practice?topic=${bossStep.topicId}`
+  const nextMoveLabel = firstIncompleteIndex === 0 ? "Start the guided lesson" : `Continue ${bossStep.topicName}`
   const bossCorrect = bossChoice === bossQuestion.answer
 
   const submitBoss = () => {
@@ -75,7 +81,10 @@ export default function PatternsPage() {
           <span className="stage-kicker">Pattern Desk · open curriculum</span>
           <h1 className="stage-title">Build the instinct.</h1>
           <p className="stage-move">A guided route through 35 mental moves. Learn the cue, use it in a problem, then prove you can recognize it somewhere new.</p>
-          <Link href="/patterns/quiz" className="pattern-desk-launch">{quizLabel}</Link>
+          <div className="pattern-desk-actions">
+            <Link href={nextMoveHref} className="pattern-desk-launch">{nextMoveLabel} →</Link>
+            <Link href="/patterns/quiz" className="pattern-desk-secondary">{quizLabel}</Link>
+          </div>
         </div>
         <div className="pattern-desk-stats" aria-label="Pattern progress">
           <div><b>{recognizedCount}</b><span>recognized</span><small>of 35 patterns</small></div>
@@ -83,6 +92,15 @@ export default function PatternsPage() {
           <div><b>{transferredCount}</b><span>transferred</span><small>proved in new terrain</small></div>
         </div>
       </header>
+
+      <section className="pattern-journal-section pattern-journal-priority" aria-labelledby="journal-priority-heading">
+        <div className="pattern-section-heading"><div><span className="discovery-kicker">Your learning record</span><h2 id="journal-priority-heading">The patterns you have earned</h2></div><span className="pattern-count">{deposits.length} earned</span></div>
+        {deposits.length === 0 ? (
+          <div className="patterns-empty"><p className="narrative">Your journal starts when you finish the guided lesson. The directory below is reference material; this is where your own explanations will live.</p><Link href="/learn/trees/sum-1-to-n" className="btn-ghost as-link">Start the guided lesson →</Link></div>
+        ) : (
+          <div className="patterns-grid">{deposits.map(d => <article key={d.patternId} className="pattern-card earned"><span className="discovery-kicker">✦ Earned {new Date(d.earnedAt).toLocaleDateString()}</span><h2 className="pattern-name">{d.name}</h2><blockquote className="ownwords-quote">“{d.ownWords}”</blockquote><Link href="/learn/trees/sum-1-to-n" className="related-go">Revisit the lesson →</Link></article>)}</div>
+        )}
+      </section>
 
       <section className="pattern-learning-path" aria-labelledby="pattern-path-heading">
         <div className="pattern-section-heading">
@@ -151,7 +169,7 @@ export default function PatternsPage() {
             {FAMILIES.map(option => <button key={option} className={family === option ? "active" : ""} onClick={() => setFamily(option)}>{option}</button>)}
           </div>
         </div>
-        <div className="pattern-directory-grid">
+        {visiblePatterns.length === 0 ? <div className="patterns-empty"><p className="narrative">No moves match this search.</p><button className="btn-ghost" onClick={() => { setQuery(""); setFamily("All") }}>Clear filters</button></div> : <div className="pattern-directory-grid">
           {visiblePatterns.map(pattern => (
             <article key={pattern.id} id={pattern.id} className={`pattern-directory-card${currentPatternId === pattern.id ? " current" : mastery.missed.includes(pattern.id) ? " needs-review" : mastery.recognized.includes(pattern.id) ? " recognized" : ""}`}>
               <div className="pattern-card-top"><span className="pattern-family">{pattern.family}</span><span className={`pattern-card-state${mastery.transferred.includes(pattern.id) ? " transfer" : mastery.missed.includes(pattern.id) ? " review" : mastery.recognized.includes(pattern.id) ? " known" : ""}`}>{mastery.transferred.includes(pattern.id) ? "Transferred" : mastery.missed.includes(pattern.id) ? "Review" : mastery.recognized.includes(pattern.id) ? "Recognized" : "New"}</span><span className="pattern-index">{String(PATTERN_DIRECTORY.indexOf(pattern) + 1).padStart(2, "0")}</span></div>
@@ -162,28 +180,7 @@ export default function PatternsPage() {
               <div className="pattern-examples">{pattern.examples.map(example => <span key={example}>{example}</span>)}</div>
             </article>
           ))}
-        </div>
-      </section>
-
-      <section className="pattern-journal-section" aria-labelledby="journal-heading">
-        <div className="pattern-section-heading"><div><span className="discovery-kicker">Earned in guided lessons</span><h2 id="journal-heading">Your Pattern Journal</h2></div><span className="pattern-count">{deposits.length} earned</span></div>
-        {deposits.length === 0 ? (
-          <div className="patterns-empty">
-            <p className="narrative">No personal deposits yet. Earn your first one at Stage 8 of the guided Trees lesson.</p>
-            <Link href="/learn/trees/sum-1-to-n" className="btn-ghost as-link">Start the guided lesson →</Link>
-          </div>
-        ) : (
-          <div className="patterns-grid">
-            {deposits.map((d) => (
-              <article key={d.patternId} className="pattern-card earned">
-                <span className="discovery-kicker">✦ Earned {new Date(d.earnedAt).toLocaleDateString()}</span>
-                <h2 className="pattern-name">{d.name}</h2>
-                <blockquote className="ownwords-quote">“{d.ownWords}”</blockquote>
-                <Link href="/learn/trees/sum-1-to-n" className="related-go">Revisit the lesson →</Link>
-              </article>
-            ))}
-          </div>
-        )}
+        </div>}
       </section>
     </main>
   )

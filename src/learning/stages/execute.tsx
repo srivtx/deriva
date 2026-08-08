@@ -28,6 +28,7 @@ export function ExecuteStage({ lesson, implement, onComplete }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [cursor, setCursor] = useState(0)
   const [playing, setPlaying] = useState(false)
+  const [runNonce, setRunNonce] = useState(0)
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export function ExecuteStage({ lesson, implement, onComplete }: Props) {
       .then(r => { if (!controller.signal.aborted) setRun(r) })
       .catch(e => { if (!controller.signal.aborted) setLoadError(String(e)) })
     return () => controller.abort()
-  }, [code, lesson, n, ex.budget])
+  }, [code, lesson, n, ex.budget, runNonce])
 
   const total = run?.trace.events.length ?? 0
   const model = useMemo(
@@ -64,7 +65,7 @@ export function ExecuteStage({ lesson, implement, onComplete }: Props) {
       <div className="stage-split workbench-first">
         <div className="workbench">
           {!run && !loadError && <div className="trace-loading">Winding up your code…</div>}
-          {loadError && <div className="test-error"><code>{loadError}</code></div>}
+          {loadError && <div className="test-error"><code>{loadError}</code><button className="btn-ghost" onClick={() => setRunNonce(value => value + 1)}>Try the trace again</button></div>}
           {run && (
             <>
               <CallStackPanel model={model} />

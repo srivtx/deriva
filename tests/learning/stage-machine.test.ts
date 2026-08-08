@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import { StageNames, useStageMachine } from "../../src/learning/flow/stage-machine"
+import { artifactIsComplete, StageNames, useStageMachine } from "../../src/learning/flow/stage-machine"
 
 describe("stage machine", () => {
   beforeEach(() => {
@@ -65,5 +65,10 @@ describe("stage machine", () => {
 
     expect(useStageMachine.getState().stages.design.artifacts).toBeUndefined()
     expect(StageNames).toHaveLength(9)
+  })
+
+  it("requires a selected transfer problem before Generalize can complete", () => {
+    expect(artifactIsComplete("generalize", { confirmed: true })).toBe(false)
+    expect(artifactIsComplete("generalize", { confirmed: true, selectedRelated: "Tree Height" })).toBe(true)
   })
 })
