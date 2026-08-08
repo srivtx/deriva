@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { STAGES_LLD, PROBLEMS_LLD } from "@/data/lld"
 import MobileProblemNav from "@/components/mobile-problem-nav"
 import { loadWorkbenchProgress, saveWorkbenchProgress } from "@/persistence/workbench-progress"
+import { loadTheoryNote, saveTheoryNote } from "@/persistence/theory-notes"
 
 export default function LLDPage() {
   const [currentId, setCurrentId] = useState(1)
   const [completed, setCompleted] = useState<number[]>([])
   const [hydrated, setHydrated] = useState(false)
+  const [theoryNote, setTheoryNote] = useState("")
   const [savedCode, setSavedCode] = useState<Record<number, string>>({})
   const [hintLevel, setHintLevel] = useState<Record<number, number>>({})
   const [revealed, setRevealed] = useState<Record<number, boolean>>({})
@@ -40,6 +42,10 @@ export default function LLDPage() {
     if (!hydrated) return
     saveWorkbenchProgress("lld", { currentId, completed })
   }, [completed, currentId, hydrated])
+  useEffect(() => {
+    if (!hydrated) return
+    setTheoryNote(loadTheoryNote(`lld:${currentId}`))
+  }, [currentId, hydrated])
 
   useEffect(() => {
     try {
@@ -110,6 +116,7 @@ export default function LLDPage() {
   }, [currentId, currentCode, pyReady])
 
   const pct = Math.round((completed.length / PROBLEMS_LLD.length) * 100)
+  const nextProblem = PROBLEMS_LLD[PROBLEMS_LLD.findIndex(item => item.id === currentId) + 1]
 
   return (
     <div className="lld-wrap">
@@ -170,6 +177,12 @@ export default function LLDPage() {
 
         <div className="why"><span className="why-lbl">Why this matters</span>{problem.why}</div>
 
+        <div className="theory-card">
+          <div><span className="theory-kicker">Your theory book</span><h3>What responsibility should stay with this object?</h3></div>
+          <textarea value={theoryNote} onChange={event => { setTheoryNote(event.target.value); saveTheoryNote(`lld:${currentId}`, event.target.value) }} placeholder="Name the responsibility, invariant, or boundary you want to reuse…" aria-label="Your theory for this object design problem" />
+          <span className="theory-hint">A short explanation makes the next design feel familiar instead of new.</span>
+        </div>
+
         <div className="ed-wrap">
           <div className="ed-bar"><span className="ed-lang">Python</span><span className="ed-file">design.py</span>{pyLoading && <span className="loading">Loading Pyodide...</span>}{pyReady && <span className="ready">Ready</span>}</div>
           <textarea value={currentCode} onChange={e => setSavedCode({ ...savedCode, [currentId]: e.target.value })} className="ed" spellCheck={false} />
@@ -183,6 +196,12 @@ export default function LLDPage() {
         </div>
 
         {output && <pre className="out">{output}</pre>}
+
+        {doneSet.has(currentId) && <aside className="learning-checkpoint" aria-label="Learning checkpoint">
+          <span className="completion-mark">✓</span>
+          <div><span className="completion-kicker">Learning checkpoint</span><strong>Keep the responsibility, not the class list.</strong><p>You practiced <em>{problem.pattern}</em>. The next design should reuse the boundary under a different set of objects.</p></div>
+          {nextProblem ? <button className="completion-next" onClick={() => navigate(1)}>Next design →</button> : <a href="/patterns" className="completion-next">Pattern Desk →</a>}
+        </aside>}
 
         {hints > 0 && (
           <div className="card" style={{ marginTop: 14 }}>

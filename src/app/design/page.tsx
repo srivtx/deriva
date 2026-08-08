@@ -1,9 +1,11 @@
 "use client"
 
+import Link from "next/link"
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { STAGES_DESIGN, PROBLEMS_DESIGN, DesignProblem } from "@/data/system-design"
 import MobileProblemNav from "@/components/mobile-problem-nav"
 import { loadWorkbenchProgress, saveWorkbenchProgress } from "@/persistence/workbench-progress"
+import { loadTheoryNote, saveTheoryNote } from "@/persistence/theory-notes"
 import {
   ReactFlow, Background, Controls, addEdge, useNodesState, useEdgesState,
   Handle, Position, type Node, type Edge, type Connection, type NodeProps,
@@ -204,6 +206,7 @@ export default function DesignPage() {
   const [currentId, setCurrentId] = useState(1)
   const [completed, setCompleted] = useState<number[]>([])
   const [hydrated, setHydrated] = useState(false)
+  const [theoryNote, setTheoryNote] = useState("")
   const [hintLevel, setHintLevel] = useState<Record<number, number>>({})
   const [showWalkthrough, setShowWalkthrough] = useState<Record<number, boolean>>({})
 
@@ -227,6 +230,10 @@ export default function DesignPage() {
     if (!hydrated) return
     saveWorkbenchProgress("design", { currentId, completed })
   }, [completed, currentId, hydrated])
+  useEffect(() => {
+    if (!hydrated) return
+    setTheoryNote(loadTheoryNote(`design:${currentId}`))
+  }, [currentId, hydrated])
 
   const markDone = useCallback(() => {
     setCompleted(prev => prev.includes(currentId) ? prev : [...prev, currentId])
@@ -234,6 +241,7 @@ export default function DesignPage() {
 
   const doneSet = new Set(completed)
   const pct = Math.round((completed.length / PROBLEMS_DESIGN.length) * 100)
+  const nextProblem = PROBLEMS_DESIGN[PROBLEMS_DESIGN.findIndex(item => item.id === currentId) + 1]
 
   const navigate = (dir: 1 | -1) => {
     const idx = PROBLEMS_DESIGN.findIndex(p => p.id === currentId)
@@ -315,6 +323,12 @@ export default function DesignPage() {
           {problem.why}
         </div>
 
+        <div className="theory-card">
+          <div><span className="theory-kicker">Your theory book</span><h3>What design judgment should survive the next system?</h3></div>
+          <textarea value={theoryNote} onChange={event => { setTheoryNote(event.target.value); saveTheoryNote(`design:${currentId}`, event.target.value) }} placeholder="Name the tradeoff, bottleneck, or requirement you want to carry forward…" aria-label="Your theory for this design problem" />
+          <span className="theory-hint">Write the decision in your own words before the next surface changes.</span>
+        </div>
+
         <div className="design-workbench" style={{ marginBottom: 14 }}>
           {problem.kind === "canvas" && <DesignCanvas problem={problem} onPass={markDone} />}
           {problem.kind === "requirements" && problem.checklist && <Checklist problem={problem} onPass={markDone} />}
@@ -322,6 +336,12 @@ export default function DesignPage() {
           {problem.kind === "critique" && problem.checklist && <Checklist problem={problem} onPass={markDone} />}
           {problem.kind === "critique" && problem.estimation && <Estimation problem={problem} onPass={markDone} />}
         </div>
+
+        {doneSet.has(currentId) && <aside className="learning-checkpoint" aria-label="Learning checkpoint">
+          <span className="completion-mark">✓</span>
+          <div><span className="completion-kicker">Learning checkpoint</span><strong>Keep the judgment, not the diagram.</strong><p>You practiced <em>{problem.pattern}</em>. Carry that decision into the next system with one unfamiliar constraint.</p></div>
+          {nextProblem ? <button className="completion-next" onClick={() => setCurrentId(nextProblem.id)}>Next design →</button> : <Link href="/patterns" className="completion-next">Pattern Desk →</Link>}
+        </aside>}
 
         <div className="design-actions" style={{ display: "flex", gap: 8, marginBottom: 14 }}>
           <button onClick={() => setHintLevel({ ...hintLevel, [currentId]: Math.min(hints + 1, problem.hints.length) })}

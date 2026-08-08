@@ -455,6 +455,22 @@ code, pre { font-family: var(--font-mono); }
 .home-finish-line b { color: var(--ink); font-weight: 700; }
 .home-finish-track { height: 7px; overflow: hidden; border-radius: 999px; background: var(--line); }
 .home-finish-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--viz-pointer)); transition: width var(--dur-slow) var(--ease-standard); }
+.mastery-momentum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.mastery-momentum > div { display: flex; min-height: 58px; flex-direction: column; justify-content: center; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 13px; background: var(--paper); }
+.mastery-momentum span { color: var(--ink-soft); font: 10px var(--font-ui); text-transform: uppercase; letter-spacing: .08em; }
+.mastery-momentum b { color: var(--ink); font: 700 13px var(--font-ui); }
+.theory-card { display: grid; gap: 9px; margin: 0 0 14px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); box-shadow: var(--shadow-raised); }
+.theory-kicker { display: block; color: var(--accent); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+.theory-card h3 { margin: 4px 0 0; color: var(--ink); font: 700 19px/1.2 var(--font-narrative); }
+.theory-card textarea { width: 100%; min-height: 78px; resize: vertical; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: var(--ink); font: 14px/1.5 var(--font-narrative); outline: none; }
+.theory-card textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.theory-hint { color: var(--ink-soft); font: 11px/1.4 var(--font-ui); }
+.learning-checkpoint { display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-3); align-items: start; margin: 0 0 14px; padding: var(--sp-4); border: 1px solid var(--success-line); border-radius: var(--radius); background: var(--success-soft); font-family: var(--font-ui); }
+.learning-checkpoint .completion-mark { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--viz-settled); color: var(--paper-raised); font-weight: 800; }
+.learning-checkpoint .completion-kicker { display: block; margin-bottom: 2px; color: var(--viz-settled); font: 700 10px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
+.learning-checkpoint strong { display: block; font: 700 18px var(--font-narrative); }
+.learning-checkpoint p { margin: 4px 0 0; color: var(--ink-soft); font: 14px/1.45 var(--font-narrative); }
+.learning-checkpoint .completion-next { min-height: 36px; padding: 6px 10px; border: 1px solid var(--success-line); border-radius: var(--radius); background: var(--paper-raised); color: var(--viz-settled); font: 700 12px var(--font-ui); text-decoration: none; cursor: pointer; }
 .notification-center { position: relative; flex-shrink: 0; }
 .notification-trigger { position: relative; display: inline-flex; width: 36px; height: 36px; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 50%; background: transparent; color: var(--ink-soft); cursor: pointer; }
 .notification-trigger:hover, .notification-trigger[aria-expanded="true"] { border-color: var(--line); background: var(--paper); color: var(--accent); }
@@ -896,6 +912,10 @@ code, pre { font-family: var(--font-mono); }
   .home-momentum-card { min-height: 132px; border-radius: 15px; }
   .home-momentum-card.primary { min-height: 150px; }
   .home-finish-line { margin-top: 14px; }
+  .mastery-momentum { grid-template-columns: 1fr; }
+  .learning-checkpoint { grid-template-columns: auto 1fr; border-radius: 16px; }
+  .learning-checkpoint .completion-next { grid-column: 2; justify-self: start; }
+  .theory-card { border-radius: 16px; padding: 15px; }
   .expedition-callout { margin: 0 0 24px; padding: 16px; }
   .patterns-page, .pattern-quiz-page { padding-top: 24px; }
   .pattern-quiz-banner { border-radius: 20px; padding: 20px; box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 14%, transparent); }

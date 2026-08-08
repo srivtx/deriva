@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
 import MobileProblemNav, { MobileTopicPicker } from "@/components/mobile-problem-nav"
 import { loadPracticePositions, savePracticePosition, type PracticePositions } from "@/persistence/practice-progress"
+import { loadTheoryNote, saveTheoryNote } from "@/persistence/theory-notes"
 
 export default function PracticePage() {
   const [topicId, setTopicId] = useState("trees")
@@ -14,6 +15,7 @@ export default function PracticePage() {
   const [savedCode, setSavedCode] = useState<Record<string, Record<number, string>>>({})
   const [hintLevel, setHintLevel] = useState<Record<string, Record<number, number>>>({})
   const [revealed, setRevealed] = useState<Record<string, Record<number, boolean>>>({})
+  const [theoryNote, setTheoryNote] = useState("")
   const [output, setOutput] = useState("")
   const [running, setRunning] = useState(false)
   const [pyReady, setPyReady] = useState(false)
@@ -73,6 +75,10 @@ export default function PracticePage() {
     if (!hydrated) return
     setPracticePositions(previous => ({ ...previous, [topicId]: currentId }))
     savePracticePosition(topicId, currentId)
+  }, [currentId, hydrated, topicId])
+  useEffect(() => {
+    if (!hydrated) return
+    setTheoryNote(loadTheoryNote(`practice:${topicId}:${currentId}`))
   }, [currentId, hydrated, topicId])
 
   const initPyodide = useCallback(async () => {
@@ -219,6 +225,12 @@ export default function PracticePage() {
         </div>
 
         <div className="why"><span className="why-lbl">Why this matters</span>{problem.why}</div>
+
+        <div className="theory-card">
+          <div><span className="theory-kicker">Your theory book</span><h3>What will you remember when the surface changes?</h3></div>
+          <textarea value={theoryNote} onChange={event => { setTheoryNote(event.target.value); saveTheoryNote(`practice:${topicId}:${currentId}`, event.target.value) }} placeholder="Name the cue, invariant, or reason the naive move fails…" aria-label="Your theory for this problem" />
+          <span className="theory-hint">A sentence in your own words is more useful than another saved solution.</span>
+        </div>
 
         <div className="ed-wrap">
           <div className="ed-bar"><span className="ed-lang">Python</span><span className="ed-file">solution.py</span>{pyLoading && <span className="loading">Loading Pyodide...</span>}{pyReady && <span className="ready">Ready</span>}</div>

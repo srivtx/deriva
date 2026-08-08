@@ -3,15 +3,17 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
-import { PATTERN_LEARNING_PATH } from "@/data/patterns"
+import { PATTERN_DIRECTORY, PATTERN_LEARNING_PATH } from "@/data/patterns"
 import Logo from "@/components/logo"
 import GameModeButton from "@/components/game-mode-button"
 import PatternModeButton from "@/components/pattern-mode-button"
 import { loadLessonProgress, type LessonProgress } from "@/persistence/lesson-progress"
 import { loadPracticeCompletion } from "@/persistence/practice-progress"
+import { loadPatternMastery } from "@/persistence/pattern-mastery"
 import { getNextActions, type NextAction } from "@/learning/next-actions"
 
 type HomeMomentum = { practiceDone: number; practiceTotal: number; pathDone: number }
+type MasteryMomentum = { recognized: number; transferred: number; review: number }
 
 const TOPIC_STYLES = [
   { bg: "#eff6ff", border: "#bfdbfe", accent: "#2563eb", dot: "var(--accent)" },
@@ -34,6 +36,7 @@ export default function HomePage() {
   const [guidedProgress, setGuidedProgress] = useState<LessonProgress | undefined>()
   const [momentum, setMomentum] = useState<HomeMomentum>()
   const [nextActions, setNextActions] = useState<NextAction[]>([])
+  const [masteryMomentum, setMasteryMomentum] = useState<MasteryMomentum>()
 
   useEffect(() => {
     setGuidedProgress(loadLessonProgress("trees/00-recursion-reflex/sum-1-to-n"))
@@ -42,6 +45,12 @@ export default function HomePage() {
     const practiceTotal = TOPIC_LIST.reduce((sum, item) => sum + item.problems.length, 0)
     const pathDone = PATTERN_LEARNING_PATH.filter(step => (allCompletion[step.topicId] || []).length >= (TOPICS[step.topicId]?.problems.length || 1)).length
     setNextActions(getNextActions())
+    const mastery = loadPatternMastery()
+    setMasteryMomentum({
+      recognized: PATTERN_DIRECTORY.filter(pattern => mastery.recognized.includes(pattern.id)).length,
+      transferred: PATTERN_DIRECTORY.filter(pattern => mastery.transferred.includes(pattern.id)).length,
+      review: PATTERN_DIRECTORY.filter(pattern => mastery.missed.includes(pattern.id)).length,
+    })
     setMomentum({ practiceDone, practiceTotal, pathDone })
   }, [])
 
@@ -123,6 +132,11 @@ export default function HomePage() {
             })}
           </div>
           <div className="home-finish-line"><div><span>Finish line</span><b>{momentum.pathDone}/14 stops complete</b></div><div className="home-finish-track"><span style={{ width: `${(momentum.pathDone / PATTERN_LEARNING_PATH.length) * 100}%` }} /></div></div>
+          {masteryMomentum && <div className="mastery-momentum" aria-label="Pattern mastery momentum">
+            <div><span>Pattern momentum</span><b>{masteryMomentum.recognized}/{PATTERN_DIRECTORY.length} recognized</b></div>
+            <div><span>Transfer proof</span><b>{masteryMomentum.transferred} transferred</b></div>
+            <div><span>Next revisit</span><b>{masteryMomentum.review ? `${masteryMomentum.review} cues waiting` : "No misses waiting"}</b></div>
+          </div>}
         </section>}
 
         <Link href="/expedition" className="expedition-callout">

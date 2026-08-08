@@ -90,6 +90,7 @@ deriva/
 │   │   ├── pattern-mastery.ts         #   recognized and missed pattern signals
 │   │   ├── pattern-desk-progress.ts   #   last-open pattern card
 │   │   ├── workbench-progress.ts      #   current problem + completion for HLD/LLD
+│   │   ├── theory-notes.ts            #   personal explanations per problem
 │   │   ├── db.ts                      #   Dexie schema + versioned migrations (planned)
 │   │   ├── repos/
 │   │   │   ├── progress-repo.ts       #   stage completion, attempts, mastery probes
