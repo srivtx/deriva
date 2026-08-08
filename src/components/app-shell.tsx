@@ -147,19 +147,21 @@ export default function AppShell() {
         .desktop-shell { display: flex; }
         .mobile-shell, .mobile-tabbar { display: none; }
         @media (max-width: 700px) {
-          .app-shell-header { height: calc(56px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) var(--sp-4) 0; }
+           .app-shell-header { height: calc(60px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) var(--sp-3) 0; background: color-mix(in srgb, var(--paper-raised) 88%, transparent); backdrop-filter: blur(18px); box-shadow: 0 8px 22px rgb(26 29 33 / .05); }
           .desktop-shell { display: none !important; }
-           .mobile-shell { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; width: 100%; height: 56px; }
-          .mobile-brand { color: var(--ink); display: flex; align-items: center; }
-          .mobile-page-title { text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-narrative); font-weight: 700; font-size: 18px; }
+           .mobile-shell { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; width: 100%; height: 60px; }
+           .mobile-brand { color: var(--ink); display: flex; align-items: center; padding: 8px; border-radius: 14px; }
+           .mobile-brand:active { background: var(--accent-soft); }
+           .mobile-page-title { text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-narrative); font-weight: 700; font-size: 19px; letter-spacing: -.02em; }
           .mobile-progress { min-width: 44px; min-height: 44px; display: flex; justify-content: flex-end; align-items: center; }
           .mobile-progress .progress-badge > div { width: 30px !important; }
            .mobile-progress .progress-badge > span { display: none; }
            .mobile-header-actions { display: flex; align-items: center; gap: 2px; }
-           .mobile-tabbar { position: fixed; z-index: 50; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: calc(60px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 96%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgb(26 29 33 / .07); }
-          .mobile-tab { min-height: 60px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 3px; color: var(--ink-soft); text-decoration: none; font-family: var(--font-ui); font-size: 10px; font-weight: 600; }
-          .mobile-tab.active { color: var(--accent); }
-          .mobile-tab.active svg { stroke-width: 2.4; }
+           .mobile-tabbar { position: fixed; z-index: 50; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: calc(68px + env(safe-area-inset-bottom)); padding: 5px 6px env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 90%, transparent); backdrop-filter: blur(18px); border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent); box-shadow: 0 -12px 30px rgb(26 29 33 / .1); }
+           .mobile-tab { min-height: 56px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; border-radius: 15px; color: var(--ink-soft); text-decoration: none; font-family: var(--font-ui); font-size: 10px; font-weight: 650; transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast); }
+           .mobile-tab:active { transform: scale(.96); }
+           .mobile-tab.active { background: var(--accent-soft); color: var(--accent); }
+           .mobile-tab.active svg { stroke-width: 2.4; }
         }
       `}</style>
     </>

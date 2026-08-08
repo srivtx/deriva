@@ -803,3 +803,28 @@ code, pre { font-family: var(--font-mono); }
 @media (max-width: 700px) {
   .lesson-surface { padding-bottom: calc(60px + 96px + env(safe-area-inset-bottom)); }
 }
+
+/* Mobile polish: the phone is a focused workbench, not a squeezed desktop. */
+@media (max-width: 700px) {
+  body { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  .landing-header { border-bottom: none !important; border-radius: 0 0 28px 28px; background: linear-gradient(145deg, var(--paper-raised), var(--accent-soft)); }
+  .landing-header h1 { letter-spacing: -.035em; }
+  .landing-actions { gap: 9px; margin-top: 20px !important; }
+  .landing-actions a, .landing-actions .home-pattern-button, .landing-actions .home-game-button { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; border-radius: 16px; }
+  .continue-derivation, .next-move-card, .expedition-callout { border-radius: 18px !important; }
+  .continue-derivation { padding: 18px !important; margin-bottom: 14px !important; }
+  .next-move-card { margin: 0 0 18px; padding: 16px; }
+  .expedition-callout { margin: 0 0 24px; padding: 16px; }
+  .patterns-page, .pattern-quiz-page { padding-top: 24px; }
+  .pattern-quiz-banner { border-radius: 20px; padding: 20px; box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 14%, transparent); }
+  .pattern-learning-path, .pattern-directory-card, .pattern-journal-section .pattern-card { border-radius: 18px; }
+  .pattern-path-step { border-radius: 16px; padding: 15px; }
+  .pattern-path-status { grid-column: 2; grid-row: 2; justify-self: start; }
+  .pattern-path-link { grid-column: 2; grid-row: 3; }
+  .pattern-quiz-act .stage-title { font-size: clamp(29px, 9vw, 38px); letter-spacing: -.03em; }
+  .pattern-quiz-context { border-radius: 0 14px 14px 0; padding: 15px; }
+  .pattern-quiz-option { min-height: 64px; align-items: center; padding: 15px; border-radius: 16px; font-size: 15px; }
+  .pattern-quiz-option > span { flex-basis: 30px; height: 30px; }
+  .pattern-quiz-act > .btn-primary { min-height: 56px; border-radius: 16px; }
+  .notification-panel { top: calc(66px + env(safe-area-inset-top)); right: 10px; }
+}

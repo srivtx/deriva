@@ -349,7 +349,7 @@ export default function PracticePage() {
           .main { overflow: visible; padding: var(--sp-4) var(--sp-4) calc(144px + env(safe-area-inset-bottom)); }
           .mobile-only { display: block; }
           .mobile-context { display: grid; grid-template-columns: 1fr; gap: var(--sp-2); margin-bottom: var(--sp-4); }
-          .prob-header { align-items: flex-start; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+          .prob-header { align-items: flex-start; gap: var(--sp-3); margin-bottom: var(--sp-3); padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-raised); box-shadow: var(--shadow-raised); }
           .prob-num { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; background: var(--accent-soft); font-size: 16px; }
           .prob-h2 { font-size: 22px; line-height: 1.15; }
           .problem-tags { flex-wrap: wrap; }
@@ -364,7 +364,7 @@ export default function PracticePage() {
            .chatgpt-link { text-align: center; }
           .why { padding: var(--sp-4); font-size: 16px; line-height: 1.55; }
           .ed { min-height: 280px; max-height: none; padding: var(--sp-3); font-size: 13px; line-height: 1.6; }
-          .acts { position: sticky; bottom: 0; z-index: 10; margin: var(--sp-3) calc(var(--sp-4) * -1) 0; padding: var(--sp-2) var(--sp-4) calc(var(--sp-2) + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--paper-raised) 94%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 20px rgb(26 29 33 / .05); }
+           .acts { position: sticky; bottom: calc(68px + env(safe-area-inset-bottom)); z-index: 10; margin: var(--sp-3) calc(var(--sp-4) * -1) 0; padding: var(--sp-2) var(--sp-4); background: color-mix(in srgb, var(--paper-raised) 94%, transparent); border-top: 1px solid var(--line); box-shadow: 0 -8px 20px rgb(26 29 33 / .05); backdrop-filter: blur(12px); }
           .acts .btn { min-height: 44px; padding-inline: 12px; }
           .primary-run { flex: 1 1 100%; font-size: 14px; }
           .acts .btn:not(.primary-run) { flex: 1 1 calc(33.333% - 6px); font-size: 12px; }
