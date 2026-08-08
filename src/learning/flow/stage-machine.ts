@@ -100,7 +100,8 @@ export const useStageMachine = create<StageMachineState>((set, get) => ({
   },
 
   completeStage: (stage, artifacts, viaProbe = false) => {
-    const { stages } = get()
+    const { stages, currentStage } = get()
+    if (stage !== currentStage || stages[stage].locked || stages[stage].completed) return
     const nextIndex = StageNames.indexOf(stage) + 1
     const next = { ...stages, [stage]: { ...stages[stage], completed: true, viaProbe, artifacts: artifacts ?? stages[stage].artifacts } }
     if (nextIndex < StageNames.length) {
@@ -112,6 +113,7 @@ export const useStageMachine = create<StageMachineState>((set, get) => ({
 
   setArtifact: (stage, artifacts) => {
     const { stages } = get()
+    if (stages[stage].locked) return
     set({ stages: { ...stages, [stage]: { ...stages[stage], artifacts } } })
   },
 

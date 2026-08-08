@@ -31,11 +31,13 @@ export function ExecuteStage({ lesson, implement, onComplete }: Props) {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-    runTraced(code, lesson.stages.implement.entryPoint, n, ex.budget)
-      .then(r => { if (!cancelled) setRun(r) })
-      .catch(e => { if (!cancelled) setLoadError(String(e)) })
-    return () => { cancelled = true }
+    const controller = new AbortController()
+    setRun(null)
+    setLoadError(null)
+    runTraced(code, lesson.stages.implement.entryPoint, n, ex.budget, { signal: controller.signal })
+      .then(r => { if (!controller.signal.aborted) setRun(r) })
+      .catch(e => { if (!controller.signal.aborted) setLoadError(String(e)) })
+    return () => controller.abort()
   }, [code, lesson, n, ex.budget])
 
   const total = run?.trace.events.length ?? 0

@@ -4,7 +4,7 @@
 // Hints are a question ladder (B3); the solution stays hidden behind a quiet
 // confirm — revealing is logged as a learning signal, never punished (F8).
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { LessonModule } from "@/curriculum/schema/lesson"
 import { StageShell, StageCTA, PrimaryButton, GhostButton } from "./shell"
 import { runTests, type TestResult } from "@/execution/pyodide-client"
@@ -28,6 +28,9 @@ export function ImplementStage({ lesson, saved, design, onComplete, onDraft }: P
   const [confirmAssertion, setConfirmAssertion] = useState(false)
   const [solutionOpen, setSolutionOpen] = useState(saved?.solutionRevealed ?? false)
   const [confirmSolution, setConfirmSolution] = useState(false)
+  const executionRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => executionRef.current?.abort(), [])
 
   const allPassed = results !== null && results.length > 0 && results.every(r => r.ok)
   const hints = [...impl.hints].sort((a, b) => a.level - b.level)
@@ -37,11 +40,15 @@ export function ImplementStage({ lesson, saved, design, onComplete, onDraft }: P
   const run = async () => {
     setRunning(true)
     setSyntaxError(null)
+    const controller = new AbortController()
+    executionRef.current?.abort()
+    executionRef.current = controller
     try {
-      const { results, syntaxError } = await runTests(code, impl.tests)
+      const { results, syntaxError } = await runTests(code, impl.tests, { signal: controller.signal })
       setResults(results)
       setSyntaxError(syntaxError ?? null)
     } finally {
+      if (executionRef.current === controller) executionRef.current = null
       setRunning(false)
     }
   }

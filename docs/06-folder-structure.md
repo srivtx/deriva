@@ -48,7 +48,7 @@ deriva/
 │   │   └── next-actions.ts             #   one derived resume queue for Home + inbox
 │   │
 │   ├── execution/                     # ★ Sandbox + trace (05 §2, §4.2)
-│   │   ├── pyodide-client.ts          #   v0 main-thread client: runTests + runTraced (D12)
+│   │   ├── pyodide-client.ts          #   safe facade: runTests + runTraced through the worker
 │   │   ├── bridge/
 │   │   │   ├── worker-client.ts       #   postMessage protocol, warm pool, respawn
 │   │   │   └── sandbox.worker.ts      #   Pyodide bootstrap, budget, terminate policy

@@ -144,6 +144,8 @@ This document is append-mostly: reversals require naming the trade-off that chan
 
 ## D12. v0 execution runs main-thread; worker bridge remains the seam (M0, 2026-07-31)
 
+_Superseded by D13 for the current execution path; retained as the historical rationale for the initial vertical slice._
+
 **Decision:** the reference nine-stage lesson (`trees/00-recursion-reflex/sum-1-to-n`)
 and `/practice` execute Pyodide on the main thread via `src/execution/pyodide-client.ts`,
 loading from CDN. The Web Worker bridge (`src/execution/bridge/`) stays as the designed
@@ -159,3 +161,17 @@ that keep traces under budget); infinite loops are caught by the event budget +
 RecursionError, not by worker kill. Migration path: swap `pyodide-client` internals for
 `worker-client` when (a) trace budgets grow past ~5k events, or (b) a second topic
 ships. Vitest added as the test runner (tests/curriculum, tests/viz) per D9's intent.
+
+## D13. Python execution moves behind the worker bridge (M0, 2026-08-08)
+
+**Decision:** `src/execution/pyodide-client.ts` is now a safe facade over
+`src/execution/bridge/worker-client.ts`. Test runs and trace runs receive request IDs,
+hard 15-second timeouts, abort signals, and worker termination on cancellation or failure.
+
+**Context:** the main-thread path made an infinite loop or oversized student input capable
+of freezing the application. The product requirement prioritizes a responsive UI and a
+killable sandbox over preserving the first implementation's shortcut.
+
+**Consequences:** Pyodide still loads from the CDN until the offline asset milestone lands;
+the worker protocol is now the only execution seam. The next execution work is self-hosting
+Pyodide, disabling network loaders, and extending the trace beyond call/return events.
