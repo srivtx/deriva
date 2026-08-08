@@ -100,6 +100,9 @@ deriva/
 │   │   ├── export.ts                  #   full-profile JSON export/import
 │   │   └── sync/                      #   v1 seam: Supabase adapter (empty in v0, typed)
 │   │
+│   ├── notifications/                    # Browser notification delivery; no progress storage
+│   │   └── desktop-reminder.ts           #   leave reminder + service-worker handoff
+│   │
 │   ├── design-system/                 #   tokens + primitives (09)
 │   │   ├── tokens.css                 #   color/space/type/motion tokens
 │   │   ├── primitives/                #   Button, Card, Rail, Tooltip… (Radix-based)

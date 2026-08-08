@@ -19,6 +19,7 @@ interface Props {
 
 export function UnderstandStage({ lesson, saved, onComplete, onDraft, onProbePass }: Props) {
   const s = lesson.stages.understand
+  const [lead, ...remainingProse] = s.prose
   const [picked, setPicked] = useState<string | null>(saved?.prediction ?? null)
   const [locked, setLocked] = useState(saved?.locked ?? !!saved)
   const [revealedExamples, setRevealedExamples] = useState<Set<string>>(new Set(saved?.revealedExamples ?? []))
@@ -27,29 +28,35 @@ export function UnderstandStage({ lesson, saved, onComplete, onDraft, onProbePas
   return (
     <StageShell stage="understand" title={lesson.title} move={lesson.stageMoves.understand}>
       <div className="stage-prose">
-        {s.prose.map((b, i) => (
-          <section key={i}>
-            {b.heading && <h2 className="prose-heading">{b.heading}</h2>}
-            <p className="narrative">{b.body}</p>
+        {lead && (
+          <section>
+            {lead.heading && <h2 className="prose-heading">{lead.heading}</h2>}
+            <p className="narrative">{lead.body}</p>
           </section>
-        ))}
+        )}
       </div>
 
-       <div className="example-strip" aria-label="Worked examples">
-         {s.examples.map(ex => (
-           <button key={ex.id} type="button" className="example-chip" onClick={() => setRevealedExamples(current => {
-             const next = new Set(current)
-             if (next.has(ex.id)) next.delete(ex.id)
-             else next.add(ex.id)
-             onDraft({ prediction: picked || "", wasRight: picked === s.prediction.correct, locked, revealedExamples: [...next] })
-             return next
-           })} aria-expanded={revealedExamples.has(ex.id)}>
-             <code>{ex.given}</code>
-             <span>→</span>
-             <code className="example-result">{revealedExamples.has(ex.id) ? ex.result : "?"}</code>
-           </button>
-         ))}
-       </div>
+      <div className="example-panel">
+        <div className="example-panel-head">
+          <span className="stage-kicker">Warm up the reflex</span>
+          <span>Tap an input to reveal its output.</span>
+        </div>
+        <div className="example-strip" aria-label="Worked examples">
+          {s.examples.map(ex => (
+            <button key={ex.id} type="button" className={`example-chip${revealedExamples.has(ex.id) ? " revealed" : ""}`} onClick={() => setRevealedExamples(current => {
+              const next = new Set(current)
+              if (next.has(ex.id)) next.delete(ex.id)
+              else next.add(ex.id)
+              onDraft({ prediction: picked || "", wasRight: picked === s.prediction.correct, locked, revealedExamples: [...next] })
+              return next
+            })} aria-expanded={revealedExamples.has(ex.id)}>
+              <code>{ex.given}</code>
+              <span>→</span>
+              <code className="example-result">{revealedExamples.has(ex.id) ? ex.result : "?"}</code>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="prediction-card">
         <p className="prediction-prompt">{s.prediction.prompt}</p>
@@ -76,6 +83,17 @@ export function UnderstandStage({ lesson, saved, onComplete, onDraft, onProbePas
           </div>
         )}
       </div>
+
+      {remainingProse.length > 0 && (
+        <div className="stage-prose">
+          {remainingProse.map((b, i) => (
+            <section key={i}>
+              {b.heading && <h2 className="prose-heading">{b.heading}</h2>}
+              <p className="narrative">{b.body}</p>
+            </section>
+          ))}
+        </div>
+      )}
 
       <ProbeCard probe={lesson.probes.understand!} onPass={onProbePass} />
 

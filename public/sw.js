@@ -1,5 +1,5 @@
 // Deriva service worker — cache-first for static assets, network-first for pages.
-const CACHE = "deriva-v1"
+const CACHE = "deriva-v2"
 const STATIC = ["/", "/practice", "/design", "/lld", "/dashboard", "/patterns", "/patterns/quiz", "/settings", "/expedition", "/games", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"]
 
 self.addEventListener("install", (e) => {
@@ -39,4 +39,21 @@ self.addEventListener("fetch", (e) => {
       }).catch(() => caches.match(request).then((hit) => hit || caches.match("/")))
     )
   }
+})
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close()
+  const href = e.notification.data?.href || "/"
+  const target = new URL(href, self.location.origin).href
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (clients) => {
+      const client = clients.find((candidate) => candidate.url.startsWith(self.location.origin))
+      if (client) {
+        await client.focus()
+        if ("navigate" in client && client.url !== target) await client.navigate(target)
+        return
+      }
+      await self.clients.openWindow(target)
+    })
+  )
 })

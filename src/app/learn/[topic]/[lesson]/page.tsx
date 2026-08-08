@@ -102,7 +102,11 @@ export default function LessonPage() {
     <div className="lesson-page">
       <StageStepper />
       <div className="lesson-body">
-        <StageRail patternName={stages.reflect.completed ? patternName : undefined} />
+        <StageRail
+          topic={lesson.topic}
+          lessonTitle={lesson.title}
+          patternName={stages.reflect.completed ? patternName : undefined}
+        />
         <main className="lesson-surface">
           {finished && currentStage === "generalize" ? (
             <div className="lesson-complete">

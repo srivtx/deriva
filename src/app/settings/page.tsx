@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { applyPreferences, defaultPreferences, loadPreferences, savePreferences, type Preferences, type ThemePreference } from "@/persistence/preferences"
+import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 
 const themes: { value: ThemePreference; title: string; body: string }[] = [
   { value: "system", title: "System", body: "Follow your phone's appearance." },
@@ -15,14 +16,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setPreferences(loadPreferences())
-    setNotificationPermission("Notification" in window ? Notification.permission : "unsupported")
+    setNotificationPermission(getNotificationPermission())
   }, [])
   const update = (next: Preferences) => { setPreferences(next); savePreferences(next); applyPreferences(next) }
   const enableNotifications = async () => {
-    if (!("Notification" in window)) return
-    const permission = await Notification.requestPermission()
+    const permission = await requestDesktopNotifications()
     setNotificationPermission(permission)
-    if (permission === "granted") new Notification("Deriva is ready", { body: "Your next move is waiting in the notification center." })
+    if (permission === "granted") new Notification("Leave reminders enabled", { body: "Deriva will remind you about your next move when you leave." })
   }
 
   return (
@@ -45,7 +45,7 @@ export default function SettingsPage() {
 
       <section className="settings-section" aria-labelledby="notifications-heading">
         <h2 id="notifications-heading">Notifications</h2>
-        <div className="notification-setting"><div><strong>Next-move reminders</strong><p>The in-app notification center always works. Optional browser notifications can remind you when you return to Deriva.</p></div><button className="btn-ghost" onClick={enableNotifications} disabled={notificationPermission === "granted" || notificationPermission === "unsupported"}>{notificationPermission === "granted" ? "Enabled" : notificationPermission === "unsupported" ? "Unavailable" : "Enable"}</button></div>
+        <div className="notification-setting"><div><strong>Next-move reminders</strong><p>Allow Deriva to show one quiet reminder when you leave, linked directly to your next useful action. The browser may require permission in its site settings.</p></div><button className="btn-ghost" onClick={enableNotifications} disabled={notificationPermission === "granted" || notificationPermission === "unsupported" || notificationPermission === "denied"}>{notificationPermission === "granted" ? "Enabled" : notificationPermission === "denied" ? "Blocked" : notificationPermission === "unsupported" ? "Unavailable" : "Enable"}</button></div>
       </section>
 
       <section className="settings-note"><strong>Learning preference</strong><p>Deriva keeps progress calm: no streaks, points, or urgency. Your record is the patterns you can derive again.</p></section>

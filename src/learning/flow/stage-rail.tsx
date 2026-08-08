@@ -31,11 +31,17 @@ function GateIcon({ locked, completed, active, viaProbe, num }: {
 }
 
 // ── Desktop rail ──
-export function StageRail({ patternName }: { patternName?: string }) {
+export function StageRail({ patternName, lessonTitle, topic }: { patternName?: string; lessonTitle?: string; topic?: string }) {
   const { currentStage, stages, enterStage } = useStageMachine()
 
   return (
     <nav className="stage-rail" aria-label="The nine-stage journey">
+      {lessonTitle && (
+        <div className="rail-context">
+          <span>{topic ? `${topic} · reference lesson` : "reference lesson"}</span>
+          <strong>{lessonTitle}</strong>
+        </div>
+      )}
       <h3 className="rail-heading">The Journey</h3>
       {StageNames.map((stage) => {
         const gate = stages[stage]

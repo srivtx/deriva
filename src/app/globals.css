@@ -478,6 +478,9 @@ code, pre { font-family: var(--font-mono); }
 .notification-panel { position: fixed; z-index: 100; top: 60px; right: 16px; width: min(360px, calc(100vw - 32px)); overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); box-shadow: var(--shadow-raised); }
 .notification-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
 .notification-panel-head > div { display: flex; flex-direction: column; gap: 3px; }
+.notification-reminder { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--accent-soft); color: var(--ink-soft); font: 12px/1.35 var(--font-ui); }
+.notification-reminder button, .notification-reminder a { flex-shrink: 0; border: 0; background: transparent; color: var(--accent); font: 700 12px var(--font-ui); text-decoration: none; cursor: pointer; }
+.notification-reminder.blocked { background: var(--paper); }
 .notification-kicker { color: var(--accent); font: 700 9px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
 .notification-panel-head b { font: 700 19px var(--font-narrative); }
 .notification-mark { border: none; background: none; color: var(--ink-soft); font: 11px var(--font-ui); cursor: pointer; text-decoration: underline; }
@@ -515,6 +518,7 @@ code, pre { font-family: var(--font-mono); }
 
 /* Stage shell */
 .stage-shell { display: flex; flex-direction: column; gap: var(--sp-6); }
+.stage-shell > .stage-head { padding: 4px 0 4px 18px; border-left: 3px solid var(--accent); }
 .stage-kicker { color: var(--accent); font: 700 10px var(--font-ui); letter-spacing: .12em; text-transform: uppercase; }
 .stage-title { margin: var(--sp-2) 0 0; font: 700 clamp(26px, 7vw, 38px)/1.1 var(--font-narrative); }
 .stage-move { margin: var(--sp-2) 0 0; color: var(--ink-soft); font: 13px var(--font-ui); }
@@ -550,7 +554,7 @@ code, pre { font-family: var(--font-mono); }
 /* Pinned CTA — above the tab bar + safe area on phones */
 .stage-cta { margin-top: var(--sp-4); }
 @media (max-width: 700px) {
-  .stage-cta { position: fixed; z-index: 40; left: 0; right: 0; bottom: calc(60px + env(safe-area-inset-bottom)); padding: 10px 16px calc(10px); background: color-mix(in srgb, var(--paper) 92%, transparent); border-top: 1px solid var(--line); backdrop-filter: blur(8px); }
+  .stage-cta { position: sticky; z-index: 40; bottom: calc(68px + env(safe-area-inset-bottom)); margin: var(--sp-4) -16px 0; padding: 10px 16px; background: color-mix(in srgb, var(--paper) 94%, transparent); border-top: 1px solid var(--line); backdrop-filter: blur(8px); }
 }
 
 /* Option cards */
@@ -562,11 +566,15 @@ code, pre { font-family: var(--font-mono); }
 .opt-card code { font-family: var(--font-mono); font-size: 14px; }
 
 /* Examples + prediction (Stage 1) */
+.example-panel { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border: 1px solid var(--line); border-radius: var(--radius); background: color-mix(in srgb, var(--paper-raised) 72%, var(--accent-soft)); }
+.example-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--ink-soft); font: 12px var(--font-ui); }
+.example-panel-head .stage-kicker { font-size: 9px; }
 .example-strip { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.example-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper-raised); font-size: 14px; }
+.example-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-raised); font-size: 14px; }
 .example-chip { color: var(--ink); cursor: pointer; font-family: var(--font-ui); transition: border-color var(--dur-fast), background var(--dur-fast), transform var(--dur-fast); }
 .example-chip:hover { border-color: var(--accent); background: var(--accent-soft); }
 .example-chip:active { transform: scale(.98); }
+.example-chip.revealed { border-color: var(--success-line); background: var(--success-soft); }
 .example-chip code { font-family: var(--font-mono); font-size: 13px; }
 .example-result { color: var(--viz-settled); font-weight: 700; }
 .prediction-card, .experiment-card, .socratic-card { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); box-shadow: var(--shadow-raised); }
@@ -865,6 +873,9 @@ code, pre { font-family: var(--font-mono); }
 /* Desktop stage rail */
 .stage-rail { width: 230px; flex-shrink: 0; border-right: 1px solid var(--line); padding: 24px 12px; display: none; flex-direction: column; gap: 2px; min-height: calc(100dvh - 52px); position: sticky; top: 52px; }
 @media (min-width: 900px) { .stage-rail { display: flex; } }
+.rail-context { display: flex; flex-direction: column; gap: 5px; margin: 0 10px 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.rail-context span { color: var(--accent); font: 700 9px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+.rail-context strong { color: var(--ink); font: 700 17px/1.12 var(--font-narrative); }
 .rail-heading { margin: 0 0 10px; color: var(--ink-soft); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
 .rail-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: none; border-radius: var(--radius); background: transparent; color: var(--ink); text-align: left; font: 500 14px var(--font-ui); cursor: pointer; width: 100%; }
 .rail-item:disabled { cursor: default; color: var(--viz-untouched); }
