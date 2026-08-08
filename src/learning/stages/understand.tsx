@@ -43,13 +43,13 @@ export function UnderstandStage({ lesson, saved, onComplete, onDraft, onProbePas
         </div>
         <div className="example-strip" aria-label="Worked examples">
           {s.examples.map(ex => (
-            <button key={ex.id} type="button" className={`example-chip${revealedExamples.has(ex.id) ? " revealed" : ""}`} onClick={() => setRevealedExamples(current => {
-              const next = new Set(current)
+            <button key={ex.id} type="button" className={`example-chip${revealedExamples.has(ex.id) ? " revealed" : ""}`} onClick={() => {
+              const next = new Set(revealedExamples)
               if (next.has(ex.id)) next.delete(ex.id)
               else next.add(ex.id)
-              onDraft({ prediction: picked || "", wasRight: picked === s.prediction.correct, locked, revealedExamples: [...next] })
-              return next
-            })} aria-expanded={revealedExamples.has(ex.id)}>
+              setRevealedExamples(next)
+              onDraft({ prediction: picked ?? "", wasRight: picked === s.prediction.correct, locked, revealedExamples: [...next] })
+            }} aria-expanded={revealedExamples.has(ex.id)}>
               <code>{ex.given}</code>
               <span>→</span>
               <code className="example-result">{revealedExamples.has(ex.id) ? ex.result : "?"}</code>
