@@ -366,6 +366,8 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
   .landing-header > p { max-width: 100% !important; }
   .landing-actions { flex-direction: column; }
   .landing-actions a { width: 100%; text-align: center; }
+  .next-move-card { align-items: stretch; flex-direction: column; gap: 10px; }
+  .next-move-card strong { align-self: flex-start; }
   .continue-derivation-head { align-items: flex-start !important; flex-direction: column; gap: 6px !important; }
   .expedition-callout { grid-template-columns: 1fr; gap: 6px; }
   .expedition-callout .discovery-kicker { margin-bottom: 4px; }
@@ -424,6 +426,12 @@ code, pre { font-family: var(--font-mono); }
 .continue-derivation-head > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .continue-derivation { width: 100%; max-width: 100%; overflow: hidden; }
 .landing-header > p { width: 100%; overflow-wrap: anywhere; }
+.next-move-card { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: -16px 0 32px; padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink); text-decoration: none; box-shadow: var(--shadow-raised); }
+.next-move-card > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.next-move-card b { font: 700 18px var(--font-narrative); }
+.next-move-card > div > span:last-child { overflow: hidden; color: var(--ink-soft); font: 13px var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.next-move-card strong { flex-shrink: 0; color: var(--accent); font: 700 12px var(--font-ui); white-space: nowrap; }
+.next-move-card:hover { border-color: var(--accent); }
 .home-game-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 24px; border-radius: var(--radius); background: linear-gradient(110deg, #162a52, #7c3aed, #ec4899, #162a52); background-size: 220% 100%; color: #fff; font: 700 14px var(--font-ui); text-decoration: none; box-shadow: 0 6px 18px color-mix(in srgb, #7c3aed 28%, transparent); transition: transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard); }
 .home-game-button:hover { transform: translateY(-2px); box-shadow: 0 10px 24px color-mix(in srgb, #ec4899 30%, transparent); }
 .game-mode-glyph { display: inline-grid; width: 20px; height: 20px; place-items: center; border: 1px solid rgb(255 255 255 / .55); border-radius: 50%; font-size: 12px; }
@@ -639,6 +647,13 @@ code, pre { font-family: var(--font-mono); }
 .pattern-route-number { color: var(--viz-untouched); font: 12px var(--font-mono); }
 .pattern-path-step .pattern-family { font-size: 10px; }
 .pattern-path-step h3 { margin: 3px 0 0; font: 700 20px/1.1 var(--font-narrative); }
+.pattern-path-status { color: var(--ink-soft); font: 11px var(--font-mono); white-space: nowrap; }
+.pattern-path-step.current { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 12%, transparent); }
+.pattern-path-step.complete { border-color: var(--success-line); }
+.pattern-path-step.complete .pattern-path-status { color: var(--viz-settled); }
+.pattern-path-step.current .pattern-path-status { color: var(--accent); font-weight: 700; }
+.pattern-path-progress { height: 4px; overflow: hidden; border-radius: 999px; background: var(--line); }
+.pattern-path-progress span { display: block; height: 100%; border-radius: inherit; background: var(--viz-settled); transition: width var(--dur-med) var(--ease-standard); }
 .pattern-path-link { color: var(--accent); font: 650 12px var(--font-ui); text-decoration: none; white-space: nowrap; }
 .pattern-path-why { max-width: 850px; margin: 0; color: var(--ink-soft); font: 14px/1.5 var(--font-narrative); }
 .pattern-path-patterns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

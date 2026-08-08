@@ -7,19 +7,23 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { listPatternDeposits, type PatternDeposit } from "@/persistence/lesson-progress"
 import { loadPatternQuizProgress, type PatternQuizProgress } from "@/persistence/pattern-quiz"
+import { loadPracticeCompletion } from "@/persistence/practice-progress"
 import { PATTERN_DIRECTORY, PATTERN_LEARNING_PATH, type PatternFamily } from "@/data/patterns"
+import { TOPICS } from "@/data"
 
 const FAMILIES: (PatternFamily | "All")[] = ["All", "Foundations", "Structures", "Graphs", "Choices", "State", "Compression", "Proof"]
 
 export default function PatternsPage() {
   const [deposits, setDeposits] = useState<PatternDeposit[]>([])
   const [quizProgress, setQuizProgress] = useState<PatternQuizProgress>()
+  const [practiceCompletion, setPracticeCompletion] = useState<Record<string, number[]>>({})
   const [query, setQuery] = useState("")
   const [family, setFamily] = useState<PatternFamily | "All">("All")
 
   useEffect(() => {
     setDeposits(listPatternDeposits())
     setQuizProgress(loadPatternQuizProgress())
+    setPracticeCompletion(loadPracticeCompletion())
   }, [])
 
   const visiblePatterns = PATTERN_DIRECTORY.filter(pattern => {
@@ -28,6 +32,7 @@ export default function PatternsPage() {
     return matchesFamily && text.includes(query.toLowerCase().trim())
   })
   const quizLabel = quizProgress?.completed ? "Retake the quiz →" : quizProgress?.answered ? "Continue the quiz →" : "Enter Quiz Mode →"
+  const firstIncompleteIndex = PATTERN_LEARNING_PATH.findIndex(step => (practiceCompletion[step.topicId] || []).length < (TOPICS[step.topicId]?.problems.length || 1))
 
   return (
     <main className="patterns-page">
@@ -57,28 +62,34 @@ export default function PatternsPage() {
           </div>
           <span className="pattern-count">{PATTERN_LEARNING_PATH.length} stops</span>
         </div>
-        <p className="pattern-guide-intro">This is the order to learn the patterns: Trees first, then explicit references, ordered structures, search, choices, state, optimization, and proof. Each stop reuses the previous move before adding the next one.</p>
+        <p className="pattern-guide-intro">This is the recommended order to learn the patterns: Trees first, then explicit references, ordered structures, search, choices, state, optimization, and proof. Nothing is locked; the route only tells you what is most useful next.</p>
         <div className="pattern-path-list">
           {PATTERN_LEARNING_PATH.map(step => {
             const newPatterns = step.newPatternIds.map(id => PATTERN_DIRECTORY.find(pattern => pattern.id === id)).filter(Boolean)
             const revisitPatterns = step.revisitPatternIds.map(id => PATTERN_DIRECTORY.find(pattern => pattern.id === id)).filter(Boolean)
+            const completedCount = (practiceCompletion[step.topicId] || []).length
+            const totalCount = TOPICS[step.topicId]?.problems.length || 0
+            const complete = totalCount > 0 && completedCount >= totalCount
+            const current = firstIncompleteIndex === PATTERN_LEARNING_PATH.indexOf(step)
             return (
-            <article key={step.topicId} className="pattern-path-step">
+            <article key={step.topicId} className={`pattern-path-step${complete ? " complete" : current ? " current" : ""}`}>
               <div className="pattern-path-step-head">
                 <span className="pattern-route-number">{step.number}</span>
                 <div><span className="pattern-family">{step.topicName}</span><h3>{step.title}</h3></div>
-                <Link href={`/practice?topic=${step.topicId}`} className="pattern-path-link">Open topic →</Link>
+                <div className="pattern-path-status">{complete ? "Complete" : current ? "Suggested next" : "Open"}</div>
               </div>
               <p className="pattern-path-why">{step.whyNow}</p>
+              <div className="pattern-path-progress"><span style={{ width: `${totalCount ? Math.min(100, (completedCount / totalCount) * 100) : 0}%` }} /></div>
               <div className="pattern-path-patterns">
                 <div><span>Learn now</span>{newPatterns.length > 0 ? newPatterns.map(pattern => <Link key={pattern!.id} href={`/patterns#${pattern!.id}`}>{pattern!.name}</Link>) : <em>Transfer the earlier moves to interval problems.</em>}</div>
                 <div><span>Revisit</span>{revisitPatterns.map(pattern => <Link key={pattern!.id} href={`/patterns#${pattern!.id}`}>{pattern!.name}</Link>)}</div>
               </div>
+              <Link href={`/practice?topic=${step.topicId}`} className="pattern-path-link">{complete ? "Review topic →" : completedCount > 0 ? `Continue topic · ${completedCount}/${totalCount} complete →` : "Start topic →"}</Link>
             </article>
             )
           })}
         </div>
-        <div className="pattern-guide-next"><b>How much</b><span>Stay on one topic until its core problems feel familiar, then take one five-question quiz block. The quiz is mixed on purpose: it tests whether you can recognize the move outside the original story.</span></div>
+        <div className="pattern-guide-next"><b>How much</b><span>Stay on one topic until its core problems feel familiar, then take one five-question quiz block. The quiz is mixed on purpose: it tests whether you can recognize the move outside the original story. You can always jump ahead.</span></div>
       </section>
 
       <section className="pattern-directory" aria-labelledby="directory-heading">

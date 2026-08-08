@@ -2,11 +2,14 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { TOPIC_LIST } from "@/data"
+import { TOPICS, TOPIC_LIST } from "@/data"
 import Logo from "@/components/logo"
 import GameModeButton from "@/components/game-mode-button"
 import PatternModeButton from "@/components/pattern-mode-button"
 import { loadLessonProgress, type LessonProgress } from "@/persistence/lesson-progress"
+import { loadPracticeCompletion, loadPracticePositions, loadPracticeTopic } from "@/persistence/practice-progress"
+
+type NextMove = { topicId: string; topicName: string; problemId: number; problemTitle: string; completed: number; total: number }
 
 const TOPIC_STYLES = [
   { bg: "#eff6ff", border: "#bfdbfe", accent: "#2563eb", dot: "var(--accent)" },
@@ -27,9 +30,17 @@ const TOPIC_STYLES = [
 
 export default function HomePage() {
   const [guidedProgress, setGuidedProgress] = useState<LessonProgress | undefined>()
+  const [nextMove, setNextMove] = useState<NextMove>()
 
   useEffect(() => {
     setGuidedProgress(loadLessonProgress("trees/00-recursion-reflex/sum-1-to-n"))
+    const topicId = loadPracticeTopic() || TOPIC_LIST[0].id
+    const topic = TOPICS[topicId] || TOPIC_LIST[0]
+    const positions = loadPracticePositions()
+    const rememberedId = positions[topic.id]
+    const problem = topic.problems.find(item => item.id === rememberedId) || topic.problems[0]
+    const completed = loadPracticeCompletion()[topic.id] || []
+    setNextMove({ topicId: topic.id, topicName: topic.name, problemId: problem.id, problemTitle: problem.title, completed: completed.length, total: topic.problems.length })
   }, [])
 
   const guidedHref = "/learn/trees/sum-1-to-n"
@@ -95,6 +106,11 @@ export default function HomePage() {
             <span style={{ width: `${guidedDone ? 100 : Math.max(5, ((guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0)) / 9) * 100)}%` }} />
           </div>
         </Link>
+
+        {nextMove && <Link href={`/practice?topic=${nextMove.topicId}&problem=${nextMove.problemId}`} className="next-move-card">
+          <div><span className="discovery-kicker">Your next move</span><b>{nextMove.topicName}</b><span>Problem {nextMove.problemId} · {nextMove.problemTitle}</span></div>
+          <strong>{nextMove.completed}/{nextMove.total} complete · Continue →</strong>
+        </Link>}
 
         <Link href="/expedition" className="expedition-callout">
           <span className="discovery-kicker">New · Pattern journeys</span>

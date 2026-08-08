@@ -12,6 +12,7 @@ const KIND_LABEL: Record<PatternQuestionKind, string> = {
   contrast: "Explain the tradeoff",
   transfer: "Transfer the move",
 }
+const SESSION_SIZE = 5
 
 export default function PatternQuizPage() {
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -19,6 +20,7 @@ export default function PatternQuizPage() {
   const [answered, setAnswered] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
   const [submitted, setSubmitted] = useState(false)
+  const [checkpoint, setCheckpoint] = useState(false)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export default function PatternQuizPage() {
     setSelected(null)
     setSubmitted(false)
     setCurrentIndex(nextIndex)
+    setCheckpoint(nextIndex < PATTERN_QUIZ.length && nextIndex % SESSION_SIZE === 0)
     savePatternQuizProgress({ currentIndex: nextIndex, score, answered, completed: nextIndex >= PATTERN_QUIZ.length })
   }
 
@@ -64,6 +67,7 @@ export default function PatternQuizPage() {
     setAnswered(0)
     setSelected(null)
     setSubmitted(false)
+    setCheckpoint(false)
   }
 
   if (!ready) return <main className="pattern-quiz-page"><p className="narrative">Loading the pattern deck...</p></main>
@@ -79,6 +83,20 @@ export default function PatternQuizPage() {
           <p className="narrative">{percentage >= 80 ? "The names are becoming handles. Keep testing the cue that makes each move necessary." : "The misses are useful: revisit the directory, then make another pass while the contrasts are still warm."}</p>
           <div className="pattern-score"><b>{percentage}%</b><span>{score} correct · {PATTERN_QUIZ.length - score} to revisit</span></div>
           <div className="pattern-quiz-actions"><button className="btn-primary" onClick={restart}>Run the quiz again →</button><Link href="/patterns" className="btn-ghost as-link">Review the directory</Link></div>
+        </section>
+      </main>
+    )
+  }
+
+  if (checkpoint) {
+    return (
+      <main className="pattern-quiz-page">
+        <div className="pattern-quiz-top"><Link href="/patterns" className="expedition-back">← Pattern Directory</Link><span>Checkpoint</span></div>
+        <section className="pattern-quiz-finished">
+          <span className="discovery-kicker">✦ Five-question block complete</span>
+          <h1 className="stage-title">Pause here or keep going.</h1>
+          <p className="narrative">You have answered {answered} of {PATTERN_QUIZ.length} questions and scored {score} correct. Review the explanations while the contrasts are fresh, or continue into the next block.</p>
+          <div className="pattern-quiz-actions"><button className="btn-primary" onClick={() => setCheckpoint(false)}>Continue to question {currentIndex + 1} →</button><Link href="/patterns" className="btn-ghost as-link">Review the learning path</Link></div>
         </section>
       </main>
     )
