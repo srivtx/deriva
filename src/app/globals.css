@@ -564,6 +564,9 @@ code, pre { font-family: var(--font-mono); }
 /* Examples + prediction (Stage 1) */
 .example-strip { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .example-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper-raised); font-size: 14px; }
+.example-chip { color: var(--ink); cursor: pointer; font-family: var(--font-ui); transition: border-color var(--dur-fast), background var(--dur-fast), transform var(--dur-fast); }
+.example-chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+.example-chip:active { transform: scale(.98); }
 .example-chip code { font-family: var(--font-mono); font-size: 13px; }
 .example-result { color: var(--viz-settled); font-weight: 700; }
 .prediction-card, .experiment-card, .socratic-card { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); box-shadow: var(--shadow-raised); }
@@ -669,6 +672,8 @@ code, pre { font-family: var(--font-mono); }
 .callstack-meta b { color: var(--ink); font-family: var(--font-mono); }
 .trace-caption { margin: 0; min-height: 24px; color: var(--ink); font: 600 15px var(--font-ui); }
 .trace-note { margin: 0; color: var(--ink-soft); font: 13px var(--font-ui); }
+.trace-evidence { margin-top: var(--sp-4); padding: var(--sp-3); border-left: 3px solid var(--viz-settled); background: var(--success-soft); }
+.trace-evidence p { margin: 4px 0 0; color: var(--ink-soft); font: 13px/1.5 var(--font-ui); }
 .trace-loading { padding: 60px 0; text-align: center; color: var(--ink-soft); font: 14px var(--font-ui); }
 .transport { display: flex; align-items: center; gap: var(--sp-2); }
 .transport-btn { width: 48px; height: 48px; border: 1px solid var(--line); border-radius: 50%; background: var(--paper-raised); color: var(--ink); font-size: 16px; cursor: pointer; }

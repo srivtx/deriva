@@ -13,17 +13,18 @@ interface Props {
   lesson: LessonModule
   saved?: StageArtifacts["play"]
   onComplete: (a: StageArtifacts["play"]) => void
+  onDraft: (a: StageArtifacts["play"]) => void
   onProbePass: () => void
 }
 
-export function PlayStage({ lesson, saved, onComplete, onProbePass }: Props) {
+export function PlayStage({ lesson, saved, onComplete, onDraft, onProbePass }: Props) {
   const s = lesson.stages.play
   const n = (s.sandbox.initial as { n: number }).n
   const total = (n * (n + 1)) / 2
 
-  const [peeled, setPeeled] = useState(0)                 // how many numbers peeled off the end
-  const [expIndex, setExpIndex] = useState(saved?.experimentsDone?.length ?? 0)
-  const [revealed, setRevealed] = useState(false)
+  const [peeled, setPeeled] = useState(saved?.peeled ?? 0)                 // how many numbers peeled off the end
+  const [expIndex, setExpIndex] = useState(saved?.expIndex ?? saved?.experimentsDone?.length ?? 0)
+  const [revealed, setRevealed] = useState(saved?.revealed ?? false)
 
   const strip = Array.from({ length: n - peeled }, (_, i) => i + 1)
   const holding = Array.from({ length: peeled }, (_, i) => n - peeled + 1 + i)
@@ -33,19 +34,25 @@ export function PlayStage({ lesson, saved, onComplete, onProbePass }: Props) {
   const done = expIndex >= s.experiments.length
 
   // Each experiment's reveal unlocks by touching, not reading (B2)
-  const [maxPeeled, setMaxPeeled] = useState(0)
+  const [maxPeeled, setMaxPeeled] = useState(saved?.maxPeeled ?? 0)
   const met =
     expIndex === 0 ? peeled >= 1 :
     expIndex === 1 ? floorReached :
     expIndex === 2 ? maxPeeled > 0 && peeled === 0 : // build all the way back
     false
 
-  const peel = () => { if (!floorReached) { const p = peeled + 1; setPeeled(p); setMaxPeeled(m => Math.max(m, p)) } }
-  const unpeel = () => { if (peeled > 0) setPeeled(peeled - 1) }
+  const saveDraft = (patch: Partial<StageArtifacts["play"]> = {}) => onDraft({
+    experimentsDone: s.experiments.slice(0, expIndex).map(experiment => experiment.id),
+    peeled, maxPeeled, expIndex, revealed, ...patch,
+  })
+  const peel = () => { if (!floorReached) { const p = peeled + 1; const max = Math.max(maxPeeled, p); setPeeled(p); setMaxPeeled(max); saveDraft({ peeled: p, maxPeeled: max }) } }
+  const unpeel = () => { if (peeled > 0) { const p = peeled - 1; setPeeled(p); saveDraft({ peeled: p }) } }
 
   const nextExperiment = () => {
+    const nextIndex = expIndex + 1
     setRevealed(false)
-    setExpIndex(i => i + 1)
+    setExpIndex(nextIndex)
+    saveDraft({ expIndex: nextIndex, revealed: false })
   }
 
   return (
@@ -98,8 +105,8 @@ export function PlayStage({ lesson, saved, onComplete, onProbePass }: Props) {
             <div className="experiment-card">
               <span className="experiment-kicker">Experiment {expIndex + 1} of {s.experiments.length}</span>
               <p className="experiment-prompt">{experiment.prompt}</p>
-              {met && !revealed && (
-                <GhostButton onClick={() => setRevealed(true)}>I did it — what did I just see?</GhostButton>
+               {met && !revealed && (
+                 <GhostButton onClick={() => { setRevealed(true); saveDraft({ revealed: true }) }}>I did it — what did I just see?</GhostButton>
               )}
               {!met && <p className="experiment-hint">Use the peel buttons above. The answer appears only after your hands find it.</p>}
               {revealed && (
@@ -124,7 +131,7 @@ export function PlayStage({ lesson, saved, onComplete, onProbePass }: Props) {
       <ProbeCard probe={lesson.probes.play!} onPass={onProbePass} />
 
       <StageCTA>
-        <PrimaryButton disabled={!done} onClick={() => onComplete({ experimentsDone: s.experiments.map(e => e.id) })}>
+         <PrimaryButton disabled={!done} onClick={() => onComplete({ experimentsDone: s.experiments.map(e => e.id), peeled, maxPeeled, expIndex, revealed })}>
           {done ? "My hands get it → Reason" : `Finish experiment ${Math.min(expIndex + 1, s.experiments.length)} of ${s.experiments.length}`}
         </PrimaryButton>
       </StageCTA>

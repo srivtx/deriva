@@ -14,9 +14,10 @@ interface Props {
   design?: StageArtifacts["design"]
   saved?: StageArtifacts["reflect"]
   onComplete: (a: StageArtifacts["reflect"]) => void
+  onDraft: (a: StageArtifacts["reflect"]) => void
 }
 
-export function ReflectStage({ lesson, design, saved, onComplete }: Props) {
+export function ReflectStage({ lesson, design, saved, onComplete, onDraft }: Props) {
   const r = lesson.stages.reflect
   const [ownWords, setOwnWords] = useState(saved?.ownWords ?? "")
   const ready = ownWords.trim().length >= 12
@@ -47,7 +48,7 @@ export function ReflectStage({ lesson, design, saved, onComplete }: Props) {
         <textarea
           className="ownwords"
           value={ownWords}
-          onChange={e => setOwnWords(e.target.value)}
+           onChange={e => { setOwnWords(e.target.value); onDraft({ ownWords: e.target.value }) }}
           placeholder="e.g. I don't have to check the small stuff — if the function works at all, it works on the smaller input…"
           aria-label="The pattern in your own words"
         />

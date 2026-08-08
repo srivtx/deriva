@@ -3,7 +3,7 @@
 // the pedagogy rules that make a lesson a Deriva lesson.
 
 import { describe, it, expect } from "vitest"
-import { LessonModuleSchema, StageNames } from "../../src/curriculum/schema/lesson"
+import { LessonModuleSchema, PredictionSchema, StageNames } from "../../src/curriculum/schema/lesson"
 import { listLessons } from "../../src/curriculum"
 
 const lessons = listLessons()
@@ -32,6 +32,17 @@ describe("Rule B1 — the 9-stage flow is complete", () => {
       expect(l.probes[s], `missing mastery probe for ${s}`).toBeDefined()
       expect(l.probes[s]!.options.length).toBeGreaterThanOrEqual(2)
     }
+  })
+})
+
+describe("Stage 1 prediction integrity", () => {
+  it("requires choices when a prediction is choice-based", () => {
+    expect(() => PredictionSchema.parse({
+      prompt: "Pick one",
+      kind: "choice",
+      correct: "a",
+      explanation: "Because a is correct",
+    })).toThrow()
   })
 })
 

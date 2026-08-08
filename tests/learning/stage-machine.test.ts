@@ -17,6 +17,29 @@ describe("stage machine", () => {
     expect(state.currentStage).toBe("understand")
   })
 
+  it("rejects an unlocked stage with an incomplete artifact", () => {
+    const machine = useStageMachine.getState()
+    machine.init("trees/test")
+    machine.completeStage("understand", { prediction: "10", wasRight: true })
+    machine.enterStage("play")
+    machine.completeStage("play", { experimentsDone: [] })
+
+    expect(useStageMachine.getState().stages.play.completed).toBe(false)
+    expect(useStageMachine.getState().currentStage).toBe("play")
+  })
+
+  it("uses lesson-specific requirements for multi-step stages", () => {
+    const machine = useStageMachine.getState()
+    machine.init("trees/test", undefined, { playExperiments: 3 })
+    machine.completeStage("understand", { prediction: "10", wasRight: true })
+    machine.enterStage("play")
+    machine.completeStage("play", { experimentsDone: ["peel-once"] })
+    expect(useStageMachine.getState().stages.play.completed).toBe(false)
+
+    machine.completeStage("play", { experimentsDone: ["peel-once", "peel-down", "build-back"] })
+    expect(useStageMachine.getState().stages.play.completed).toBe(true)
+  })
+
   it("unlocks exactly the next stage and permits revisiting completed stages", () => {
     const machine = useStageMachine.getState()
     machine.init("trees/test")

@@ -9,6 +9,9 @@
 > fold tests. Remaining M0 gaps: self-hosted execution assets, tree sandbox,
 > Dexie persistence, porting the rest of Trees into lesson modules.
 
+The reference lesson also persists in-stage drafts, requires real example reveals, validates
+stage artifacts before advancing, and moves complexity evidence into the Execute trace.
+
 **Strategy: one vertical slice proves the thesis; then scale the machine.**
 We never build "all infrastructure, then all content" (the slice validates nothing until
 the end) nor "all Trees UI, then all topics' UI" (re-learning viz lessons 14 times).

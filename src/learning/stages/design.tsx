@@ -13,12 +13,13 @@ interface Props {
   lesson: LessonModule
   saved?: StageArtifacts["design"]
   onComplete: (a: StageArtifacts["design"]) => void
+  onDraft: (a: StageArtifacts["design"]) => void
   onProbePass: () => void
 }
 
 type FieldKey = "baseCase" | "recursiveStep" | "complexity"
 
-export function DesignStage({ lesson, saved, onComplete, onProbePass }: Props) {
+export function DesignStage({ lesson, saved, onComplete, onDraft, onProbePass }: Props) {
   const c = lesson.stages.design.contract
   const [name, setName] = useState(saved?.name ?? c.signature.defaultName)
   const [param, setParam] = useState(saved?.param ?? c.signature.defaultParam)
@@ -27,8 +28,8 @@ export function DesignStage({ lesson, saved, onComplete, onProbePass }: Props) {
     recursiveStep: saved?.recursiveStep ?? null,
     complexity: saved?.complexity ?? null,
   })
-  const [checked, setChecked] = useState(false)
-  const [passed, setPassed] = useState(false)
+  const [checked, setChecked] = useState(saved?.checked ?? false)
+  const [passed, setPassed] = useState(saved?.passed ?? false)
 
   const nameOk = /^[a-z_][a-z0-9_]*$/.test(name.trim())
   const paramOk = /^[a-z_][a-z0-9_]*$/.test(param.trim())
@@ -39,10 +40,14 @@ export function DesignStage({ lesson, saved, onComplete, onProbePass }: Props) {
   ]
   const allChosen = fields.every(f => choices[f.key]) && nameOk && paramOk
   const allCorrect = fields.every(f => choices[f.key] === f.data.correct) && nameOk && paramOk
+  const saveDraft = (patch: Partial<StageArtifacts["design"]> = {}) => onDraft({
+    name, param, baseCase: choices.baseCase || "", recursiveStep: choices.recursiveStep || "", complexity: choices.complexity || "", checked, passed, ...patch,
+  })
 
   const lock = () => {
     setChecked(true)
     if (allCorrect) setPassed(true)
+    saveDraft({ checked: true, passed: allCorrect })
   }
 
   const renderField = (f: { key: FieldKey; data: typeof c.baseCase }) => {
@@ -57,15 +62,15 @@ export function DesignStage({ lesson, saved, onComplete, onProbePass }: Props) {
               key={o.value}
               selected={choices[f.key] === o.value}
               state={checked && choices[f.key] === o.value ? (o.value === f.data.correct ? "correct" : "wrong") : null}
-              onClick={() => { if (!passed) { setChoices(s => ({ ...s, [f.key]: o.value })); setChecked(false) } }}
+               onClick={() => { if (!passed) { const nextChoices = { ...choices, [f.key]: o.value }; setChoices(nextChoices); setChecked(false); saveDraft({ baseCase: nextChoices.baseCase || "", recursiveStep: nextChoices.recursiveStep || "", complexity: nextChoices.complexity || "", checked: false, passed: false }) } }}
             >
               <code>{o.label}</code>
             </OptionRow>
           ))}
         </div>
         {wrong && <p className="design-wrong-feedback">{f.data.wrongFeedback}</p>}
-        {right && f.key === "complexity" && "derivation" in f.data && (
-          <p className="design-derivation">{(f.data as typeof c.complexity).derivation}</p>
+        {right && f.key === "complexity" && (
+          <p className="design-derivation">Commit this as a hypothesis. Execute will count the actual trace before the lesson names the cost.</p>
         )}
       </div>
     )
@@ -82,9 +87,9 @@ export function DesignStage({ lesson, saved, onComplete, onProbePass }: Props) {
         <p className="design-prompt">{c.signature.prompt}</p>
         <div className="signature-form">
           <code>def&nbsp;</code>
-          <input value={name} onChange={e => setName(e.target.value)} disabled={passed} aria-label="Function name" />
+           <input value={name} onChange={e => { setName(e.target.value); saveDraft({ name: e.target.value }) }} disabled={passed} aria-label="Function name" />
           <code>(</code>
-          <input value={param} onChange={e => setParam(e.target.value)} disabled={passed} aria-label="Parameter name" className="param-input" />
+           <input value={param} onChange={e => { setParam(e.target.value); saveDraft({ param: e.target.value }) }} disabled={passed} aria-label="Parameter name" className="param-input" />
           <code>) → number</code>
         </div>
         {checked && (!nameOk || !paramOk) && (
@@ -114,7 +119,7 @@ export function DesignStage({ lesson, saved, onComplete, onProbePass }: Props) {
         ) : (
           <PrimaryButton onClick={() => onComplete({
             name: name.trim(), param: param.trim(),
-            baseCase: choices.baseCase!, recursiveStep: choices.recursiveStep!, complexity: choices.complexity!,
+            baseCase: choices.baseCase!, recursiveStep: choices.recursiveStep!, complexity: choices.complexity!, checked: true, passed: true,
           })}>
             The editor is yours → Implement
           </PrimaryButton>

@@ -28,8 +28,11 @@ export const StageNames = [
 export const StageNameEnum = z.enum(StageNames)
 export type LessonStageName = z.infer<typeof StageNameEnum>
 
-// A1: one thinking-move per stage, nameable in ≤8 words (≈ ≤50 chars)
-const ThinkingMove = z.string().min(3).max(50)
+// A1: one thinking-move per stage, nameable in ≤8 words.
+const ThinkingMove = z.string().min(3).max(80).refine(
+  value => value.trim().split(/\s+/).length <= 8,
+  { message: "Rule A1: thinking moves must be eight words or fewer" },
+)
 
 // ── Prose blocks (typed data, not MDX, until the pipeline needs MDX) ──
 export const ProseBlockSchema = z.object({
@@ -48,13 +51,23 @@ export const ProbeSchema = z.object({
 export type Probe = z.infer<typeof ProbeSchema>
 
 // ── Stage 1: Understand ──
-export const PredictionSchema = z.object({
-  prompt: z.string(),
-  kind: z.enum(["numeric", "choice"]),
-  options: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
-  correct: z.string(),
-  explanation: z.string(),
-})
+const PredictionOptionSchema = z.object({ label: z.string(), value: z.string() })
+export const PredictionSchema = z.discriminatedUnion("kind", [
+  z.object({
+    prompt: z.string(),
+    kind: z.literal("numeric"),
+    options: z.array(PredictionOptionSchema).optional(),
+    correct: z.string(),
+    explanation: z.string(),
+  }),
+  z.object({
+    prompt: z.string(),
+    kind: z.literal("choice"),
+    options: z.array(PredictionOptionSchema).min(2),
+    correct: z.string(),
+    explanation: z.string(),
+  }),
+])
 
 export const InteractiveExampleSchema = z.object({
   id: z.string(),

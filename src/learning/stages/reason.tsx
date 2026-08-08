@@ -13,33 +13,40 @@ interface Props {
   lesson: LessonModule
   saved?: StageArtifacts["reason"]
   onComplete: (a: StageArtifacts["reason"]) => void
+  onDraft: (a: StageArtifacts["reason"]) => void
   onProbePass: () => void
 }
 
-export function ReasonStage({ lesson, saved, onComplete, onProbePass }: Props) {
+export function ReasonStage({ lesson, saved, onComplete, onDraft, onProbePass }: Props) {
   const nodes = lesson.stages.reason.socraticLadder
-  const [index, setIndex] = useState(0)
-  const [picked, setPicked] = useState<string | null>(null)
-  const [misses, setMisses] = useState(0)
+  const [index, setIndex] = useState(saved?.index ?? Object.keys(saved?.answers ?? {}).length)
+  const [picked, setPicked] = useState<string | null>(saved?.picked ?? null)
+  const [misses, setMisses] = useState(saved?.misses ?? 0)
   const [answers, setAnswers] = useState<Record<string, string>>(saved?.answers ?? {})
 
   const node = nodes[index]
-  const isCorrect = picked !== null && picked === node.correct
+  const isCorrect = picked !== null && !!node && picked === node.correct
   const done = index >= nodes.length
 
   const choose = (value: string) => {
     if (isCorrect) return
     setPicked(value)
     if (value === node.correct) {
-      setAnswers(a => ({ ...a, [node.id]: value }))
+      const nextAnswers = { ...answers, [node.id]: value }
+      setAnswers(nextAnswers)
+      onDraft({ answers: nextAnswers, misses, index, picked: value })
     } else {
-      setMisses(m => m + 1)
+      const nextMisses = misses + 1
+      setMisses(nextMisses)
+      onDraft({ answers, misses: nextMisses, index, picked: value })
     }
   }
 
   const next = () => {
+    const nextIndex = index + 1
     setPicked(null)
-    setIndex(i => i + 1)
+    setIndex(nextIndex)
+    onDraft({ answers, misses, index: nextIndex, picked: null })
   }
 
   return (

@@ -34,7 +34,16 @@ export default function LessonPage() {
   useEffect(() => {
     if (!lesson) return
     const saved = loadLessonProgress(lesson.id)
-    init(lesson.id, saved ? { currentStage: saved.currentStage, stages: saved.stages } : undefined)
+    init(
+      lesson.id,
+      saved ? { currentStage: saved.currentStage, stages: saved.stages } : undefined,
+      {
+        playExperiments: lesson.stages.play.experiments.length,
+        reasonQuestions: lesson.stages.reason.socraticLadder.length,
+        discoverSlots: lesson.stages.discover.artifact.slots.length,
+        implementTests: lesson.stages.implement.tests.length,
+      },
+    )
   }, [lesson, init])
 
   // Persist on every change
@@ -113,23 +122,23 @@ export default function LessonPage() {
             <>
               {currentStage === "understand" && (
                 <UnderstandStage lesson={lesson} saved={art("understand")}
-                  onComplete={(a) => advance("understand", a)} onProbePass={() => probePass("understand")} />
+                  onComplete={(a) => advance("understand", a)} onDraft={(a) => setArtifact("understand", a)} onProbePass={() => probePass("understand")} />
               )}
               {currentStage === "play" && (
                 <PlayStage lesson={lesson} saved={art("play")}
-                  onComplete={(a) => advance("play", a)} onProbePass={() => probePass("play")} />
+                  onComplete={(a) => advance("play", a)} onDraft={(a) => setArtifact("play", a)} onProbePass={() => probePass("play")} />
               )}
               {currentStage === "reason" && (
                 <ReasonStage lesson={lesson} saved={art("reason")}
-                  onComplete={(a) => advance("reason", a)} onProbePass={() => probePass("reason")} />
+                  onComplete={(a) => advance("reason", a)} onDraft={(a) => setArtifact("reason", a)} onProbePass={() => probePass("reason")} />
               )}
               {currentStage === "discover" && (
                 <DiscoverStage lesson={lesson} saved={art("discover")}
-                  onComplete={(a) => advance("discover", a)} onProbePass={() => probePass("discover")} />
+                  onComplete={(a) => advance("discover", a)} onDraft={(a) => setArtifact("discover", a)} onProbePass={() => probePass("discover")} />
               )}
               {currentStage === "design" && (
                 <DesignStage lesson={lesson} saved={art("design")}
-                  onComplete={(a) => advance("design", a)} onProbePass={() => probePass("design")} />
+                  onComplete={(a) => advance("design", a)} onDraft={(a) => setArtifact("design", a)} onProbePass={() => probePass("design")} />
               )}
               {currentStage === "implement" && (
                 <ImplementStage lesson={lesson} saved={art("implement")} design={art("design")}
@@ -142,7 +151,7 @@ export default function LessonPage() {
               )}
               {currentStage === "reflect" && (
                 <ReflectStage lesson={lesson} design={art("design")} saved={art("reflect")}
-                  onComplete={(a) => advance("reflect", a)} />
+                  onComplete={(a) => advance("reflect", a)} onDraft={(a) => setArtifact("reflect", a)} />
               )}
               {currentStage === "generalize" && (
                 <GeneralizeStage lesson={lesson} reflect={art("reflect")}

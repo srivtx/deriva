@@ -13,25 +13,28 @@ interface Props {
   lesson: LessonModule
   saved?: StageArtifacts["discover"]
   onComplete: (a: StageArtifacts["discover"]) => void
+  onDraft: (a: StageArtifacts["discover"]) => void
   onProbePass: () => void
 }
 
-export function DiscoverStage({ lesson, saved, onComplete, onProbePass }: Props) {
+export function DiscoverStage({ lesson, saved, onComplete, onDraft, onProbePass }: Props) {
   const artifact = lesson.stages.discover.artifact
   const [slots, setSlots] = useState<Record<string, string>>(saved?.slots ?? {})
   const [attempts, setAttempts] = useState(saved?.attempts ?? 0)
-  const [checked, setChecked] = useState(false)
-  const [passed, setPassed] = useState(false)
+  const [checked, setChecked] = useState(saved?.checked ?? false)
+  const [passed, setPassed] = useState(saved?.passed ?? false)
 
   const allFilled = artifact.slots.every(sl => slots[sl.name])
   const wrongSlots = checked ? artifact.slots.filter(sl => slots[sl.name] !== sl.correct) : []
 
   const check = () => {
-    setAttempts(a => a + 1)
+    const nextAttempts = attempts + 1
+    setAttempts(nextAttempts)
     setChecked(true)
     if (artifact.slots.every(sl => slots[sl.name] === sl.correct)) {
       setPassed(true)
     }
+    onDraft({ slots, attempts: nextAttempts, checked: true, passed: artifact.slots.every(sl => slots[sl.name] === sl.correct) })
   }
 
   return (
@@ -62,7 +65,7 @@ export function DiscoverStage({ lesson, saved, onComplete, onProbePass }: Props)
                   <button
                     key={o.value}
                     className={`slot-chip ${slots[sl.name] === o.value ? "selected" : ""}`}
-                    onClick={() => { if (!passed) { setSlots(s => ({ ...s, [sl.name]: o.value })); setChecked(false) } }}
+                   onClick={() => { if (!passed) { const nextSlots = { ...slots, [sl.name]: o.value }; setSlots(nextSlots); setChecked(false); onDraft({ slots: nextSlots, attempts, checked: false, passed: false }) } }}
                   >
                     {o.label}
                   </button>

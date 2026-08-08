@@ -98,6 +98,10 @@ export function ExecuteStage({ lesson, implement, onComplete }: Props) {
                 got its answer back, added one number, and handed it up. That is the entire
                 mechanism behind every recursive algorithm you will ever write.
               </p>
+              <div className="trace-evidence">
+                <span className="experiment-kicker">Trace evidence</span>
+                <p><b>{model.calls} calls</b> for n = {n}. Each call did one combine step, so the observed work grows with the length of the chain: linear time for this shape.</p>
+              </div>
             </div>
           )}
         </div>
