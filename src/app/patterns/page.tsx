@@ -7,7 +7,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { listPatternDeposits, type PatternDeposit } from "@/persistence/lesson-progress"
 import { loadPatternQuizProgress, type PatternQuizProgress } from "@/persistence/pattern-quiz"
-import { PATTERN_DIRECTORY, type PatternFamily } from "@/data/patterns"
+import { PATTERN_DIRECTORY, PATTERN_LEARNING_PATH, type PatternFamily } from "@/data/patterns"
 
 const FAMILIES: (PatternFamily | "All")[] = ["All", "Foundations", "Structures", "Graphs", "Choices", "State", "Compression", "Proof"]
 
@@ -42,11 +42,43 @@ export default function PatternsPage() {
 
       <section className="pattern-quiz-banner">
         <div>
-          <span className="discovery-kicker">35-question retrieval practice</span>
+          <span className="discovery-kicker">7 sessions · 5 questions each</span>
           <h2>Can you recognize the move before the code?</h2>
-          <p>Choose the pattern, invariant, state, or proof that makes each situation click.</p>
+          <p>Choose the pattern, invariant, state, or proof that makes each situation click. Your place saves after every answer.</p>
         </div>
         <Link href="/patterns/quiz" className="btn-primary as-link">{quizLabel}</Link>
+      </section>
+
+      <section className="pattern-learning-path" aria-labelledby="pattern-path-heading">
+        <div className="pattern-section-heading">
+          <div>
+            <span className="discovery-kicker">Recommended curriculum order</span>
+            <h2 id="pattern-path-heading">Follow the path, do not pick at random</h2>
+          </div>
+          <span className="pattern-count">{PATTERN_LEARNING_PATH.length} stops</span>
+        </div>
+        <p className="pattern-guide-intro">This is the order to learn the patterns: Trees first, then explicit references, ordered structures, search, choices, state, optimization, and proof. Each stop reuses the previous move before adding the next one.</p>
+        <div className="pattern-path-list">
+          {PATTERN_LEARNING_PATH.map(step => {
+            const newPatterns = step.newPatternIds.map(id => PATTERN_DIRECTORY.find(pattern => pattern.id === id)).filter(Boolean)
+            const revisitPatterns = step.revisitPatternIds.map(id => PATTERN_DIRECTORY.find(pattern => pattern.id === id)).filter(Boolean)
+            return (
+            <article key={step.topicId} className="pattern-path-step">
+              <div className="pattern-path-step-head">
+                <span className="pattern-route-number">{step.number}</span>
+                <div><span className="pattern-family">{step.topicName}</span><h3>{step.title}</h3></div>
+                <Link href={`/practice?topic=${step.topicId}`} className="pattern-path-link">Open topic →</Link>
+              </div>
+              <p className="pattern-path-why">{step.whyNow}</p>
+              <div className="pattern-path-patterns">
+                <div><span>Learn now</span>{newPatterns.length > 0 ? newPatterns.map(pattern => <Link key={pattern!.id} href={`/patterns#${pattern!.id}`}>{pattern!.name}</Link>) : <em>Transfer the earlier moves to interval problems.</em>}</div>
+                <div><span>Revisit</span>{revisitPatterns.map(pattern => <Link key={pattern!.id} href={`/patterns#${pattern!.id}`}>{pattern!.name}</Link>)}</div>
+              </div>
+            </article>
+            )
+          })}
+        </div>
+        <div className="pattern-guide-next"><b>How much</b><span>Stay on one topic until its core problems feel familiar, then take one five-question quiz block. The quiz is mixed on purpose: it tests whether you can recognize the move outside the original story.</span></div>
       </section>
 
       <section className="pattern-directory" aria-labelledby="directory-heading">

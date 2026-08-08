@@ -631,6 +631,23 @@ code, pre { font-family: var(--font-mono); }
 .pattern-quiz-banner h2, .pattern-section-heading h2 { margin: 4px 0 0; font: 700 clamp(22px, 4vw, 30px)/1.15 var(--font-narrative); }
 .pattern-quiz-banner p { margin: 8px 0 0; color: var(--ink-soft); font: 14px/1.45 var(--font-ui); }
 .pattern-quiz-banner .btn-primary { width: auto; white-space: nowrap; }
+.pattern-learning-path { display: flex; flex-direction: column; gap: 16px; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); }
+.pattern-guide-intro { max-width: 760px; margin: -4px 0 0; color: var(--ink-soft); font: 15px/1.5 var(--font-narrative); }
+.pattern-path-list { display: flex; flex-direction: column; gap: 8px; }
+.pattern-path-step { display: flex; min-width: 0; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.pattern-path-step-head { display: grid; grid-template-columns: 36px 1fr auto; align-items: start; gap: 12px; }
+.pattern-route-number { color: var(--viz-untouched); font: 12px var(--font-mono); }
+.pattern-path-step .pattern-family { font-size: 10px; }
+.pattern-path-step h3 { margin: 3px 0 0; font: 700 20px/1.1 var(--font-narrative); }
+.pattern-path-link { color: var(--accent); font: 650 12px var(--font-ui); text-decoration: none; white-space: nowrap; }
+.pattern-path-why { max-width: 850px; margin: 0; color: var(--ink-soft); font: 14px/1.5 var(--font-narrative); }
+.pattern-path-patterns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pattern-path-patterns > div { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 5px; }
+.pattern-path-patterns > div > span { flex-basis: 100%; color: var(--ink-soft); font: 700 10px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
+.pattern-path-patterns a, .pattern-path-patterns em { padding: 5px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: 11px/1.25 var(--font-ui); text-decoration: none; }
+.pattern-path-patterns em { color: var(--ink-soft); font-style: normal; }
+.pattern-guide-next { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 13px 15px; border-left: 3px solid var(--accent); background: var(--accent-soft); color: var(--ink-soft); font: 13px/1.45 var(--font-ui); }
+.pattern-guide-next b { color: var(--accent); white-space: nowrap; }
 .pattern-directory, .pattern-journal-section { display: flex; flex-direction: column; gap: 18px; }
 .pattern-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; }
 .pattern-count { color: var(--ink-soft); font: 12px var(--font-mono); white-space: nowrap; }
@@ -660,6 +677,8 @@ code, pre { font-family: var(--font-mono); }
 .pattern-quiz-top > span, .pattern-quiz-score { color: var(--ink-soft); font: 12px var(--font-mono); }
 .pattern-quiz-progress { height: 6px; margin-bottom: 42px; overflow: hidden; border-radius: 999px; background: var(--line); }
 .pattern-quiz-progress span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width var(--dur-med) var(--ease-standard); }
+.pattern-quiz-session-note { margin: -26px 0 8px; color: var(--ink-soft); font: 12px/1.45 var(--font-ui); }
+.pattern-quiz-session-note b { color: var(--accent); }
 .pattern-quiz-act, .pattern-quiz-finished { display: flex; flex-direction: column; gap: 18px; }
 .pattern-quiz-act .stage-title { margin-top: 0; }
 .pattern-quiz-context { margin: -4px 0 0; padding: 16px; border-left: 3px solid var(--accent); background: var(--paper-raised); color: var(--ink-soft); font: 15px/1.55 var(--font-narrative); }
@@ -686,6 +705,10 @@ code, pre { font-family: var(--font-mono); }
   .pattern-quiz-banner { grid-template-columns: 1fr; }
   .pattern-quiz-banner .btn-primary { width: 100%; }
   .pattern-section-heading { align-items: start; }
+  .pattern-path-step-head { grid-template-columns: 28px 1fr; }
+  .pattern-path-link { grid-column: 2; }
+  .pattern-path-patterns { grid-template-columns: 1fr; gap: 9px; }
+  .pattern-guide-next { grid-template-columns: 1fr; gap: 4px; }
   .pattern-quiz-progress { margin-bottom: 30px; }
   .pattern-quiz-recap { grid-template-columns: 1fr; gap: 2px; }
   .pattern-quiz-recap b { margin-bottom: 6px; }

@@ -84,6 +84,7 @@ deriva/
 │   ├── persistence/                   # ★ Local-first data (08) — ONLY dir touching localStorage
 │   │   ├── preferences.ts             #   theme / motion / text-scale prefs
 │   │   ├── lesson-progress.ts         #   9-stage progress, artifacts, pattern journal
+│   │   ├── practice-progress.ts       #   last-open problem per DSA topic
 │   │   ├── db.ts                      #   Dexie schema + versioned migrations (planned)
 │   │   ├── repos/
 │   │   │   ├── progress-repo.ts       #   stage completion, attempts, mastery probes

@@ -19,6 +19,15 @@ export type PatternQuestion = {
   answer: number
   explanation: string
 }
+export type PatternPathStep = {
+  number: string
+  topicId: string
+  topicName: string
+  title: string
+  whyNow: string
+  newPatternIds: string[]
+  revisitPatternIds: string[]
+}
 
 export const PATTERN_DIRECTORY: PatternDefinition[] = [
   {
@@ -335,6 +344,93 @@ export const PATTERN_DIRECTORY: PatternDefinition[] = [
     move: "Use a doubled result to skip roughly half the repeated work each step.",
     watchOut: "Odd remainders still need an explicit contribution.",
     examples: ["power by exponentiation", "fast matrix powers", "repeated transitions"],
+  },
+]
+
+export const PATTERN_LEARNING_PATH: PatternPathStep[] = [
+  {
+    number: "01", topicId: "trees", topicName: "Trees", title: "Build recursive contracts",
+    whyNow: "Start here. Trees make the shape of a smaller subproblem visible before you manage mutable references or arbitrary cycles.",
+    newPatternIds: ["recursive-leap-of-faith", "traversal-as-skeleton", "upward-aggregation", "returning-tuples"],
+    revisitPatternIds: [],
+  },
+  {
+    number: "02", topicId: "linked-lists", topicName: "Linked Lists", title: "Make references explicit",
+    whyNow: "Once recursive movement is familiar, make the links visible. You now learn to cut, reconnect, and protect boundaries without losing the suffix.",
+    newPatternIds: ["pointer-surgery", "sentinel-thinking", "cycle-detection"],
+    revisitPatternIds: ["recursive-leap-of-faith"],
+  },
+  {
+    number: "03", topicId: "bst", topicName: "Binary Search Trees", title: "Turn order into an invariant",
+    whyNow: "BSTs reuse tree traversal but add ancestor-wide obligations. The ordering rule becomes a tool for eliminating whole subtrees.",
+    newPatternIds: ["invariant-driven-structure", "downward-constraints", "elimination", "representative-trees"],
+    revisitPatternIds: ["traversal-as-skeleton", "upward-aggregation"],
+  },
+  {
+    number: "04", topicId: "trie", topicName: "Trie", title: "Store the shared dimension",
+    whyNow: "After ordering complete keys, change the representation so shared prefixes are stored once and prefix questions become direct walks.",
+    newPatternIds: ["representation-choice", "structure-as-compression-trie"],
+    revisitPatternIds: ["invariant-driven-structure", "representative-trees"],
+  },
+  {
+    number: "05", topicId: "heap", topicName: "Heap", title: "Expose the next best choice",
+    whyNow: "A heap teaches the smallest useful ordering: preserve one local rule so the next global extreme is always available.",
+    newPatternIds: ["local-rules-global-answer-heap", "frontier-maintenance"],
+    revisitPatternIds: ["invariant-driven-structure", "representation-choice"],
+  },
+  {
+    number: "06", topicId: "advanced-trees", topicName: "Advanced Trees", title: "Carry context along paths",
+    whyNow: "Now combine the tree skeleton with path-scoped memory and canonical shapes. This is the bridge from one structure to many.",
+    newPatternIds: ["path-as-array-prefix-on-path"],
+    revisitPatternIds: ["returning-tuples", "representative-trees", "upward-aggregation"],
+  },
+  {
+    number: "07", topicId: "graphs", topicName: "Graphs", title: "Search without a tree guarantee",
+    whyNow: "Graphs remove the safety rails of a tree: routes merge and cycles appear. Visited identity, layers, and frontiers keep search finite and explainable.",
+    newPatternIds: ["visited-canonical-form", "layer-argument"],
+    revisitPatternIds: ["frontier-maintenance", "cycle-detection", "representation-choice"],
+  },
+  {
+    number: "08", topicId: "backtracking", topicName: "Backtracking", title: "Branch, undo, and prove",
+    whyNow: "After graph search, deliberately create alternatives. Backtracking adds reversible choices and only prunes a branch when the proof is sound.",
+    newPatternIds: ["decision-tree", "choose-explore-unchoose", "pruning", "bit-as-membership-enumeration"],
+    revisitPatternIds: ["visited-canonical-form", "representation-choice"],
+  },
+  {
+    number: "09", topicId: "dp", topicName: "Dynamic Programming", title: "Compress repeated futures",
+    whyNow: "Branching reveals the same future being solved again. DP names the smallest state, caches overlap, and turns the decision tree into a product table.",
+    newPatternIds: ["overlap-memoization", "state-design-amnesia-test", "table-as-product", "ending-at-i"],
+    revisitPatternIds: ["choose-explore-unchoose", "upward-aggregation"],
+  },
+  {
+    number: "10", topicId: "greedy", topicName: "Greedy", title: "Discard state with a proof",
+    whyNow: "Only after learning to preserve the future should you safely forget most of it. Exchange arguments explain when a frontier choice is enough.",
+    newPatternIds: ["greedy-frontier", "exchange-argument"],
+    revisitPatternIds: ["frontier-maintenance", "state-design-amnesia-test"],
+  },
+  {
+    number: "11", topicId: "intervals", topicName: "Intervals", title: "Apply the frontier to time",
+    whyNow: "Intervals are a transfer lab: sort the right boundary, merge a frontier, and make overlap a precise relation instead of a visual guess.",
+    newPatternIds: [],
+    revisitPatternIds: ["greedy-frontier", "representation-choice", "frontier-maintenance"],
+  },
+  {
+    number: "12", topicId: "advanced-graphs", topicName: "Advanced Graphs", title: "Add cost to the frontier",
+    whyNow: "Weighted edges break BFS layers. Reuse heaps, relaxation, and greedy proof habits to make the next graph estimate trustworthy.",
+    newPatternIds: ["relaxation-rounds"],
+    revisitPatternIds: ["local-rules-global-answer-heap", "greedy-frontier", "frontier-maintenance", "invariant-driven-structure"],
+  },
+  {
+    number: "13", topicId: "bit-manipulation", topicName: "Bit Manipulation", title: "Make membership algebraic",
+    whyNow: "After state and subset work, bits make membership and cancellation compact. The representation becomes the optimization.",
+    newPatternIds: ["masks-stencils", "cancellation-algebra"],
+    revisitPatternIds: ["bit-as-membership-enumeration", "state-design-amnesia-test"],
+  },
+  {
+    number: "14", topicId: "math", topicName: "Math", title: "Reduce with invariants",
+    whyNow: "Finish by turning the accumulated moves into proof-driven shortcuts: preserve the answer while shrinking the input or halving the work.",
+    newPatternIds: ["invariance-preserving-reduction-euclid", "halve-the-work-squaring"],
+    revisitPatternIds: ["cycle-detection", "cancellation-algebra", "representation-choice"],
   },
 ]
 

@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
 import MobileProblemNav, { MobileTopicPicker } from "@/components/mobile-problem-nav"
+import { loadPracticePositions, savePracticePosition, type PracticePositions } from "@/persistence/practice-progress"
 
 export default function PracticePage() {
   const [topicId, setTopicId] = useState("trees")
   const [hydrated, setHydrated] = useState(false)
   const [currentId, setCurrentId] = useState(1)
+  const [practicePositions, setPracticePositions] = useState<PracticePositions>({})
   const [completed, setCompleted] = useState<Record<string, number[]>>({})
   const [savedCode, setSavedCode] = useState<Record<string, Record<number, string>>>({})
   const [hintLevel, setHintLevel] = useState<Record<string, Record<number, number>>>({})
@@ -38,6 +40,8 @@ export default function PracticePage() {
       const params = new URLSearchParams(window.location.search)
       const topicParam = params.get("topic")
       const problemParam = Number(params.get("problem"))
+      const positions = loadPracticePositions()
+      setPracticePositions(positions)
       if (topicParam && TOPICS[topicParam]) {
         setTopicId(topicParam)
         const requestedProblem = TOPICS[topicParam].problems.find(problem => problem.id === problemParam)
@@ -46,7 +50,9 @@ export default function PracticePage() {
         const stored = localStorage.getItem("deriva-topic-v1")
         if (stored && TOPICS[stored]) {
           setTopicId(stored)
-          setCurrentId(TOPICS[stored].problems[0].id)
+          const remembered = positions[stored]
+          const validRemembered = TOPICS[stored].problems.some(problem => problem.id === remembered)
+          setCurrentId(validRemembered ? remembered : TOPICS[stored].problems[0].id)
         }
       }
       const c = localStorage.getItem("deriva-completed-v2");
@@ -59,11 +65,15 @@ export default function PracticePage() {
     } catch {}
   }, [])
 
-  useEffect(() => { setHydrated(true) }, [])
   useEffect(() => { localStorage.setItem("deriva-completed-v2", JSON.stringify(Object.fromEntries(Object.entries(completed).map(([k,v]) => [k, [...new Set(v)]])))) }, [completed])
   useEffect(() => { localStorage.setItem("deriva-code-v2", JSON.stringify(savedCode)) }, [savedCode])
   useEffect(() => { localStorage.setItem("deriva-hints-v2", JSON.stringify(hintLevel)) }, [hintLevel])
   useEffect(() => { localStorage.setItem("deriva-topic-v1", topicId) }, [topicId])
+  useEffect(() => {
+    if (!hydrated) return
+    setPracticePositions(previous => ({ ...previous, [topicId]: currentId }))
+    savePracticePosition(topicId, currentId)
+  }, [currentId, hydrated, topicId])
 
   const initPyodide = useCallback(async () => {
     if (pyRef.current) return true
@@ -118,7 +128,9 @@ export default function PracticePage() {
   }
 
   const switchTopic = (id: string) => {
-    setTopicId(id); setCurrentId(TOPICS[id].problems[0].id); setOutput("")
+    const remembered = practicePositions[id]
+    const validRemembered = TOPICS[id].problems.some(problem => problem.id === remembered)
+    setTopicId(id); setCurrentId(validRemembered ? remembered : TOPICS[id].problems[0].id); setOutput("")
   }
 
   useEffect(() => {
