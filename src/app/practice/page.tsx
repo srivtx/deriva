@@ -200,8 +200,8 @@ export default function PracticePage() {
             </div>
           </div>
           <div className="problem-pager" style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => navigate(-1)} disabled={currentId <= topic.problems[0].id} className="btn" aria-label="Previous problem">←</button>
-            <button onClick={() => navigate(1)} disabled={currentId >= topic.problems[topic.problems.length-1].id} className="btn" aria-label="Next problem">→</button>
+            <button onClick={() => navigate(-1)} disabled={hydrated && currentId <= topic.problems[0].id} className="btn" aria-label="Previous problem">←</button>
+            <button onClick={() => navigate(1)} disabled={hydrated && currentId >= topic.problems[topic.problems.length-1].id} className="btn" aria-label="Next problem">→</button>
           </div>
         </header>
 
@@ -360,7 +360,7 @@ export default function PracticePage() {
           .sidebar { display: none; }
          .main { overflow: visible; padding: var(--sp-4) var(--sp-4) calc(144px + env(safe-area-inset-bottom)); }
           .mobile-only { display: block; }
-          .mobile-context { position: sticky; top: calc(60px + env(safe-area-inset-top)); z-index: 25; display: grid; grid-template-columns: 1fr; gap: var(--sp-2); margin: calc(var(--sp-2) * -1) 0 var(--sp-4); padding: var(--sp-2) 0; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(14px); }
+          .mobile-context { position: sticky; top: calc(60px + env(safe-area-inset-top)); z-index: 60; display: grid; grid-template-columns: 1fr; gap: var(--sp-2); margin: calc(var(--sp-2) * -1) 0 var(--sp-4); padding: var(--sp-2) 0; background: var(--paper); }
           .mobile-context > * { box-shadow: 0 4px 14px rgb(26 29 33 / .05); }
           .prob-header { align-items: flex-start; gap: var(--sp-3); margin-bottom: var(--sp-3); padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-raised); box-shadow: var(--shadow-raised); }
           .prob-num { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; background: var(--accent-soft); font-size: 16px; }
