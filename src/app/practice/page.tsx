@@ -371,11 +371,11 @@ export default function PracticePage() {
           .completion-next { grid-column: 2; justify-self: start; }
           .kbd { display: none; }
         }
-        .drill-mode-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink-soft); font-size: 12px; }
+         .drill-mode-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; padding: 12px 14px; border: 1px solid var(--viz-pointer); border-left: 4px solid #22d3ee; border-radius: 0 var(--radius) var(--radius) 0; background: linear-gradient(110deg, #162a52, var(--accent) 58%, var(--viz-pointer)); color: rgb(255 255 255 / .78); font-size: 12px; box-shadow: 0 8px 18px color-mix(in srgb, var(--viz-pointer) 18%, transparent); }
         .drill-mode-banner div { display: flex; align-items: baseline; gap: 8px; }
-        .drill-mode-banner span { color: var(--accent); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
-        .drill-mode-banner strong { color: var(--ink); font-weight: 600; }
-        .drill-mode-banner a { color: var(--accent); font-weight: 700; text-decoration: none; white-space: nowrap; }
+         .drill-mode-banner span { color: rgb(255 255 255 / .72); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+         .drill-mode-banner strong { color: #fff; font-weight: 700; }
+         .drill-mode-banner a { color: #fff; font-weight: 700; text-decoration: none; white-space: nowrap; }
         @media (min-width: 801px) {
           .mobile-only { display: none; }
         }
