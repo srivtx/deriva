@@ -63,12 +63,12 @@ export default function HomePage() {
   const practiceHref = practiceAction?.href || "/practice?topic=trees&problem=1"
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--paper)", color: "var(--ink)", fontFamily: "var(--font-ui)" }}>
+    <div className="home-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--paper)", color: "var(--ink)", fontFamily: "var(--font-ui)" }}>
       <header className="landing-header" style={{ padding: "clamp(24px, 5vw, 48px) clamp(20px, 5vw, 48px) clamp(20px, 4vw, 32px)", borderBottom: "1px solid var(--line)", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
         <div className="home-eyebrow" aria-label="Daily practice session">
           <span className="home-eyebrow-index">01</span>
           <span>Daily practice</span>
-          <span>10 min · no install</span>
+          <span>10 minute session</span>
         </div>
         <h1 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontFamily: "var(--font-narrative)", fontWeight: 700, lineHeight: 1.15, margin: 0 }}>
           Make one algorithm<br/>
@@ -94,7 +94,7 @@ export default function HomePage() {
               <span className="discovery-kicker">Today&rsquo;s session</span>
               <h2 id="today-heading">The Recursion Reflex</h2>
             </div>
-            <span className="today-session-time">10 min · no install</span>
+            <span className="today-session-time">10 minutes</span>
           </div>
           <p className="today-session-copy">
             {guidedDone
@@ -112,7 +112,7 @@ export default function HomePage() {
           <div className="continue-derivation-rail" role="progressbar" aria-valuemin={0} aria-valuemax={9} aria-valuenow={Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} aria-label={`${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}>
             <span style={{ width: `${guidedDone ? 100 : Math.max(5, ((guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0)) / 9) * 100)}%` }} />
           </div>
-          <span className="today-session-progress">{guidedDone ? "9 of 9 stages complete · transfer is next" : `${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}</span>
+          <span className="today-session-progress">{guidedDone ? "9 of 9 stages complete. Transfer is next." : `${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}</span>
         </section>
 
         <section className="stuck-callout" aria-labelledby="stuck-heading">
