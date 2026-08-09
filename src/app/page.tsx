@@ -5,8 +5,6 @@ import { useEffect, useState } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
 import { PATTERN_DIRECTORY, PATTERN_LEARNING_PATH } from "@/data/patterns"
 import Logo from "@/components/logo"
-import GameModeButton from "@/components/game-mode-button"
-import PatternModeButton from "@/components/pattern-mode-button"
 import { loadLessonProgress, type LessonProgress } from "@/persistence/lesson-progress"
 import { loadPracticeCompletion } from "@/persistence/practice-progress"
 import { loadPatternMastery } from "@/persistence/pattern-mastery"
@@ -36,8 +34,8 @@ export default function HomePage() {
   const [hydrated, setHydrated] = useState(false)
   const [guidedProgress, setGuidedProgress] = useState<LessonProgress | undefined>()
   const [momentum, setMomentum] = useState<HomeMomentum>()
-  const [nextActions, setNextActions] = useState<NextAction[]>([])
   const [masteryMomentum, setMasteryMomentum] = useState<MasteryMomentum>()
+  const [practiceAction, setPracticeAction] = useState<NextAction>()
 
   useEffect(() => {
     setGuidedProgress(loadLessonProgress("trees/00-recursion-reflex/sum-1-to-n"))
@@ -45,7 +43,7 @@ export default function HomePage() {
     const practiceDone = Object.values(allCompletion).reduce((sum, values) => sum + values.length, 0)
     const practiceTotal = TOPIC_LIST.reduce((sum, item) => sum + item.problems.length, 0)
     const pathDone = PATTERN_LEARNING_PATH.filter(step => (allCompletion[step.topicId] || []).length >= (TOPICS[step.topicId]?.problems.length || 1)).length
-    setNextActions(getNextActions())
+    setPracticeAction(getNextActions().find(action => action.kind === "practice"))
     const mastery = loadPatternMastery()
     setMasteryMomentum({
       recognized: PATTERN_DIRECTORY.filter(pattern => mastery.recognized.includes(pattern.id)).length,
@@ -63,6 +61,7 @@ export default function HomePage() {
   const guidedStages = ["understand", "play", "reason", "discover", "design", "implement", "execute", "reflect", "generalize"]
   const guidedIndex = guidedStages.indexOf(guidedStage)
   const guidedDone = guidedProgress?.stages.generalize?.completed
+  const practiceHref = practiceAction?.href || "/practice?topic=trees&problem=1"
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--paper)", color: "var(--ink)", fontFamily: "var(--font-ui)" }}>
@@ -70,150 +69,89 @@ export default function HomePage() {
         <div className="landing-brandline" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <Logo size={44} variant="wordmark" />
           <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "var(--ink-soft)" }}>
-            Learn DSA from first principles
+            One useful session at a time
           </span>
         </div>
         <h1 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontFamily: "var(--font-narrative)", fontWeight: 700, lineHeight: 1.15, margin: 0 }}>
-          Derive the algorithm.<br/>
-          <span style={{ color: "var(--accent)" }}>Don't memorize it.</span>
+          Make one algorithm<br/>
+          <span style={{ color: "var(--accent)" }}>feel inevitable.</span>
         </h1>
         <p style={{ marginTop: 16, color: "var(--ink-soft)", maxWidth: 600, fontSize: 17, lineHeight: 1.6, fontFamily: "var(--font-narrative)" }}>
-           DSA (700 problems) · System Design HLD (45) · LLD (35). Every topic follows a nine-stage derivation —
-          each stage adds exactly one new mental model. In-browser Python. No install. Just think.
+          Deriva gives you one small reasoning win before asking for a hard problem. Start with a ten-minute guided session, then choose whether to practice or recall the move.
         </p>
         <div className="landing-actions" style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
-           <Link href={guidedHref} style={{ padding: "12px 28px", background: "var(--accent)", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
-             Start guided learning →
+           <Link href={guidedHref} className="landing-primary-action" style={{ padding: "12px 28px", background: "var(--accent)", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+             Begin today&rsquo;s session →
            </Link>
-           <Link href="/practice" className="landing-drill-action" style={{ padding: "12px 28px", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
-             Drill problems →
+           <Link href={practiceHref} className="landing-drill-action" style={{ padding: "12px 28px", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+             I already know the idea →
            </Link>
-           <Link href="/design" className="landing-secondary-action" style={{ padding: "12px 28px", background: "#7c3aed", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
-             System Design (HLD) →
-           </Link>
-            <Link href="/lld" className="landing-secondary-action" style={{ padding: "12px 28px", background: "#16a34a", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
-             Low-Level Design →
-           </Link>
-           <PatternModeButton />
-           <GameModeButton />
-         </div>
+        </div>
       </header>
 
       <main className="landing-main" style={{ flex: 1, padding: "clamp(24px, 5vw, 40px) clamp(20px, 5vw, 48px) 60px", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
-        <Link href={guidedHref} className="continue-derivation" style={{
-          display: "block", marginBottom: 32, padding: "20px 24px", border: "1px solid var(--accent)",
-          borderRadius: "var(--radius)", background: "var(--accent-soft)", color: "var(--ink)", textDecoration: "none",
-        }}>
-          <div className="continue-derivation-head" style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "baseline" }}>
-            <span style={{ color: "var(--accent)", fontSize: 10, fontWeight: 800, letterSpacing: 1.3, textTransform: "uppercase" }}>
-              {guidedDone ? "Pattern earned · revisit" : guidedProgress ? "Your unfinished derivation" : "Start with one idea"}
-            </span>
-            <span style={{ color: "var(--accent)", fontSize: 13, fontWeight: 700 }}>Open lesson →</span>
+        <section className="today-session" aria-labelledby="today-heading">
+          <div className="today-session-head">
+            <div>
+              <span className="discovery-kicker">Today&rsquo;s session</span>
+              <h2 id="today-heading">The Recursion Reflex</h2>
+            </div>
+            <span className="today-session-time">10 min · no install</span>
           </div>
-          <h2 style={{ margin: "8px 0 4px", fontFamily: "var(--font-narrative)", fontSize: 24 }}>
-            The Recursion Reflex
-          </h2>
-          <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: 14, lineHeight: 1.5 }}>
+          <p className="today-session-copy">
             {guidedDone
-              ? "You named the leap. Revisit it before it fades, then transfer it to a tree."
+              ? "The pattern is earned. Revisit it once, then prove you can spot the same leap in a tree."
               : guidedProgress
-                ? `You are at Stage ${guidedIndex + 1} of 9: ${guidedStage}. The next move is still waiting for you.`
-                : "A 10-minute guided derivation. No editor until you have invented the contract."}
+                ? `You are at Stage ${guidedIndex + 1} of 9. ${guidedStage === "understand" ? "Make one prediction to get moving." : "Your next small move is ready."}`
+                : "Predict an output, touch a live example, and derive the recursive contract before writing code."}
           </p>
-           <div className="continue-derivation-rail" role="progressbar" aria-valuemin={0} aria-valuemax={9} aria-valuenow={Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} aria-label={`${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}>
+          <div className="today-session-proof"><span>First win</span><b>Make one correct prediction</b><span>Then</span><b>Turn it into a reusable pattern</b></div>
+          <div className="today-session-actions">
+            <Link href={guidedHref} className="today-session-primary">{guidedProgress ? "Continue the derivation" : "Start the derivation"} →</Link>
+            <Link href={practiceHref} className="today-session-secondary">Practice code <span>5 min</span></Link>
+            <Link href="/patterns/quiz" className="today-session-secondary">Recall a pattern <span>2 min</span></Link>
+          </div>
+          <div className="continue-derivation-rail" role="progressbar" aria-valuemin={0} aria-valuemax={9} aria-valuenow={Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} aria-label={`${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}>
             <span style={{ width: `${guidedDone ? 100 : Math.max(5, ((guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0)) / 9) * 100)}%` }} />
           </div>
-        </Link>
+          <span className="today-session-progress">{guidedDone ? "9 of 9 stages complete · transfer is next" : `${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}</span>
+        </section>
 
-        {momentum && <section className="home-momentum" aria-labelledby="momentum-heading">
-          <div className="home-momentum-head"><div><span className="discovery-kicker">Your momentum</span><h2 id="momentum-heading">One coherent finish path.</h2></div><span className="home-momentum-total">{momentum.practiceDone}/{momentum.practiceTotal} DSA problems</span></div>
-          <div className="home-momentum-grid">
-            {nextActions.map((action, index) => {
-              const cardTone = index === 0 ? "primary" : action.kind === "patterns" ? "path" : action.kind
-              return <Link key={action.id} href={action.href} className={`home-momentum-card ${cardTone}`}>
-                <span className="home-momentum-label">{action.eyebrow}</span>
-                <b>{action.title}</b>
-                <span>{action.description}</span>
-                <strong>{action.progress ? `${action.progress.completed}/${action.progress.total} complete · ` : ""}{action.cta} →</strong>
+        <section className="stuck-callout" aria-labelledby="stuck-heading">
+          <div><span className="discovery-kicker">No shame route</span><h2 id="stuck-heading">Stuck is part of the lesson.</h2></div>
+          <p>Use a smaller example, ask for the next question, or switch to code practice. You can always return to the derivation without losing your work.</p>
+          <div><Link href={guidedHref}>Try the next question →</Link><Link href={practiceHref}>See the code run →</Link></div>
+        </section>
+
+        {momentum && <section className="home-momentum compact-momentum" aria-labelledby="momentum-heading">
+          <div className="home-momentum-head"><div><span className="discovery-kicker">Your evidence</span><h2 id="momentum-heading">What you can do now.</h2></div><span className="home-momentum-total">{momentum.practiceDone} problems solved</span></div>
+          <div className="mastery-momentum" aria-label="Pattern mastery momentum">
+            <div><span>Patterns recognized</span><b>{masteryMomentum?.recognized ?? 0}/{PATTERN_DIRECTORY.length}</b></div>
+            <div><span>Transfer proof</span><b>{masteryMomentum?.transferred ?? 0} completed</b></div>
+            <div><span>Review cues</span><b>{masteryMomentum?.review ? `${masteryMomentum.review} waiting` : "Clear"}</b></div>
+          </div>
+        </section>}
+
+        <details className="curriculum-explore">
+          <summary><span>Explore the curriculum</span><small>DSA, HLD, LLD, games, and pattern tools</small></summary>
+          <div className="explore-actions">
+            <Link href="/patterns" className="explore-link"><b>Pattern Journal</b><span>Recognize the thinking moves</span></Link>
+            <Link href="/expedition" className="explore-link"><b>Expedition</b><span>Retrieve, break, and transfer an idea</span></Link>
+            <Link href="/games" className="explore-link"><b>Game Mode</b><span>Practice invariants through play</span></Link>
+            <Link href="/design" className="explore-link"><b>System Design</b><span>45 architecture problems</span></Link>
+            <Link href="/lld" className="explore-link"><b>Low-Level Design</b><span>35 object design problems</span></Link>
+          </div>
+          <h3>DSA Topics</h3>
+          <div className="topic-grid">
+            {TOPIC_LIST.map((topic, i) => {
+              const s = TOPIC_STYLES[i % TOPIC_STYLES.length]
+              return <Link key={topic.id} href={`/topic/${topic.id}`} className="topic-card" style={{ background: s.bg, border: `1px solid ${s.border}`, color: "var(--ink)" }}>
+                <span className="topic-card-title"><b style={{ background: s.accent }} /><strong>{topic.name}</strong><em>{topic.problems.length}</em></span>
+                <span className="topic-card-stages">{topic.stages.map(stage => stage.name).join(" · ")}</span>
               </Link>
             })}
           </div>
-          <div className="home-finish-line"><div><span>Finish line</span><b>{momentum.pathDone}/14 stops complete</b></div><div className="home-finish-track"><span style={{ width: `${(momentum.pathDone / PATTERN_LEARNING_PATH.length) * 100}%` }} /></div></div>
-          {masteryMomentum && <div className="mastery-momentum" aria-label="Pattern mastery momentum">
-            <div><span>Pattern momentum</span><b>{masteryMomentum.recognized}/{PATTERN_DIRECTORY.length} recognized</b></div>
-            <div><span>Transfer proof</span><b>{masteryMomentum.transferred} transferred</b></div>
-            <div><span>Next revisit</span><b>{masteryMomentum.review ? `${masteryMomentum.review} cues waiting` : "No misses waiting"}</b></div>
-          </div>}
-        </section>}
-
-        <Link href="/expedition" className="expedition-callout">
-          <span className="discovery-kicker">New · Pattern journeys</span>
-          <b>Go deeper than the problem bank</b>
-          <span>Retrieve an idea, break it, transfer it, and leave with your own theory.</span>
-          <strong>Enter the Expedition →</strong>
-        </Link>
-
-        <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", marginBottom: 32 }}>
-          <Link href="/design" className="topic-card" style={{
-             background: "linear-gradient(135deg, #f5f3ff, #ede9fe)", border: "1px solid #ddd6fe", borderRadius: "var(--radius)",
-            padding: "24px 28px", display: "flex", flexDirection: "column", textDecoration: "none", color: "var(--ink)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#7c3aed", flexShrink: 0 }} />
-              <h2 style={{ fontSize: 16, fontFamily: "var(--font-narrative)", fontWeight: 700, margin: 0 }}>System Design (HLD)</h2>
-              <span style={{ fontSize: 12, color: "var(--ink-soft)", fontFamily: "var(--font-mono)", marginLeft: "auto" }}>45</span>
-            </div>
-            <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: 0, lineHeight: 1.5 }}>
-              Requirements → API → capacity math → components → naive → optimized → full designs. Interactive architecture canvas (React Flow).
-            </p>
-          </Link>
-          <Link href="/lld" className="topic-card" style={{
-             background: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "1px solid #bbf7d0", borderRadius: "var(--radius)",
-            padding: "24px 28px", display: "flex", flexDirection: "column", textDecoration: "none", color: "var(--ink)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", flexShrink: 0 }} />
-              <h2 style={{ fontSize: 16, fontFamily: "var(--font-narrative)", fontWeight: 700, margin: 0 }}>Low-Level Design (OOP)</h2>
-              <span style={{ fontSize: 12, color: "var(--ink-soft)", fontFamily: "var(--font-mono)", marginLeft: "auto" }}>35</span>
-            </div>
-            <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: 0, lineHeight: 1.5 }}>
-              Entities → responsibilities → relationships → state machines → god classes → patterns → full designs (parking lot, LRU cache, splitwise).
-            </p>
-          </Link>
-        </div>
-         <h3 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 1.5, color: "var(--ink-soft)", marginBottom: 16 }}>DSA Topics — 700 Problems</h3>
-        <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
-          {TOPIC_LIST.map((topic, i) => {
-            const s = TOPIC_STYLES[i % TOPIC_STYLES.length]
-            const stageNames = topic.stages.map(st => st.name)
-            return (
-              <Link key={topic.id} href={`/topic/${topic.id}`}
-                className="topic-card"
-                style={{
-                  background: s.bg, border: `1px solid ${s.border}`, borderRadius: "var(--radius)",
-                  padding: "24px 28px", display: "flex", flexDirection: "column", textDecoration: "none",
-                  color: "var(--ink)", transition: "all 0.2s", cursor: "pointer",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.accent, flexShrink: 0 }} />
-                  <h2 style={{ fontSize: 16, fontFamily: "var(--font-narrative)", fontWeight: 700, margin: 0 }}>{topic.name}</h2>
-                  <span style={{ fontSize: 12, color: "var(--ink-soft)", fontFamily: "var(--font-mono)", marginLeft: "auto" }}>{topic.problems.length}</span>
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {stageNames.map((name, j) => (
-                    <span key={j} style={{
-                      fontSize: 10, padding: "2px 8px", borderRadius: 10,
-                      background: `${s.accent}14`, color: s.accent, border: `1px solid ${s.accent}33`,
-                      fontFamily: "var(--font-mono)",
-                    }}>{name}</span>
-                  ))}
-                </div>
-              </Link>
-            )
-          })}
-        </div>
+        </details>
       </main>
 
       <footer style={{ padding: "24px 48px", borderTop: "1px solid var(--line)", color: "var(--ink-soft)", fontSize: 12 }}>

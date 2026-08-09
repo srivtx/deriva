@@ -36,6 +36,20 @@ export function ImplementStage({ lesson, saved, design, onComplete, onDraft }: P
   const hints = [...impl.hints].sort((a, b) => a.level - b.level)
   const visibleHints = hints.filter(h => h.level <= hintLevel)
   const nextHint = hints.find(h => h.level === hintLevel + 1)
+  const needsRecovery = Boolean(syntaxError || (results && !allPassed))
+
+  const askNextQuestion = () => {
+    if (!nextHint) {
+      setConfirmSolution(true)
+      return
+    }
+    if (nextHint.type === "question") {
+      setHintLevel(nextHint.level)
+      persist({ hintLevel: nextHint.level })
+    } else {
+      setConfirmAssertion(true)
+    }
+  }
 
   const run = async () => {
     setRunning(true)
@@ -99,6 +113,20 @@ export function ImplementStage({ lesson, saved, design, onComplete, onDraft }: P
         </div>
       )}
 
+      {needsRecovery && (
+        <div className="stuck-recovery" aria-live="polite">
+          <div>
+            <span className="experiment-kicker">Stuck is expected</span>
+            <b>Choose a gentler next move.</b>
+            <p>Start with the first failing example, then change one line. You will not lose this attempt by asking for help.</p>
+          </div>
+          <div className="stuck-recovery-actions">
+            <GhostButton onClick={askNextQuestion}>Ask the next question</GhostButton>
+            <GhostButton onClick={() => setConfirmSolution(true)}>Open a worked solution</GhostButton>
+          </div>
+        </div>
+      )}
+
       {/* Hint ladder — questions first; assertion costs a confirm (B3) */}
       <div className="hint-ladder">
         {visibleHints.map(h => (
@@ -138,7 +166,7 @@ export function ImplementStage({ lesson, saved, design, onComplete, onDraft }: P
       )}
       {confirmSolution && !solutionOpen && (
         <div className="confirm-card">
-          <p>Reading the solution ends the discovery for this lesson. The questions above usually get you there.</p>
+            <p>The solution is a map, not a failure. Read it, then explain the key move in your own words before moving on.</p>
           <div className="confirm-actions">
             <GhostButton onClick={() => { setSolutionOpen(true); setConfirmSolution(false); persist({ solutionRevealed: true }) }}>
               Reveal it anyway
