@@ -79,8 +79,8 @@ src/
     logo.tsx              # editorial d monogram and wordmark
   data/
     *.ts                  # 14 DSA topic files (50 problems each)
-    system-design.ts      # 45 HLD problems (7 stages)
-    lld.ts                # 35 LLD problems (7 stages)
+    system-design.ts      # 45 HLD problems
+    lld.ts                # 35 LLD problems
     index.ts              # topic registry
 public/
   favicon.svg             # browser favicon
