@@ -430,9 +430,10 @@ code, pre { font-family: var(--font-mono); }
 .continue-derivation:hover { transform: translateY(-2px); box-shadow: var(--shadow-raised); }
 .continue-derivation-rail { height: 5px; margin-top: 16px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .continue-derivation-rail span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width var(--dur-med) var(--ease-standard); }
-.landing-brandline { min-width: 0; }
-.landing-brandline > .logo-wordmark { flex: 0 0 auto; white-space: nowrap; }
-.landing-brandline > .landing-kicker { min-width: 0; overflow-wrap: anywhere; }
+.home-eyebrow { display: flex; align-items: center; gap: 9px; margin-bottom: 20px; color: var(--ink-soft); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+.home-eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--accent); }
+.home-eyebrow-index { color: var(--accent); font-family: var(--font-mono); }
+.home-eyebrow > span:last-child { margin-left: 5px; color: var(--ink-soft); font: 10px var(--font-mono); letter-spacing: 0; text-transform: none; }
 .landing-actions a { max-width: 100%; }
 .continue-derivation-head > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .continue-derivation { width: 100%; max-width: 100%; overflow: hidden; }

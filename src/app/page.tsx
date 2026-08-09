@@ -4,7 +4,6 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
 import { PATTERN_DIRECTORY, PATTERN_LEARNING_PATH } from "@/data/patterns"
-import Logo from "@/components/logo"
 import { loadLessonProgress, type LessonProgress } from "@/persistence/lesson-progress"
 import { loadPracticeCompletion } from "@/persistence/practice-progress"
 import { loadPatternMastery } from "@/persistence/pattern-mastery"
@@ -66,18 +65,17 @@ export default function HomePage() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--paper)", color: "var(--ink)", fontFamily: "var(--font-ui)" }}>
       <header className="landing-header" style={{ padding: "clamp(24px, 5vw, 48px) clamp(20px, 5vw, 48px) clamp(20px, 4vw, 32px)", borderBottom: "1px solid var(--line)", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
-        <div className="landing-brandline" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <Logo size={44} variant="wordmark" />
-          <span className="landing-kicker" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "var(--ink-soft)" }}>
-            One useful session at a time
-          </span>
+        <div className="home-eyebrow" aria-label="Daily practice session">
+          <span className="home-eyebrow-index">01</span>
+          <span>Daily practice</span>
+          <span>10 min · no install</span>
         </div>
         <h1 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontFamily: "var(--font-narrative)", fontWeight: 700, lineHeight: 1.15, margin: 0 }}>
           Make one algorithm<br/>
           <span style={{ color: "var(--accent)" }}>feel inevitable.</span>
         </h1>
         <p style={{ marginTop: 16, color: "var(--ink-soft)", maxWidth: 600, fontSize: 17, lineHeight: 1.6, fontFamily: "var(--font-narrative)" }}>
-          Deriva gives you one small reasoning win before asking for a hard problem. Start with a ten-minute guided session, then choose whether to practice or recall the move.
+          Start with one small reasoning win before taking on a hard problem. Build the idea first, then choose whether to practice or recall the move.
         </p>
         <div className="landing-actions" style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
            <Link href={guidedHref} className="landing-primary-action" style={{ padding: "12px 28px", background: "var(--accent)", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
@@ -155,7 +153,7 @@ export default function HomePage() {
       </main>
 
       <footer style={{ padding: "24px 48px", borderTop: "1px solid var(--line)", color: "var(--ink-soft)", fontSize: 12 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>Deriva — All code runs locally in your browser. Nothing is uploaded.</div>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>All code runs locally in your browser. Nothing is uploaded.</div>
       </footer>
 
       <style>{`
