@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/icons/icon-192.png" width="96" height="96" alt="Deriva logo" />
+  <img src="public/favicon.svg" width="96" height="96" alt="Deriva logo" />
   <h1>Deriva</h1>
   <p><strong>Derive the algorithm. Don't memorize it.</strong></p>
   <p>An interactive platform for mastering DSA, System Design, and Low-Level Design through first-principles reasoning.</p>
@@ -9,7 +9,7 @@
 
 ## What is Deriva?
 
-Deriva trains you to *derive* solutions from first principles instead of memorizing patterns. Every track follows **7-stage slow scaffolding**: each stage reuses the skeleton from the previous one and adds exactly **one new mental model** — so you always think *"I already know 90% of this problem."*
+Deriva trains you to *derive* solutions from first principles instead of memorizing patterns. Every lesson follows a **9-stage guided flow**: each stage reuses the skeleton from the previous one and adds exactly **one new mental model** — so you always think *"I already know 90% of this problem."*
 
 Three tracks, one philosophy:
 
@@ -19,13 +19,13 @@ Three tracks, one philosophy:
 | **System Design (HLD)** | 45 | Requirements → API contracts → capacity math → components → naive → optimized → full designs (URL shortener, Twitter, WhatsApp) on an interactive architecture canvas |
 | **Low-Level Design (OOP)** | 35 | Entities → responsibilities → relationships → state machines → god classes → design patterns → full systems (parking lot, LRU cache, Splitwise) |
 
-## The 7-Stage Scaffolding
+## The 9-Stage Guided Flow
 
-Every topic moves through the same arc:
+Every problem moves through the same arc:
 
 ```
-Reflex → Core Mechanic → Tool Building → Naive (feel the pain)
-  → Optimization (fix the pain) → Mastery (compose everything)
+Understand → Play → Reason → Discover → Design
+  → Implement → Execute → Reflect → Generalize
 ```
 
 - **Naive before optimized** — you build the O(n²) version first and *feel* why it breaks, so the optimization is a relief, not a trick.
@@ -53,6 +53,15 @@ pnpm build      # production build (static routes prerender)
 pnpm start      # serve the production build
 ```
 
+Validation commands:
+
+```bash
+pnpm typecheck
+pnpm test
+node scripts/extract-bank.mjs
+python3 scripts/verify-bank.py /tmp/deriva-bank.json
+```
+
 ## Project Structure
 
 ```
@@ -67,14 +76,15 @@ src/
   components/
     app-shell.tsx         # global header, breadcrumbs, progress
     mobile-problem-nav.tsx# mobile navigation (stage-grouped select)
-    logo.tsx              # the ∂ mark
+    logo.tsx              # editorial d monogram and wordmark
   data/
     *.ts                  # 14 DSA topic files (50 problems each)
     system-design.ts      # 45 HLD problems (7 stages)
     lld.ts                # 35 LLD problems (7 stages)
     index.ts              # topic registry
 public/
-  icons/                  # PWA icons (180/192/512)
+  favicon.svg             # browser favicon
+  icons/                  # PWA icons (180/192/512 + maskable)
   manifest.webmanifest
   sw.js                   # service worker — cache-first assets, offline pages
 docs/                     # product & curriculum design docs
