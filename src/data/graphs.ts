@@ -348,7 +348,7 @@ export const PROBLEMS_GRAPHS: Problem[] = [
     ],
     solution: "def shortest_path(graph, start, target):\n    if start == target:\n        return 0\n    visited = set()\n    queue = [(start, 0)]\n    visited.add(start)\n    while queue:\n        node, dist = queue.pop(0)\n        for nei in graph.get(node, []):\n            if nei == target:\n                return dist + 1\n            if nei not in visited:\n                visited.add(nei)\n                queue.append((nei, dist + 1))\n    return -1",
     walkthrough: "Standard BFS, but check if a neighbor IS the target before enqueueing. Return dist+1 immediately. Because BFS explores in distance order, the first discovery is the shortest path.",
-    testCode: "g = {0: [1,2], 1: [0,3], 2: [0], 3: [1,4], 4: [3]}\nassert shortest_path(g, 0, 4) == 3\nassert shortest_path(g, 0, 0) == 0\nassert shortest_path(g, 0, 5) == -1\nassert shortest_path(g, 2, 4) == 3\nprint('All tests passed!')"
+     testCode: "g = {0: [1,2], 1: [0,3], 2: [0], 3: [1,4], 4: [3]}\nassert shortest_path(g, 0, 4) == 3\nassert shortest_path(g, 0, 0) == 0\nassert shortest_path(g, 0, 5) == -1\nassert shortest_path(g, 2, 4) == 4\nprint('All tests passed!')"
   },
   {
     id: 19, stage: 2, title: "DFS Path Finding", pattern: "traversal", skill: "backtrack to build a path",
@@ -473,7 +473,7 @@ export const PROBLEMS_GRAPHS: Problem[] = [
     ],
     solution: "def closed_islands(grid):\n    rows, cols = len(grid), len(grid[0])\n    def dfs(r, c):\n        if r < 0 or r >= rows or c < 0 or c >= cols or grid[r][c] != 0:\n            return\n        grid[r][c] = 1\n        dfs(r+1, c)\n        dfs(r-1, c)\n        dfs(r, c+1)\n        dfs(r, c-1)\n    for r in range(rows):\n        for c in range(cols):\n            if (r == 0 or r == rows-1 or c == 0 or c == cols-1) and grid[r][c] == 0:\n                dfs(r, c)\n    count = 0\n    for r in range(rows):\n        for c in range(cols):\n            if grid[r][c] == 0:\n                count += 1\n                dfs(r, c)\n    return count",
     walkthrough: "Two passes. First: flood all border-touching 0's to 1's (they can't be closed). Second: standard island count on remaining 0's. The first pass eliminates open islands; the second counts closed ones. O(mn).",
-    testCode: "g1 = [[1,1,1,1],[1,0,0,1],[1,0,0,1],[1,1,1,1]]\nassert closed_islands([r[:] for r in g1]) == 1\ng2 = [[0,0,1,0],[1,0,1,1],[0,1,0,1],[1,0,1,0]]\nassert closed_islands([r[:] for r in g2]) == 2\ng3 = [[0,0,0],[0,0,0],[0,0,0]]\nassert closed_islands(g3) == 0\nprint('All tests passed!')"
+     testCode: "g1 = [[1,1,1,1],[1,0,0,1],[1,0,0,1],[1,1,1,1]]\nassert closed_islands([r[:] for r in g1]) == 1\ng2 = [[0,0,1,0],[1,0,1,1],[0,1,0,1],[1,0,1,0]]\nassert closed_islands([r[:] for r in g2]) == 1\ng3 = [[0,0,0],[0,0,0],[0,0,0]]\nassert closed_islands(g3) == 0\nprint('All tests passed!')"
   },
   {
     id: 26, stage: 3, title: "Count Sub-Islands", pattern: "connected components", skill: "two-grid intersection",
@@ -490,7 +490,7 @@ export const PROBLEMS_GRAPHS: Problem[] = [
     ],
     solution: "def count_sub_islands(grid1, grid2):\n    rows, cols = len(grid1), len(grid1[0])\n    def dfs(r, c):\n        if r < 0 or r >= rows or c < 0 or c >= cols or grid2[r][c] != 1:\n            return True\n        grid2[r][c] = 0\n        valid = (grid1[r][c] == 1)\n        for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:\n            valid = dfs(r+dr, c+dc) and valid\n        return valid\n    count = 0\n    for r in range(rows):\n        for c in range(cols):\n            if grid2[r][c] == 1:\n                if dfs(r, c):\n                    count += 1\n    return count",
     walkthrough: "DFS on grid2. At each cell, check if grid1 is also land. AND all results together — one failure cascades through `valid = dfs(...) and valid`. If entire island passes, count it.",
-    testCode: "g1 = [[1,1,1],[1,0,1],[1,1,1]]\ng2 = [[1,1,1],[0,1,0],[1,1,1]]\nassert count_sub_islands([r[:] for r in g1], [r[:] for r in g2]) == 1\ng1b = [[1,0,1],[0,1,0],[1,0,1]]\ng2b = [[1,1,1],[1,1,1],[1,1,1]]\nassert count_sub_islands([r[:] for r in g1b], [r[:] for r in g2b]) == 0\nprint('All tests passed!')"
+     testCode: "g1 = [[1,1,1],[1,0,1],[1,1,1]]\ng2 = [[1,1,1],[0,1,0],[1,1,1]]\nassert count_sub_islands([r[:] for r in g1], [r[:] for r in g2]) == 0\ng1b = [[1,0,1],[0,1,0],[1,0,1]]\ng2b = [[1,1,1],[1,1,1],[1,1,1]]\nassert count_sub_islands([r[:] for r in g1b], [r[:] for r in g2b]) == 0\nprint('All tests passed!')"
   },
   {
     id: 27, stage: 3, title: "Surrounded Regions", pattern: "connected components", skill: "border-flood + flip",
@@ -797,7 +797,7 @@ export const PROBLEMS_GRAPHS: Problem[] = [
     ],
     solution: "def topo_sort_kahn(n, edges):\n    adj = {i: [] for i in range(n)}\n    indegree = {i: 0 for i in range(n)}\n    for u, v in edges:\n        adj[u].append(v)\n        indegree[v] += 1\n    queue = [i for i in range(n) if indegree[i] == 0]\n    result = []\n    while queue:\n        node = queue.pop(0)\n        result.append(node)\n        for nei in adj[node]:\n            indegree[nei] -= 1\n            if indegree[nei] == 0:\n                queue.append(nei)\n    return result if len(result) == n else []",
     walkthrough: "Kahn's: nodes with no incoming edges can be placed first. Remove them, update indegree of their neighbors. Repeat. If we process all n nodes: valid topo order. If not: cycle exists. O(V+E).",
-    testCode: "r = topo_sort_kahn(4, [[1,0],[2,0],[3,1],[3,2]])\nassert r in [[0,1,2,3],[0,2,1,3]], f'Got {r}'\nr2 = topo_sort_kahn(3, [[0,1],[1,2],[2,0]])\nassert r2 == []\nprint('All tests passed!')"
+     testCode: "r = topo_sort_kahn(4, [[1,0],[2,0],[3,1],[3,2]])\nassert r in [[3,1,2,0],[3,2,1,0]], f'Got {r}'\nr2 = topo_sort_kahn(3, [[0,1],[1,2],[2,0]])\nassert r2 == []\nprint('All tests passed!')"
   },
   {
     id: 44, stage: 6, title: "Topological Sort (DFS Post-Order)", pattern: "mastery", skill: "DFS finish time",
@@ -923,4 +923,3 @@ export const PROBLEMS_GRAPHS: Problem[] = [
     testCode: "t1 = [['MUC','LHR'],['JFK','MUC'],['SFO','SJC'],['LHR','SFO']]\nr1 = find_itinerary(t1)\nassert r1 == ['JFK','MUC','LHR','SFO','SJC'], f'Got {r1}'\nt2 = [['JFK','SFO'],['JFK','ATL'],['SFO','ATL'],['ATL','JFK'],['ATL','SFO']]\nr2 = find_itinerary(t2)\nassert r2 == ['JFK','ATL','JFK','SFO','ATL','SFO'], f'Got {r2}'\nprint('All tests passed!')"
   },
 ]
-

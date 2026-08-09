@@ -41,7 +41,7 @@ export const PROBLEMS_INTERVALS: Problem[] = [
       "max(a[0], b[0]) < min(a[1], b[1]) — less than (not <=) for strict overlap; <= includes touching.",
       "There are 6 ways to arrange 4 points. This one condition handles all of them."
     ],
-    solution: "def has_overlap(a, b):\n    return max(a[0], b[0]) < min(a[1], b[1])",
+     solution: "def has_overlap(a, b):\n    return max(a[0], b[0]) <= min(a[1], b[1])",
     walkthrough: "Overlap means the intervals intersect. The overlap region starts at the later of the two starts and ends at the earlier of the two ends. If the start of the overlap region < end, they overlap. max(s1,s2) < min(e1,e2) encodes this in one line.",
     testCode: "assert has_overlap([1,5], [2,6]) == True\nassert has_overlap([1,3], [4,6]) == False\nassert has_overlap([1,4], [4,6]) == True\nassert has_overlap([2,3], [1,2]) == True\nprint('All tests passed!')"
   },
@@ -78,7 +78,7 @@ export const PROBLEMS_INTERVALS: Problem[] = [
       "O(n²) is fine for small n. For larger n, we'll optimize in Stage 1.",
       "Return True as soon as you find the first overlapping pair."
     ],
-    solution: "def has_any_overlap(intervals):\n    n = len(intervals)\n    for i in range(n):\n        for j in range(i + 1, n):\n            s1, e1 = intervals[i]\n            s2, e2 = intervals[j]\n            if max(s1, s2) < min(e1, e2):\n                return True\n    return False",
+     solution: "def has_any_overlap(intervals):\n    n = len(intervals)\n    for i in range(n):\n        for j in range(i + 1, n):\n            s1, e1 = intervals[i]\n            s2, e2 = intervals[j]\n            if max(s1, s2) <= min(e1, e2):\n                return True\n    return False",
     walkthrough: "Brute-force all pairs. For each pair, use the max-start < min-end overlap test. Return on first found. O(n²). This establishes the baseline: pairwise checking works but is expensive — motivating the sorting optimization in Stage 1.",
     testCode: "assert has_any_overlap([[1,3],[8,10],[7,8]]) == True\nassert has_any_overlap([[1,3],[4,6]]) == False\nassert has_any_overlap([[1,2],[2,3],[3,4]]) == True\nprint('All tests passed!')"
   },
@@ -95,7 +95,7 @@ export const PROBLEMS_INTERVALS: Problem[] = [
       "For each case, run classify_overlap and check against expected label.",
       "Also verify: the overlap test from P1 returns True for identical, contains, overlap; False for disjoint."
     ],
-    solution: "def verify_all_six_cases():\n    cases = [\n        ([1,5],[1,5],'identical'),\n        ([2,8],[3,5],'a_contains_b'),\n        ([3,5],[1,8],'b_contains_a'),\n        ([1,3],[4,6],'b_after_a'),\n        ([5,7],[1,3],'a_after_b'),\n        ([1,5],[3,7],'overlap'),\n    ]\n    for a, b, expected in cases:\n        if classify_overlap(a, b) != expected:\n            return False\n        if expected in ('b_after_a', 'a_after_b'):\n            if has_overlap(a, b):\n                return False\n        else:\n            if not has_overlap(a, b):\n                return False\n    return True",
+     solution: "def verify_all_six_cases():\n    def classify_overlap(a, b):\n        s1, e1 = a\n        s2, e2 = b\n        if s1 == s2 and e1 == e2:\n            return 'identical'\n        if s1 <= s2 and e1 >= e2:\n            return 'a_contains_b'\n        if s2 <= s1 and e2 >= e1:\n            return 'b_contains_a'\n        if e1 <= s2:\n            return 'b_after_a'\n        if e2 <= s1:\n            return 'a_after_b'\n        return 'overlap'\n    def has_overlap(a, b):\n        return max(a[0], b[0]) <= min(a[1], b[1])\n    cases = [\n        ([1,5],[1,5],'identical'),\n        ([2,8],[3,5],'a_contains_b'),\n        ([3,5],[1,8],'b_contains_a'),\n        ([1,3],[4,6],'b_after_a'),\n        ([5,7],[1,3],'a_after_b'),\n        ([1,5],[3,7],'overlap'),\n    ]\n    for a, b, expected in cases:\n        if classify_overlap(a, b) != expected:\n            return False\n        if expected in ('b_after_a', 'a_after_b'):\n            if has_overlap(a, b):\n                return False\n        elif not has_overlap(a, b):\n            return False\n    return True",
     walkthrough: "Generate all six cases. Run classification and overlap test on each. Verify: disjoint cases should have no overlap, all others should overlap. This exercise builds the reflex that 'max(start) < min(end)' covers 4 of 6 cases, and the other 2 (disjoint) are its negation.",
     testCode: "assert verify_all_six_cases() == True\nprint('All tests passed!')"
   },
@@ -150,7 +150,7 @@ export const PROBLEMS_INTERVALS: Problem[] = [
       "If max_start < min_end: return [max_start, min_end]. Else: return None.",
       "This is the overlap test + constructing the answer interval."
     ],
-    solution: "def overlap_region(a, b):\n    start = max(a[0], b[0])\n    end = min(a[1], b[1])\n    if start < end:\n        return [start, end]\n    return None",
+     solution: "def overlap_region(a, b):\n    start = max(a[0], b[0])\n    end = min(a[1], b[1])\n    if start <= end:\n        return [start, end]\n    return None",
     walkthrough: "Overlap region = the intersection of two line segments. max(start) gives the later start (left edge of overlap). min(end) gives the earlier end (right edge). If start < end, the region is non-empty. This is the building block for merge: each merge decision uses this region.",
     testCode: "assert overlap_region([1,5], [2,6]) == [2,5]\nassert overlap_region([1,3], [4,6]) is None\nassert overlap_region([1,4], [4,6]) == [4,4]\nprint('All tests passed!')"
   },
@@ -170,7 +170,7 @@ export const PROBLEMS_INTERVALS: Problem[] = [
       "Why adjacent? If intervals sorted by start, any non-adjacent overlap MUST also have an adjacent overlap.",
       "Property: if A overlaps C (A before C), then B (between A and C) starts at most C.start and extends past A.end — so A overlaps B."
     ],
-    solution: "def has_overlap_sorted(intervals):\n    intervals.sort(key=lambda x: x[0])\n    for i in range(len(intervals) - 1):\n        if intervals[i][1] > intervals[i+1][0]:\n            return True\n    return False",
+     solution: "def has_overlap_sorted(intervals):\n    intervals.sort(key=lambda x: x[0])\n    for i in range(len(intervals) - 1):\n        if intervals[i][1] >= intervals[i+1][0]:\n            return True\n    return False",
     walkthrough: "Sort by start. Iterate adjacent pairs. If intervals[i].end > intervals[i+1].start, they overlap. This is sufficient because if any two non-adjacent intervals A,C overlap, then A must also overlap the interval B between them (B starts <= C.start < A.end). Checking adjacent pairs catches all overlaps. O(n log n).",
     testCode: "assert has_overlap_sorted([[1,5],[2,3],[4,6]]) == True\nassert has_overlap_sorted([[1,2],[3,4]]) == False\nassert has_overlap_sorted([[1,3],[8,10],[7,8]]) == True\nprint('All tests passed!')"
   },
@@ -494,7 +494,7 @@ export const PROBLEMS_INTERVALS: Problem[] = [
     ],
     solution: "def find_gaps(intervals):\n    if len(intervals) < 2:\n        return []\n    gaps = []\n    for i in range(len(intervals) - 1):\n        if intervals[i][1] < intervals[i+1][0]:\n            gaps.append([intervals[i][1], intervals[i+1][0]])\n    return gaps",
     walkthrough: "For sorted non-overlapping intervals, gaps are the spaces between consecutive end and start. [1,3],[5,7] → gap [3,5]. [1,3],[3,5] → no gap (touching). The gaps are exactly where new intervals can be inserted without overlap. O(n).",
-    testCode: "assert find_gaps([[1,3],[5,7],[8,10]]) == [[3,5]]\nassert find_gaps([[1,3],[3,5]]) == []\nassert find_gaps([[1,3]]) == []\nprint('All tests passed!')"
+     testCode: "assert find_gaps([[1,3],[5,7],[8,10]]) == [[3,5],[7,8]]\nassert find_gaps([[1,3],[3,5]]) == []\nassert find_gaps([[1,3]]) == []\nprint('All tests passed!')"
   },
   {
     id: 27, stage: 3, title: "Remove Covered Intervals", pattern: "filter dominated intervals", skill: "interval a covers b if a.start <= b.start and a.end >= b.end",
@@ -512,7 +512,7 @@ export const PROBLEMS_INTERVALS: Problem[] = [
     ],
     solution: "def remove_covered_intervals(intervals):\n    intervals.sort(key=lambda x: (x[0], -x[1]))\n    max_end = 0\n    result = []\n    for s, e in intervals:\n        if e > max_end:\n            result.append([s, e])\n            max_end = e\n    return result",
     walkthrough: "Sort: (start ASC, end DESC) means same-start intervals are ordered longest-first. max_end tracks the farthest end seen. An interval is covered if its end <= max_end (same or earlier start, but some prior interval already reaches at least as far). O(n log n).",
-    testCode: "assert remove_covered_intervals([[1,4],[3,6],[2,8]]) == [[2,8]]\nassert remove_covered_intervals([[1,2],[1,2]]) == [[1,2]]\nassert remove_covered_intervals([[1,4],[2,3]]) == [[1,4]]\nprint('All tests passed!')"
+     testCode: "assert remove_covered_intervals([[1,4],[3,6],[2,8]]) == [[1,4],[2,8]]\nassert remove_covered_intervals([[1,2],[1,2]]) == [[1,2]]\nassert remove_covered_intervals([[1,4],[2,3]]) == [[1,4]]\nprint('All tests passed!')"
   },
   {
     id: 28, stage: 3, title: "Insert Without Merging (Pure Insert)", pattern: "binary search + splice", skill: "find insertion index; slide new interval in without modifying others",
@@ -656,7 +656,7 @@ export const PROBLEMS_INTERVALS: Problem[] = [
     ],
     solution: "def most_overlaps(intervals):\n    n = len(intervals)\n    max_count = -1\n    max_int = None\n    for i in range(n):\n        count = 0\n        for j in range(n):\n            if i != j:\n                si, ei = intervals[i]\n                sj, ej = intervals[j]\n                if max(si, sj) < min(ei, ej):\n                    count += 1\n        if count > max_count:\n            max_count = count\n            max_int = intervals[i]\n    return max_int",
     walkthrough: "For each interval: count overlaps with every other interval (O(n²)). Track the interval with maximum count. This is the naive 'hot spot' detection — the interval causing the most conflicts. Sort-based optimization: the hottest interval is in the densest part of the timeline.",
-    testCode: "assert most_overlaps([[1,5],[2,6],[3,7],[10,12]]) == [2,6]\nassert most_overlaps([[1,2],[3,4]]) in ([1,2], [3,4])\nprint('All tests passed!')"
+     testCode: "assert most_overlaps([[1,5],[2,6],[3,7],[10,12]]) in ([1,5], [2,6], [3,7])\nassert most_overlaps([[1,2],[3,4]]) in ([1,2], [3,4])\nprint('All tests passed!')"
   },
 
   // ── STAGE 5: Optimization ──
@@ -766,7 +766,7 @@ export const PROBLEMS_INTERVALS: Problem[] = [
     ],
     solution: "def remove_covered_optimized(intervals):\n    intervals.sort(key=lambda x: (x[0], -x[1]))\n    result = []\n    max_end = 0\n    for s, e in intervals:\n        if e > max_end:\n            result.append([s, e])\n            max_end = e\n    return result",
     walkthrough: "Sort: start ASC (earlier starts first), end DESC (longest first when starts tie). Scan: max_end tracks farthest reach so far. If current.end > max_end, it extends coverage beyond previous intervals — keep it. If current.end <= max_end, an earlier interval fully contains it. O(n log n).",
-    testCode: "assert remove_covered_optimized([[1,4],[3,6],[2,8]]) == [[2,8]]\nassert remove_covered_optimized([[1,2],[1,3]]) == [[1,3]]\nassert remove_covered_optimized([[1,4],[2,3],[3,5]]) == [[1,4],[3,5]]\nprint('All tests passed!')"
+     testCode: "assert remove_covered_optimized([[1,4],[3,6],[2,8]]) == [[1,4],[2,8]]\nassert remove_covered_optimized([[1,2],[1,3]]) == [[1,3]]\nassert remove_covered_optimized([[1,4],[2,3],[3,5]]) == [[1,4],[3,5]]\nprint('All tests passed!')"
   },
   {
     id: 42, stage: 5, title: "Data Stream as Disjoint Intervals", pattern: "online interval maintenance", skill: "add numbers one at a time; maintain sorted disjoint merged intervals of all seen numbers",
@@ -891,7 +891,7 @@ export const PROBLEMS_INTERVALS: Problem[] = [
     ],
     solution: "def merge_interval_lists(a, b):\n    combined = []\n    i = j = 0\n    while i < len(a) and j < len(b):\n        if a[i][0] <= b[j][0]:\n            combined.append(a[i])\n            i += 1\n        else:\n            combined.append(b[j])\n            j += 1\n    combined.extend(a[i:])\n    combined.extend(b[j:])\n    if not combined:\n        return []\n    result = []\n    cs, ce = combined[0]\n    for s, e in combined[1:]:\n        if s <= ce:\n            ce = max(ce, e)\n        else:\n            result.append([cs, ce])\n            cs, ce = s, e\n    result.append([cs, ce])\n    return result",
     walkthrough: "Two-phase pipeline: (1) two-pointer merge of sorted lists → combined sorted by start. (2) Interval merge → merge any overlapping intervals in combined result. Each phase is O(n+m). The two-pointer ensures sorting is already done; only interval merge remains. Compose two known patterns.",
-    testCode: "assert merge_interval_lists([[1,5],[10,15]], [[3,8],[12,20]]) == [[1,8],[10,20]]\nassert merge_interval_lists([[1,2],[5,6]], [[3,4],[7,8]]) == [[1,4],[5,8]]\nassert merge_interval_lists([], [[1,2]]) == [[1,2]]\nprint('All tests passed!')"
+     testCode: "assert merge_interval_lists([[1,5],[10,15]], [[3,8],[12,20]]) == [[1,8],[10,20]]\nassert merge_interval_lists([[1,2],[5,6]], [[3,4],[7,8]]) == [[1,2],[3,4],[5,6],[7,8]]\nassert merge_interval_lists([], [[1,2]]) == [[1,2]]\nprint('All tests passed!')"
   },
   {
     id: 49, stage: 6, title: "Count Points Covered by K Intervals", pattern: "sweep line + sliding count", skill: "count number of integer points covered by exactly k intervals using event counts",
@@ -909,7 +909,7 @@ export const PROBLEMS_INTERVALS: Problem[] = [
     ],
     solution: "def points_covered_by_k(intervals, k):\n    events = []\n    for s, e in intervals:\n        events.append((s, 1))\n        events.append((e, -1))\n    events.sort()\n    total = 0\n    active = 0\n    prev = None\n    for time, delta in events:\n        if prev is not None and active == k:\n            total += time - prev\n        active += delta\n        prev = time\n    return total",
     walkthrough: "Sweep line with active count. Before processing each event: if active == k, the interval [prev, current_time] had exactly k active intervals. Add the span length. Then update active count. This generalizes 'meeting rooms II' (max concurrent) to 'how long does concurrency equal exactly k?' O(n log n).",
-    testCode: "assert points_covered_by_k([[1,3],[2,5],[3,6]], 2) == 2\nassert points_covered_by_k([[1,2],[3,4]], 1) == 2\nassert points_covered_by_k([[1,5]], 1) == 4\nprint('All tests passed!')"
+     testCode: "assert points_covered_by_k([[1,3],[2,5],[3,6]], 2) == 3\nassert points_covered_by_k([[1,2],[3,4]], 1) == 2\nassert points_covered_by_k([[1,5]], 1) == 4\nprint('All tests passed!')"
   },
   {
     id: 50, stage: 6, title: "Minimum Number of Removal Intervals", pattern: "greedy activity selection", skill: "sort by end, greedily select non-overlapping to minimize removals",

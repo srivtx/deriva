@@ -232,7 +232,7 @@ export const PROBLEMS_BST: Problem[] = [
     hints: ["What does a None subtree contribute to the count?", "The count at any node = 1 (this node) + count of left subtree + count of right subtree.", "Base case: root is None -> return 0. Recursive case: return 1 + count_nodes(root.left) + count_nodes(root.right)."],
     solution: "def count_nodes(root):\n    if root is None:\n        return 0\n    return 1 + count_nodes(root.left) + count_nodes(root.right)",
     walkthrough: "The simplest recursive tree pattern: every node adds 1 and delegates the rest to children. The BST property is irrelevant — this pattern works on any binary tree. It's the mental skeleton for sum, height, and everything else.",
-    testCode: "assert count_nodes(build_tree([4,2,7,1,3])) == 5\nassert count_nodes(build_tree([])) == 0\nassert count_nodes(build_tree([5])) == 1\nassert count_nodes(build_tree([5,3,8,1,4,None,9])) == 7\nprint('All tests passed!')"
+     testCode: "assert count_nodes(build_tree([4,2,7,1,3])) == 5\nassert count_nodes(build_tree([])) == 0\nassert count_nodes(build_tree([5])) == 1\nassert count_nodes(build_tree([5,3,8,1,4,None,9])) == 6\nprint('All tests passed!')"
   },
   {
     id: 15, stage: 2, title: "Validate BST (The Trap!)", pattern: "BST validation", skill: "recognize why parent-check fails",
@@ -265,7 +265,7 @@ export const PROBLEMS_BST: Problem[] = [
     hints: ["Use the same DFS from P16. Instead of returning False, return the offending value.", "If node.val < low or node.val > high, this node is misplaced — return node.val immediately.", "Search left subtree first (returns None if nothing found there), then right subtree."],
     solution: "def find_misplaced(root):\n    def dfs(node, low, high):\n        if node is None:\n            return None\n        if node.val < low or node.val > high:\n            return node.val\n        left_result = dfs(node.left, low, node.val)\n        if left_result is not None:\n            return left_result\n        return dfs(node.right, node.val, high)\n    return dfs(root, float('-inf'), float('inf'))",
     walkthrough: "Same DFS skeleton as P16. The one new idea: instead of returning a boolean, return the first misplaced value you encounter. Check the current node first, then left, then right. The first non-None result bubbles up as the answer.",
-    testCode: "assert find_misplaced(build_tree([5,3,7,1,9,None,8])) == 9\nassert find_misplaced(build_tree([4,2,6,1,3,5,7])) is None\nassert find_misplaced(build_tree([5,1,4,None,None,3,6])) == 3\nprint('All tests passed!')"
+     testCode: "assert find_misplaced(build_tree([5,3,7,1,9,None,8])) == 9\nassert find_misplaced(build_tree([4,2,6,1,3,5,7])) is None\nassert find_misplaced(build_tree([5,1,4,None,None,3,6])) == 4\nprint('All tests passed!')"
   },
   {
     id: 18, stage: 2, title: "Sorted Array to Balanced BST", pattern: "range divide", skill: "mid is root, ranges split children",
@@ -452,7 +452,7 @@ export const PROBLEMS_BST: Problem[] = [
     hints: ["Traverse the entire tree. For each node, increment its count in a hashmap.", "After traversal, find the maximum frequency. Collect all values with that frequency.", "The BST property is irrelevant here — works on any binary tree."],
     solution: "def find_mode_naive(root):\n    freq = {}\n    def dfs(node):\n        if node is None:\n            return\n        freq[node.val] = freq.get(node.val, 0) + 1\n        dfs(node.left)\n        dfs(node.right)\n    dfs(root)\n    if not freq:\n        return []\n    max_f = max(freq.values())\n    return [v for v, f in freq.items() if f == max_f]",
     walkthrough: "Full traversal counts every value with a hashmap. Post-processing: find highest frequency, collect all values with that frequency. O(n) time and space. No BST structure leveraged.",
-    testCode: "assert find_mode_naive(build_tree([1,None,2,2])) == [2]\nassert find_mode_naive(build_tree([0])) == [0]\nr = find_mode_naive(build_tree([2,2,3,2,None,3]))\nassert 2 in r and 3 in r\nprint('All tests passed!')"
+      testCode: "assert find_mode_naive(build_tree([1,None,2,None,None,2])) == [2]\nassert find_mode_naive(build_tree([0])) == [0]\nr = find_mode_naive(build_tree([2,2,3,2,None,3]))\nassert r == [2]\nprint('All tests passed!')"
   },
   {
     id: 35, stage: 4, title: "Kth Largest via Dump", pattern: "dump and reverse index", skill: "collect all, return vals[n-k]",
@@ -538,7 +538,7 @@ export const PROBLEMS_BST: Problem[] = [
     why: "Composes P8 (insert) with P16 (validate). After inserting, check BST property. This 'mutate then verify' pattern is a building block for self-balancing trees.",
     starterCode: "def insert_and_verify(root, val):\n    def insert(node, val):\n        pass\n    def validate(node, low, high):\n        pass\n    root = insert(root, val)\n    pass",
     hints: ["First insert using P8's algorithm.", "Then validate using P16's range-check.", "Composing two previously learned operations — no new algorithms needed."],
-    solution: "def insert_and_verify(root, val):\n    def insert(node, val):\n        if node is None:\n            return TreeNode(val)\n        if val == node.val:\n            return None\n        if val < node.val:\n            node.left = insert(node.left, val)\n        else:\n            node.right = insert(node.right, val)\n        return node\n    def validate(node, low, high):\n        if node is None:\n            return True\n        if node.val <= low or node.val >= high:\n            return False\n        return validate(node.left, low, node.val) and validate(node.right, node.val, high)\n    new_root = insert(root, val)\n    if new_root is None:\n        return False\n    return validate(new_root, float('-inf'), float('inf'))",
+     solution: "def insert_and_verify(root, val):\n    duplicate = [False]\n    def insert(node, val):\n        if node is None:\n            return TreeNode(val)\n        if val == node.val:\n            duplicate[0] = True\n            return node\n        if val < node.val:\n            node.left = insert(node.left, val)\n        else:\n            node.right = insert(node.right, val)\n        return node\n    def validate(node, low, high):\n        if node is None:\n            return True\n        if node.val <= low or node.val >= high:\n            return False\n        return validate(node.left, low, node.val) and validate(node.right, node.val, high)\n    new_root = insert(root, val)\n    if duplicate[0]:\n        return False\n    return validate(new_root, float('-inf'), float('inf'))",
     walkthrough: "Two operations in sequence: insert (P8) then validate (P16). Insert either creates new node or returns None for duplicates. If insert succeeds, validate confirms BST property holds for every node. Composition: no new algorithms, sequencing of known ones.",
     testCode: "assert insert_and_verify(build_tree([4,2,7,1,3]), 5) == True\nassert insert_and_verify(build_tree([4,2,7,1,3]), 2) == False\nassert insert_and_verify(build_tree([]), 10) == True\nassert insert_and_verify(build_tree([5,3,8,1,4,None,9]), 6) == True\nprint('All tests passed!')"
   },

@@ -114,8 +114,7 @@ export default function AppShell() {
         <div className="desktop-shell" style={{ alignItems: "center", justifyContent: "space-between", width: "100%" }}>
           <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
             <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
-              <Logo size={26} />
-              <span style={{ fontWeight: 800, fontFamily: "var(--font-narrative)", fontSize: 17, color: "var(--ink)" }}>Deriva</span>
+              <Logo size={26} variant="wordmark" />
             </Link>
             <Suspense fallback={null}><Breadcrumbs /></Suspense>
           </div>

@@ -90,6 +90,8 @@
 /* ── Base ── */
 html { font-family: "Inter", system-ui, sans-serif; }
 body { background: var(--paper); color: var(--ink); margin: 0; }
+.logo-wordmark { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); }
+.logo-wordmark > span { font: 800 17px/1 var(--font-narrative); letter-spacing: -.03em; }
 .app-content { min-height: calc(100dvh - var(--app-header-height)); }
 .page-loading { min-height: calc(100dvh - var(--app-header-height)); display: grid; place-items: center; padding: 24px; color: var(--ink-soft); font: 14px var(--font-ui); }
 button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }

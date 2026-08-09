@@ -53,7 +53,7 @@ export const PROBLEMS_GREEDY: Problem[] = [
       { input: "coins = [1,3,4], amount = 8", output: "2", explain: "4+4=2 coins. Greedy: 4+3+1=3" },
     ],
     why: "Greedy is not magic — it has a condition: the problem must have the 'greedy-choice property.' Counterexamples build the reflex to QUESTION whether greedy applies, not just apply it blindly.",
-    starterCode: "def optimal_coin_change(coins, amount):\n    dp = [float('inf')] * (amount + 1)\n    dp[0] = 0\n    pass",
+     starterCode: "def optimal_coin_change(coins, amount):\n    dp = [float('inf')] * (amount + 1)\n    dp[0] = 0\n    pass\n\ndef greedy_coin_change(coins, amount):\n    pass",
     hints: [
       "For non-canonical systems, DP is needed. dp[i] = min coins to make amount i.",
       "For each amount 1..target: dp[i] = min(dp[i - coin] + 1) for each coin <= i.",
@@ -551,7 +551,7 @@ export const PROBLEMS_GREEDY: Problem[] = [
     ],
     solution: "def max_chain_greedy(pairs):\n    pairs.sort(key=lambda x: x[1])\n    count = 0\n    last_end = float('-inf')\n    for start, end in pairs:\n        if start > last_end:\n            count += 1\n            last_end = end\n    return count",
     walkthrough: "Sort by end. Iterate: if current pair starts after last_end, pick it and update last_end. This is the exact same greedy as activity selection — the earliest-finishing compatible pair leaves maximum room. O(n log n).",
-    testCode: "assert max_chain_greedy([[1,2],[2,3],[3,4],[4,5]]) == 4\nassert max_chain_greedy([[1,2],[7,8],[4,5]]) == 3\nassert max_chain_greedy([[5,9],[1,2],[4,6]]) == 2\nprint('All tests passed!')"
+     testCode: "assert max_chain_greedy([[1,2],[2,3],[3,4],[4,5]]) == 2\nassert max_chain_greedy([[1,2],[7,8],[4,5]]) == 3\nassert max_chain_greedy([[5,9],[1,2],[4,6]]) == 2\nprint('All tests passed!')"
   },
   {
     id: 30, stage: 5, title: "Minimum Deletions to Make Non-Overlapping", pattern: "sort by end, count overlaps to remove", skill: "greedy selection of non-overlapping intervals",
@@ -824,7 +824,7 @@ export const PROBLEMS_GREEDY: Problem[] = [
     ],
     solution: "def min_taps(n, ranges):\n    intervals = []\n    for i, r in enumerate(ranges):\n        if r > 0:\n            intervals.append([max(0, i - r), min(n, i + r)])\n    intervals.sort()\n    count = 0\n    cur_end = 0\n    i = 0\n    m = len(intervals)\n    while cur_end < n:\n        farthest = cur_end\n        while i < m and intervals[i][0] <= cur_end:\n            farthest = max(farthest, intervals[i][1])\n            i += 1\n        if farthest == cur_end:\n            return -1\n        count += 1\n        cur_end = farthest\n    return count",
     walkthrough: "Transform taps -> intervals -> same pattern as Video Stitching (P42). Sort by start. At each position cur_end, scan all intervals whose start <= cur_end, pick the one extending furthest. Increment count. If at any point we can't advance, return -1. O(n log n). Same frontier model, different surface.",
-    testCode: "assert min_taps(5, [3,4,1,1,0,0]) == 1\nassert min_taps(3, [0,0,0,0]) == -1\nassert min_taps(5, [3,3,1,1,0,0]) == 2\nprint('All tests passed!')"
+     testCode: "assert min_taps(5, [3,4,1,1,0,0]) == 1\nassert min_taps(3, [0,0,0,0]) == -1\nassert min_taps(5, [3,3,1,1,0,0]) == -1\nprint('All tests passed!')"
   },
 
   // ── STAGE 4: Naive (extended) ──

@@ -178,7 +178,7 @@ export const PROBLEMS_DP: Problem[] = [
     ],
     solution: "def tribonacci_memo(n):\n    memo = {0: 0, 1: 1, 2: 1}\n    def t(k):\n        if k in memo:\n            return memo[k]\n        memo[k] = t(k - 1) + t(k - 2) + t(k - 3)\n        return memo[k]\n    return t(n)",
     walkthrough: "Identical memo pattern as P7. Only the recurrence changes (3 terms instead of 2). The skeleton: check memo, compute via recurrence, store, return. This is the universal top-down DP template. The branching factor barely matters — with memo, each k is visited once regardless of how many children it has.",
-    testCode: "assert tribonacci_memo(0) == 0\nassert tribonacci_memo(1) == 1\nassert tribonacci_memo(2) == 1\nassert tribonacci_memo(4) == 4\nassert tribonacci_memo(37) == 3122171529233\nprint('All tests passed!')"
+     testCode: "assert tribonacci_memo(0) == 0\nassert tribonacci_memo(1) == 1\nassert tribonacci_memo(2) == 1\nassert tribonacci_memo(4) == 4\nassert tribonacci_memo(37) == 2082876103\nprint('All tests passed!')"
   },
   {
     id: 9, stage: 1, title: "Climbing Stairs with Memo", pattern: "top-down DP", skill: "map story recurrence + memo",
@@ -232,7 +232,7 @@ export const PROBLEMS_DP: Problem[] = [
     ],
     solution: "def count_ways_obstacles(n, blocked):\n    blocked_set = set(blocked)\n    memo = {0: 1}\n    def ways(pos):\n        if pos < 0:\n            return 0\n        if pos in blocked_set:\n            return 0\n        if pos in memo:\n            return memo[pos]\n        memo[pos] = ways(pos - 1) + ways(pos - 2)\n        return memo[pos]\n    return ways(n)",
     walkthrough: "Same memo skeleton. The recurrence now has a gate: 'if blocked, answer is 0.' This pattern — recurrences with domain constraints — is fundamental. DP recurrences aren't pure math; they encode the problem's RULES. The memo still ensures each pos is computed once.",
-    testCode: "assert count_ways_obstacles(5, [3]) == 5\nassert count_ways_obstacles(4, [2]) == 2\nassert count_ways_obstacles(3, []) == 3\nassert count_ways_obstacles(2, [1]) == 1\nprint('All tests passed!')"
+     testCode: "assert count_ways_obstacles(5, [3]) == 2\nassert count_ways_obstacles(4, [2]) == 2\nassert count_ways_obstacles(3, []) == 3\nassert count_ways_obstacles(2, [1]) == 1\nprint('All tests passed!')"
   },
 
   // ═══════════════════════════════════════════════════════════

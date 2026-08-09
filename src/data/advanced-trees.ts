@@ -135,7 +135,7 @@ export const PROBLEMS_ADVANCED_TREES: Problem[] = [
     ],
     solution: "def path_max_value(root):\n    if not root:\n        return []\n    result = []\n    def dfs(node, cur_max):\n        if node is None:\n            return\n        cur_max = max(cur_max, node.val)\n        if not node.left and not node.right:\n            result.append(cur_max)\n        else:\n            dfs(node.left, cur_max)\n            dfs(node.right, cur_max)\n    dfs(root, root.val)\n    return result",
     walkthrough: "Preorder DFS. At each node, update the running max = max(so-far, current-value). At a leaf, the running max is the path's max — record it. No backtracking needed since max is an immutable value — each recursive call gets its own copy. O(n).",
-    testCode: "t = build_tree([5,3,8,1,4,None,9])\nassert path_max_value(t) == [5, 5, 9]\nt2 = build_tree([1,2,3])\nassert path_max_value(t2) == [1, 2, 3]\nassert path_max_value(build_tree([7])) == [7]\nprint('All tests passed!')",
+     testCode: "t = build_tree([5,3,8,1,4,None,9])\nassert path_max_value(t) == [5, 5, 9]\nt2 = build_tree([1,2,3])\nassert path_max_value(t2) == [2, 3]\nassert path_max_value(build_tree([7])) == [7]\nprint('All tests passed!')",
   },
   {
     id: 7, stage: 0, title: "Path Value Equality Check", pattern: "all-path sum equality", skill: "compute all path sums, check if all equal",
@@ -502,7 +502,7 @@ export const PROBLEMS_ADVANCED_TREES: Problem[] = [
     ],
     solution: "def boundary_traversal(root):\n    if not root:\n        return []\n    result = [root.val]\n    def left_boundary(node):\n        if node is None or (node.left is None and node.right is None):\n            return\n        result.append(node.val)\n        if node.left:\n            left_boundary(node.left)\n        else:\n            left_boundary(node.right)\n    def leaves(node):\n        if node is None:\n            return\n        if node.left is None and node.right is None:\n            result.append(node.val)\n        else:\n            leaves(node.left)\n            leaves(node.right)\n    def right_boundary(node):\n        if node is None or (node.left is None and node.right is None):\n            return\n        if node.right:\n            right_boundary(node.right)\n        else:\n            right_boundary(node.left)\n        result.append(node.val)\n    left_boundary(root.left)\n    leaves(root.left)\n    leaves(root.right)\n    right_boundary(root.right)\n    return result",
     walkthrough: "Three phases: (1) Left boundary from root.left, going left (or right if no left), excluding leaves. (2) All leaves left-to-right via DFS on both children. (3) Right boundary from root.right, going right (or left), collecting in reverse — append AFTER the recursive call so values come out bottom-up. Exclude root from sub-boundaries to avoid duplicates.",
-    testCode: "t = build_tree([1,2,3,4,5,6,None,None,None,7,8,9,10])\nassert boundary_traversal(t) == [1,2,4,7,8,9,10,6,3]\nt2 = build_tree([1,None,2,3,4])\nassert boundary_traversal(t2) == [1,3,4,2]\nprint('All tests passed!')"
+     testCode: "t = build_tree([1,2,3,4,5,6,None,None,None,7,8,9,10])\nassert boundary_traversal(t) == [1,2,4,7,8,9,10,6,3]\nt2 = build_tree([1,None,2,None,None,3,4])\nassert boundary_traversal(t2) == [1,3,4,2]\nprint('All tests passed!')"
   },
 
   {
@@ -539,7 +539,7 @@ export const PROBLEMS_ADVANCED_TREES: Problem[] = [
     ],
     solution: "def outer_boundary(root):\n    if not root:\n        return []\n    result = []\n    queue = [root]\n    while queue:\n        level_size = len(queue)\n        for i in range(level_size):\n            node = queue.pop(0)\n            if i == 0:\n                result.append(node.val)\n            elif i == level_size - 1 and level_size > 1:\n                result.append(node.val)\n            if node.left:\n                queue.append(node.left)\n            if node.right:\n                queue.append(node.right)\n    return result",
     walkthrough: "BFS level processing. At each level: first node (i==0) is always added. Last node (i==level_size-1) is added only if level_size > 1 (to avoid duplicating when there's 1 node). Enqueue children normally. O(n).",
-    testCode: "t = build_tree([1,2,3,None,5,None,4])\nassert outer_boundary(t) == [1,2,3,5,4]\nt2 = build_tree([1,None,2,None,3])\nassert outer_boundary(t2) == [1,2,3]\nprint('All tests passed!')",
+     testCode: "t = build_tree([1,2,3,None,5,None,4])\nassert outer_boundary(t) == [1,2,3,5,4]\nt2 = build_tree([1,None,2,None,None,None,3])\nassert outer_boundary(t2) == [1,2,3]\nprint('All tests passed!')",
   },
   // ── STAGE 4: Naive ──
   {
@@ -595,7 +595,7 @@ export const PROBLEMS_ADVANCED_TREES: Problem[] = [
     ],
     solution: "def max_path_product(root):\n    max_prod = [float('-inf')]\n    def dfs_from(node, current):\n        if node is None:\n            return\n        current *= node.val\n        if current > max_prod[0]:\n            max_prod[0] = current\n        dfs_from(node.left, current)\n        dfs_from(node.right, current)\n    def traverse(node):\n        if node is None:\n            return\n        dfs_from(node, 1)\n        traverse(node.left)\n        traverse(node.right)\n    traverse(root)\n    return max_prod[0]",
     walkthrough: "Identical to P21 with * replacing +. Start product = 1 (identity for multiplication). Each node multiplies its value into the running product. Track maximum globally. The pattern works for ANY associative accumulation — sum, product, min, max. Reuse is the point.",
-    testCode: "t = build_tree([2,3,4])\nassert max_path_product(t) == 12\nt2 = build_tree([0,1,2])\nassert max_path_product(t2) == 2\nt3 = build_tree([1])\nassert max_path_product(t3) == 1\nassert max_path_product(None) == float('-inf')\nprint('All tests passed!')"
+     testCode: "t = build_tree([2,3,4])\nassert max_path_product(t) == 8\nt2 = build_tree([0,1,2])\nassert max_path_product(t2) == 2\nt3 = build_tree([1])\nassert max_path_product(t3) == 1\nassert max_path_product(None) == float('-inf')\nprint('All tests passed!')"
   },
   {
     id: 32, stage: 4, title: "Print All Paths with Sum K", pattern: "print all matching paths", skill: "collect paths (not just count) with sum k, O(n²)",
@@ -613,7 +613,7 @@ export const PROBLEMS_ADVANCED_TREES: Problem[] = [
     ],
     solution: "def print_paths_with_sum(root, k):\n    result = []\n    def dfs_from(node, path, current_sum):\n        if node is None:\n            return\n        path.append(node.val)\n        current_sum += node.val\n        if current_sum == k:\n            result.append(path[:])\n        dfs_from(node.left, path, current_sum)\n        dfs_from(node.right, path, current_sum)\n        path.pop()\n    def traverse(node):\n        if node is None:\n            return\n        dfs_from(node, [], 0)\n        traverse(node.left)\n        traverse(node.right)\n    traverse(root)\n    return result",
     walkthrough: "Combine P21 (enumerate from each node) with P2 (path accumulation via append/pop). Outer traverse picks start node. Inner dfs_from accumulates path values and sum. When sum == k, snapshot path. Pop on backtrack is essential since path is mutable.",
-    testCode: "t = build_tree([5,4,8,11,None,13,4,7,2,None,None,5,1])\nres = print_paths_with_sum(t, 22)\nassert len(res) == 2\nassert [5,4,11,2] in res\nassert [5,8,4,5] in res\nt2 = build_tree([1,2,3])\nres2 = print_paths_with_sum(t2, 3)\nassert [1,2] in res2\nassert [3] in res2\nprint('All tests passed!')"
+     testCode: "t = build_tree([5,4,8,11,None,13,4,7,2,None,None,None,None,5,1])\nres = print_paths_with_sum(t, 22)\nassert len(res) == 2\nassert [5,4,11,2] in res\nassert [5,8,4,5] in res\nt2 = build_tree([1,2,3])\nres2 = print_paths_with_sum(t2, 3)\nassert [1,2] in res2\nassert [3] in res2\nprint('All tests passed!')"
   },
   {
     id: 33, stage: 4, title: "Longest Path with Sum K", pattern: "max-length path with target sum", skill: "track max length alongside sum, O(n²)",
@@ -651,7 +651,7 @@ export const PROBLEMS_ADVANCED_TREES: Problem[] = [
     ],
     solution: "def count_subtrees_naive(root, k):\n    count = [0]\n    def subtree_sum(node):\n        if node is None:\n            return 0\n        return node.val + subtree_sum(node.left) + subtree_sum(node.right)\n    def traverse(node):\n        if node is None:\n            return\n        if subtree_sum(node) == k:\n            count[0] += 1\n        traverse(node.left)\n        traverse(node.right)\n    traverse(root)\n    return count[0]",
     walkthrough: "Outer traverse visits each node, inner subtree_sum recomputes the entire subtree sum. For a node at depth d, its subtree is summed (h-d) separate times — once for each ancestor that calls traverse. Total work: O(n²). The optimization (Stage 5/6) computes all subtree sums in one bottom-up pass.",
-    testCode: "t = build_tree([5,2,-3])\nassert count_subtrees_naive(t, 4) == 1\nt2 = build_tree([5,2,3])\nassert count_subtrees_naive(t2, 5) == 1\nprint('All tests passed!')",
+     testCode: "t = build_tree([5,2,-3])\nassert count_subtrees_naive(t, 4) == 1\nt2 = build_tree([5,2,3])\nassert count_subtrees_naive(t2, 5) == 0\nprint('All tests passed!')",
   },
   {
     id: 35, stage: 4, title: "Max XOR Path Value (Naive)", pattern: "enumerate all paths, compute XOR", skill: "enumerate all downward paths, track max XOR. O(n²) naive.",
@@ -669,7 +669,7 @@ export const PROBLEMS_ADVANCED_TREES: Problem[] = [
     ],
     solution: "def max_xor_path_naive(root):\n    max_xor = [0]\n    def dfs_from(node, current_xor):\n        if node is None:\n            return\n        current_xor ^= node.val\n        if current_xor > max_xor[0]:\n            max_xor[0] = current_xor\n        dfs_from(node.left, current_xor)\n        dfs_from(node.right, current_xor)\n    def traverse(node):\n        if node is None:\n            return\n        dfs_from(node, 0)\n        traverse(node.left)\n        traverse(node.right)\n    traverse(root)\n    return max_xor[0]",
     walkthrough: "Same O(n²) skeleton as P21/P23. Enumerate all downward paths, compute XOR. Update global max. XOR's properties (associative, self-inverse) make it a natural candidate for prefix optimization (like P26's prefix sum). O(n²) time, O(1) extra space (ignoring recursion stack).",
-    testCode: "t = build_tree([2,3,4])\nassert max_xor_path_naive(t) == 7\nt2 = build_tree([1,2,3])\nassert max_xor_path_naive(t2) == 3\nt3 = build_tree([8])\nassert max_xor_path_naive(t3) == 8\nprint('All tests passed!')",
+     testCode: "t = build_tree([2,3,4])\nassert max_xor_path_naive(t) == 6\nt2 = build_tree([1,2,3])\nassert max_xor_path_naive(t2) == 3\nt3 = build_tree([8])\nassert max_xor_path_naive(t3) == 8\nprint('All tests passed!')",
   },
   // ── STAGE 5: Optimization ──
   {
@@ -706,7 +706,7 @@ export const PROBLEMS_ADVANCED_TREES: Problem[] = [
     ],
     solution: "def count_subpaths_range(root, low, high):\n    prefix_map = {0: 1}\n    count = [0]\n    def dfs(node, current_sum):\n        if node is None:\n            return\n        current_sum += node.val\n        for p in range(current_sum - high, current_sum - low + 1):\n            if p in prefix_map:\n                count[0] += prefix_map[p]\n        prefix_map[current_sum] = prefix_map.get(current_sum, 0) + 1\n        dfs(node.left, current_sum)\n        dfs(node.right, current_sum)\n        prefix_map[current_sum] -= 1\n    dfs(root, 0)\n    return count[0]",
     walkthrough: "Same framework as P26. The prefix relationship: for a path to have sum s in [low, high], the ancestor prefix p must satisfy low <= current - p <= high, which rearranges to p in [current - high, current - low]. For each qualifying p, add its frequency from the map. Works best when the range is small; for large ranges, a balanced BST on prefix sums would be needed.",
-    testCode: "t = build_tree([10,5,1,2,-3])\nassert count_subpaths_range(t, 6, 15) == 3\nt2 = build_tree([1,2,3])\nassert count_subpaths_range(t2, 1, 3) == 4\nprint('All tests passed!')"
+     testCode: "t = build_tree([10,5,1,2,-3])\nassert count_subpaths_range(t, 6, 15) == 5\nt2 = build_tree([1,2,3])\nassert count_subpaths_range(t2, 1, 3) == 4\nprint('All tests passed!')"
   },
   {
     id: 38, stage: 5, title: "Longest Path with Same Value (O(n))", pattern: "same-value DFS with length tracking", skill: "DFS returning (same_val_length, same_val_length_not_splitting)",
@@ -776,7 +776,7 @@ export const PROBLEMS_ADVANCED_TREES: Problem[] = [
       "Update: while idx <= n: bit[idx] += delta; idx += idx & -idx.",
       "Query prefix sum to idx: while idx > 0: total += bit[idx]; idx -= idx & -idx. Range sum = query(right) - query(left-1)."
     ],
-    solution: "class FenwickTree:\n    def __init__(self, arr):\n        self.n = len(arr)\n        self.bit = [0] * (self.n + 1)\n        for i in range(self.n):\n            self.update(i + 1, arr[i])\n    def update(self, idx, delta):\n        while idx <= self.n:\n            self.bit[idx] += delta\n            idx += idx & -idx\n    def query(self, idx):\n        total = 0\n        while idx > 0:\n            total += self.bit[idx]\n            idx -= idx & -idx\n        return total\n    def range_sum(self, left, right):\n        return self.query(right) - self.query(left - 1)",
+     solution: "class FenwickTree:\n    def __init__(self, arr):\n        self.n = len(arr)\n        self.bit = [0] * (self.n + 1)\n        for i in range(self.n):\n            self.update(i + 1, arr[i])\n    def update(self, idx, delta):\n        while idx <= self.n:\n            self.bit[idx] += delta\n            idx += idx & -idx\n    def query(self, idx):\n        total = 0\n        while idx > 0:\n            total += self.bit[idx]\n            idx -= idx & -idx\n        return total\n    def range_sum(self, left, right):\n        return self.query(right + 1) - self.query(left)",
     walkthrough: "BIT uses 1-indexed array. Each index i is responsible for a range of length LSB(i) = i & -i. Update: propagate delta to all indices that cover the updated position (i += i & -i). Query: aggregate contributions by stripping the lowest set bit (i -= i & -i). Both O(log n).",
     testCode: "arr = [1, 3, 5, 7, 9, 11]\nft = FenwickTree(arr)\nassert ft.query(3) == 9\nassert ft.range_sum(2, 5) == 32\nft.update(3, 6)\nassert ft.query(3) == 15\nprint('All tests passed!')",
   },
@@ -833,7 +833,7 @@ export const PROBLEMS_ADVANCED_TREES: Problem[] = [
     ],
     solution: "def longest_zigzag(root):\n    max_zig = [0]\n    def dfs(node, go_left, length):\n        if node is None:\n            return\n        max_zig[0] = max(max_zig[0], length)\n        if go_left:\n            dfs(node.left, False, length + 1)\n            dfs(node.right, True, 1)\n        else:\n            dfs(node.right, True, length + 1)\n            dfs(node.left, False, 1)\n    dfs(root, True, 0)\n    dfs(root, False, 0)\n    return max_zig[0]",
     walkthrough: "Every node starts two recursive paths: one pretending it was reached via a left move (so next must be right), one via right (next must be left). Length accumulates on alternation, resets to 1 on same-direction moves. Two calls from root (go_left=True and go_left=False) cover both starting directions. O(n).",
-    testCode: "def build_zigzag_tree():\n    n1 = TreeNode(1)\n    n2 = TreeNode(1); n3 = TreeNode(1)\n    n1.right = n2\n    n2.left = n3\n    n4 = TreeNode(1); n5 = TreeNode(1)\n    n3.left = n4; n3.right = n5\n    n6 = TreeNode(1)\n    n5.right = n6\n    return n1\nassert longest_zigzag(build_zigzag_tree()) == 3\nt2 = build_tree([1,1,1,None,1,None,None,1,1,None,1])\nassert longest_zigzag(t2) == 4\nprint('All tests passed!')"
+     testCode: "def build_zigzag_tree():\n    n1 = TreeNode(1)\n    n2 = TreeNode(1); n3 = TreeNode(1)\n    n1.right = n2\n    n2.left = n3\n    n4 = TreeNode(1); n5 = TreeNode(1)\n    n3.left = n4; n3.right = n5\n    n6 = TreeNode(1)\n    n5.right = n6\n    return n1\nassert longest_zigzag(build_zigzag_tree()) == 3\nn1 = TreeNode(1); n2 = TreeNode(1); n3 = TreeNode(1); n4 = TreeNode(1); n5 = TreeNode(1)\nn1.left = n2; n2.right = n3; n3.left = n4; n4.right = n5\nassert longest_zigzag(n1) == 4\nprint('All tests passed!')"
   },
   {
     id: 45, stage: 6, title: "Maximum Average Subtree", pattern: "tuple (sum, count) per subtree", skill: "bottom-up sum+count, compute avg, track max",
@@ -905,7 +905,7 @@ export const PROBLEMS_ADVANCED_TREES: Problem[] = [
     ],
     solution: "def is_avl_balanced(root):\n    def dfs(node):\n        if node is None:\n            return (True, -1)\n        left_ok, left_h = dfs(node.left)\n        right_ok, right_h = dfs(node.right)\n        if not left_ok or not right_ok:\n            return (False, 0)\n        if abs(left_h - right_h) > 1:\n            return (False, 0)\n        return (True, 1 + max(left_h, right_h))\n    return dfs(root)[0]",
     walkthrough: "Bottom-up: each subtree returns (is_balanced, height). None = (True, -1). If any child is unbalanced, propagate False. At current node: check |left_h - right_h| <= 1. If yes, (True, 1+max(h)). This composes: depth measurement (P5) + boolean propagation (tuple return from P29) + global check. O(n).",
-    testCode: "t = build_tree([3,9,20,None,None,15,7])\nassert is_avl_balanced(t) == True\nt2 = build_tree([1,2,3,4,None,None,5])\nassert is_avl_balanced(t2) == False\nt3 = build_tree([1])\nassert is_avl_balanced(t3) == True\nprint('All tests passed!')",
+     testCode: "t = build_tree([3,9,20,None,None,15,7])\nassert is_avl_balanced(t) == True\nt2 = build_tree([1,2,3,4,None,None,None,5])\nassert is_avl_balanced(t2) == False\nt3 = build_tree([1])\nassert is_avl_balanced(t3) == True\nprint('All tests passed!')",
   },
   {
     id: 49, stage: 6, title: "Segment Tree — Build and Range Sum", pattern: "recursive segment tree construction", skill: "build segment tree array; query range sum; point update. O(log n) per operation.",

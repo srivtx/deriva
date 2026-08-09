@@ -291,7 +291,7 @@ export const PROBLEMS_TREES: Problem[] = [
     ],
     solution: "def height(node):\n    if node is None:\n        return 0\n    return 1 + max(height(node.left), height(node.right))",
     walkthrough: "The most important function in the curriculum. Trace: leaf has height 1 (1+max(0,0)). Node with leaf has height 2 (1+max(1,0)). The max picks taller subtree. 1+ adds this node. Must feel automatic before proceeding.",
-    testCode: "assert height(build_tree([])) == 0\nassert height(build_tree([1])) == 1\nassert height(build_tree([1,2,3,4,5])) == 3\nassert height(build_tree([1,None,2,None,3])) == 3\nprint('All tests passed!')"
+     testCode: "assert height(build_tree([])) == 0\nassert height(build_tree([1])) == 1\nassert height(build_tree([1,2,3,4,5])) == 3\nassert height(build_tree([1,None,2,None,None,3])) == 3\nprint('All tests passed!')"
   },
   {
     id: 16, stage: 2, title: "Minimum Depth", pattern: "measurement", skill: "min with leaf trap",
@@ -309,7 +309,7 @@ export const PROBLEMS_TREES: Problem[] = [
     ],
     solution: "def min_depth(node):\n    if node is None:\n        return 0\n    if node.left is None and node.right is None:\n        return 1\n    if node.left is None:\n        return 1 + min_depth(node.right)\n    if node.right is None:\n        return 1 + min_depth(node.left)\n    return 1 + min(min_depth(node.left), min_depth(node.right))",
     walkthrough: "The trap: naive min would always return 0 because min_depth(None)=0. A leaf is where left AND right are None. This 'measurement edge case' is exactly what makes balanced checks tricky.",
-    testCode: "assert min_depth(build_tree([])) == 0\nassert min_depth(build_tree([1])) == 1\nassert min_depth(build_tree([1,2,3,4,5])) == 2\nassert min_depth(build_tree([1,None,2,None,3])) == 3\nprint('All tests passed!')"
+     testCode: "assert min_depth(build_tree([])) == 0\nassert min_depth(build_tree([1])) == 1\nassert min_depth(build_tree([1,2,3,4,5])) == 2\nassert min_depth(build_tree([1,None,2,None,None,3])) == 3\nprint('All tests passed!')"
   },
   {
     id: 17, stage: 2, title: "Path Sum Check", pattern: "measurement", skill: "carry running sum downward",
@@ -645,7 +645,7 @@ export const PROBLEMS_TREES: Problem[] = [
     ],
     solution: "def max_path_to_node(node):\n    if node is None:\n        return 0\n    left_best = max_path_to_node(node.left)\n    right_best = max_path_to_node(node.right)\n    return node.val + max(0, left_best, right_best)",
     walkthrough: "Same DFS skeleton. Key insight: child paths that are negative contribute nothing (max with 0). This node's best = its value + best non-negative child extension. The 1+ becomes node.val+; max becomes selecting best child.",
-    testCode: "assert max_path_to_node(build_tree([1,2,3])) == 4\nassert max_path_to_node(build_tree([-10,5,6])) == 6\nassert max_path_to_node(build_tree([5,4,8,11,None,13,4,7,2,None,None,None,1])) == 48\nprint('All tests passed!')"
+     testCode: "assert max_path_to_node(build_tree([1,2,3])) == 4\nassert max_path_to_node(build_tree([-10,5,6])) == -4\nassert max_path_to_node(build_tree([5,4,8,11,None,13,4,7,2,None,None,None,1])) == 27\nprint('All tests passed!')"
   },
   {
     id: 36, stage: 5, title: "Count Good Nodes", pattern: "optimization", skill: "carry max-seen downward",
@@ -785,7 +785,7 @@ export const PROBLEMS_TREES: Problem[] = [
     ],
     solution: "def deepest_leaves_sum(node):\n    def dfs(node, d):\n        if node is None:\n            return (0, 0)\n        if node.left is None and node.right is None:\n            return (d, node.val)\n        ld, ls = dfs(node.left, d + 1)\n        rd, rs = dfs(node.right, d + 1)\n        if ld > rd:\n            return (ld, ls)\n        elif rd > ld:\n            return (rd, rs)\n        else:\n            return (ld, ls + rs)\n    return dfs(node, 0)[1]",
     walkthrough: "Tuple carries (depth, sum). At each node, compare children's max depths. The deeper one's data wins. If equal depth, merge sums. This 'compare child tuples and merge' pattern generalizes P21-P27.",
-    testCode: "t=build_tree([1,2,3,4,5,None,6,7,None,None,None,None,8])\nassert deepest_leaves_sum(t) == 15\nassert deepest_leaves_sum(build_tree([6,7,8,2,7,1,3,9,None,1,4,None,None,None,5])) == 19\nprint('All tests passed!')"
+     testCode: "t=build_tree([1,2,3,4,5,6,6,7,None,None,None,None,8])\nassert deepest_leaves_sum(t) == 15\nassert deepest_leaves_sum(build_tree([6,7,8,2,7,1,3,9,None,1,4,None,None,None,5])) == 19\nprint('All tests passed!')"
   },
   {
     id: 44, stage: 6, title: "Sum of Left Leaves", pattern: "mastery", skill: "conditional + is-left flag",
@@ -931,4 +931,9 @@ def build_tree(arr):
             if right_idx < len(nodes):
                 node.right = nodes[right_idx]
     return nodes[0] if nodes else None
+
+def height(node):
+    if node is None:
+        return 0
+    return 1 + max(height(node.left), height(node.right))
 `

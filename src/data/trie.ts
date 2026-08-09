@@ -152,7 +152,7 @@ export const PROBLEMS_TRIE: Problem[] = [
     ],
     solution: "def max_pairwise_prefix(words):\n    n = len(words)\n    best = 0\n    for i in range(n):\n        for j in range(i + 1, n):\n            k = 0\n            while k < len(words[i]) and k < len(words[j]) and words[i][k] == words[j][k]:\n                k += 1\n            best = max(best, k)\n    return best",
     walkthrough: "Check every unordered pair exactly once. For ['apple', 'apply', 'apricot']: i=0,j=1 → 'apple' vs 'apply': a-p-p-l all match (4). i=0,j=2 → 'apple' vs 'apricot': a-p match, then l≠r (2). i=1,j=2 → 'apply' vs 'apricot': a-p match, p≠r (2). Best=4. Cost: n*(n-1)/2 pairs, each up to L comparisons → O(n^2 * L). A trie would reveal this as the deepest node with ≥2 children — no pairwise comparison needed.",
-    testCode: "assert max_pairwise_prefix(['apple','apply','apricot','banana']) == 4\nassert max_pairwise_prefix(['cat','dog','fish']) == 0\nassert max_pairwise_prefix(['interspecies','interstellar','interstate']) == 5\nassert max_pairwise_prefix(['a','a','a']) == 1\nassert max_pairwise_prefix(['abc']) == 0\nprint('All tests passed!')"
+     testCode: "assert max_pairwise_prefix(['apple','apply','apricot','banana']) == 4\nassert max_pairwise_prefix(['cat','dog','fish']) == 0\nassert max_pairwise_prefix(['interspecies','interstellar','interstate']) == 7\nassert max_pairwise_prefix(['a','a','a']) == 1\nassert max_pairwise_prefix(['abc']) == 0\nprint('All tests passed!')"
   },
   // ═══ STAGE 1: Node = Map + Flag ═══
   {
@@ -240,7 +240,7 @@ export const PROBLEMS_TRIE: Problem[] = [
     ],
     solution: "def build_trie(words):\n    root = TrieNode()\n    for word in words:\n        insert(root, word)\n    return root\n\ndef count_nodes(root):\n    count = 1\n    for child in root.children.values():\n        count += count_nodes(child)\n    return count",
     walkthrough: "build_trie delegates to insert for each word — it's a one-liner. count_nodes recurses through every child. The root counts as 1 (non-character node). Each child node represents a character in some word's path. The total shows how much we compressed vs. the character-by-character representation.",
-    testCode: "root = build_trie(['cat','car','bat'])\nassert count_nodes(root) == 6\nroot2 = build_trie(['a','ab','abc'])\nassert count_nodes(root2) == 4\nroot3 = build_trie([])\nassert count_nodes(root3) == 1\nprint('All tests passed!')"
+     testCode: "root = build_trie(['cat','car','bat'])\nassert count_nodes(root) == 8\nroot2 = build_trie(['a','ab','abc'])\nassert count_nodes(root2) == 4\nroot3 = build_trie([])\nassert count_nodes(root3) == 1\nprint('All tests passed!')"
   },
   {
     id: 13, stage: 1, title: "Visualize Trie Structure", pattern: "trie traversal", skill: "print all paths with terminal markers",
@@ -255,7 +255,7 @@ export const PROBLEMS_TRIE: Problem[] = [
       "If node.is_end, append ' *' to mark a complete word.",
       "Recurse into each child in node.children, updating prefix or using a new path string."
     ],
-    solution: "def print_trie(node, prefix=''):\n    if node.is_end:\n        print(prefix[:] + ' *')\n    for ch, child in sorted(node.children.items()):\n        print_trie(child, prefix + ch)",
+     solution: "def print_trie(node, prefix='', depth=0):\n    if node.is_end:\n        print(prefix[:] + ' *')\n    for ch, child in sorted(node.children.items()):\n        print_trie(child, prefix + ch, depth + 1)",
     walkthrough: "DFS with path accumulation. As you descend, append each character to the path string. When you hit a node with is_end=True, print the accumulated path plus '*'. Then recurse into children. The sorted iteration ensures alphabetical order. For ['cat','car']: c, then a, then split: t* and r*.",
     testCode: "root = build_trie(['cat','car','bat'])\nimport io, sys\ncapture = io.StringIO()\nsys.stdout = capture\nprint_trie(root)\nsys.stdout = sys.__stdout__\noutput = capture.getvalue()\nassert 'cat' in output or 'ca' in output\nassert 'car' in output\nassert 'bat' in output\nprint('All tests passed!')"
   },
@@ -404,7 +404,7 @@ export const PROBLEMS_TRIE: Problem[] = [
     ],
     solution: "def trie_compression(words):\n    root = TrieNode()\n    total_chars = 0\n    for w in words:\n        total_chars += len(w)\n        node = root\n        for ch in w:\n            if ch not in node.children:\n                node.children[ch] = TrieNode()\n            node = node.children[ch]\n        node.is_end = True\n    def count_nodes(n):\n        c = 1\n        for child in n.children.values():\n            c += count_nodes(child)\n        return c\n    return (count_nodes(root), total_chars)",
     walkthrough: "Insert all words, tracking total character count. Then DFS-count nodes: root + every unique character-position pair ever seen. For ['cat','car']: nodes = root + c + a + t + r = 5. Total chars = 6. Ratio = 6/5 = 1.2x (saved 1 character). For ['prefix','prepare']: p-r-e shared, then diverge. Savings are modest for tiny lists but compound massively for large dictionaries where thousands of words share prefixes.",
-    testCode: "nodes, chars = trie_compression(['cat','car','bat'])\nassert nodes == 6\nassert chars == 9\nnodes2, chars2 = trie_compression(['a','a','a'])\nassert nodes2 == 2\nassert chars2 == 3\nnodes3, chars3 = trie_compression([])\nassert nodes3 == 1\nassert chars3 == 0\nprint('All tests passed!')"
+     testCode: "nodes, chars = trie_compression(['cat','car','bat'])\nassert nodes == 8\nassert chars == 9\nnodes2, chars2 = trie_compression(['a','a','a'])\nassert nodes2 == 2\nassert chars2 == 3\nnodes3, chars3 = trie_compression([])\nassert nodes3 == 1\nassert chars3 == 0\nprint('All tests passed!')"
   },
   // ═══ STAGE 3: The Payload ═══
   {
@@ -679,7 +679,7 @@ export const PROBLEMS_TRIE: Problem[] = [
     ],
     solution: "def max_overlap_pair(words):\n    n = len(words)\n    if n < 2:\n        return (0, '', '')\n    max_len = 0\n    best_pair = (0, 1)\n    for i in range(n):\n        for j in range(i + 1, n):\n            k = 0\n            while k < len(words[i]) and k < len(words[j]) and words[i][k] == words[j][k]:\n                k += 1\n            if k > max_len:\n                max_len = k\n                best_pair = (i, j)\n    return (max_len, words[best_pair[0]], words[best_pair[1]])",
     walkthrough: "Check every unordered pair once. Track the running maximum. For ['interspecies','interstellar','interstate']: pair 0-1: i-n-t-e-r-s (6 matching). pair 0-2: i-n-t-e-r-s (6 matching). pair 1-2: i-n-t-e-r-s (6 matching). Best = 6, pair = (0,1). The trie equivalent: insert all words, then the deepest node with ≥2 children reveals the max overlap position — no pairwise loops needed. The trie structure itself answers the question.",
-    testCode: "length, w1, w2 = max_overlap_pair(['interspecies','interstellar','interstate','banana'])\nassert length == 5\nlength2, w1b, w2b = max_overlap_pair(['a','b','c'])\nassert length2 == 0\nlength3, w1c, w2c = max_overlap_pair(['abc','abd','xyz'])\nassert length3 == 2\nprint('All tests passed!')"
+     testCode: "length, w1, w2 = max_overlap_pair(['interspecies','interstellar','interstate','banana'])\nassert length == 7\nlength2, w1b, w2b = max_overlap_pair(['a','b','c'])\nassert length2 == 0\nlength3, w1c, w2c = max_overlap_pair(['abc','abd','xyz'])\nassert length3 == 2\nprint('All tests passed!')"
   },
   // ═══ STAGE 5: Optimization ═══
   {
@@ -695,7 +695,7 @@ export const PROBLEMS_TRIE: Problem[] = [
       "DFS from the prefix node, appending terminal nodes' accumulated strings.",
       "The complexity: p steps down + output_size * avg_word_length. No dependency on total trie size."
     ],
-    solution: "def prefix_trie_search(root, prefix):\n    node = root\n    for ch in prefix:\n        if ch not in node.children:\n            return []\n        node = node.children[ch]\n    results = []\n    def collect(n, path):\n        if n.is_end:\n            results.append(path)\n        for ch, child in n.children.items():\n            collect(child, path + ch)\n    collect(node, prefix)\n    return results",
+     solution: "def prefix_trie_search(root, prefix):\n    node = root\n    for ch in prefix:\n        if ch not in node.children:\n            return []\n        node = node.children[ch]\n    results = []\n    def collect(n, path):\n        if n.is_end:\n            results.append(path)\n        for ch in sorted(n.children):\n            collect(n.children[ch], path + ch)\n    collect(node, prefix)\n    return results",
     walkthrough: "Phase 1 (O(p)): navigate the spine of the trie following the prefix. You land at a node that represents the entire subtree of words with this prefix. Phase 2 (O(results)): DFS the subtree. Every terminal node contributes one word to results. The total work is the sum of output word lengths, plus p — independent of how many other words exist in the trie.",
     testCode: "root = build_trie(['app','apple','apricot','bat','ball'])\nassert prefix_trie_search(root, 'ap') == ['app','apple','apricot']\nassert prefix_trie_search(root, 'b') == ['ball','bat']\nassert prefix_trie_search(root, 'z') == []\nprint('All tests passed!')"
   },
@@ -840,7 +840,7 @@ export const PROBLEMS_TRIE: Problem[] = [
     ],
     solution: "def word_search_ii(board, words):\n    root = TrieNode()\n    for w in words:\n        node = root\n        for ch in w:\n            if ch not in node.children:\n                node.children[ch] = TrieNode()\n            node = node.children[ch]\n        node.is_end = True\n    result = []\n    rows, cols = len(board), len(board[0])\n    def dfs(r, c, node, path):\n        ch = board[r][c]\n        if ch not in node.children:\n            return\n        node = node.children[ch]\n        path.append(ch)\n        if node.is_end:\n            result.append(''.join(path))\n            node.is_end = False\n        board[r][c] = '#'\n        for dr, dc in [(0,1),(1,0),(0,-1),(-1,0)]:\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < rows and 0 <= nc < cols and board[nr][nc] != '#':\n                dfs(nr, nc, node, path)\n        board[r][c] = ch\n        path.pop()\n    for r in range(rows):\n        for c in range(cols):\n            dfs(r, c, root, [])\n    return result",
     walkthrough: "Build trie from words (O(W * L)). DFS from every cell, using the trie as a prefix filter. The trie's children dict tells you which directions are worth exploring. When is_end hits, a word is found — record it and clear is_end (dedup). Path tracking assembles the word. Backtracking restores board and path state. The trie compresses all words into one search tree; the grid explores once.",
-    testCode: "b = [['o','a','a','n'],['e','t','a','e'],['i','h','k','r'],['i','f','l','v']]\nwords = ['oath','pea','eat','rain']\nr = sorted(word_search_ii(b, words))\nassert r == ['eat','oath']\nb2 = [['a','b'],['c','d']]\nassert word_search_ii(b2, ['ab','cd','ac']) == ['ab','ac']\nprint('All tests passed!')"
+     testCode: "b = [['o','a','a','n'],['e','t','a','e'],['i','h','k','r'],['i','f','l','v']]\nwords = ['oath','pea','eat','rain']\nr = sorted(word_search_ii(b, words))\nassert r == ['eat','oath']\nb2 = [['a','b'],['c','d']]\nassert word_search_ii(b2, ['ab','cd','ac']) == ['ab','ac','cd']\nprint('All tests passed!')"
   },
   {
     id: 46, stage: 6, title: "Maximum XOR Pair — Binary Trie + Bit Bridge", pattern: "trie + bit manipulation", skill: "build binary trie, greedy complement search",
@@ -929,9 +929,9 @@ export const PROBLEMS_TRIE: Problem[] = [
       "Sort words by length. For each word, use DP: can_break[i] = there exists j < i where word[j:i] in trie and can_break[j].",
       "Exclude the word itself as a match — if DP checks count only shorter words, or set a minimum of 2+ words."
     ],
-    solution: "def concatenated_words(words):\n    root = build_trie(words)\n    result = []\n    words.sort(key=len)\n    for w in words:\n        if not w:\n            continue\n        dp = [False] * (len(w) + 1)\n        dp[0] = True\n        for i in range(1, len(w) + 1):\n            node = root\n            for j in range(i - 1, -1, -1):\n                ch = w[j]\n                if ch not in node.children:\n                    break\n                node = node.children[ch]\n                if node.is_end and dp[j]:\n                    dp[i] = True\n                    break\n        if dp[len(w)]:\n            result.append(w)\n    return result",
+     solution: "def concatenated_words(words):\n    root = build_trie(words)\n    result = []\n    for w in words:\n        if not w:\n            continue\n        dp = [False] * (len(w) + 1)\n        dp[0] = True\n        for i in range(len(w)):\n            if not dp[i]:\n                continue\n            node = root\n            for j in range(i, len(w)):\n                ch = w[j]\n                if ch not in node.children:\n                    break\n                node = node.children[ch]\n                if node.is_end and (j + 1 < len(w) or i > 0):\n                    dp[j + 1] = True\n        if dp[len(w)]:\n            result.append(w)\n    return result",
     walkthrough: "Sort words by length — shorter words can form longer ones. For each word, DP: can_break[i] is True if word[0:i] can be segmented into dictionary words. The inner loop checks from i-1 backward: follow the trie from word[j] to word[i-1]. If that substring is a word (is_end) AND prefix can_break[j] is True, segment is valid. A concatenated word must use 2+ pieces — the DP naturally enforces this since the full word itself doesn't trigger a single-piece solution (exclude self-check).",
-    testCode: "r = concatenated_words(['cat','cats','dog','catsdog'])\nassert 'catsdog' in r\nr2 = concatenated_words(['a','b','ab','abc'])\nassert sorted(r2) == ['ab','abc']\nr3 = concatenated_words(['cat','dog','catdog'])\nassert 'catdog' in r3\nprint('All tests passed!')"
+     testCode: "r = concatenated_words(['cat','cats','dog','catsdog'])\nassert 'catsdog' in r\nr2 = concatenated_words(['a','b','ab','abc'])\nassert sorted(r2) == ['ab']\nr3 = concatenated_words(['cat','dog','catdog'])\nassert 'catdog' in r3\nprint('All tests passed!')"
   },
 ]
 
@@ -951,4 +951,35 @@ def build_trie(words):
             node = node.children[ch]
         node.is_end = True
     return root
+
+def insert(root, word):
+    node = root
+    for ch in word:
+        if ch not in node.children:
+            node.children[ch] = TrieNode()
+        node = node.children[ch]
+    node.is_end = True
+
+def search(root, word):
+    node = root
+    for ch in word:
+        if ch not in node.children:
+            return False
+        node = node.children[ch]
+    return bool(word) and node.is_end
+
+class TrieNodeFreq:
+    def __init__(self):
+        self.children = {}
+        self.is_end = False
+        self.count = 0
+
+def insert_freq(root, word):
+    node = root
+    for ch in word:
+        if ch not in node.children:
+            node.children[ch] = TrieNodeFreq()
+        node = node.children[ch]
+    node.is_end = True
+    node.count += 1
 `

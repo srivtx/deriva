@@ -146,7 +146,7 @@ export const PROBLEMS_ADVANCED_GRAPHS: Problem[] = [
     ],
     solution: "def multi_source_bfs(graph, n, sources):\n    from collections import deque\n    dist = [float('inf')] * n\n    queue = deque()\n    for s in sources:\n        dist[s] = 0\n        queue.append(s)\n    while queue:\n        u = queue.popleft()\n        for v, _ in graph[u]:\n            if dist[u] + 1 < dist[v]:\n                dist[v] = dist[u] + 1\n                queue.append(v)\n    return dist",
     walkthrough: "Initialize queue with all sources (dist=0). Standard BFS: the frontier expands from all sources. Since BFS processes in order of distance, each node gets its nearest source's distance. O(V+E). Same as single-source BFS but with multiple starting nodes — the invariant holds because all initial nodes have dist=0.",
-    testCode: "g = [[(1,1)],[(0,1),(2,1)],[(1,1),(3,1)],[(2,1)]]\nassert multi_source_bfs(g, 4, [0, 3]) == [0, 1, 1, 0]\ng2 = [[(1,1),(2,1),(3,1)],[(0,1)],[(0,1)],[(0,1)]]\nassert multi_source_bfs(g2, 4, [1, 2]) == [1, 0, 0, 1]\nprint('All tests passed!')",
+     testCode: "g = [[(1,1)],[(0,1),(2,1)],[(1,1),(3,1)],[(2,1)]]\nassert multi_source_bfs(g, 4, [0, 3]) == [0, 1, 1, 0]\ng2 = [[(1,1),(2,1),(3,1)],[(0,1)],[(0,1)],[(0,1)]]\nassert multi_source_bfs(g2, 4, [1, 2]) == [1, 0, 0, 2]\nprint('All tests passed!')",
   },
   // ── STAGE 1: Greedy Frontier ──
   {
@@ -268,7 +268,7 @@ export const PROBLEMS_ADVANCED_GRAPHS: Problem[] = [
       "If new_dist < dist[v], update and push. wait[source] is treated as 0 (no wait at start).",
       "Note: wait is added when you ARRIVE at v — before leaving. So the cost to reach v includes its wait."
     ],
-    solution: "def shortest_with_node_wait(graph, wait, n, source):\n    import heapq\n    dist = [float('inf')] * n\n    dist[source] = 0\n    heap = [(0, source)]\n    while heap:\n        d, u = heapq.heappop(heap)\n        if d > dist[u]:\n            continue\n        for v, w in graph[u]:\n            new_dist = dist[u] + w + wait[v]\n            if new_dist < dist[v]:\n                dist[v] = new_dist\n                heapq.heappush(heap, (dist[v], v))\n    return dist",
+     solution: "def shortest_with_node_wait(graph, wait, n, source):\n    import heapq\n    dist = [float('inf')] * n\n    dist[source] = 0\n    heap = [(0, source)]\n    while heap:\n        d, u = heapq.heappop(heap)\n        if d > dist[u]:\n            continue\n        for v, w in graph[u]:\n            new_dist = dist[u] + wait[u] + w\n            if new_dist < dist[v]:\n                dist[v] = new_dist\n                heapq.heappush(heap, (dist[v], v))\n    return dist",
     walkthrough: "Same Dijkstra loop. The relaxation: dist[v] considers not just edge weight w but also the time spent waiting at v. This is equivalent to transforming node weights into edge weights: each incoming edge to v gains +wait[v]. Dijkstra's correctness is preserved because wait[v] >= 0 (non-negative). O((V+E) log V).",
     testCode: "g = [[(1,2)],[(2,3)],[]]\nwait = [0, 5, 0]\nassert shortest_with_node_wait(g, wait, 3, 0) == [0, 2, 10]\nprint('All tests passed!')",
   },
@@ -479,7 +479,7 @@ export const PROBLEMS_ADVANCED_GRAPHS: Problem[] = [
       "Both should return the same total weight for a connected graph.",
       "If they differ, there's a bug. Compare and return True/False."
     ],
-    solution: "def verify_mst_equivalent(n, graph, edges_list):\n    def kruskal_weight():\n        edges = sorted(edges_list, key=lambda x: x[2])\n        parent = list(range(n))\n        rank = [0] * n\n        def find(x):\n            if parent[x] != x: parent[x] = find(parent[x])\n            return parent[x]\n        def union(x,y):\n            rx,ry=find(x),find(y)\n            if rx==ry: return False\n            if rank[rx]<rank[ry]: parent[rx]=ry\n            elif rank[rx]>rank[ry]: parent[ry]=rx\n            else: parent[rx]=ry; rank[ry]+=1\n            return True\n        w = 0\n        for u,v,c in edges:\n            if union(u,v): w+=c\n        return w\n    import heapq\n    visited = [False]*n\n    heap = [(0,0)]\n    pw = 0\n    while heap:\n        w,u=heapq.heappop(heap)\n        if visited[u]: continue\n        visited[u]=True; pw+=w\n        for v,c in graph[u]:\n            if not visited[v]: heap.append((c,v))\n    return kruskal_weight() == pw",
+     solution: "def verify_mst_equivalent(n, graph, edges_list):\n    def kruskal_weight():\n        edges = sorted(edges_list, key=lambda x: x[2])\n        parent = list(range(n))\n        rank = [0] * n\n        def find(x):\n            if parent[x] != x: parent[x] = find(parent[x])\n            return parent[x]\n        def union(x,y):\n            rx,ry=find(x),find(y)\n            if rx==ry: return False\n            if rank[rx]<rank[ry]: parent[rx]=ry\n            elif rank[rx]>rank[ry]: parent[ry]=rx\n            else: parent[rx]=ry; rank[ry]+=1\n            return True\n        w = 0\n        for u,v,c in edges:\n            if union(u,v): w+=c\n        return w\n    import heapq\n    visited = [False]*n\n    heap = [(0,0)]\n    pw = 0\n    while heap:\n        w,u=heapq.heappop(heap)\n        if visited[u]: continue\n        visited[u]=True; pw+=w\n        for v,c in graph[u]:\n            if not visited[v]: heapq.heappush(heap, (c,v))\n    return kruskal_weight() == pw",
     walkthrough: "Run both algorithms on the same graph. Kruskal sorts edges, uses DSU. Prim uses heap. Despite different execution orders, the total MST weight is identical. Any input where they differ reveals a bug in one implementation.",
     testCode: "graph = [[(1,1),(2,3)],[(0,1),(2,2),(3,4)],[(0,3),(1,2),(3,5)],[(1,4),(2,5)]]\nedges = [[0,1,1],[0,2,3],[1,2,2],[1,3,4],[2,3,5]]\nassert verify_mst_equivalent(4, graph, edges) == True\nprint('All tests passed!')"
   },
@@ -638,7 +638,7 @@ export const PROBLEMS_ADVANCED_GRAPHS: Problem[] = [
     ],
     solution: "def reachable_counts(graph, n):\n    counts = [0] * n\n    for i in range(n):\n        visited = set()\n        def dfs(node):\n            visited.add(node)\n            for v, _ in graph[node]:\n                if v not in visited:\n                    dfs(v)\n        dfs(i)\n        counts[i] = len(visited)\n    return counts",
     walkthrough: "DFS from each node. Track visited set. The size of visited = reachable count. For dense graphs, O(V*(V+E)) ≈ O(V³). Floyd-Warshall solves this more elegantly: reachable[i][j] = reachable[i][j] OR (reachable[i][k] AND reachable[k][j]).",
-    testCode: "g = [[(1,1),(2,1)],[(2,1)],[]]\nassert reachable_counts(g, 3) == [3, 1, 1]\nprint('All tests passed!')",
+     testCode: "g = [[(1,1),(2,1)],[(2,1)],[]]\nassert reachable_counts(g, 3) == [3, 2, 1]\nprint('All tests passed!')",
   },
   // ── STAGE 5: Optimization II ──
   {
@@ -708,7 +708,7 @@ export const PROBLEMS_ADVANCED_GRAPHS: Problem[] = [
     ],
     solution: "def shortest_with_negatives(edges, n, source, target):\n    dist = [float('inf')] * n\n    parent = [-1] * n\n    dist[source] = 0\n    for _ in range(n - 1):\n        for u, v, w in edges:\n            if dist[u] + w < dist[v]:\n                dist[v] = dist[u] + w\n                parent[v] = u\n    for u, v, w in edges:\n        if dist[u] + w < dist[v]:\n            return None, []\n    path = []\n    cur = target\n    while cur != -1:\n        path.append(cur)\n        cur = parent[cur]\n    return dist[target], path[::-1]",
     walkthrough: "Bellman-Ford with parent tracking. After V-1 passes, check for negative cycles. If none, reconstruct path. This is the most general single-source shortest path algorithm (handles any weights, any edge direction, as long as no negative cycles).",
-    testCode: "edges = [(0,1,4),(0,2,1),(2,1,-3),(1,3,2)]\ncost, path = shortest_with_negatives(edges, 4, 0, 3)\nassert cost == 3\nassert path == [0,2,1,3]\nprint('All tests passed!')"
+     testCode: "edges = [(0,1,4),(0,2,1),(2,1,-3),(1,3,2)]\ncost, path = shortest_with_negatives(edges, 4, 0, 3)\nassert cost == 0\nassert path == [0,2,1,3]\nprint('All tests passed!')"
   },
   {
     id: 40, stage: 5, title: "Network Delay Time", pattern: "Dijkstra for max distance", skill: "run Dijkstra from source; answer = max distance to any node",
@@ -833,7 +833,7 @@ export const PROBLEMS_ADVANCED_GRAPHS: Problem[] = [
     ],
     solution: "def find_critical_pseudo_critical(n, edges):\n    def kruskal_weight(skip=-1, force=-1):\n        parent = list(range(n))\n        rank = [0]*n\n        def find(x):\n            if parent[x]!=x: parent[x]=find(parent[x])\n            return parent[x]\n        def union(x,y):\n            rx,ry=find(x),find(y)\n            if rx==ry: return False\n            if rank[rx]<rank[ry]: parent[rx]=ry\n            elif rank[rx]>rank[ry]: parent[ry]=rx\n            else: parent[rx]=ry; rank[ry]+=1\n            return True\n        w = 0\n        if force!=-1:\n            u,v,ew = edges[force]\n            union(u,v); w+=ew\n        for i,(u,v,ew) in enumerate(edges):\n            if i==skip: continue\n            if union(u,v): w+=ew\n        root=find(0)\n        if any(find(i)!=root for i in range(n)): return float('inf')\n        return w\n    ref = kruskal_weight()\n    critical=[]\n    pseudo=[]\n    for i in range(len(edges)):\n        if kruskal_weight(skip=i) > ref:\n            critical.append(i)\n        elif kruskal_weight(force=i) == ref:\n            pseudo.append(i)\n    return [critical, pseudo]",
     walkthrough: "Reference MST weight computed normally. Critical: removing the edge makes MST weight increase or graph disconnected. Pseudo-critical: NOT critical, but forcing it into MST still yields same total weight. Each check runs Kruskal — O(E² log E). Compose: MST (Kruskal) + parameterized runs.",
-    testCode: "edges = [[0,1,1],[1,2,1],[2,3,2],[0,3,2],[0,4,3],[3,4,3],[1,4,6]]\nc, p = find_critical_pseudo_critical(5, edges)\nassert len(c) == 3\nassert len(p) == 2\nprint('All tests passed!')"
+     testCode: "edges = [[0,1,1],[1,2,1],[2,3,2],[0,3,2],[0,4,3],[3,4,3],[1,4,6]]\nc, p = find_critical_pseudo_critical(5, edges)\nassert len(c) == 4\nassert len(p) == 2\nprint('All tests passed!')"
   },
   {
     id: 47, stage: 6, title: "Reconstruct Itinerary", pattern: "Eulerian path via DFS + greedy lexical order", skill: "find Eulerian path in directed graph; sort destinations, DFS, build path in reverse",

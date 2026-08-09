@@ -826,7 +826,7 @@ export const PROBLEMS_BIT: Problem[] = [
     ],
     solution: "def subarray_xor_count(nums, k):\n    count = 0\n    prefix = 0\n    freq = {0: 1}\n    for num in nums:\n        prefix ^= num\n        target = prefix ^ k\n        count += freq.get(target, 0)\n        freq[prefix] = freq.get(prefix, 0) + 1\n    return count",
     walkthrough: "If prefix[R] ^ prefix[L-1] = K, then prefix[L-1] = prefix[R] ^ K. For each R, we check if prefix[R]^K has been seen as any previous prefix. Each prior occurrence starts a subarray ending at R. freq tracks how many times each prefix value appeared. O(n).",
-    testCode: "assert subarray_xor_count([4, 2, 2, 6, 4], 6) == 4\nassert subarray_xor_count([5, 6, 7, 8, 9], 5) == 2\nassert subarray_xor_count([1, 1, 1], 0) == 3\nprint('All tests passed!')"
+     testCode: "assert subarray_xor_count([4, 2, 2, 6, 4], 6) == 4\nassert subarray_xor_count([5, 6, 7, 8, 9], 5) == 2\nassert subarray_xor_count([1, 1, 1], 0) == 2\nprint('All tests passed!')"
   },
 
   // ── STAGE 6: Compose ──
