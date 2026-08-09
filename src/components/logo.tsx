@@ -7,11 +7,12 @@ function Mark({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" role="img" aria-label="Deriva logo">
       <rect x="2" y="2" width="44" height="44" rx="14" fill="var(--ink)" />
-      <path d="M14 12.5h8.1c7.4 0 12.1 4.4 12.1 11.5s-4.7 11.5-12.1 11.5H14v-23Z" stroke="var(--paper)" strokeWidth="3.1" strokeLinejoin="round" />
-      <path d="M10.5 34 18.5 27.5 25 30 37.5 14" stroke="var(--accent)" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="10.5" cy="34" r="2.5" fill="var(--paper)" />
-      <circle cx="25" cy="30" r="2.5" fill="var(--accent)" />
-      <circle cx="37.5" cy="14" r="2.5" fill="var(--accent)" />
+      <path d="M24 12v11M24 23 14 35M24 23l10 12" stroke="var(--paper)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="24" cy="12" r="4" fill="var(--accent)" />
+      <circle cx="24" cy="23" r="3.2" fill="var(--paper)" />
+      <circle cx="14" cy="35" r="3.2" fill="var(--accent)" />
+      <circle cx="34" cy="35" r="3.2" fill="var(--accent)" />
+      <path d="M11 12h6M31 12h6" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" />
     </svg>
   )
 }
