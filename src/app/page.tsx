@@ -68,7 +68,7 @@ export default function HomePage() {
       <header className="landing-header" style={{ padding: "clamp(24px, 5vw, 48px) clamp(20px, 5vw, 48px) clamp(20px, 4vw, 32px)", borderBottom: "1px solid var(--line)", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
         <div className="landing-brandline" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <Logo size={44} variant="wordmark" />
-          <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "var(--ink-soft)" }}>
+          <span className="landing-kicker" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "var(--ink-soft)" }}>
             One useful session at a time
           </span>
         </div>

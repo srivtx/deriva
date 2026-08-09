@@ -431,7 +431,8 @@ code, pre { font-family: var(--font-mono); }
 .continue-derivation-rail { height: 5px; margin-top: 16px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .continue-derivation-rail span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width var(--dur-med) var(--ease-standard); }
 .landing-brandline { min-width: 0; }
-.landing-brandline span { min-width: 0; overflow-wrap: anywhere; }
+.landing-brandline > .logo-wordmark { flex: 0 0 auto; white-space: nowrap; }
+.landing-brandline > .landing-kicker { min-width: 0; overflow-wrap: anywhere; }
 .landing-actions a { max-width: 100%; }
 .continue-derivation-head > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .continue-derivation { width: 100%; max-width: 100%; overflow: hidden; }
