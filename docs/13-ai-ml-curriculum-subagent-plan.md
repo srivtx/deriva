@@ -981,3 +981,258 @@ review where data or generation is involved.
 
 If a checkbox has no lesson ID, artifact, fixture, and exit test attached to it, the
 curriculum is not complete.
+
+## Product navigation and question bank
+
+The labs must be surfaced in the product. A learner must never need to guess or type a
+route URL.
+
+### Required routes
+
+    /ai-ml
+    /ai-ml/track/[trackId]
+    /ai-ml/lab/[lessonId]
+    /ai-ml/question/[questionId]
+    /ai-ml/projects
+    /ai-ml/patterns
+
+The AI/ML home screen shows Continue, Current Build, Tracks, Labs, Practice Queue,
+Projects, and Patterns. Every card has Start or Resume. Any question is reachable in
+three taps: track, lab, question.
+
+Track pages filter by status, type, prerequisite, artifact, and review date. Persist
+last lesson, stage, artifact draft, attempts, hints, trace cursor, and review date.
+Every lab links to its questions, project, artifact, prerequisite, and next action.
+
+### Typed question contract
+
+Every question must contain:
+
+    id, track, lessonId, kind, prompt, contextFixture,
+    expectedArtifact or expectedTraceObservation,
+    rubric, hints, pattern, prerequisites, nextQuestionId, reviewIntervals
+
+Kinds are derivation, prediction, construction, implementation, debugging,
+counterexample, comparison, operations, communication, and transfer. A question
+without a fixture, rubric, hints, and next question is incomplete.
+
+### Author the first 180 real questions
+
+#### Foundations and mathematics
+
+1. MATH-001: What shape does a batch have after adding three features?
+2. MATH-002: Why does a dot product rank these two documents differently?
+3. MATH-003: Find the cosine similarity of these supplied vectors.
+4. MATH-004: Which matrix multiplication is invalid, and why?
+5. MATH-005: Predict dense versus sparse memory cost for this vocabulary.
+6. MATH-006: Repair this broadcasting error without changing the batch dimension.
+7. STAT-001: Which sampling process creates selection bias?
+8. STAT-002: Predict how this class imbalance changes accuracy.
+9. STAT-003: Calculate precision, recall, and F1 from this confusion matrix.
+10. STAT-004: Which confidence interval is narrower, and what caused the difference?
+11. STAT-005: Identify correlation here without evidence of causation.
+12. STAT-006: Diagnose this badly calibrated confidence score.
+13. OPT-001: Estimate this derivative with finite differences.
+14. OPT-002: Derive the gradient of this one-parameter squared loss.
+15. OPT-003: Trace one gradient-descent update by hand.
+16. OPT-004: Predict the effect of doubling this learning rate.
+17. OPT-005: Find the exploding update in this loss trace.
+18. OPT-006: Choose a batch size under this memory constraint.
+19. INFO-001: Calculate entropy for these two label distributions.
+20. INFO-002: Why does cross-entropy punish this confident wrong prediction?
+21. INFO-003: Tokenize this string under the supplied vocabulary.
+22. INFO-004: Find the tokenization that creates the longest context.
+23. INFO-005: Choose sparse or dense features for this dataset and justify it.
+24. INFO-006: Identify what this dimensionality reduction discarded.
+25. THEORY-001: Find the train/test leakage in this feature.
+26. THEORY-002: Predict which of these models will overfit.
+27. THEORY-003: Construct a distribution shift that breaks this model.
+28. THEORY-004: Choose regularization for the stated failure.
+29. THEORY-005: Explain why more training data may not fix this bias.
+30. THEORY-006: Design a split that respects time and user groups.
+
+#### Data and classical ML
+
+31. DATA-001: Choose required fields for this document contract.
+32. DATA-002: Decide which duplicate record survives and explain the rule.
+33. DATA-003: Repair this malformed record without hiding the error.
+34. DATA-004: Separate missing, unknown, and invalid values.
+35. DATA-005: Build a rejection reason for this leaked label.
+36. DATA-006: Predict the result of this temporal split.
+37. DATA-007: Find the group that appears in both train and test.
+38. DATA-008: Design a dataset version identifier.
+39. DATA-009: Recover this failed ingestion job from its checkpoint.
+40. DATA-010: Decide whether this retry is idempotent.
+41. BASE-001: Build a majority-class baseline for these labels.
+42. BASE-002: Build a keyword baseline and state its blind spot.
+43. BASE-003: Choose a baseline for this ranking problem.
+44. BASE-004: Compare this baseline and model without changing the split.
+45. BASE-005: Explain why this random baseline is still useful.
+46. MODEL-001: Convert these feature weights into a linear score.
+47. MODEL-002: Choose a classification threshold for this asymmetric cost.
+48. MODEL-003: Implement logistic prediction from scratch.
+49. MODEL-004: Trace this classifier’s loss and gradient.
+50. MODEL-005: Debug the sign error in this gradient descent loop.
+51. MODEL-006: Diagnose why this model predicts only one class.
+52. MODEL-007: Choose regularization strength from these validation curves.
+53. MODEL-008: Calibrate this accurate but overconfident model.
+54. MODEL-009: Decide when this model should abstain.
+55. MODEL-010: Explain one false positive and one false negative.
+56. UNSUP-001: Choose the number of clusters from this plot.
+57. UNSUP-002: Trace one centroid update.
+58. UNSUP-003: Identify the cluster created by a scaling error.
+59. UNSUP-004: Explain what this dimensionality reduction discarded.
+60. UNSUP-005: Design a manual inspection sample for these clusters.
+61. TREE-ML-001: Choose a split that reduces impurity for these rows.
+62. TREE-ML-002: Find the feature split that overfits the training set.
+63. TREE-ML-003: Explain why an ensemble is more stable here.
+64. TREE-ML-004: Debug a tree that uses a leaked feature.
+65. TREE-ML-005: Compare nearest-neighbor behavior before and after scaling.
+
+#### Experiments and evaluation
+
+66. EXP-001: Write a hypothesis before changing this feature.
+67. EXP-002: Select the one variable allowed to change.
+68. EXP-003: Detect this invalid comparison caused by different splits.
+69. EXP-004: Reproduce this run from its config and seed.
+70. EXP-005: Read this learning curve and diagnose underfitting.
+71. EXP-006: Read this learning curve and diagnose overfitting.
+72. EXP-007: Decide whether this improvement is practically meaningful.
+73. EXP-008: Design an ablation for this feature group.
+74. EXP-009: Classify these errors by root cause.
+75. EXP-010: Choose the next experiment from this error taxonomy.
+76. EVAL-001: Choose metrics for this high-recall moderation system.
+77. EVAL-002: Calculate PR-AUC from these points.
+78. EVAL-003: Find the metric that hides this minority-class failure.
+79. EVAL-004: Design slice evaluation for these user segments.
+80. EVAL-005: Interpret this calibration curve.
+81. EVAL-006: Build a regression fixture for this previous failure.
+82. EVAL-007: Decide whether this model is ready for shadow traffic.
+83. EVAL-008: Separate data, model, and serving regressions.
+84. EVAL-009: Explain why offline success did not transfer online.
+85. EVAL-010: Write the acceptance question for this model release.
+
+#### Deep learning and transformers
+
+86. TENSOR-001: Repair this tensor shape mismatch.
+87. TENSOR-002: Predict the output shape of this batched operation.
+88. TENSOR-003: Implement a reduction without losing the batch dimension.
+89. TENSOR-004: Compare dense and sparse memory for this vocabulary.
+90. TENSOR-005: Find the operation that causes numerical overflow.
+91. AUTOGRAD-001: Draw the computation graph for this scalar expression.
+92. AUTOGRAD-002: Propagate one gradient through the graph.
+93. AUTOGRAD-003: Find the missing backward edge.
+94. AUTOGRAD-004: Validate this analytic gradient with finite differences.
+95. AUTOGRAD-005: Debug the parameter that never receives a gradient.
+96. NN-001: Choose an activation for this output contract.
+97. NN-002: Predict how initialization changes activation scale.
+98. NN-003: Trace one MLP forward pass.
+99. NN-004: Trace one MLP backward pass.
+100. NN-005: Diagnose these exploding gradients.
+101. NN-006: Diagnose these vanishing gradients.
+102. NN-007: Choose where normalization changes the system.
+103. NN-008: Resume training from this checkpoint.
+104. NN-009: Compare batch and mini-batch updates.
+105. NN-010: Explain why this model memorizes training data.
+106. ATTN-001: Construct queries, keys, and values for this sentence.
+107. ATTN-002: Calculate one attention score.
+108. ATTN-003: Apply this causal mask.
+109. ATTN-004: Predict how context changes this token representation.
+110. ATTN-005: Inspect and explain this attention failure.
+111. ATTN-006: Compare one head and multiple heads.
+112. ATTN-007: Explain the cost of a longer context.
+113. ATTN-008: Debug this positional-information bug.
+114. LM-001: Calculate next-token cross-entropy.
+115. LM-002: Compare temperature and top-k sampling.
+
+#### Retrieval, ranking, and recommendation
+
+116. SEARCH-001: Build an inverted index for these five documents.
+117. SEARCH-002: Calculate term frequency and inverse document frequency.
+118. SEARCH-003: Rank these documents with BM25-style evidence.
+119. SEARCH-004: Diagnose this lexical retrieval miss.
+120. SEARCH-005: Design a retrieval evaluation set.
+121. VECTOR-001: Calculate nearest-neighbor similarity.
+122. VECTOR-002: Diagnose this embedding-space collision.
+123. VECTOR-003: Choose an index for latency versus freshness.
+124. VECTOR-004: Detect stale vectors after these document updates.
+125. VECTOR-005: Compare lexical and semantic retrieval for this query.
+126. RANK-001: Separate candidate recall from final ranking.
+127. RANK-002: Choose ranking features for this query.
+128. RANK-003: Debug the reranker that reverses strong evidence.
+129. RANK-004: Calculate this ranking metric.
+130. RANK-005: Explain this relevance-label disagreement.
+131. REC-001: Build a popularity baseline.
+132. REC-002: Diagnose the cold-start problem.
+133. REC-003: Identify feedback-loop amplification.
+134. REC-004: Choose exploration versus exploitation.
+135. REC-005: Design a recommendation slice evaluation.
+
+#### Generative AI and RAG
+
+136. RAG-001: Choose which chunks belong in this context.
+137. RAG-002: Diagnose retrieval failure versus generation failure.
+138. RAG-003: Construct a citation-backed answer.
+139. RAG-004: Decide when this system must abstain.
+140. RAG-005: Detect unsupported claims in this answer.
+141. PROMPT-001: Separate instruction, context, and user data.
+142. PROMPT-002: Prevent prompt injection from retrieved content.
+143. PROMPT-003: Design a structured-output contract.
+144. PROMPT-004: Handle context truncation.
+145. PROMPT-005: Version this prompt without hiding the change.
+146. TOOL-001: Define a safe tool contract.
+147. TOOL-002: Validate tool arguments before execution.
+148. TOOL-003: Decide where human approval is required.
+149. TOOL-004: Make this tool call idempotent.
+150. TOOL-005: Recover from this partial workflow.
+151. GENEVAL-001: Build a groundedness evaluation case.
+152. GENEVAL-002: Score citation correctness.
+153. GENEVAL-003: Build a refusal-quality fixture.
+154. GENEVAL-004: Detect a regression in answer relevance.
+155. GENEVAL-005: Separate model quality from retrieval quality.
+
+#### Backend, MLOps, and safety
+
+156. API-001: Design the inference request/response contract.
+157. API-002: Separate client errors from server errors.
+158. API-003: Design health and readiness checks.
+159. API-004: Version a model endpoint safely.
+160. API-005: Validate an oversized request.
+161. QUEUE-001: Choose synchronous versus asynchronous execution.
+162. QUEUE-002: Make this job retry idempotent.
+163. QUEUE-003: Handle this dead-letter record.
+164. QUEUE-004: Design backpressure for a busy worker.
+165. QUEUE-005: Recover this worker after its lease expires.
+166. PERF-001: Choose a batching boundary.
+167. PERF-002: Design a cache key for inference.
+168. PERF-003: Diagnose this p99 latency spike.
+169. PERF-004: Estimate cost per request.
+170. PERF-005: Choose CPU or GPU for this workload.
+171. MLOPS-001: Compare two model artifacts by hash and metrics.
+172. MLOPS-002: Design a promotion gate.
+173. MLOPS-003: Roll back this bad model version.
+174. MLOPS-004: Choose logs, metrics, and traces for this failure.
+175. MLOPS-005: Detect data drift before quality collapses.
+176. SAFE-001: Identify PII and design redaction.
+177. SAFE-002: Design retention and deletion behavior.
+178. SAFE-003: Build a prompt-injection fixture.
+179. SAFE-004: Find an unsafe tool boundary.
+180. OPS-001: Write the incident timeline from these traces.
+
+### Lab and question surfacing rules
+
+Every lab card must display status, duration, prerequisite, thinking move, artifact, and
+completion requirement. Every lab links to its questions, project, artifact, prerequisite,
+and next action. Question pages show prompt, fixture, rubric, hint progression, trace or
+artifact preview, save/resume, next question, and related lab.
+
+The mobile AI/ML hub must be the primary entry point. It must expose Continue, Start
+Next, Search, Filters, Review Queue, Projects, and Patterns. Any question must be
+reachable in three taps. Every question must link to a lab and every lab must link back
+to its question queue.
+
+### Final completeness rule
+
+The track is not complete when topics are listed. It is complete only when all 180
+questions are typed, fixture-backed, rubric-scored, hint-supported, connected to a lab,
+connected to a next question, and reachable from the mobile AI/ML hub.
