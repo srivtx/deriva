@@ -46,6 +46,60 @@ existing LessonModuleSchema is the contract to extend, not bypass.
   an LLM.
 - Keep all phone layouts compatible with the existing app shell and bottom navigation.
 
+## Build Everything companion lane
+
+The supplied `Build Everything — 37 Projects from First Principles` PDF is surfaced as
+a separate, ordered lane at `/ai-ml/build-everything`. It is not merged into the
+15-project Systems Projects map: the two lanes have different jobs.
+
+- **Build Everything** preserves the book's four tiers and atomic-to-frontier sequence:
+  19 atomic skills, 8 first combinations, 7 real systems, and 3 frontier capstones.
+- **Systems Projects** remains the executable five-level workbench for the dependable
+  knowledge-intelligence system.
+
+The map now continues with twelve **Deriva extensions** after the source sequence. They
+are intentionally not presented as PDF projects: they close the production gaps that
+advanced practitioners and foundation teams must handle before trusting a model:
+
+1. Dataset Contract + Leakage Firewall
+2. Reproducible Experiment Runner
+3. Evaluation Harness + Calibration
+4. Point-in-Time Feature Store
+5. Data Drift + Quality Monitor
+6. Model Registry + Canary Rollout
+7. Inference Observability Trace
+8. RAG Retrieval Evaluation
+9. Safety Policy Gateway
+10. Differential Privacy Budget
+11. Federated Averaging
+12. Online A/B Experiment
+
+These additions are grounded in production ML guidance: Google’s Rules of ML emphasizes
+independent infrastructure tests and temporal holdouts; the ML Test Score treats testing
+and monitoring as production requirements; NIST’s AI RMF GenAI profile frames governance,
+measurement, and risk management as lifecycle work; OpenTelemetry makes traces, metrics,
+and logs the basic observability signals; and KServe’s rollout model demonstrates
+weighted canaries with rollback. The exercises reduce each practice to a deterministic
+Python contract before asking for a real-library handoff.
+
+Every PDF project is represented as a typed five-move build contract:
+
+1. **Derive the idea** — state the mechanism in plain language.
+2. **Build the smallest version** — type the runnable core.
+3. **Verify the invariant** — compare a fixed expected output and an edge case.
+4. **Break one assumption** — change one cause and record the failure or trade-off.
+5. **Package the artifact** — save code, output, and a transfer note.
+
+The route is source-mapped and executable status is explicit. All 49 projects now
+carry a problem statement, starter, visible/hidden tests, artifact, and exit gate.
+Every project offers the same problem → optional design → Python editor → Run Tests →
+hidden edge tests → artifact flow. GPU/model-hub projects use deterministic,
+dependency-free kernels in the browser first; their real-library artifact is a later
+handoff, never a fake passing test.
+Opening a workspace always lands in the code pane. The Spec tab, design question, hint
+ladder, and solution are optional side paths; none of them may block editing or running
+tests.
+
 ## First curriculum slice
 
 ### Module A — Data is a contract

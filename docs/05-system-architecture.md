@@ -93,6 +93,16 @@ type StructureOp =
   | { kind: "dp.write";    cell: [number, number] | [number]; value: Value }
   | { kind: "bt.choose";   choice: Value } | { kind: "bt.unchoose"; choice: Value }
   | { kind: "graph.enqueue"; node: NodeId } // ... etc per structure family
+  // AI/ML semantic events (docs/13 Step 4) — emitted by lab code, snapshots only:
+  | { kind: "data.accept";   rowId: number }
+  | { kind: "data.reject";   rowId: number; reason: string }
+  | { kind: "feature.write"; name: string; value: Value }
+  | { kind: "model.score";   rowId: number; score: number }
+  | { kind: "loss.update";   value: number }
+  | { kind: "gradient.update"; parameter: string; value: number }
+  | { kind: "request.start"; requestId: string }
+  | { kind: "request.end";   requestId: string; status: number; latencyMs: number }
+  | { kind: "failure.detected"; category: string }
 ```
 
 Design notes:
@@ -129,12 +139,22 @@ type LessonModule = {
     reflect:    { prompts: string[]; pattern: PatternId } // Rule C2
     generalize: { related: LessonId[]; revisitInDays?: number[] }
   }
+  ai?: {                                  // AI/ML systems labs only (docs/13)
+    kind: "data-lab" | "model-lab" | "experiment-lab" | "service-lab" | "failure-lab"
+    artifacts: AiArtifact[]               // ≥1 — Rule AI-1, build-checked
+    evaluation?: EvaluationContract       // required for model-lab — Rule AI-2
+    apiContract?: ApiContract             // required for service-lab — Rule AI-3
+    counterexampleFixture?: string        // required for failure-lab — Rule AI-4
+    constraints: SystemConstraint[]
+  }
 }
 ```
 
 Everything mechanically checkable in Rules 03 (stage completeness, thinking-move length,
 dependency chain, hint ladder depth, pattern attachment) is a **zod refinement that fails
-the build**. The curriculum cannot silently rot.
+the build**. The curriculum cannot silently rot. The same holds for the AI lab rules
+(AI-1…AI-4): an AI lesson missing its artifact, evaluation contract, API contract, or
+counterexample fixture fails the build.
 
 ## 4. Runtime Layers
 

@@ -3,8 +3,9 @@
 
 import type { LessonModule } from "./schema/lesson"
 import sum1toN from "./topics/trees/00-recursion-reflex/sum-1-to-n"
+import dataContract from "./topics/ai-ml/00-data-contract/lesson"
 
-const lessons: LessonModule[] = [sum1toN]
+const lessons: LessonModule[] = [sum1toN, dataContract]
 
 const byId = new Map(lessons.map(l => [l.id as string, l]))
 const byRoute = new Map(lessons.map(l => [`${l.topic}/${l.routeSlug}`, l]))

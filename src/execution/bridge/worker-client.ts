@@ -16,6 +16,8 @@ type WorkerRequest =
   | { type: "runTests"; code: string; tests: { call: string; expect: unknown }[] }
   | { type: "runScript"; code: string; setup?: string; testCode: string }
   | { type: "runTrace"; code: string; entryPoint: string; arg: number; budget: number }
+  // docs/13 Step 6: tiny deterministic AI/ML experiments, same sandbox
+  | { type: "runAiTrace"; code: string; entryPoint: string; payload: unknown; budget: number }
   | { type: "warmup" }
 
 export type WorkerMessage = WorkerRequest & { id: string }
@@ -124,6 +126,12 @@ class WorkerBridge {
 
   async runTrace(code: string, entryPoint: string, arg: number, budget: number, signal?: AbortSignal) {
     const response = await this.request({ type: "runTrace", code, entryPoint, arg, budget }, DEFAULT_TIMEOUT_MS, signal)
+    if (response.type !== "trace") throw new Error("Worker returned an invalid trace response")
+    return response
+  }
+
+  async runAiTrace(code: string, entryPoint: string, payload: unknown, budget: number, signal?: AbortSignal) {
+    const response = await this.request({ type: "runAiTrace", code, entryPoint, payload, budget }, DEFAULT_TIMEOUT_MS, signal)
     if (response.type !== "trace") throw new Error("Worker returned an invalid trace response")
     return response
   }

@@ -90,7 +90,7 @@ export function DesignStage({ lesson, saved, onComplete, onDraft, onProbePass }:
            <input value={name} onChange={e => { setName(e.target.value); saveDraft({ name: e.target.value }) }} disabled={passed} aria-label="Function name" />
           <code>(</code>
            <input value={param} onChange={e => { setParam(e.target.value); saveDraft({ param: e.target.value }) }} disabled={passed} aria-label="Parameter name" className="param-input" />
-          <code>) → number</code>
+           <code>{c.signature.returns ? `) → ${c.signature.returns}` : ") → number"}</code>
         </div>
         {checked && (!nameOk || !paramOk) && (
           <p className="design-wrong-feedback">Python names: lowercase letters, digits, underscores; start with a letter.</p>

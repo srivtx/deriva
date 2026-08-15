@@ -78,7 +78,11 @@ export function DiscoverStage({ lesson, saved, onComplete, onDraft, onProbePass 
 
       {checked && !passed && (
         <div className="socratic-feedback wrong" aria-live="polite">
-          <p>A blank breaks the contract. Ask of each one: <i>does it make the problem smaller? does the chain ever stop?</i></p>
+          <p>
+            {artifact.wrongFeedback ?? (
+              <>A blank breaks the contract. Ask of each one: <i>does it make the problem smaller? does the chain ever stop?</i></>
+            )}
+          </p>
         </div>
       )}
 

@@ -131,8 +131,9 @@ export default function HomePage() {
         </section>}
 
         <details className="curriculum-explore">
-          <summary><span>Explore the curriculum</span><small>DSA, HLD, LLD, games, and pattern tools</small></summary>
+          <summary><span>Explore the curriculum</span><small>AI/ML, DSA, HLD, LLD, games, and pattern tools</small></summary>
           <div className="explore-actions">
+            <Link href="/ai-ml" className="explore-link"><b>AI/ML Systems</b><span>Labs + 180 practice questions</span></Link>
             <Link href="/patterns" className="explore-link"><b>Pattern Journal</b><span>Recognize the thinking moves</span></Link>
             <Link href="/expedition" className="explore-link"><b>Expedition</b><span>Retrieve, break, and transfer an idea</span></Link>
             <Link href="/games" className="explore-link"><b>Game Mode</b><span>Practice invariants through play</span></Link>

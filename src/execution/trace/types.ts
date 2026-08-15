@@ -30,6 +30,19 @@ export type StructureOp =
   | { kind: "graph.visit"; nodeId: string }
   | { kind: "callstack.push"; frame: FrameId; fn: string }
   | { kind: "callstack.pop"; frame: FrameId }
+  // ── AI/ML semantic events (docs/13 Step 4) — emitted by lab harness code.
+  // Snapshots only; visualizers stay pure functions of (trace, cursor).
+  | { kind: "data.accept"; rowId: number }
+  | { kind: "data.reject"; rowId: number; reason: string }
+  | { kind: "data.split"; rowId: number; split: string }
+  | { kind: "data.version"; version: string }
+  | { kind: "feature.write"; name: string; value: unknown }
+  | { kind: "model.score"; rowId: number; score: number }
+  | { kind: "loss.update"; value: number }
+  | { kind: "gradient.update"; parameter: string; value: number }
+  | { kind: "request.start"; requestId: string }
+  | { kind: "request.end"; requestId: string; status: number; latencyMs: number }
+  | { kind: "failure.detected"; category: string }
 
 export interface Trace {
   version: 1

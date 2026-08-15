@@ -47,6 +47,19 @@ export async function runTraced(
   return { trace: response.trace, result: response.result, error: response.error }
 }
 
+// docs/13 Step 6 — AI/ML labs: deterministic fixture payloads, event/time budget
+// enforced in the worker exactly like DSA runs.
+export async function runAiTraced(
+  code: string,
+  entryPoint: string,
+  payload: unknown,
+  budget: number,
+  options?: ExecutionOptions,
+): Promise<TraceRun> {
+  const response = await workerBridge.runAiTrace(code, entryPoint, payload, budget, options?.signal)
+  return { trace: response.trace, result: response.result, error: response.error }
+}
+
 export function cancelPythonExecution() {
   workerBridge.cancel()
 }

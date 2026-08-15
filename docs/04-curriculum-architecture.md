@@ -523,7 +523,19 @@ the pattern count is the product.
 | Math | 7 | 6–8 | Simulation sandbox (iterate-a-function) |
 | **Total** | **~93 stages** | **~110–130 problems** | ≈ the size of a dense university course |
 
-## 6. Delivery Audit — What Must Exist Before This Is a Curriculum Product
+## 6. The AI/ML Systems Track
+
+The 14-topic DSA spine above is one curriculum. A second track — **AI/ML systems
+engineering** — lives alongside it under the `ai-ml` topic (docs/13). It is a separate
+spine with its own lab kinds (`data-lab | model-lab | experiment-lab | service-lab |
+failure-lab`), its own artifact chain (dataset card → split policy → feature contract →
+baseline → model → experiment → API contract → failure policy), and the same nine-stage
+flow with the same order guarantee: implementation is always Stage 6, and a lab is never
+accepted without its artifact, baseline, evaluation, or failure behavior. Schema rules
+AI-1…AI-4 enforce this at build time. The two tracks share the stage engine, the trace
+format, and the design system; they do not share the beat grammar.
+
+## 7. Delivery Audit — What Must Exist Before This Is a Curriculum Product
 
 The topic spines above are the **course design**. A problem bank with stage labels is
 not yet the course. v0 must close the following delivery gaps in this order:

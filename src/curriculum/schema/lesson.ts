@@ -11,7 +11,7 @@ export const LessonId = z.string().brand("LessonId")
 export const TopicId = z.enum([
   "trees", "linked-lists", "bst", "trie", "heap", "advanced-trees",
   "backtracking", "graphs", "dp", "greedy", "intervals",
-  "advanced-graphs", "bit-manipulation", "math"
+  "advanced-graphs", "bit-manipulation", "math", "ai-ml"
 ])
 export const PatternId = z.string().brand("PatternId")
 
@@ -83,7 +83,7 @@ export const UnderstandStageSchema = z.object({
 
 // ── Stage 2: Play ──
 export const SandboxConfigSchema = z.object({
-  type: z.enum(["peel-strip", "tree", "linked-list", "array", "heap", "grid", "graph"]),
+  type: z.enum(["peel-strip", "tree", "linked-list", "array", "heap", "grid", "graph", "dataset"]),
   initial: z.unknown(),
   prompt: z.string(),
 })
@@ -134,6 +134,9 @@ export const DiscoverStageSchema = z.object({
     prompt: z.string(),
     slots: z.array(ArtifactSlotSchema).min(1),
     crystallized: z.string(), // the platform's crisp restatement once built (B2 order)
+    // optional: generic Socratic wrong-feedback; DSA lessons fall back to the
+    // recursion-flavored default in the shared Discover surface.
+    wrongFeedback: z.string().optional(),
   }),
 })
 
@@ -150,6 +153,8 @@ export const DesignContractSchema = z.object({
     prompt: z.string(),
     defaultName: z.string(),
     defaultParam: z.string(),
+    // optional return-type label for the signature line (DSA default: "number")
+    returns: z.string().optional(),
   }),
   baseCase: ChoiceField,
   recursiveStep: ChoiceField,
@@ -184,7 +189,7 @@ export const ImplementStageSchema = z.object({
 export const ExecuteStageSchema = z.object({
   traceInput: z.record(z.string(), z.unknown()), // e.g. { n: 6 }
   budget: z.number().default(5000),
-  vizPanels: z.array(z.enum(["call-stack"])).min(1),
+  vizPanels: z.array(z.enum(["call-stack", "dataset"])).min(1),
 })
 
 // ── Stage 8: Reflect ──
@@ -207,6 +212,80 @@ export const GeneralizeStageSchema = z.object({
   revisitInDays: z.array(z.number()).optional(),
 })
 
+// ── AI/ML systems labs (docs/13) ──
+// A separate learning spine from the DSA beats. Labs are engineering
+// investigations: the learner builds an artifact (dataset, baseline, model,
+// experiment, API contract, failure report) before any implementation.
+// These schemas are pure data — no React or execution internals (05 §3).
+
+export const AiLessonKind = z.enum([
+  "data-lab", "model-lab", "experiment-lab", "service-lab", "failure-lab",
+])
+export type AiLessonKindType = z.infer<typeof AiLessonKind>
+
+export const AiArtifactKind = z.enum([
+  "dataset-card", "baseline", "model", "experiment", "api-contract", "failure-report",
+])
+
+export const AiArtifactSchema = z.object({
+  kind: AiArtifactKind,
+  title: z.string(),
+  requiredFields: z.array(z.string()),
+})
+export type AiArtifact = z.infer<typeof AiArtifactSchema>
+
+export const EvaluationContractSchema = z.object({
+  metrics: z.array(z.string()).min(1),
+  baseline: z.string(),          // named baseline the model must be measured against
+  acceptanceQuestion: z.string(), // the question the learner must answer to accept/reject
+})
+export type EvaluationContract = z.infer<typeof EvaluationContractSchema>
+
+export const SystemConstraintSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  whyItMatters: z.string(),
+})
+export type SystemConstraint = z.infer<typeof SystemConstraintSchema>
+
+export const FailurePolicySchema = z.object({
+  clientErrors: z.array(z.string()),
+  serverErrors: z.array(z.string()),
+})
+export type FailurePolicy = z.infer<typeof FailurePolicySchema>
+
+export const ApiContractSchema = z.object({
+  method: z.string(),
+  path: z.string(),
+  requestSchema: z.string(),
+  responseSchema: z.string(),
+  failurePolicy: FailurePolicySchema,
+})
+export type ApiContract = z.infer<typeof ApiContractSchema>
+
+export const AiLabSchema = z.object({
+  kind: AiLessonKind,
+  // AI-1: every AI/ML lesson declares at least one artifact the learner builds
+  artifacts: z.array(AiArtifactSchema).min(1),
+  // AI-2: model lessons declare a baseline and metric (model-lab)
+  evaluation: EvaluationContractSchema.optional(),
+  // AI-3: service lessons declare an API contract and failure policy (service-lab)
+  apiContract: ApiContractSchema.optional(),
+  // AI-4: failure lessons declare a counterexample fixture (failure-lab)
+  counterexampleFixture: z.string().optional(),
+  constraints: z.array(SystemConstraintSchema).default([]),
+})
+  .refine(lab => lab.kind !== "model-lab" || lab.evaluation !== undefined, {
+    message: "Rule AI-2: model-lab lessons must declare an evaluation (baseline + metrics)",
+  })
+  .refine(lab => lab.kind !== "service-lab" || lab.apiContract !== undefined, {
+    message: "Rule AI-3: service-lab lessons must declare an API contract and failure policy",
+  })
+  .refine(lab => lab.kind !== "failure-lab" || lab.counterexampleFixture !== undefined, {
+    message: "Rule AI-4: failure-lab lessons must declare a counterexample fixture",
+  })
+export type AiLab = z.infer<typeof AiLabSchema>
+
 // ── Full Lesson Module ──
 export const LessonModuleSchema = z.object({
   id: LessonId,
@@ -217,6 +296,11 @@ export const LessonModuleSchema = z.object({
   thinkingMove: ThinkingMove, // the lesson's single move — A1
   purpose: z.string(),        // the one educational purpose — A5
   dependencies: z.array(LessonId).default([]),
+
+  // AI/ML systems labs (docs/13): a separate spine from the DSA beats.
+  // Optional — DSA lessons do not carry it; every AI lesson must satisfy
+  // AI-1..AI-4 below, and invalid labs fail the build (C1).
+  ai: AiLabSchema.optional(),
 
   // One thinking-move per stage, each named in ≤8 words (12 §Acceptance)
   stageMoves: z.record(StageNameEnum, ThinkingMove),

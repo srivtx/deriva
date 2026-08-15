@@ -54,6 +54,23 @@ function Breadcrumbs() {
     parts.push({ label: "Quiz Mode", href: pathname })
   } else if (pathname === "/patterns") {
     parts.push({ label: "Pattern Journal", href: "/patterns" })
+  } else if (pathname === "/ai-ml") {
+    parts.push({ label: "AI/ML Systems", href: "/ai-ml" })
+  } else if (pathname.startsWith("/ai-ml/track/")) {
+    parts.push({ label: "AI/ML", href: "/ai-ml" })
+    parts.push({ label: "Track", href: pathname })
+  } else if (pathname.startsWith("/ai-ml/lab/")) {
+    parts.push({ label: "AI/ML", href: "/ai-ml" })
+    parts.push({ label: "Lab", href: pathname })
+  } else if (pathname.startsWith("/ai-ml/question/")) {
+    parts.push({ label: "AI/ML", href: "/ai-ml" })
+    parts.push({ label: "Question", href: pathname })
+  } else if (pathname.startsWith("/ai-ml/projects")) {
+    parts.push({ label: "AI/ML", href: "/ai-ml" })
+    parts.push({ label: "Projects", href: pathname })
+  } else if (pathname.startsWith("/ai-ml/patterns")) {
+    parts.push({ label: "AI/ML", href: "/ai-ml" })
+    parts.push({ label: "Patterns", href: pathname })
   }
 
   if (parts.length === 0) return null
@@ -99,7 +116,7 @@ export default function AppShell() {
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = useState(false)
   useEffect(() => { applyPreferences(loadPreferences()) }, [])
-  const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
+  const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
   const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings"
   const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
     { label: "Home", href: "/", icon: "home", active: pathname === "/" },
@@ -120,12 +137,14 @@ export default function AppShell() {
           </div>
           <div className="desktop-nav-actions">
             <Link href="/learn/trees/sum-1-to-n" className={`nav-link${pathname === "/practice" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") ? " active" : ""}`}>Learn</Link>
+            <Link href="/ai-ml" className={`nav-link${pathname.startsWith("/ai-ml") || pathname.startsWith("/lab") ? " active" : ""}`}>AI/ML</Link>
             <Link href="/patterns" className={`nav-link${pathname.startsWith("/patterns") ? " active" : ""}`}>Patterns</Link>
             <Link href="/dashboard" className={`nav-link${pathname === "/dashboard" ? " active" : ""}`}>Progress</Link>
             <button className={`nav-more${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>More <span aria-hidden="true">⌄</span></button>
             <NotificationCenter />
             <ProgressBadge />
             {moreOpen && <div className="desktop-more-menu" role="menu">
+              <Link href="/ai-ml" onClick={() => setMoreOpen(false)}>AI/ML Systems</Link>
               <Link href="/design" onClick={() => setMoreOpen(false)}>System Design (HLD)</Link>
               <Link href="/lld" onClick={() => setMoreOpen(false)}>Low-Level Design</Link>
               <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition</Link>
@@ -156,13 +175,14 @@ export default function AppShell() {
          <section className="mobile-more-sheet" role="dialog" aria-modal="true" aria-label="More destinations" onClick={event => event.stopPropagation()}>
            <div className="mobile-sheet-handle" />
            <div className="mobile-more-heading"><span className="notification-kicker">More destinations</span><button onClick={() => setMoreOpen(false)} aria-label="Close more destinations">×</button></div>
-           <div className="mobile-more-links">
-             <Link href="/design" onClick={() => setMoreOpen(false)}>System Design <span>HLD</span></Link>
-             <Link href="/lld" onClick={() => setMoreOpen(false)}>Low-Level Design <span>LLD</span></Link>
-             <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition <span>Retrieval</span></Link>
-             <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode <span>Play</span></Link>
-             <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings <span>Preferences</span></Link>
-           </div>
+            <div className="mobile-more-links">
+              <Link href="/ai-ml" onClick={() => setMoreOpen(false)}>AI/ML Systems <span>Labs + 180 questions</span></Link>
+              <Link href="/design" onClick={() => setMoreOpen(false)}>System Design <span>HLD</span></Link>
+              <Link href="/lld" onClick={() => setMoreOpen(false)}>Low-Level Design <span>LLD</span></Link>
+              <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition <span>Retrieval</span></Link>
+              <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode <span>Play</span></Link>
+              <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings <span>Preferences</span></Link>
+            </div>
          </section>
        </div>}
        <style>{`

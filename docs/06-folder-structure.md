@@ -13,12 +13,35 @@ deriva/
 │   ├── app/                           # Routes only. Zero logic — pages compose features.
 │   │   ├── page.tsx                   #   / — curriculum map (the story, visualized)
 │   │   ├── learn/[topic]/[lesson]/    #   the 9-stage lesson experience (the product)
+│   │   ├── lab/                       #   AI/ML lab lessons (docs/13) — separate from DSA
+│   │   │   ├── page.tsx               #   lab map + artifact chain
+│   │   │   └── [slug]/page.tsx        #   a single lab through the same 9-stage flow
+│   │   ├── ai-ml/                     #   AI/ML hub + 180-question bank (docs/13 §nav)
+│   │   │   ├── page.tsx               #   hub: continue, tracks, labs, queue, projects, patterns
+│   │   │   ├── build-everything/       #   37 PDF projects + 12 trustworthy-AI extensions
+│   │   │   │   ├── page.tsx            #   four tiers and recommended foundation arc
+│   │   │   │   └── [projectId]/page.tsx#   five-step contract + workspace CTA
+│   │   │   │       └── workbench/page.tsx# executable contract when authored
+│   │   │   ├── track/[trackId]/       #   question track with status/kind filters
+│   │   │   ├── lab/[lessonId]/        #   lab page: artifact, questions, start/resume
+│   │   │   ├── question/[questionId]/ #   typed question player (fixture→answer→rubric→next)
+│   │   │   ├── projects/              #   Systems Projects (system-ai/ml-projects-plan.md)
+│   │   │   │   ├── page.tsx           #   15-card project map with 0/5–5/5 progress
+│   │   │   │   ├── [projectId]/       #   brief, five levels, artifact chain
+│   │   │   │   │   └── level/[levelId]/ # level workbench: spec→design gate→code→artifact
+│   │   │   │   └── …/level/[levelId]/artifact/ # saved artifact + reflection + next decision
+│   │   │   ├── projects/page.tsx      #   (legacy) — superseded by the project map
+│   │   │   └── patterns/page.tsx      #   pattern journal derived from the question bank
 │   │   ├── patterns/                  #   pattern directory, quiz, and earned journal
 │   │   ├── practice/                  #   daily queue (v0: simple; v1: spaced)
 │   │   └── layout.tsx                 #   design-system shell, fonts, theme
 │   │
 │   ├── curriculum/                    # ★ THE PRODUCT. Content as validated data.
 │   │   ├── schema/                    #   zod: LessonModule, SocraticNode, TraceConfig…
+│   │   │   └── question.ts            #   typed question contract (docs/13 §bank): fixture,
+│   │   │                               #   rubric, hints, pattern, nextQuestionId
+│   │   ├── schema/project.ts          #   Systems Projects contract: five levels, spec,
+│   │   │                               #   design gate, tests, artifact, drill, exit gate
 │   │   ├── patterns/                  #   the 36 named patterns (04 §4) as data
 │   │   ├── topics/
 │   │   │   ├── trees/
@@ -28,7 +51,24 @@ deriva/
 │   │   │   │   │   ├── prose.mdx      #   narrative blocks (imported by lesson.ts)
 │   │   │   │   │   └── solution.py    #   reference solution (CI-executed)
 │   │   │   │   └── …/                 #   one folder per lesson
-│   │   │   ├── linked-lists/ … math/  #   14 topics total
+│   │   │   ├── linked-lists/ … math/  #   14 DSA topics total
+│   │   │   └── ai-ml/                 #   AI/ML systems track (docs/13) — separate
+│   │   │       ├── topic.ts           #   spine metadata for the five lab kinds
+│   │   │       ├── build-everything.ts#   49-project curriculum + executable registry
+│   │   │       ├── build-everything-implementations.ts # dependency-free lab contracts
+│   │   │       ├── build-everything-extensions.ts # production/data/safety/privacy extensions
+│   │   │       ├── 00-data-contract/  #   lesson + deterministic JSON fixtures
+│   │   │       ├── questions/         #   the 180-question bank, one file per family
+│   │   │       │   ├── index.ts       #   registry: parse-all + track map + chain
+│   │   │       │   └── questions-*.ts #   math/data/classical/experiments/deep/
+│   │   │       │                       #   retrieval/rag/backend families
+│   │   │       ├── projects/          #   Systems Projects ladder (system-ai plan)
+│   │   │       │   ├── index.ts       #   registry: 15 projects, parse-all
+│   │   │       │   ├── project-01-data-contract.ts # Project 1, L1–L5 authored slice
+│   │   │       │   └── project-01-fixtures.ts      # per-level trace fixtures + wrappers
+│   │   │       └── …/                 #   one lesson per module (A–F)
+│   ├── learning/stages/ai/build-everything-workbench.tsx # A1 executable workspace
+│   └── persistence/build-everything-progress.ts          # local-first workspace state
 │   │   └── index.ts                   #   registry: dependency graph, build-time checks
 │   │
 │   ├── learning/                      # ★ The 9-stage engine (pedagogy as software)
@@ -39,6 +79,12 @@ deriva/
 │   │   ├── stages/                    #   ★ the nine stage surfaces (docs/12 reference)
 │   │   │   ├── shell.tsx              #   shared grammar: kicker, move chip, pinned CTA, ProbeCard
 │   │   │   ├── understand.tsx … generalize.tsx
+│   │   │   └── ai/                    #   AI/ML lab surfaces (docs/13) — DSA surfaces untouched
+│   │   │       ├── ai-page.tsx        #   lab orchestrator (same machine, lab-native Play/Execute)
+│   │   │       ├── dataset-sandbox.ts #   pure contract rules for the Play sandbox
+│   │   │       ├── dataset-play.tsx   #   Stage 2: edit rows, watch counts
+│   │   │       ├── dataset-execute.tsx#   Stage 7: runAiTrace + dataset panel
+│   │   │       └── artifact-card.tsx  #   durable artifact + system constraints
 │   │   ├── socratic/
 │   │   │   └── (lives in stages/reason.tsx — one question at a time, pump-before-tell)
 │   │   ├── contract/
@@ -67,6 +113,7 @@ deriva/
 │   │   ├── grammar/                   #   shared visual language (colors, motion — 09 §6)
 │   │   ├── panels/
 │   │   │   ├── call-stack.tsx         #   frames, args, return values (low channel)
+│   │   │   ├── dataset.tsx            #   AI/ML: rows → accepted/rejected at the cursor
 │   │   │   ├── tree.tsx               #   SVG + d3-hierarchy layout
 │   │   │   ├── linked-list.tsx        #   boxes-and-arrows, pointer labels
 │   │   │   ├── array-pointers.tsx     #   index strip + named pointer chips
@@ -86,6 +133,8 @@ deriva/
 │   │   ├── preferences.ts             #   theme / motion / text-scale prefs
 │   │   ├── lesson-progress.ts         #   9-stage progress, artifacts, pattern journal
 │   │   ├── practice-progress.ts       #   last-open problem per DSA topic
+│   │   ├── ai-question-progress.ts    #   AI question status, drafts, attempts, review dates
+│   │   ├── project-progress.ts        #   project level: stage, pane, draft, artifact, gates
 │   │   ├── app-notifications.ts       #   derived next-move inbox + read state
 │   │   ├── pattern-mastery.ts         #   recognized and missed pattern signals
 │   │   ├── pattern-desk-progress.ts   #   last-open pattern card
@@ -113,7 +162,7 @@ deriva/
 │       └── ids.ts                     #   branded id types (LessonId, PatternId…)
 │
 ├── tests/
-│   ├── curriculum/                    #   schema + rules checks (A1/A2/A5/B1…)
+│   ├── curriculum/                    #   schema + rules checks (A1/A2/A5/B1…, AI-1…AI-4)
 │   ├── viz/                           #   golden traces → folds → panel models
 │   └── execution/                     #   tracer unit tests (run under CPython in CI)
 │
