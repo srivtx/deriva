@@ -18,8 +18,8 @@ deriva/
 │   │   │   └── [slug]/page.tsx        #   a single lab through the same 9-stage flow
 │   │   ├── ai-ml/                     #   AI/ML hub + 180-question bank (docs/13 §nav)
 │   │   │   ├── page.tsx               #   hub: continue, tracks, labs, queue, projects, patterns
-│   │   │   ├── build-everything/       #   37 PDF projects + 12 trustworthy-AI extensions
-│   │   │   │   ├── page.tsx            #   four tiers and recommended foundation arc
+│   │   │   ├── build-everything/       #   37 PDF projects + production + modern extensions
+│   │   │   │   ├── page.tsx            #   source tiers, production extensions, live progress
 │   │   │   │   └── [projectId]/page.tsx#   five-step contract + workspace CTA
 │   │   │   │       └── workbench/page.tsx# executable contract when authored
 │   │   │   ├── track/[trackId]/       #   question track with status/kind filters
@@ -54,9 +54,10 @@ deriva/
 │   │   │   ├── linked-lists/ … math/  #   14 DSA topics total
 │   │   │   └── ai-ml/                 #   AI/ML systems track (docs/13) — separate
 │   │   │       ├── topic.ts           #   spine metadata for the five lab kinds
-│   │   │       ├── build-everything.ts#   49-project curriculum + executable registry
+│   │   │       ├── build-everything.ts#   63-project curriculum + executable registry
 │   │   │       ├── build-everything-implementations.ts # dependency-free lab contracts
 │   │   │       ├── build-everything-extensions.ts # production/data/safety/privacy extensions
+│   │   │       ├── build-everything-modern.ts # MCP/agents/inference/compiler extensions
 │   │   │       ├── 00-data-contract/  #   lesson + deterministic JSON fixtures
 │   │   │       ├── questions/         #   the 180-question bank, one file per family
 │   │   │       │   ├── index.ts       #   registry: parse-all + track map + chain

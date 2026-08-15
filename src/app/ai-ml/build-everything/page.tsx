@@ -28,7 +28,7 @@ export default function BuildEverythingPage() {
   return (
     <div className="lab-page build-everything-page">
       <header className="landing-header">
-        <span className="home-eyebrow"><span>Build Everything · 37 projects</span></span>
+        <span className="home-eyebrow"><span>Build Everything · {buildEverythingProjects.length} projects</span></span>
         <h1 className="lab-title">From a gradient step to a DeepSeek replica.</h1>
         <p className="narrative">
           A first-principles AI/ML path mapped from the supplied Build Everything book:

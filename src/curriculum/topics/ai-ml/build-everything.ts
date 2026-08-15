@@ -1,7 +1,7 @@
 // Source-mapped curriculum from Build Everything — 37 Projects from First
-// Principles (Sribatsha Dash, 2026), followed by twelve Deriva-authored
-// production extensions. Every project is a build contract, not a page of links:
-// five explicit moves make the learning order and handoff visible.
+// Principles (Sribatsha Dash, 2026), followed by Deriva-authored production and
+// modern engineering extensions. Every project is a build contract, not a page
+// of links: five explicit moves make the learning order and handoff visible.
 
 import {
   BuildEverythingProjectSchema,
@@ -11,6 +11,7 @@ import {
 } from "../../schema/build-everything"
 import { implementationForBuildEverythingProject } from "./build-everything-implementations"
 import { buildEverythingExtensions } from "./build-everything-extensions"
+import { buildEverythingModern } from "./build-everything-modern"
 
 type ProjectDraft = Omit<BuildEverythingProject, "steps">
 
@@ -192,6 +193,7 @@ const sourceProjects: BuildEverythingProject[] = [
 export const buildEverythingProjects: BuildEverythingProject[] = [
   ...sourceProjects,
   ...buildEverythingExtensions,
+  ...buildEverythingModern,
 ]
 
 for (const item of buildEverythingProjects) {
@@ -208,6 +210,7 @@ export const buildEverythingTiers: { id: BuildEverythingTier; label: string; des
   { id: "system", label: "Tier 2 · Real systems", description: "Ship products with serving, agents, documents, vision, distribution, and alignment." },
   { id: "frontier", label: "Tier 3 · Frontier capstones", description: "Run verifiable reasoning, research a new mechanism, and integrate the full stack." },
   { id: "extension", label: "Deriva extensions · Trustworthy AI", description: "Close the production gaps: data contracts, evaluation, monitoring, safety, privacy, and controlled rollout." },
+  { id: "modern", label: "Modern AI engineering", description: "Practice the interfaces and systems current teams ship: MCP, agents, structured output, efficient inference, compilers, supply chain, and streaming." },
 ]
 
 export const buildEverythingFeaturedPath = ["A1", "A4", "C1", "M2"]

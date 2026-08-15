@@ -116,7 +116,7 @@ export default async function BuildEverythingProjectPage({ params }: Props) {
 }
 
 function tierLabel(tier: string): string {
-  return ({ atomic: "Tier 0 · Atomic", combination: "Tier 1 · Combination", system: "Tier 2 · Real system", frontier: "Tier 3 · Frontier", extension: "Deriva extension · Trustworthy AI" } as Record<string, string>)[tier] ?? tier
+  return ({ atomic: "Tier 0 · Atomic", combination: "Tier 1 · Combination", system: "Tier 2 · Real system", frontier: "Tier 3 · Frontier", extension: "Deriva extension · Trustworthy AI", modern: "Modern AI engineering" } as Record<string, string>)[tier] ?? tier
 }
 
 function formatDuration(minutes: number): string {

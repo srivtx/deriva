@@ -82,7 +82,28 @@ and logs the basic observability signals; and KServe’s rollout model demonstra
 weighted canaries with rollback. The exercises reduce each practice to a deterministic
 Python contract before asking for a real-library handoff.
 
-Every PDF project is represented as a typed five-move build contract:
+The lane now continues with a third, **Modern AI engineering** tier (Y1–Y14). These are
+the interfaces and bottlenecks a current AI engineer must be able to build and debug:
+
+- MCP JSON-RPC negotiation, tool consent, and audit trails;
+- agent trace grading, durable workflows, idempotency, capability sandboxes, and typed
+  structured output;
+- prefix caching, paged KV allocation, speculative decoding, quantization, and graph
+  compilation caches;
+- model provenance/signing, MLPerf-style workload benchmarking, and streaming
+  backpressure/cancellation.
+
+Every one is a live editor contract with visible and hidden tests. The browser version
+uses deterministic kernels (protocol messages, allocators, schedulers, and reports), then
+names the production transfer artifact so the learner can reproduce the same mechanism
+with MCP, vLLM, PyTorch, TensorRT-LLM, OpenSSF, or MLPerf in a real environment.
+Reference anchors: [MCP specification](https://modelcontextprotocol.io/specification/2025-06-18/server/index),
+[vLLM capabilities](https://docs.vllm.ai/en/stable/), [PyTorch compiler](https://docs.pytorch.org/docs/main/user_guide/torch_compiler/torch.compiler.html),
+[OWASP LLM risks](https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/),
+[OpenSSF model signing](https://openssf.org/projects/model-signing/), and
+[MLPerf Inference](https://docs.mlcommons.org/inference/).
+
+Every source project and authored extension is represented as a typed five-move build contract:
 
 1. **Derive the idea** — state the mechanism in plain language.
 2. **Build the smallest version** — type the runnable core.
@@ -90,7 +111,7 @@ Every PDF project is represented as a typed five-move build contract:
 4. **Break one assumption** — change one cause and record the failure or trade-off.
 5. **Package the artifact** — save code, output, and a transfer note.
 
-The route is source-mapped and executable status is explicit. All 49 projects now
+The route is source-mapped and executable status is explicit. All 63 projects now
 carry a problem statement, starter, visible/hidden tests, artifact, and exit gate.
 Every project offers the same problem → optional design → Python editor → Run Tests →
 hidden edge tests → artifact flow. GPU/model-hub projects use deterministic,

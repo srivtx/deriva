@@ -6,7 +6,7 @@
 
 import { z } from "zod"
 
-export const BuildEverythingTierSchema = z.enum(["atomic", "combination", "system", "frontier", "extension"])
+export const BuildEverythingTierSchema = z.enum(["atomic", "combination", "system", "frontier", "extension", "modern"])
 export type BuildEverythingTier = z.infer<typeof BuildEverythingTierSchema>
 
 const BuildStepSchema = z.object({
@@ -74,7 +74,7 @@ export const BuildEverythingImplementationSchema = z.object({
 export const BuildEverythingProjectSchema = z.object({
   id: z.string(),
   code: z.string(),
-  order: z.number().int().min(1).max(49),
+  order: z.number().int().min(1).max(63),
   tier: BuildEverythingTierSchema,
   title: z.string(),
   lines: z.number().int().positive(),

@@ -809,6 +809,230 @@ const specs: Record<string, ImplementationDraft> = {
       { name: "regression", call: "ab_test_summary([1, 1], [1, 0], 0.0)['decision']", expect: 'hold', invariant: "a guardrail regression blocks shipping" },
     ],
   }),
+  Y1: s({
+    entryPoint: "validate_jsonrpc",
+    problemStatement: "Validate the protocol envelope before routing a tool: JSON-RPC version, request ID, method, and capability must be explicit.",
+    requiredApi: "def validate_jsonrpc(message, supported_version, methods):\n    return {'valid': ..., 'kind': ..., 'error': ...}",
+    starter: "def validate_jsonrpc(message, supported_version, methods):\n    # Notifications may omit an id, but every message needs a method.\n    pass\n",
+    solution: "def validate_jsonrpc(message, supported_version, methods):\n    if not isinstance(message, dict):\n        return {'valid': False, 'kind': 'invalid', 'error': 'not-object'}\n    if message.get('jsonrpc') != supported_version:\n        return {'valid': False, 'kind': 'invalid', 'error': 'unsupported-version'}\n    if not isinstance(message.get('method'), str):\n        return {'valid': False, 'kind': 'invalid', 'error': 'missing-method'}\n    if message['method'] not in methods:\n        return {'valid': False, 'kind': 'invalid', 'error': 'method-not-found'}\n    if 'id' in message and not isinstance(message['id'], (str, int)):\n        return {'valid': False, 'kind': 'invalid', 'error': 'invalid-id'}\n    return {'valid': True, 'kind': 'notification' if 'id' not in message else 'request', 'error': None}\n",
+    behavior: ["require the negotiated JSON-RPC version", "allow notifications without IDs", "reject unknown methods before tool dispatch"],
+    visibleTests: [
+      { name: "valid request", call: "validate_jsonrpc({'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'}, '2.0', ['tools/list'])", expect: { valid: true, kind: 'request', error: null }, invariant: "a valid protocol envelope reaches the capability layer" },
+      { name: "unknown method", call: "validate_jsonrpc({'jsonrpc': '2.0', 'id': 1, 'method': 'shell'}, '2.0', ['tools/list'])", expect: { valid: false, kind: 'invalid', error: 'method-not-found' }, invariant: "unknown protocol methods fail closed" },
+    ],
+    hiddenTests: [
+      { name: "notification", call: "validate_jsonrpc({'jsonrpc': '2.0', 'method': 'ping'}, '2.0', ['ping'])['kind']", expect: 'notification', invariant: "notifications are distinct from requests" },
+      { name: "bad version", call: "validate_jsonrpc({'jsonrpc': '1.0', 'id': 1, 'method': 'ping'}, '2.0', ['ping'])['error']", expect: 'unsupported-version', invariant: "protocol negotiation protects incompatible peers" },
+    ],
+  }),
+  Y2: s({
+    entryPoint: "authorize_tool_call",
+    problemStatement: "Authorize a tool call with consent, an allowlist, and a replay-safe audit record before any side effect occurs.",
+    requiredApi: "def authorize_tool_call(call, allowed_tools, sensitive_tools, consented, seen_ids):\n    return {'allowed': ..., 'reason': ..., 'audit': ...}",
+    starter: "def authorize_tool_call(call, allowed_tools, sensitive_tools, consented, seen_ids):\n    # Calls have id and tool fields. Never log the raw arguments.\n    pass\n",
+    solution: "def authorize_tool_call(call, allowed_tools, sensitive_tools, consented, seen_ids):\n    if call['id'] in seen_ids:\n        return {'allowed': False, 'reason': 'duplicate', 'audit': None}\n    if call['tool'] not in allowed_tools:\n        return {'allowed': False, 'reason': 'denied-tool', 'audit': None}\n    if call['tool'] in sensitive_tools and not consented:\n        return {'allowed': False, 'reason': 'consent-required', 'audit': None}\n    return {'allowed': True, 'reason': 'ok', 'audit': {'id': call['id'], 'tool': call['tool'], 'redacted': True}}\n",
+    behavior: ["reject replayed call IDs", "enforce the tool allowlist", "require consent for sensitive tools and redact arguments"],
+    visibleTests: [
+      { name: "approved call", call: "authorize_tool_call({'id': '1', 'tool': 'search', 'args': {'q': 'x'}}, ['search'], ['delete'], False, [])", expect: { allowed: true, reason: 'ok', audit: { id: '1', tool: 'search', redacted: true } }, invariant: "approved calls carry a safe audit envelope" },
+      { name: "consent gate", call: "authorize_tool_call({'id': '2', 'tool': 'delete'}, ['delete'], ['delete'], False, [])['reason']", expect: 'consent-required', invariant: "sensitive actions require human authority" },
+    ],
+    hiddenTests: [
+      { name: "replay", call: "authorize_tool_call({'id': '1', 'tool': 'search'}, ['search'], [], True, ['1'])['reason']", expect: 'duplicate', invariant: "retries cannot duplicate side effects" },
+      { name: "unknown tool", call: "authorize_tool_call({'id': '3', 'tool': 'shell'}, ['search'], [], True, [])['reason']", expect: 'denied-tool', invariant: "capability discovery does not grant capability" },
+    ],
+  }),
+  Y3: s({
+    entryPoint: "evaluate_agent_trace",
+    problemStatement: "Grade an agent trajectory using tool order, step budget, tool outcomes, and final outcome instead of scoring only its last sentence.",
+    requiredApi: "def evaluate_agent_trace(events, expected_tools, max_steps):\n    return {'success': ..., 'steps': ..., 'violations': [...]} ",
+    starter: "def evaluate_agent_trace(events, expected_tools, max_steps):\n    # Tool events have kind, name, and ok; the final event has outcome/success.\n    pass\n",
+    solution: "def evaluate_agent_trace(events, expected_tools, max_steps):\n    violations = []\n    tool_events = [event for event in events if event.get('kind') == 'tool']\n    if len(tool_events) > max_steps:\n        violations.append('step-budget')\n    for event in tool_events:\n        if event.get('name') not in expected_tools:\n            violations.append('unexpected-tool')\n        if not event.get('ok', False):\n            violations.append('tool-failed')\n    outcome = events[-1].get('success', False) if events else False\n    if not outcome:\n        violations.append('outcome-failed')\n    return {'success': not violations, 'steps': len(tool_events), 'violations': violations}\n",
+    behavior: ["count tool steps", "record unsafe or failed actions", "require a successful final outcome"],
+    visibleTests: [
+      { name: "successful trace", call: "evaluate_agent_trace([{'kind': 'tool', 'name': 'search', 'ok': True}, {'kind': 'outcome', 'success': True}], ['search'], 3)", expect: { success: true, steps: 1, violations: [] }, invariant: "a trajectory earns success only when the path and outcome agree" },
+      { name: "wrong tool", call: "evaluate_agent_trace([{'kind': 'tool', 'name': 'shell', 'ok': True}, {'kind': 'outcome', 'success': True}], ['search'], 3)", expect: { success: false, steps: 1, violations: ['unexpected-tool'] }, invariant: "a good final answer cannot erase an unsafe path" },
+    ],
+    hiddenTests: [
+      { name: "step budget", call: "evaluate_agent_trace([{'kind': 'tool', 'name': 'search', 'ok': True}, {'kind': 'tool', 'name': 'search', 'ok': True}, {'kind': 'outcome', 'success': True}], ['search'], 1)['violations']", expect: ['step-budget'], invariant: "bounded autonomy is an evaluation criterion" },
+      { name: "empty trace", call: "evaluate_agent_trace([], [], 1)", expect: { success: false, steps: 0, violations: ['outcome-failed'] }, invariant: "no trace cannot claim success" },
+    ],
+  }),
+  Y4: s({
+    entryPoint: "apply_workflow_events",
+    problemStatement: "Make a long-running workflow restartable: apply events idempotently, checkpoint state, and reject impossible transitions.",
+    requiredApi: "def apply_workflow_events(events):\n    return {'status': ..., 'effects': [...], 'applied': [...], 'errors': [...]} ",
+    starter: "def apply_workflow_events(events):\n    # Event types: start, charge, complete. IDs make effects idempotent.\n    pass\n",
+    solution: "def apply_workflow_events(events):\n    status = 'pending'\n    effects = []\n    applied = []\n    errors = []\n    for event in events:\n        event_id = event['id']\n        if event_id in applied:\n            continue\n        kind = event['type']\n        if kind == 'start' and status == 'pending':\n            status = 'running'\n        elif kind == 'charge' and status == 'running':\n            effects.append('charge:' + event_id)\n        elif kind == 'complete' and status == 'running':\n            status = 'completed'\n        else:\n            errors.append(kind + ':invalid-transition')\n            continue\n        applied.append(event_id)\n    return {'status': status, 'effects': effects, 'applied': applied, 'errors': errors}\n",
+    behavior: ["apply only valid state transitions", "skip duplicate event IDs", "record effects and errors for recovery"],
+    visibleTests: [
+      { name: "resume safely", call: "apply_workflow_events([{'id': 's', 'type': 'start'}, {'id': 'c', 'type': 'charge'}, {'id': 'c', 'type': 'charge'}, {'id': 'd', 'type': 'complete'}])", expect: { status: 'completed', effects: ['charge:c'], applied: ['s', 'c', 'd'], errors: [] }, invariant: "replay does not duplicate a side effect" },
+      { name: "invalid transition", call: "apply_workflow_events([{'id': 'd', 'type': 'complete'}])['errors']", expect: ['complete:invalid-transition'], invariant: "a workflow cannot skip its state contract" },
+    ],
+    hiddenTests: [
+      { name: "duplicate start", call: "apply_workflow_events([{'id': 's', 'type': 'start'}, {'id': 's', 'type': 'start'}])['applied']", expect: ['s'], invariant: "event identity is the replay boundary" },
+      { name: "unknown event", call: "apply_workflow_events([{'id': 'x', 'type': 'unknown'}])['errors']", expect: ['unknown:invalid-transition'], invariant: "unknown work cannot silently mutate state" },
+    ],
+  }),
+  Y5: s({
+    entryPoint: "validate_structured_output",
+    problemStatement: "Validate untrusted model output against a small schema before application code consumes it.",
+    requiredApi: "def validate_structured_output(payload, schema, allow_extra):\n    return {'valid': ..., 'errors': [...]} ",
+    starter: "def validate_structured_output(payload, schema, allow_extra):\n    # Schema values are string, number, or enum:a|b.\n    pass\n",
+    solution: "def validate_structured_output(payload, schema, allow_extra):\n    errors = []\n    for key, kind in schema.items():\n        if key not in payload:\n            errors.append(key + ':missing')\n            continue\n        value = payload[key]\n        if kind == 'string' and not isinstance(value, str):\n            errors.append(key + ':type')\n        elif kind == 'number' and (not isinstance(value, (int, float)) or isinstance(value, bool)):\n            errors.append(key + ':type')\n        elif kind.startswith('enum:') and value not in kind[5:].split('|'):\n            errors.append(key + ':enum')\n    if not allow_extra:\n        errors.extend(key + ':extra' for key in sorted(payload) if key not in schema)\n    return {'valid': not errors, 'errors': errors}\n",
+    behavior: ["require declared fields", "check primitive and enum types", "apply an explicit unknown-key policy"],
+    visibleTests: [
+      { name: "valid payload", call: "validate_structured_output({'answer': 'yes', 'score': 2}, {'answer': 'string', 'score': 'number'}, False)", expect: { valid: true, errors: [] }, invariant: "typed output can cross the application boundary" },
+      { name: "missing field", call: "validate_structured_output({'answer': 'yes'}, {'answer': 'string', 'score': 'number'}, False)", expect: { valid: false, errors: ['score:missing'] }, invariant: "missing evidence is a validation failure" },
+    ],
+    hiddenTests: [
+      { name: "enum error", call: "validate_structured_output({'status': 'maybe'}, {'status': 'enum:ok|error'}, False)['errors']", expect: ['status:enum'], invariant: "free text cannot bypass a finite state machine" },
+      { name: "extra rejected", call: "validate_structured_output({'answer': 'yes', 'debug': 'x'}, {'answer': 'string'}, False)['errors']", expect: ['debug:extra'], invariant: "unknown output must not become an accidental API" },
+    ],
+  }),
+  Y6: s({
+    entryPoint: "verify_capability",
+    problemStatement: "Verify a narrow capability token for action, resource prefix, expiry, and nonce before sandbox access.",
+    requiredApi: "def verify_capability(token, action, resource, now, used_nonces):\n    return {'allowed': ..., 'reason': ...}",
+    starter: "def verify_capability(token, action, resource, now, used_nonces):\n    # Tokens contain action, prefix, expires, and nonce.\n    pass\n",
+    solution: "def verify_capability(token, action, resource, now, used_nonces):\n    if token['nonce'] in used_nonces:\n        return {'allowed': False, 'reason': 'replayed'}\n    if now >= token['expires']:\n        return {'allowed': False, 'reason': 'expired'}\n    if token['action'] != action:\n        return {'allowed': False, 'reason': 'wrong-action'}\n    if not resource.startswith(token['prefix']):\n        return {'allowed': False, 'reason': 'outside-scope'}\n    return {'allowed': True, 'reason': 'ok'}\n",
+    behavior: ["reject replayed or expired tokens", "match the exact action", "confine resources to the token prefix"],
+    visibleTests: [
+      { name: "in scope", call: "verify_capability({'action': 'read', 'prefix': '/docs/', 'expires': 10, 'nonce': 'n1'}, 'read', '/docs/a.txt', 3, [])", expect: { allowed: true, reason: 'ok' }, invariant: "a capability grants only its declared authority" },
+      { name: "outside scope", call: "verify_capability({'action': 'read', 'prefix': '/docs/', 'expires': 10, 'nonce': 'n1'}, 'read', '/secrets/a', 3, [])['reason']", expect: 'outside-scope', invariant: "path boundaries are enforced by the token" },
+    ],
+    hiddenTests: [
+      { name: "expired", call: "verify_capability({'action': 'read', 'prefix': '/', 'expires': 3, 'nonce': 'n1'}, 'read', '/a', 3, [])['reason']", expect: 'expired', invariant: "expiry is a hard boundary" },
+      { name: "replay", call: "verify_capability({'action': 'read', 'prefix': '/', 'expires': 10, 'nonce': 'n1'}, 'read', '/a', 3, ['n1'])['reason']", expect: 'replayed', invariant: "one capability cannot authorize two effects" },
+    ],
+  }),
+  Y7: s({
+    entryPoint: "prefix_cache_plan",
+    problemStatement: "Plan safe prefix-cache reuse by finding shared immutable token prefixes inside one policy scope.",
+    requiredApi: "def prefix_cache_plan(requests, min_shared):\n    return {'hits': ..., 'misses': ..., 'saved_tokens': ...}",
+    starter: "def prefix_cache_plan(requests, min_shared):\n    # Requests contain scope and token lists.\n    pass\n",
+    solution: "def prefix_cache_plan(requests, min_shared):\n    seen = {}\n    hits = 0\n    misses = 0\n    saved = 0\n    for request in requests:\n        best = 0\n        for previous in seen.get(request['scope'], []):\n            shared = 0\n            for left, right in zip(previous, request['tokens']):\n                if left != right:\n                    break\n                shared += 1\n            best = max(best, shared)\n        if best >= min_shared:\n            hits += 1\n            saved += best\n        else:\n            misses += 1\n        seen.setdefault(request['scope'], []).append(request['tokens'])\n    return {'hits': hits, 'misses': misses, 'saved_tokens': saved}\n",
+    behavior: ["compare exact token prefixes", "isolate cache entries by scope", "report saved tokens rather than vague hit rate"],
+    visibleTests: [
+      { name: "shared prefix", call: "prefix_cache_plan([{'scope': 'a', 'tokens': [1, 2, 3]}, {'scope': 'a', 'tokens': [1, 2, 4]}], 2)", expect: { hits: 1, misses: 1, saved_tokens: 2 }, invariant: "shared immutable context avoids repeated prefill" },
+      { name: "scope isolation", call: "prefix_cache_plan([{'scope': 'a', 'tokens': [1, 2]}, {'scope': 'b', 'tokens': [1, 2]}], 2)", expect: { hits: 0, misses: 2, saved_tokens: 0 }, invariant: "one tenant cannot reuse another tenant's context" },
+    ],
+    hiddenTests: [
+      { name: "below threshold", call: "prefix_cache_plan([{'scope': 'a', 'tokens': [1, 2]}, {'scope': 'a', 'tokens': [1, 3]}], 2)['hits']", expect: 0, invariant: "short overlap is not a cache hit" },
+      { name: "longest prefix", call: "prefix_cache_plan([{'scope': 'a', 'tokens': [1, 2]}, {'scope': 'a', 'tokens': [1, 2, 3]}, {'scope': 'a', 'tokens': [1, 2, 4]}], 2)['saved_tokens']", expect: 4, invariant: "the planner finds the best reusable prefix" },
+    ],
+  }),
+  Y8: s({
+    entryPoint: "paged_kv_allocate",
+    problemStatement: "Allocate fixed KV-cache pages for variable-length requests, free them safely, and expose capacity failures.",
+    requiredApi: "def paged_kv_allocate(operations, block_size, capacity):\n    return {'maps': ..., 'free': ..., 'rejected': [...]} ",
+    starter: "def paged_kv_allocate(operations, block_size, capacity):\n    # Operations are alloc/free events. Physical pages are integers.\n    pass\n",
+    solution: "def paged_kv_allocate(operations, block_size, capacity):\n    free = list(range(capacity))\n    maps = {}\n    rejected = []\n    for operation in operations:\n        request_id = operation['id']\n        if operation['op'] == 'free':\n            for page in maps.pop(request_id, []):\n                if page not in free:\n                    free.append(page)\n            free.sort()\n            continue\n        needed = (operation['tokens'] + block_size - 1) // block_size\n        if needed > len(free):\n            rejected.append(request_id)\n        else:\n            maps[request_id] = free[:needed]\n            free = free[needed:]\n    return {'maps': maps, 'free': free, 'rejected': rejected}\n",
+    behavior: ["round token counts up to fixed pages", "reuse freed pages", "reject allocations that exceed capacity"],
+    visibleTests: [
+      { name: "allocate pages", call: "paged_kv_allocate([{'op': 'alloc', 'id': 'a', 'tokens': 5}], 4, 3)", expect: { maps: { a: [0, 1] }, free: [2], rejected: [] }, invariant: "logical tokens map to explicit physical pages" },
+      { name: "capacity failure", call: "paged_kv_allocate([{'op': 'alloc', 'id': 'a', 'tokens': 9}], 4, 2)['rejected']", expect: ['a'], invariant: "memory pressure becomes a controlled rejection" },
+    ],
+    hiddenTests: [
+      { name: "reuse freed page", call: "paged_kv_allocate([{'op': 'alloc', 'id': 'a', 'tokens': 4}, {'op': 'free', 'id': 'a'}, {'op': 'alloc', 'id': 'b', 'tokens': 4}], 4, 1)['maps']", expect: { b: [0] }, invariant: "free lists prevent permanent fragmentation" },
+      { name: "no alias", call: "paged_kv_allocate([{'op': 'alloc', 'id': 'a', 'tokens': 4}, {'op': 'alloc', 'id': 'b', 'tokens': 4}], 4, 2)['maps']", expect: { a: [0], b: [1] }, invariant: "live requests never share a physical page" },
+    ],
+  }),
+  Y9: s({
+    entryPoint: "speculative_accept",
+    problemStatement: "Accept the longest prefix where a draft sequence agrees with the target model, then emit the target token at the first mismatch.",
+    requiredApi: "def speculative_accept(draft, target):\n    return {'accepted': ..., 'emitted': ...}",
+    starter: "def speculative_accept(draft, target):\n    # The target sequence is authoritative.\n    pass\n",
+    solution: "def speculative_accept(draft, target):\n    accepted = 0\n    while accepted < len(draft) and accepted < len(target) and draft[accepted] == target[accepted]:\n        accepted += 1\n    emitted = target[accepted] if accepted < len(target) else None\n    return {'accepted': accepted, 'emitted': emitted}\n",
+    behavior: ["compare from the first drafted token", "stop at the first mismatch", "emit the target continuation"],
+    visibleTests: [
+      { name: "full agreement", call: "speculative_accept([1, 2], [1, 2, 3])", expect: { accepted: 2, emitted: 3 }, invariant: "a correct draft skips target work" },
+      { name: "first mismatch", call: "speculative_accept([9, 2], [1, 2, 3])", expect: { accepted: 0, emitted: 1 }, invariant: "the target remains authoritative" },
+    ],
+    hiddenTests: [
+      { name: "late mismatch", call: "speculative_accept([1, 9, 3], [1, 2, 3])", expect: { accepted: 1, emitted: 2 }, invariant: "only the agreeing prefix is accepted" },
+      { name: "empty draft", call: "speculative_accept([], [4])", expect: { accepted: 0, emitted: 4 }, invariant: "the fallback path handles no draft tokens" },
+    ],
+  }),
+  Y10: s({
+    entryPoint: "quantization_summary",
+    problemStatement: "Calibrate a symmetric integer quantizer and report the reconstruction error before claiming a memory win.",
+    requiredApi: "def quantization_summary(values, bits):\n    return {'scale': ..., 'quantized': [...], 'dequantized': [...], 'max_error': ...}",
+    starter: "def quantization_summary(values, bits):\n    # Use symmetric levels from -(2^(bits-1)-1) to +(2^(bits-1)-1).\n    pass\n",
+    solution: "def quantization_summary(values, bits):\n    levels = 2 ** (bits - 1) - 1\n    maximum = max((abs(value) for value in values), default=0.0)\n    scale = maximum / levels if maximum else 1.0\n    quantized = [max(-levels, min(levels, round(value / scale))) for value in values]\n    dequantized = [round(value * scale, 6) for value in quantized]\n    error = max((abs(original - restored) for original, restored in zip(values, dequantized)), default=0.0)\n    return {'scale': round(scale, 6), 'quantized': quantized, 'dequantized': dequantized, 'max_error': round(error, 6)}\n",
+    behavior: ["calibrate from the observed range", "bound integer levels", "report reconstruction error"],
+    visibleTests: [
+      { name: "exact ternary", call: "quantization_summary([-1.0, 0.0, 1.0], 2)", expect: { scale: 1.0, quantized: [-1, 0, 1], dequantized: [-1.0, 0.0, 1.0], max_error: 0.0 }, invariant: "a simple calibration can be exact" },
+      { name: "bounded levels", call: "quantization_summary([0.0, 2.0], 2)['quantized']", expect: [0, 1], invariant: "quantized values stay inside the declared bit budget" },
+    ],
+    hiddenTests: [
+      { name: "all zero", call: "quantization_summary([0.0, 0.0], 8)", expect: { scale: 1.0, quantized: [0, 0], dequantized: [0.0, 0.0], max_error: 0.0 }, invariant: "a zero range has a defined scale" },
+      { name: "outlier error", call: "quantization_summary([0.0, 0.5, 1.0], 2)['max_error']", expect: 0.5, invariant: "the error budget exposes low-bit distortion" },
+    ],
+  }),
+  Y11: s({
+    entryPoint: "compile_cache_key",
+    problemStatement: "Create a stable graph-compiler cache key from operations and shapes, and flag dynamic dimensions that may recompile.",
+    requiredApi: "def compile_cache_key(operations, shapes):\n    return {'key': ..., 'dynamic': ...}",
+    starter: "def compile_cache_key(operations, shapes):\n    # A shape uses -1 to represent a dynamic dimension.\n    pass\n",
+    solution: "def compile_cache_key(operations, shapes):\n    ops = ','.join(operations)\n    shape_text = ';'.join('x'.join(str(dim) for dim in shape) for shape in shapes)\n    dynamic = any(-1 in shape for shape in shapes)\n    return {'key': 'ops=' + ops + '|shapes=' + shape_text, 'dynamic': dynamic}\n",
+    behavior: ["preserve operation order", "encode every input shape", "flag dynamic dimensions"],
+    visibleTests: [
+      { name: "stable graph", call: "compile_cache_key(['matmul', 'relu'], [(2, 4), (2,)])", expect: { key: 'ops=matmul,relu|shapes=2x4;2', dynamic: false }, invariant: "the same graph and shapes reuse compiled work" },
+      { name: "dynamic shape", call: "compile_cache_key(['matmul'], [(-1, 4)])['dynamic']", expect: true, invariant: "dynamic dimensions change compilation policy" },
+    ],
+    hiddenTests: [
+      { name: "operation changes", call: "compile_cache_key(['relu'], [(2,)])['key']", expect: 'ops=relu|shapes=2', invariant: "one graph operation creates a distinct artifact" },
+      { name: "empty graph", call: "compile_cache_key([], [])", expect: { key: 'ops=|shapes=', dynamic: false }, invariant: "the cache contract is defined before optimization" },
+    ],
+  }),
+  Y12: s({
+    entryPoint: "verify_model_manifest",
+    problemStatement: "Verify a model manifest's provenance, signer, digest status, and expiry before loading it into a service.",
+    requiredApi: "def verify_model_manifest(manifest, approved_signers, required_fields, now):\n    return {'valid': ..., 'error': ...}",
+    starter: "def verify_model_manifest(manifest, approved_signers, required_fields, now):\n    # The signature is represented by a deterministic boolean in this lab.\n    pass\n",
+    solution: "def verify_model_manifest(manifest, approved_signers, required_fields, now):\n    for field in required_fields:\n        if not manifest.get(field):\n            return {'valid': False, 'error': 'missing-' + field}\n    if not manifest.get('signature_valid'):\n        return {'valid': False, 'error': 'invalid-signature'}\n    if manifest.get('signer') not in approved_signers:\n        return {'valid': False, 'error': 'unapproved-signer'}\n    if manifest.get('expires', 0) <= now:\n        return {'valid': False, 'error': 'expired'}\n    return {'valid': True, 'error': None}\n",
+    behavior: ["require provenance fields", "verify signature and signer", "fail closed after expiry"],
+    visibleTests: [
+      { name: "trusted model", call: "verify_model_manifest({'digest': 'abc', 'source': 'hub', 'signer': 'team', 'signature_valid': True, 'expires': 10}, ['team'], ['digest', 'source'], 3)", expect: { valid: true, error: null }, invariant: "trusted provenance is a deployment prerequisite" },
+      { name: "tampered model", call: "verify_model_manifest({'digest': 'abc', 'source': 'hub', 'signer': 'team', 'signature_valid': False, 'expires': 10}, ['team'], ['digest', 'source'], 3)['error']", expect: 'invalid-signature', invariant: "a digest without verification is not trustworthy" },
+    ],
+    hiddenTests: [
+      { name: "missing provenance", call: "verify_model_manifest({'signer': 'team', 'signature_valid': True, 'expires': 10}, ['team'], ['digest', 'source'], 3)['error']", expect: 'missing-digest', invariant: "deployment needs a reconstructable source" },
+      { name: "expired model", call: "verify_model_manifest({'digest': 'abc', 'source': 'hub', 'signer': 'team', 'signature_valid': True, 'expires': 3}, ['team'], ['digest', 'source'], 3)['error']", expect: 'expired', invariant: "old authorization cannot be reused forever" },
+    ],
+  }),
+  Y13: s({
+    entryPoint: "benchmark_report",
+    problemStatement: "Summarize an inference workload with warmup exclusion, p95 latency, throughput, quality, and SLO verdicts.",
+    requiredApi: "def benchmark_report(runs, quality_target, p95_limit_ms, throughput_target):\n    return {'runs': ..., 'p95_ms': ..., 'throughput': ..., 'quality_ok': ..., 'slo_ok': ...}",
+    starter: "def benchmark_report(runs, quality_target, p95_limit_ms, throughput_target):\n    # A run has latency_ms, tokens, quality, and warmup.\n    pass\n",
+    solution: "def benchmark_report(runs, quality_target, p95_limit_ms, throughput_target):\n    measured = [run for run in runs if not run.get('warmup', False)]\n    if not measured:\n        return {'runs': 0, 'p95_ms': 0, 'throughput': 0.0, 'quality_ok': False, 'slo_ok': False}\n    latencies = sorted(run['latency_ms'] for run in measured)\n    index = max(0, int(len(latencies) * 0.95 + 0.999999) - 1)\n    total_seconds = sum(latencies) / 1000\n    throughput = round(sum(run.get('tokens', 0) for run in measured) / total_seconds if total_seconds else 0.0, 6)\n    quality_ok = min(run.get('quality', 0.0) for run in measured) >= quality_target\n    p95 = latencies[index]\n    return {'runs': len(measured), 'p95_ms': p95, 'throughput': throughput, 'quality_ok': quality_ok, 'slo_ok': quality_ok and p95 <= p95_limit_ms and throughput >= throughput_target}\n",
+    behavior: ["exclude warmup from measured runs", "compute p95 and token throughput", "require quality and performance SLOs together"],
+    visibleTests: [
+      { name: "passes SLO", call: "benchmark_report([{'latency_ms': 10, 'tokens': 10, 'quality': 1.0, 'warmup': True}, {'latency_ms': 20, 'tokens': 20, 'quality': 0.9, 'warmup': False}, {'latency_ms': 30, 'tokens': 30, 'quality': 0.9, 'warmup': False}], 0.8, 40, 900)", expect: { runs: 2, p95_ms: 30, throughput: 1000.0, quality_ok: true, slo_ok: true }, invariant: "quality and performance must pass together" },
+      { name: "quality blocks", call: "benchmark_report([{'latency_ms': 10, 'tokens': 10, 'quality': 0.5, 'warmup': False}], 0.8, 20, 1)['slo_ok']", expect: false, invariant: "a faster but worse model is not a benchmark win" },
+    ],
+    hiddenTests: [
+      { name: "warmup only", call: "benchmark_report([{'latency_ms': 1, 'tokens': 100, 'quality': 1.0, 'warmup': True}], 0.8, 20, 1)", expect: { runs: 0, p95_ms: 0, throughput: 0.0, quality_ok: false, slo_ok: false }, invariant: "warmup cannot manufacture throughput" },
+      { name: "tail fails", call: "benchmark_report([{'latency_ms': 10, 'tokens': 10, 'quality': 1.0, 'warmup': False}, {'latency_ms': 100, 'tokens': 10, 'quality': 1.0, 'warmup': False}], 0.8, 50, 1)['slo_ok']", expect: false, invariant: "tail latency is a production constraint" },
+    ],
+  }),
+  Y14: s({
+    entryPoint: "stream_with_backpressure",
+    problemStatement: "Simulate a bounded response stream: deliver chunks to a slow consumer, record drops, and stop cleanly on cancellation.",
+    requiredApi: "def stream_with_backpressure(chunks, capacity, consume_per_tick, cancel_after=None):\n    return {'delivered': [...], 'dropped': [...], 'peak_buffer': ..., 'cancelled': ...}",
+    starter: "def stream_with_backpressure(chunks, capacity, consume_per_tick, cancel_after=None):\n    # The producer offers one chunk per tick; the consumer drains a bounded amount.\n    pass\n",
+    solution: "def stream_with_backpressure(chunks, capacity, consume_per_tick, cancel_after=None):\n    buffer = []\n    delivered = []\n    dropped = []\n    peak = 0\n    cancelled = False\n    for index, chunk in enumerate(chunks):\n        if cancel_after is not None and index >= cancel_after:\n            cancelled = True\n            dropped.extend({'chunk': item, 'reason': 'cancelled'} for item in chunks[index:])\n            break\n        if len(buffer) >= capacity:\n            dropped.append({'chunk': chunk, 'reason': 'backpressure'})\n        else:\n            buffer.append(chunk)\n            peak = max(peak, len(buffer))\n        for _ in range(consume_per_tick):\n            if buffer:\n                delivered.append(buffer.pop(0))\n    return {'delivered': delivered, 'dropped': dropped, 'peak_buffer': peak, 'cancelled': cancelled}\n",
+    behavior: ["bound the in-flight buffer", "record every dropped chunk with a reason", "stop future delivery after cancellation"],
+    visibleTests: [
+      { name: "healthy stream", call: "stream_with_backpressure(['a', 'b'], 1, 1)", expect: { delivered: ['a', 'b'], dropped: [], peak_buffer: 1, cancelled: false }, invariant: "a consumer keeping up sees every chunk" },
+      { name: "slow consumer", call: "stream_with_backpressure(['a', 'b', 'c'], 1, 0)", expect: { delivered: [], dropped: [{ chunk: 'b', reason: 'backpressure' }, { chunk: 'c', reason: 'backpressure' }], peak_buffer: 1, cancelled: false }, invariant: "bounded buffers turn overload into visible backpressure" },
+    ],
+    hiddenTests: [
+      { name: "cancel", call: "stream_with_backpressure(['a', 'b', 'c'], 2, 1, 1)", expect: { delivered: ['a'], dropped: [{ chunk: 'b', reason: 'cancelled' }, { chunk: 'c', reason: 'cancelled' }], peak_buffer: 1, cancelled: true }, invariant: "cancellation prevents work after the user leaves" },
+      { name: "empty", call: "stream_with_backpressure([], 1, 1)", expect: { delivered: [], dropped: [], peak_buffer: 0, cancelled: false }, invariant: "empty streams have a defined lifecycle" },
+    ],
+  }),
 }
 
 export function implementationForBuildEverythingProject(project: BuildEverythingProject): BuildEverythingImplementation {

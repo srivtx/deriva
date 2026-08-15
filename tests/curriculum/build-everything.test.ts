@@ -11,12 +11,12 @@ import {
 } from "../../src/curriculum/topics/ai-ml/build-everything"
 
 describe("Build Everything curriculum lane", () => {
-  it("maps the 37 source projects plus 12 production extensions in order", () => {
-    expect(buildEverythingProjects).toHaveLength(49)
+  it("maps the 37 source projects plus production and modern extensions in order", () => {
+    expect(buildEverythingProjects).toHaveLength(63)
     expect(buildEverythingProjects.map(project => project.order)).toEqual(
-      Array.from({ length: 49 }, (_, index) => index + 1),
+      Array.from({ length: 63 }, (_, index) => index + 1),
     )
-    expect(new Set(buildEverythingProjects.map(project => project.code)).size).toBe(49)
+    expect(new Set(buildEverythingProjects.map(project => project.code)).size).toBe(63)
   })
 
   it("preserves the four source tiers and the extension tier", () => {
@@ -28,8 +28,9 @@ describe("Build Everything curriculum lane", () => {
       ["system", 7],
       ["frontier", 3],
       ["extension", 12],
+      ["modern", 14],
     ]))
-    expect(buildEverythingTiers.map(tier => tier.id)).toEqual(["atomic", "combination", "system", "frontier", "extension"])
+    expect(buildEverythingTiers.map(tier => tier.id)).toEqual(["atomic", "combination", "system", "frontier", "extension", "modern"])
   })
 
   it("gives every project five explicit build moves", () => {
@@ -59,13 +60,18 @@ describe("Build Everything curriculum lane", () => {
 
   it("marks authored extensions separately from PDF source projects", () => {
     expect(buildEverythingProjects.slice(0, 37).every(project => project.sourcePage > 0)).toBe(true)
-    expect(buildEverythingProjects.slice(37).every(project => project.tier === "extension" && project.sourcePage === 0)).toBe(true)
-    expect(buildEverythingProjects.slice(37).map(project => project.code)).toEqual(["X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12"])
+    expect(buildEverythingProjects.slice(37, 49).every(project => project.tier === "extension" && project.sourcePage === 0)).toBe(true)
+    expect(buildEverythingProjects.slice(37, 49).map(project => project.code)).toEqual(["X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12"])
+  })
+
+  it("marks modern engineering labs as the final authored tier", () => {
+    expect(buildEverythingProjects.slice(49).every(project => project.tier === "modern" && project.sourcePage === 0)).toBe(true)
+    expect(buildEverythingProjects.slice(49).map(project => project.code)).toEqual(["Y1", "Y2", "Y3", "Y4", "Y5", "Y6", "Y7", "Y8", "Y9", "Y10", "Y11", "Y12", "Y13", "Y14"])
   })
 
   it("only labels a project executable when its full coding contract exists", () => {
     const executable = buildEverythingProjects.filter(project => project.implementation)
-    expect(executable).toHaveLength(49)
+    expect(executable).toHaveLength(63)
     expect(executable.map(project => project.code)).toEqual(buildEverythingProjects.map(project => project.code))
     for (const project of executable) {
       expect(project.implementation!.visibleTests.length, project.code).toBeGreaterThanOrEqual(2)
