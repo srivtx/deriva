@@ -631,3 +631,353 @@ contract, baseline, loss/gradient trace, evaluation report, and reflection artif
 Do not claim the AI/ML curriculum is complete until Tracks 0–4 include the service and
 retrieval work. Do not claim production readiness until the failure labs, evaluation,
 observability, and backend execution lane exist.
+
+## Master coverage map
+
+This is the complete program map. No curriculum, engineering, evaluation, or release
+dependency is complete unless it appears here and has an exit check.
+
+### A. Mathematics and theory
+
+#### A1. Mathematical language
+
+- scalars, vectors, matrices, tensors;
+- shape, rank, broadcasting, sparse vs dense representation;
+- dot products, norms, projections, cosine similarity;
+- matrix multiplication and computational cost;
+- numerical precision, overflow, and stability.
+
+Artifacts: tensor specification, shape-error tests, and a similarity calculator.
+
+#### A2. Probability and statistics
+
+- random variables and distributions;
+- conditional probability and Bayes reasoning;
+- expectation, variance, covariance;
+- sampling and sampling bias;
+- confidence intervals and calibration;
+- correlation versus causation.
+
+Artifacts: sampling simulator, confidence-interval report, calibration plot.
+
+#### A3. Calculus and optimization
+
+- derivative as local change;
+- partial derivatives and chain rule;
+- gradient and gradient field;
+- convex versus non-convex loss;
+- gradient descent;
+- stochastic and mini-batch updates;
+- learning-rate schedules.
+
+Artifacts: loss-surface explorer, finite-difference gradient checker, optimizer report.
+
+#### A4. Learning theory
+
+- generalization;
+- bias/variance;
+- overfitting;
+- regularization;
+- train/validation/test roles;
+- leakage;
+- distribution shift;
+- class imbalance.
+
+Artifacts: controlled overfit experiment, leakage counterexample, shift report.
+
+#### A5. Information and representation
+
+- entropy and cross-entropy;
+- mutual-information intuition;
+- tokenization;
+- sparse representations;
+- dense representations;
+- dimensionality reduction.
+
+Artifacts: entropy calculator, tokenization inspector, sparse-versus-dense comparison.
+
+### B. Data engineering
+
+Lessons must cover:
+
+- data contracts, schemas, validation, versioning;
+- collection, provenance, licensing, consent, lineage;
+- cleaning, deduplication, missing values, noisy labels;
+- annotation guidelines, disagreement, adjudication;
+- random, temporal, group, and stratified splits;
+- batch/incremental ingestion, checkpoints, retries, dead letters, idempotency;
+- freshness, schema drift, distribution drift, missingness, and outliers.
+
+Required project: a versioned document dataset pipeline with a dataset card, lineage,
+quality report, reproducible rebuild, and drift warning.
+
+### C. Classical ML
+
+Lessons must cover:
+
+- majority, keyword, random, and retrieval baselines;
+- linear regression and logistic regression;
+- nearest neighbors;
+- decision trees and random forests;
+- clustering and dimensionality reduction;
+- cross-validation and hyperparameter search;
+- threshold selection, calibration, confidence, abstention;
+- accuracy, precision, recall, F1, ROC-AUC, PR-AUC, regression error, ranking metrics,
+  calibration, and slice evaluation.
+
+Required project: a document classifier with baseline comparison, error taxonomy,
+calibrated confidence, and abstention.
+
+### D. Deep learning
+
+Lessons must cover:
+
+- tensor storage, shape checks, broadcasting, reductions, batching;
+- computation graphs and automatic differentiation;
+- gradient checks;
+- linear layers, activations, initialization, normalization, dropout;
+- training loops and checkpointing;
+- convolution and receptive fields;
+- sequence representation, recurrence, hidden state, vanishing gradients;
+- queries, keys, values, positional information, masking, multi-head attention;
+- transformer blocks and scaling behavior.
+
+Required project: a deterministic tiny transformer with attention inspection,
+checkpointing, and a generation failure report.
+
+### E. Retrieval and recommendation
+
+Lessons must cover:
+
+- inverted indexes, term frequency, inverse document frequency, BM25;
+- embeddings, nearest neighbors, approximate search, index freshness;
+- ranking features, pairwise/listwise intuition, reranking;
+- popularity, content similarity, collaborative signals, cold start, feedback loops.
+
+Required project: hybrid search and recommendation with relevance labels, retrieval
+metrics, ranking metrics, and an index freshness policy.
+
+### F. Generative AI
+
+Lessons must cover:
+
+- token prediction, cross-entropy, causal masking, sampling;
+- temperature, top-k, top-p;
+- context selection, truncation, structured output, prompt versioning;
+- retrieval-augmented generation;
+- citations, abstention, groundedness;
+- tool contracts, planning/execution, validation, retries, human approval;
+- groundedness, relevance, citation correctness, refusal quality, regression sets.
+
+Required project: a citation-backed knowledge service that abstains when evidence is
+insufficient and passes a grounded-answer evaluation set.
+
+### G. Backend and distributed AI engineering
+
+Lessons must cover:
+
+- request/response contracts;
+- synchronous versus asynchronous work;
+- health versus readiness;
+- versioned model endpoints;
+- batching, caching, streaming, concurrency;
+- CPU/GPU scheduling, memory limits, cold starts;
+- timeouts, retries, idempotency, circuit breakers, backpressure;
+- queues, workers, leases, checkpoints, replay, partial failure;
+- relational metadata, object storage, model artifacts, vector indexes, migrations.
+
+Required project: asynchronous ingestion plus inference API with retries, idempotency,
+queue visibility, and a failure-recovery exercise.
+
+### H. MLOps and platform engineering
+
+Lessons must cover:
+
+- run configuration, seeds, artifact hashes, metric persistence;
+- model registry, version promotion, approval gates, rollback, deprecation;
+- containers, environment configuration, secrets, health checks, rollout strategies;
+- logs, metrics, traces, latency percentiles, error rates, quality, and cost;
+- golden sets, regression tests, shadow evaluation, drift triggers, human review.
+
+Required project: deployable model service with registry, evaluation gate, rollback,
+observability dashboard, and cost report.
+
+### I. Security, privacy, and responsible AI
+
+Lessons must cover:
+
+- PII identification, redaction, retention, access, deletion, provenance;
+- prompt injection, data exfiltration, unsafe tools, untrusted retrieval;
+- output validation;
+- slice metrics, subgroup performance, label bias, human escalation;
+- rate limits, quotas, audit logs, abuse fixtures, incident response.
+
+Required project: red-team suite and remediation report for the knowledge service.
+
+### J. Product and communication
+
+Lessons must cover:
+
+- user, operator, success definition, constraints, non-goals;
+- product, model, system, and guardrail metrics;
+- build versus buy;
+- quality versus latency;
+- quality versus cost;
+- freshness versus stability;
+- architecture review;
+- model card, dataset card, experiment memo, and incident postmortem.
+
+Required project: final design review with tradeoffs and one explicitly rejected
+alternative.
+
+## Complete project ladder
+
+The program must produce these cumulative builds:
+
+1. Data Contract Lab — validate and version messy documents.
+2. Metrics Lab — implement metrics and a majority baseline.
+3. Classifier Lab — train a linear classifier from scratch.
+4. Experiment Lab — compare controlled runs and classify errors.
+5. Data Pipeline — ingest, clean, split, checkpoint, and rebuild data.
+6. Inference API — serve the classifier with validation and structured errors.
+7. Async Ingestion Service — queue work, retry safely, and recover failures.
+8. Lexical Search — build an index and evaluate retrieval.
+9. Vector Search — build embeddings and nearest-neighbor retrieval.
+10. Hybrid Ranker — combine lexical and semantic candidates.
+11. Grounded Answer Service — retrieve, cite, abstain, and evaluate.
+12. Tensor/Autograd Engine — implement tensors and gradients from scratch.
+13. Mini Transformer — train and inspect a tiny language model.
+14. Production AI Platform — registry, deployment, observability, rollback, and cost.
+15. Final Knowledge Intelligence System — integrate all preceding artifacts.
+
+Every project must include a problem statement, design contract, from-scratch core,
+tests, baseline, evaluation report, failure exercise, operational artifact,
+reflection/postmortem, and transfer exercise.
+
+## Required practice inventory
+
+Every major track must include all ten practice types:
+
+1. Derivation — derive an equation, invariant, or contract.
+2. Prediction — predict a score, gradient, metric, or system state.
+3. Construction — assemble a pipeline, model, or API contract.
+4. Implementation — write the minimal working component.
+5. Debugging — repair a deliberately broken implementation.
+6. Counterexample — create input that defeats a tempting rule.
+7. Comparison — compare baseline and improved system.
+8. Operations — respond to timeout, drift, queue, or deployment failure.
+9. Communication — write a model card, design memo, or incident report.
+10. Transfer — apply the pattern in an unfamiliar domain.
+
+No track is complete if it contains only coding exercises.
+
+## End-to-end milestones
+
+### M0 — Curriculum contract
+
+Deliver schema extensions, artifact/evaluation contracts, trace vocabulary, first fixture,
+and the lesson What counts as training data?
+
+Exit: schema rejects incomplete AI lessons; all nine stages work; learner produces a
+dataset card before implementation.
+
+### M1 — Foundations and classical model
+
+Deliver lessons 0.1–1.5, tensor/metric/gradient traces, baseline and classifier projects,
+experiment runner, and error-analysis artifacts.
+
+Exit: learner builds and evaluates a classifier from scratch; baseline comparison and
+failure report are complete.
+
+### M2 — Data and experiment operations
+
+Deliver data pipelines, reproducibility records, artifact hashes, quality checks, drift,
+and leakage labs.
+
+Exit: dataset rebuild is reproducible; changed source creates a quality warning;
+experiments are comparable.
+
+### M3 — Backend inference service
+
+Deliver service contract lessons, API builder, inference runner, validation/errors,
+request traces, latency, timeout, retry, and idempotency labs.
+
+Exit: model is behind a documented service contract; malformed inputs and duplicate jobs
+are safe; quality, latency, and failure metrics are distinct.
+
+### M4 — Retrieval and knowledge service
+
+Deliver lexical retrieval, vector retrieval, ranking, hybrid search, citation-backed
+answers, groundedness, and abstention evaluation.
+
+Exit: learner diagnoses retrieval failure versus generation failure; answers cite or
+abstain; retrieval evaluation is reproducible.
+
+### M5 — Deep learning foundations
+
+Deliver tensor engine, autograd, MLP, optimizer, sequence, attention, and mini-transformer
+lessons.
+
+Exit: learner explains forward/backward computation; training and inference are
+reproducible; failures are captured in a model card.
+
+### M6 — MLOps and reliability
+
+Deliver registry, deployment, observability, continuous evaluation, drift, rollback,
+cost, security, and red-team labs.
+
+Exit: model version can be promoted, monitored, rejected, and rolled back; quality and
+operational alerts are distinct; runbook and postmortem exist.
+
+### M7 — Final system capstone
+
+Deliver integrated knowledge system, architecture review, load test, evaluation,
+security, cost report, final demo, and transfer review.
+
+Exit: learner can rebuild from clean artifacts, every component has tests/failure
+policy, and tradeoffs are explainable mathematically, operationally, and product-wise.
+
+## Cross-cutting acceptance gates
+
+Every lesson must pass schema validation, nine-stage completeness, one thinking move per
+stage, deterministic fixture execution, 390px layout, light/dark contrast, keyboard,
+reduced-motion, artifact-before-implementation, trace replay, reflection, and transfer.
+
+Every project must additionally pass baseline comparison, evaluation, failure fixture,
+reproducibility, system contract, observability, cost/tradeoff note, and security/privacy
+review where data or generation is involved.
+
+## Completeness checklist
+
+- [ ] math and probability
+- [ ] statistics and evaluation
+- [ ] data contracts and provenance
+- [ ] cleaning and labeling
+- [ ] splitting and leakage
+- [ ] classical baselines and supervised learning
+- [ ] unsupervised learning
+- [ ] model selection and calibration
+- [ ] tensors and automatic differentiation
+- [ ] neural networks and convolution
+- [ ] sequence modeling and transformers
+- [ ] lexical, vector, and hybrid retrieval
+- [ ] ranking and recommendations
+- [ ] language modeling and RAG
+- [ ] tool workflows and generative evaluation
+- [ ] API contracts and inference
+- [ ] queues, workers, batching, caching, and streaming
+- [ ] timeouts, retries, idempotency, and backpressure
+- [ ] storage and model artifacts
+- [ ] experiments and reproducibility
+- [ ] registry and promotion
+- [ ] deployment and observability
+- [ ] continuous evaluation, drift, and rollback
+- [ ] privacy and PII
+- [ ] prompt/model security
+- [ ] fairness and slice evaluation
+- [ ] abuse controls and incident response
+- [ ] product metrics, cost, tradeoffs, and communication
+- [ ] final integrated capstone
+
+If a checkbox has no lesson ID, artifact, fixture, and exit test attached to it, the
+curriculum is not complete.
