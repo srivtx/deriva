@@ -323,3 +323,311 @@ The subagent is finished only when:
 
 Do not add the next AI/ML lesson until this first vertical slice feels like an
 engineering investigation rather than a quiz.
+
+## Exact lesson backlog
+
+The subagent must build these lessons in this order. Do not invent a different first
+batch or skip directly to neural networks.
+
+### Track 0 — Engineering and data
+
+#### 0.1 What counts as training data?
+
+- Kind: `data-lab`
+- Thinking move: make messy reality measurable
+- Learner builds: a dataset contract and validator
+- Fixture: 30 document rows with duplicates, missing labels, malformed text, and one
+  train/test leak
+- Execute trace: accepted rows, rejected rows, rejection reasons
+- Artifact: dataset card
+- Gate: learner correctly rejects the leaked row and explains why
+
+#### 0.2 Split the evidence
+
+- Kind: `data-lab`
+- Thinking move: protect the evidence from the learner
+- Learner builds: train/validation/test splitter
+- Fixture: labelled documents with repeated author/source groups
+- Execute trace: row assignment and group leakage warnings
+- Artifact: split policy
+- Gate: no source group appears in both train and test
+
+#### 0.3 Features are a decision
+
+- Kind: `data-lab`
+- Thinking move: turn language into comparable signals
+- Learner builds: a deterministic bag-of-words feature extractor
+- Fixture: short support-ticket documents
+- Execute trace: tokenization, vocabulary, feature vectors
+- Artifact: feature contract
+- Gate: learner identifies a feature that leaks the label and removes it
+
+#### 0.4 The baseline earns the right to improve
+
+- Kind: `model-lab`
+- Thinking move: measure before optimizing
+- Learner builds: majority-class and keyword baselines
+- Fixture: imbalanced support-ticket labels
+- Execute trace: predictions, confusion matrix counts, metric calculations
+- Artifact: baseline report
+- Gate: learner chooses precision or recall for the stated product cost
+
+### Track 1 — Classical learning from scratch
+
+#### 1.1 A score is not a prediction
+
+- Kind: `model-lab`
+- Thinking move: separate score from decision
+- Learner builds: linear score function and threshold rule
+- Fixture: two-feature binary dataset
+- Execute trace: weighted sum, threshold, prediction
+- Artifact: model contract
+- Gate: learner changes the threshold and predicts the confusion-matrix tradeoff
+
+#### 1.2 Learn by reducing error
+
+- Kind: `model-lab`
+- Thinking move: adjust parameters to reduce loss
+- Learner builds: logistic regression with gradient descent from scratch
+- Fixture: linearly separable and non-separable variants
+- Execute trace: score, loss, gradient, parameter update per step
+- Artifact: training run report
+- Gate: learner predicts the effect of doubling the learning rate
+
+#### 1.3 The learning rate is a system choice
+
+- Kind: `experiment-lab`
+- Thinking move: change one cause at a time
+- Learner builds: controlled learning-rate experiment
+- Fixture: fixed dataset and fixed seed
+- Execute trace: loss curves for three learning rates
+- Artifact: experiment table
+- Gate: learner identifies under-step, stable, and divergent runs
+
+#### 1.4 When a good score lies
+
+- Kind: `failure-lab`
+- Thinking move: distrust aggregate metrics
+- Learner builds: error-analysis report
+- Fixture: imbalanced labels with a high-accuracy bad model
+- Execute trace: per-class metrics and false-positive/false-negative examples
+- Artifact: metric decision memo
+- Gate: learner rejects accuracy as the sole acceptance metric
+
+#### 1.5 Regularization is a tradeoff
+
+- Kind: `experiment-lab`
+- Thinking move: pay a little bias to reduce variance
+- Learner builds: L2-regularized classifier
+- Fixture: noisy high-dimensional features
+- Execute trace: train/validation loss and parameter magnitudes
+- Artifact: regularization comparison
+- Gate: learner explains why training loss can rise while validation performance improves
+
+### Track 2 — Experiments and model judgment
+
+#### 2.1 Reproducibility is part of correctness
+
+- Kind: `experiment-lab`
+- Thinking move: make a result repeatable
+- Learner builds: seeded experiment runner
+- Fixture: fixed dataset plus shuffled training order
+- Execute trace: seed, config, metrics, artifact hash
+- Artifact: reproducibility record
+- Gate: two runs with the same config produce the same result
+
+#### 2.2 Find the error family
+
+- Kind: `failure-lab`
+- Thinking move: group failures before fixing them
+- Learner builds: error taxonomy and filterable report
+- Fixture: prediction errors caused by length, vocabulary, label noise, and leakage
+- Execute trace: error category assignment
+- Artifact: error taxonomy
+- Gate: learner selects a fix that addresses the largest error family
+
+#### 2.3 Build a better baseline honestly
+
+- Kind: `experiment-lab`
+- Thinking move: improve one variable with evidence
+- Learner builds: feature ablation runner
+- Fixture: same data and split as earlier lessons
+- Execute trace: baseline vs one-feature-change comparisons
+- Artifact: ablation report
+- Gate: learner rejects an improvement that is not statistically or practically useful
+
+### Track 3 — Service engineering
+
+#### 3.1 A model needs a contract
+
+- Kind: `service-lab`
+- Thinking move: make inference behavior explicit
+- Learner builds: request/response API contract
+- Fixture: valid, missing-field, oversized, and unknown-version requests
+- Execute trace: validation and structured error events
+- Artifact: API contract
+- Gate: learner separates client errors from server errors
+
+#### 3.2 Serve the model safely
+
+- Kind: `service-lab`
+- Thinking move: isolate prediction from transport
+- Learner builds: inference service wrapper around the trained classifier
+- Fixture: request batch with valid and invalid payloads
+- Execute trace: request start, validation, inference, response, latency
+- Artifact: service README and example requests
+- Gate: malformed input never reaches model inference
+
+#### 3.3 Timeouts and retries are not free
+
+- Kind: `failure-lab`
+- Thinking move: bound work before scaling it
+- Learner builds: timeout, retry, and idempotency policy
+- Fixture: delayed model calls and duplicate request IDs
+- Execute trace: retry count, timeout, completion, deduplication
+- Artifact: failure policy
+- Gate: learner prevents retry amplification and duplicate side effects
+
+#### 3.4 Measure the service, not just the model
+
+- Kind: `service-lab`
+- Thinking move: connect quality to operations
+- Learner builds: request metrics dashboard model
+- Fixture: mixed request sizes and response outcomes
+- Execute trace: latency, status, model version, confidence, and cost estimate
+- Artifact: service SLO sheet
+- Gate: learner identifies a model-quality regression separately from a latency regression
+
+### Track 4 — Retrieval and language systems
+
+These lessons come only after Tracks 0–3 pass. They extend the same document service.
+
+#### 4.1 Search before generation
+
+- Kind: `model-lab`
+- Thinking move: retrieve evidence before answering
+- Learner builds: TF-IDF/BM25-style lexical search
+- Fixture: the same document corpus plus query set
+- Execute trace: token overlap, scores, ranked results
+- Artifact: retrieval evaluation set
+- Gate: learner distinguishes retrieval failure from answer failure
+
+#### 4.2 Similarity is a representation choice
+
+- Kind: `model-lab`
+- Thinking move: make semantic closeness computable
+- Learner builds: embeddings from a small deterministic encoder and cosine retrieval
+- Fixture: paraphrased documents and distractors
+- Execute trace: vectors, similarities, nearest results
+- Artifact: lexical-vs-semantic comparison
+- Gate: learner explains one query where lexical search wins and one where embeddings win
+
+#### 4.3 Ranking is a separate responsibility
+
+- Kind: `experiment-lab`
+- Thinking move: separate candidate generation from ordering
+- Learner builds: hybrid retrieval and reranking pipeline
+- Fixture: candidate sets with relevance labels
+- Execute trace: candidate retrieval, feature scoring, final ordering
+- Artifact: ranking report
+- Gate: learner diagnoses whether a failure came from recall or ranking
+
+#### 4.4 Cite the evidence
+
+- Kind: `service-lab`
+- Thinking move: keep generated claims attached to sources
+- Learner builds: retrieval-backed answer endpoint with citations
+- Fixture: answerable, ambiguous, and unanswerable questions
+- Execute trace: retrieved chunks, citation selection, abstention
+- Artifact: grounded-answer evaluation set
+- Gate: system abstains when evidence is insufficient
+
+### Track 5 — Deep learning and transformers
+
+These lessons are a separate later milestone; do not mix them into the first vertical
+slice.
+
+#### 5.1 Tensors are structured data
+
+- Kind: `model-lab`
+- Thinking move: make batched computation explicit
+- Learner builds: tiny tensor class with shape checks and broadcasting
+- Artifact: tensor operation tests
+
+#### 5.2 Gradients are dependency accounting
+
+- Kind: `model-lab`
+- Thinking move: propagate responsibility backward
+- Learner builds: scalar autograd engine
+- Artifact: gradient-check report
+
+#### 5.3 Compose a neural network
+
+- Kind: `model-lab`
+- Thinking move: compose differentiable transformations
+- Learner builds: MLP and training loop from scratch
+- Artifact: training trace and checkpoint
+
+#### 5.4 Context changes representation
+
+- Kind: `model-lab`
+- Thinking move: condition a token on its neighbors
+- Learner builds: single-head self-attention with causal masking
+- Artifact: attention inspection report
+
+#### 5.5 Build a tiny language model
+
+- Kind: `model-lab`
+- Thinking move: predict the next piece from context
+- Learner builds: tokenizer, mini-transformer, training loop, and sampler
+- Artifact: model card and generation failure report
+
+## Required learner artifact chain
+
+The subagent must connect artifacts across lessons rather than resetting after every
+exercise:
+
+    dataset card
+      -> split policy
+      -> feature contract
+      -> baseline report
+      -> model/training report
+      -> experiment table
+      -> error taxonomy
+      -> model artifact
+      -> API contract
+      -> service SLO sheet
+      -> failure policy
+      -> retrieval evaluation set
+      -> grounded-answer evaluation set
+
+Every later lesson should load the previous artifact and make the learner decide whether
+to keep, revise, or reject it.
+
+## Subagent execution order
+
+1. Implement schema extensions and tests.
+2. Author and render only lesson 0.1.
+3. Add deterministic fixtures and trace folds for lesson 0.1.
+4. Add lesson 0.2 and 0.3 using the same surfaces.
+5. Add lessons 0.4 and 1.1–1.2.
+6. Add experiment lessons 1.3–1.5 and 2.1–2.3.
+7. Add service lessons 3.1–3.4.
+8. Stop and review the vertical slice before starting retrieval.
+9. Add Tracks 4 and 5 only as separate milestones.
+
+After each lesson, run:
+
+    pnpm typecheck
+    pnpm build
+    git diff --check
+
+## Definition of done for the first milestone
+
+The first milestone is complete when lessons 0.1–1.2 are authored and usable. A learner
+must be able to go from messy rows to a trained-from-scratch classifier, with a dataset
+contract, baseline, loss/gradient trace, evaluation report, and reflection artifact.
+
+Do not claim the AI/ML curriculum is complete until Tracks 0–4 include the service and
+retrieval work. Do not claim production readiness until the failure labs, evaluation,
+observability, and backend execution lane exist.
