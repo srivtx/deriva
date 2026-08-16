@@ -142,6 +142,22 @@ Tailwind exposes these as semantic utilities only (`bg-paper`, `text-ink-soft`,
 `text-viz-active`…). **Arbitrary hex values in components are a lint error** — the
 grammar stays coherent mechanically (07 D7).
 
+### 4.1 Personal Theme Profile
+
+Settings may change the token profile without changing curriculum behavior. The
+supported presets are `system`, `paper`, `ink`, `moss`, `violet`, and `sunset`.
+Accent choices are `cobalt`, `ember`, `violet`, `mint`, `gold`, or a validated
+custom hex color. Type voice choices are `editorial`, `technical`, and
+`humanist`. The profile also owns the workspace name, tagline, logo mark, and a
+local image logo capped at 240 KB. Surface language can be `calm`, `focused`,
+or `compact`; shape can be `soft` or `precise`; texture can be `plain` or a
+subtle study grid.
+
+These values are stored in the versioned preferences boundary, applied through
+root data attributes and CSS custom properties, and migrated from the original
+`system/light/dark` preference values. Components must consume semantic tokens;
+they must not branch on a user's selected preset or embed a second palette.
+
 ## 5. Typography Rules
 
 - **Narrative is serif, instruction is sans.** The moment the platform *asks the student

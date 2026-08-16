@@ -7,7 +7,7 @@ import { TOPICS, TOPIC_LIST } from "@/data"
 import { useState, useEffect } from "react"
 import Logo from "./logo"
 import NotificationCenter from "./notification-center"
-import { applyPreferences, loadPreferences } from "@/persistence/preferences"
+import { applyPreferences, defaultPreferences, loadPreferences, type Preferences } from "@/persistence/preferences"
 
 type AppIconName = "home" | "practice" | "progress" | "design" | "settings" | "more"
 
@@ -115,7 +115,20 @@ function ProgressBadge({ className = "" }: { className?: string }) {
 export default function AppShell() {
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = useState(false)
-  useEffect(() => { applyPreferences(loadPreferences()) }, [])
+  const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
+  useEffect(() => {
+    const next = loadPreferences()
+    setPreferences(next)
+    applyPreferences(next)
+    const onPreferencesChange = (event: Event) => {
+      const detail = (event as CustomEvent<Preferences>).detail
+      if (!detail) return
+      setPreferences(detail)
+      applyPreferences(detail)
+    }
+    window.addEventListener("deriva-preferences-change", onPreferencesChange)
+    return () => window.removeEventListener("deriva-preferences-change", onPreferencesChange)
+  }, [])
   const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
   const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings"
   const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
@@ -131,7 +144,7 @@ export default function AppShell() {
         <div className="desktop-shell" style={{ alignItems: "center", justifyContent: "space-between", width: "100%" }}>
           <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
             <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
-              <Logo size={26} variant="wordmark" />
+              <Logo size={26} variant="wordmark" label={preferences.brandName} mark={preferences.logoMark} imageUrl={preferences.logoDataUrl} />
             </Link>
             <Suspense fallback={null}><Breadcrumbs /></Suspense>
           </div>
@@ -154,7 +167,7 @@ export default function AppShell() {
           </div>
         </div>
         <div className="mobile-shell">
-          <Link href="/" className="mobile-brand" aria-label="Deriva home"><Logo size={24} /></Link>
+           <Link href="/" className="mobile-brand" aria-label={`${preferences.brandName} home`}><Logo size={24} label={preferences.brandName} mark={preferences.logoMark} imageUrl={preferences.logoDataUrl} /></Link>
           <span className="mobile-page-title">{mobileTitle}</span>
            <div className="mobile-header-actions"><NotificationCenter /><ProgressBadge className="mobile-progress" /></div>
         </div>

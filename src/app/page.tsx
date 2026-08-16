@@ -8,6 +8,7 @@ import { loadLessonProgress, type LessonProgress } from "@/persistence/lesson-pr
 import { loadPracticeCompletion } from "@/persistence/practice-progress"
 import { loadPatternMastery } from "@/persistence/pattern-mastery"
 import { getNextActions, type NextAction } from "@/learning/next-actions"
+import { loadPreferences, type Preferences } from "@/persistence/preferences"
 
 type HomeMomentum = { practiceDone: number; practiceTotal: number; pathDone: number }
 type MasteryMomentum = { recognized: number; transferred: number; review: number }
@@ -35,6 +36,7 @@ export default function HomePage() {
   const [momentum, setMomentum] = useState<HomeMomentum>()
   const [masteryMomentum, setMasteryMomentum] = useState<MasteryMomentum>()
   const [practiceAction, setPracticeAction] = useState<NextAction>()
+  const [preferences, setPreferences] = useState<Preferences>()
 
   useEffect(() => {
     setGuidedProgress(loadLessonProgress("trees/00-recursion-reflex/sum-1-to-n"))
@@ -43,6 +45,7 @@ export default function HomePage() {
     const practiceTotal = TOPIC_LIST.reduce((sum, item) => sum + item.problems.length, 0)
     const pathDone = PATTERN_LEARNING_PATH.filter(step => (allCompletion[step.topicId] || []).length >= (TOPICS[step.topicId]?.problems.length || 1)).length
     setPracticeAction(getNextActions().find(action => action.kind === "practice"))
+    setPreferences(loadPreferences())
     const mastery = loadPatternMastery()
     setMasteryMomentum({
       recognized: PATTERN_DIRECTORY.filter(pattern => mastery.recognized.includes(pattern.id)).length,
@@ -67,7 +70,7 @@ export default function HomePage() {
       <header className="landing-header" style={{ padding: "clamp(24px, 5vw, 48px) clamp(20px, 5vw, 48px) clamp(20px, 4vw, 32px)", borderBottom: "1px solid var(--line)", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
         <div className="home-eyebrow" aria-label="Daily practice session">
           <span className="home-eyebrow-index">01</span>
-          <span>Daily practice</span>
+           <span>{preferences?.brandName ?? "Deriva"} / Daily practice</span>
           <span>10 minute session</span>
         </div>
         <h1 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontFamily: "var(--font-narrative)", fontWeight: 700, lineHeight: 1.15, margin: 0 }}>
@@ -75,7 +78,7 @@ export default function HomePage() {
           <span style={{ color: "var(--accent)" }}>feel inevitable.</span>
         </h1>
         <p style={{ marginTop: 16, color: "var(--ink-soft)", maxWidth: 600, fontSize: 17, lineHeight: 1.6, fontFamily: "var(--font-narrative)" }}>
-          Start with one small reasoning win before taking on a hard problem. Build the idea first, then choose whether to practice or recall the move.
+           {preferences?.tagline ?? "Derive the algorithm."} Start with one small reasoning win before taking on a hard problem. Build the idea first, then choose whether to practice or recall the move.
         </p>
         <div className="landing-actions" style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
            <Link href={guidedHref} className="landing-primary-action" style={{ padding: "12px 28px", background: "var(--accent)", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
@@ -154,7 +157,7 @@ export default function HomePage() {
       </main>
 
       <footer style={{ padding: "24px 48px", borderTop: "1px solid var(--line)", color: "var(--ink-soft)", fontSize: 12 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>All code runs locally in your browser. Nothing is uploaded.</div>
+         <div style={{ maxWidth: 1100, margin: "0 auto" }}>{preferences?.brandName ?? "Deriva"} runs locally in your browser. Nothing is uploaded.</div>
       </footer>
 
       <style>{`
