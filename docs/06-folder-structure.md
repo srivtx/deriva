@@ -35,6 +35,7 @@ deriva/
 │   │   │   │   └── [scenarioId]/      #   gates → atelier (naive run first) → artifact
 │   │   │   ├── projects/page.tsx      #   (legacy) — superseded by the project map
 │   │   │   └── patterns/page.tsx      #   pattern journal derived from the question bank
+│   │   │   ├── observatory/page.tsx    #   living map: next move, patterns, systems, terrain
 │   │   ├── patterns/                  #   pattern directory, quiz, and earned journal
 │   │   ├── practice/                  #   daily queue (v0: simple; v1: spaced)
 │   │   └── layout.tsx                 #   design-system shell, fonts, theme

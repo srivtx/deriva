@@ -42,6 +42,8 @@ function Breadcrumbs() {
     parts.push({ label: "LLD", href: "/lld" })
   } else if (pathname === "/dashboard") {
     parts.push({ label: "Dashboard", href: "/dashboard" })
+  } else if (pathname === "/observatory") {
+    parts.push({ label: "Learning Observatory", href: "/observatory" })
   } else if (pathname.startsWith("/learn/")) {
     parts.push({ label: "Trees", href: "/topic/trees" })
     parts.push({ label: "Guided Lesson", href: pathname })
@@ -129,13 +131,13 @@ export default function AppShell() {
     window.addEventListener("deriva-preferences-change", onPreferencesChange)
     return () => window.removeEventListener("deriva-preferences-change", onPreferencesChange)
   }, [])
-  const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
+  const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
   const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings"
   const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
     { label: "Home", href: "/", icon: "home", active: pathname === "/" },
     { label: "Learn", href: "/learn/trees/sum-1-to-n", icon: "practice", active: pathname === "/practice" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") },
     { label: "Patterns", href: "/patterns", icon: "progress", active: pathname.startsWith("/patterns") },
-    { label: "Progress", href: "/dashboard", icon: "design", active: pathname === "/dashboard" },
+     { label: "Observe", href: "/observatory", icon: "design", active: pathname === "/dashboard" || pathname === "/observatory" },
   ]
 
   return (
@@ -152,7 +154,7 @@ export default function AppShell() {
             <Link href="/learn/trees/sum-1-to-n" className={`nav-link${pathname === "/practice" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") ? " active" : ""}`}>Learn</Link>
             <Link href="/ai-ml" className={`nav-link${pathname.startsWith("/ai-ml") || pathname.startsWith("/lab") ? " active" : ""}`}>AI/ML</Link>
             <Link href="/patterns" className={`nav-link${pathname.startsWith("/patterns") ? " active" : ""}`}>Patterns</Link>
-            <Link href="/dashboard" className={`nav-link${pathname === "/dashboard" ? " active" : ""}`}>Progress</Link>
+            <Link href="/observatory" className={`nav-link${pathname === "/dashboard" || pathname === "/observatory" ? " active" : ""}`}>Observe</Link>
             <button className={`nav-more${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>More <span aria-hidden="true">⌄</span></button>
             <NotificationCenter />
             <ProgressBadge />
@@ -160,9 +162,10 @@ export default function AppShell() {
               <Link href="/ai-ml" onClick={() => setMoreOpen(false)}>AI/ML Systems</Link>
               <Link href="/design" onClick={() => setMoreOpen(false)}>System Design (HLD)</Link>
               <Link href="/lld" onClick={() => setMoreOpen(false)}>Low-Level Design</Link>
-              <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition</Link>
-              <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode</Link>
-              <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings</Link>
+               <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition</Link>
+               <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode</Link>
+               <Link href="/dashboard" onClick={() => setMoreOpen(false)}>Progress details</Link>
+               <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings</Link>
             </div>}
           </div>
         </div>
@@ -192,9 +195,10 @@ export default function AppShell() {
               <Link href="/ai-ml" onClick={() => setMoreOpen(false)}>AI/ML Systems <span>Labs + 180 questions</span></Link>
               <Link href="/design" onClick={() => setMoreOpen(false)}>System Design <span>HLD</span></Link>
               <Link href="/lld" onClick={() => setMoreOpen(false)}>Low-Level Design <span>LLD</span></Link>
-              <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition <span>Retrieval</span></Link>
-              <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode <span>Play</span></Link>
-              <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings <span>Preferences</span></Link>
+               <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition <span>Retrieval</span></Link>
+               <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode <span>Play</span></Link>
+               <Link href="/dashboard" onClick={() => setMoreOpen(false)}>Progress details <span>History</span></Link>
+               <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings <span>Preferences</span></Link>
             </div>
          </section>
        </div>}
