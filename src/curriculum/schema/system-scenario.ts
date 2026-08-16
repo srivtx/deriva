@@ -14,7 +14,7 @@ export const ScenarioDesignGate = z.object({
 // Structured system gates — evaluated against the run's real metrics, never
 // against prose. `metric` picks a derived number; `op` and `value` bound it.
 export const SystemGate = z.object({
-  metric: z.enum(["p50Ms", "p95Ms", "p99Ms", "errorRate", "cacheHitRatio", "maxAttemptsPerRequest", "timeoutCount"]),
+  metric: z.enum(["p50Ms", "p95Ms", "p99Ms", "errorRate", "cacheHitRatio", "maxAttemptsPerRequest", "timeoutCount", "circuitOpenCount", "admissionRejectCount"]),
   op: z.enum(["<=", ">="]),
   value: z.number(),
   name: z.string(),

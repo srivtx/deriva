@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from "vitest"
 import type { TraceEvent } from "../../src/execution/trace/types"
-import { evaluateSystemGates, foldSimulation, type SimulationMetrics } from "../../src/viz/replay/folds"
+import { evaluateSystemGates, findFirstSimulationDivergence, foldSimulation, type SimulationMetrics } from "../../src/viz/replay/folds"
 
 function structure(ops: unknown[]): TraceEvent[] {
   return ops.map(op => ({ t: "structure", op }) as unknown as TraceEvent)
@@ -99,6 +99,24 @@ describe("foldSimulation", () => {
     expect(fold.series[0]!.queueDepth).toBe(3)
   })
 
+  it("counts circuit openings as operational evidence", () => {
+    const events = structure([
+      { kind: "circuit.open", at: 100, target: "payments" },
+      { kind: "circuit.open", at: 200, target: "payments" },
+    ])
+    const fold = foldSimulation(events, events.length)
+    expect(fold.metrics.circuitOpenCount).toBe(2)
+  })
+
+  it("counts admission rejects as protected capacity", () => {
+    const events = structure([
+      { kind: "admission.accept", at: 100, name: "edge", limit: 2 },
+      { kind: "admission.reject", at: 200, name: "edge", limit: 2 },
+    ])
+    const fold = foldSimulation(events, events.length)
+    expect(fold.metrics.admissionRejectCount).toBe(1)
+  })
+
   it("is a pure, deterministic function of (events, cursor)", () => {
     const events = structure([
       { kind: "load.arrival", at: 0, requestId: "r-001" },
@@ -111,6 +129,18 @@ describe("foldSimulation", () => {
     // cursor-capped: nothing before the cursor is folded
     const partial = foldSimulation(events, 2)
     expect(partial.requests).toHaveLength(0)
+  })
+
+  it("keeps scheduled arrival time when a request waits in the root queue", () => {
+    const events = structure([
+      { kind: "load.arrival", at: 100, scheduledAt: 100, requestId: "r-001" },
+      { kind: "queue.wait", at: 250, requestId: "r-001", queue: "root", waitMs: 150 },
+      { kind: "request.start", at: 250, component: "a", requestId: "r-001" },
+      { kind: "request.end", at: 300, status: 200, latencyMs: 200, requestId: "r-001" },
+    ])
+    const fold = foldSimulation(events, events.length)
+    expect(fold.requests[0]!.at).toBe(100)
+    expect(fold.metrics.latencyMs.max).toBe(200)
   })
 
   it("marks failed and truncated runs ineligible for gates", () => {
@@ -138,7 +168,9 @@ describe("evaluateSystemGates", () => {
     latencyMs: { p50: 80, p95: 300, p99: 700, max: 900 },
     cache: { hits: 60, misses: 40, hitRatio: 0.6 },
     maxAttemptsPerRequest: 4,
-    timeoutCount: 22,
+      timeoutCount: 22,
+      circuitOpenCount: 0,
+      admissionRejectCount: 0,
     queueDepthMax: 10,
     queueDepthByQueue: {},
     components: {},
@@ -159,5 +191,21 @@ describe("evaluateSystemGates", () => {
   it("never evaluates free-form prose — metrics only", () => {
     const results = evaluateSystemGates([], metrics)
     expect(results).toEqual([])
+  })
+})
+
+describe("findFirstSimulationDivergence", () => {
+  it("finds the first semantic change while ignoring virtual-time drift", () => {
+    const naive = structure([
+      { kind: "load.arrival", at: 0, requestId: "r-001" },
+      { kind: "request.end", at: 600, requestId: "r-001", status: 200, latencyMs: 600 },
+    ])
+    const fixed = structure([
+      { kind: "load.arrival", at: 0, requestId: "r-001" },
+      { kind: "request.end", at: 150, requestId: "r-001", status: 504, latencyMs: 150 },
+    ])
+    const divergence = findFirstSimulationDivergence(naive, fixed)
+    expect(divergence?.index).toBe(1)
+    expect(divergence?.reason).toBe("request.end became request.end")
   })
 })

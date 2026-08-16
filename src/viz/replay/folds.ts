@@ -213,6 +213,8 @@ export interface SimulationMetrics {
   cache: { hits: number; misses: number; hitRatio: number }
   maxAttemptsPerRequest: number
   timeoutCount: number
+  circuitOpenCount: number
+  admissionRejectCount: number
   queueDepthMax: number
   queueDepthByQueue: Record<string, number>
   components: Record<string, {
@@ -229,6 +231,40 @@ export interface SimulationFold {
   series: SimulationSeriesBucket[]
   status: "complete" | "empty" | "error" | "truncated"
   eligible: boolean
+}
+
+export interface SimulationDivergence {
+  index: number
+  naive?: TraceEvent
+  fixed?: TraceEvent
+  reason: string
+}
+
+function eventSignature(event: TraceEvent | undefined): string {
+  if (!event) return "<none>"
+  if (event.t !== "structure") return event.t
+  const op = event.op as { kind: string } & Record<string, unknown>
+  const keys = ["kind", "requestId", "target", "component", "status", "attempt", "side", "reason", "control", "value"]
+  return keys.map(key => `${key}=${JSON.stringify(op[key])}`).join("|")
+}
+
+// Compare semantic events rather than timestamps: the same seeded world can
+// take a different amount of virtual time after the learner changes policy.
+export function findFirstSimulationDivergence(naive: TraceEvent[], fixed: TraceEvent[]): SimulationDivergence | null {
+  const length = Math.max(naive.length, fixed.length)
+  for (let index = 0; index < length; index++) {
+    if (eventSignature(naive[index]) !== eventSignature(fixed[index])) {
+      const naiveEvent = naive[index]
+      const fixedEvent = fixed[index]
+      return {
+        index,
+        naive: naiveEvent,
+        fixed: fixedEvent,
+        reason: `${naiveEvent?.t === "structure" ? naiveEvent.op.kind : naiveEvent?.t ?? "missing"} became ${fixedEvent?.t === "structure" ? fixedEvent.op.kind : fixedEvent?.t ?? "missing"}`,
+      }
+    }
+  }
+  return null
 }
 
 export interface SimulationRunValidity {
@@ -269,6 +305,8 @@ export function foldSimulation(events: TraceEvent[], cursor: number, validity: S
   const attemptsMax = { value: 0 }
   const apiCallCount = { value: 0 }
   const contractRejectCount = { value: 0 }
+  const circuitOpenCount = { value: 0 }
+  const admissionRejectCount = { value: 0 }
 
   const bucket = (at: number) => {
     const second = Math.floor(at / 1000)
@@ -288,9 +326,10 @@ export function foldSimulation(events: TraceEvent[], cursor: number, validity: S
     const bucketModel = bucket(at)
 
     if (op.kind === "load.arrival") {
-      arrivalAt.set(op.requestId, at)
+      const scheduledAt = typeof op.scheduledAt === "number" ? op.scheduledAt : at
+      arrivalAt.set(op.requestId, scheduledAt)
       arrivalCount++
-      bucketModel.arrivals++
+      bucket(scheduledAt).arrivals++
     } else if (op.kind === "request.start") {
       let stack = stacks.get(op.requestId)
       if (!stack) {
@@ -335,6 +374,10 @@ export function foldSimulation(events: TraceEvent[], cursor: number, validity: S
       apiCallCount.value++
     } else if (op.kind === "contract.reject") {
       contractRejectCount.value++
+    } else if (op.kind === "circuit.open") {
+      circuitOpenCount.value++
+    } else if (op.kind === "admission.reject") {
+      admissionRejectCount.value++
     } else if (op.kind === "cache.hit") {
       cache.hits++
     } else if (op.kind === "cache.miss") {
@@ -349,6 +392,8 @@ export function foldSimulation(events: TraceEvent[], cursor: number, validity: S
       queueDepth = Math.max(0, queueDepth - 1)
       queueDepthCurrentByQueue[op.queue] = Math.max(0, (queueDepthCurrentByQueue[op.queue] ?? 0) - 1)
       bucketModel.queueDepth = Math.max(bucketModel.queueDepth, queueDepth)
+    } else if (op.kind === "queue.wait") {
+      // Request latency already includes this wait in the root end event.
     } else if (op.kind === "failure.detected") {
       // failures are already attributed via hop statuses; the category informs nothing structural here
     }
@@ -384,6 +429,8 @@ export function foldSimulation(events: TraceEvent[], cursor: number, validity: S
     },
     maxAttemptsPerRequest: attemptsMax.value,
     timeoutCount: timeoutCount.value,
+    circuitOpenCount: circuitOpenCount.value,
+    admissionRejectCount: admissionRejectCount.value,
     queueDepthMax: queueDepthMax.value,
     queueDepthByQueue: queueDepthMaxByQueue,
     components: Object.fromEntries(Object.entries(componentLatency).map(([component, values]) => {
@@ -429,6 +476,8 @@ export function evaluateSystemGates(
       case "cacheHitRatio": actual = metrics.cache.hitRatio; break
       case "maxAttemptsPerRequest": actual = metrics.maxAttemptsPerRequest; break
       case "timeoutCount": actual = metrics.timeoutCount; break
+      case "circuitOpenCount": actual = metrics.circuitOpenCount; break
+      case "admissionRejectCount": actual = metrics.admissionRejectCount; break
       default: actual = 0
     }
     const passed = eligible && (gate.op === "<=" ? actual <= gate.value : actual >= gate.value)

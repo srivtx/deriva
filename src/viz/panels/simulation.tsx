@@ -50,6 +50,14 @@ export function SimulationSummary({ fold, gates }: { fold: SimulationFold; gates
           <span className="sim-metric-value">{metrics.maxAttemptsPerRequest}</span>
         </div>
         <div className="sim-metric-card">
+          <span className="sim-metric-label">circuit opens</span>
+          <span className="sim-metric-value">{metrics.circuitOpenCount}</span>
+        </div>
+        <div className="sim-metric-card">
+          <span className="sim-metric-label">admission rejects</span>
+          <span className="sim-metric-value">{metrics.admissionRejectCount}</span>
+        </div>
+        <div className="sim-metric-card">
           <span className="sim-metric-label">API calls</span>
           <span className="sim-metric-value">{metrics.apiCalls}</span>
         </div>
@@ -196,7 +204,7 @@ const KIND_LABEL: Record<string, string> = {
   "queue.enqueue": "enqueue", "queue.dequeue": "dequeue",
   "retry.attempt": "retry", "circuit.open": "circuit open", "circuit.close": "circuit close",
   "api.request": "API request", "api.response": "API response", "contract.reject": "contract reject",
-  "failure.detected": "failure",
+  "failure.detected": "failure", "control.changed": "control changed",
 }
 
 export function SimulationEvents({ events, filter, onFilter }: {

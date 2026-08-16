@@ -17,6 +17,12 @@ export interface ScenarioRunSummary {
   gatesTotal: number
 }
 
+export interface ScenarioInterventions {
+  trafficMultiplier: number
+  failureRateOverrides: Record<string, number>
+  latencyMultiplierOverrides: Record<string, number>
+}
+
 export interface ScenarioProgress {
   status: ScenarioStatus
   designPicked: string[]
@@ -28,6 +34,8 @@ export interface ScenarioProgress {
   fixedSummary?: ScenarioRunSummary
   artifactValues: Record<string, string>
   reflection: string
+  interventions?: ScenarioInterventions
+  evidenceSelected?: boolean
   lastOpened?: string // ISO date
 }
 

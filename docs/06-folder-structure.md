@@ -73,7 +73,7 @@ deriva/
 │   │   │       │   ├── project-01-data-contract.ts # Project 1, L1–L5 authored slice
 │   │   │       │   └── project-01-fixtures.ts      # per-level trace fixtures + wrappers
 │   │   │       ├── systems/           #   Systems Atelier ladder (system-ai plan)
-│   │   │       │   └── index.ts       #   S1–S2 authored scenarios + toRuntimeSpec
+│   │   │       │   └── index.ts       #   S1–S5 authored scenarios + toRuntimeSpec
 │   │   │       └── …/                 #   one lesson per module (A–F)
 │   ├── learning/stages/ai/system-scenario.tsx # atelier shell: gates → runs → artifact
 │   ├── execution/simulation/runtime.ts       # in-worker Python sim runtime (load, transport)

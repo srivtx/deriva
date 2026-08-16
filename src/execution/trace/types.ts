@@ -55,7 +55,11 @@ export type StructureOp =
   | { kind: "retry.attempt"; requestId: string; target: string; attempt: number }
   | { kind: "circuit.open"; target: string }
   | { kind: "circuit.close"; target: string }
-  | { kind: "load.arrival"; requestId: string; at: number }
+  | { kind: "load.arrival"; requestId: string; at: number; scheduledAt?: number }
+  | { kind: "queue.wait"; requestId: string; queue: string; waitMs: number }
+  | { kind: "control.changed"; control: string; value: number }
+  | { kind: "admission.accept"; name: string; limit: number }
+  | { kind: "admission.reject"; name: string; limit: number }
 
 export interface Trace {
   version: 1

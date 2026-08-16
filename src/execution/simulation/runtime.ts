@@ -13,6 +13,12 @@ export interface SimulationComponentSpec {
   failureWindow?: { from: number; until: number; rate: number }
 }
 
+export interface SimulationInterventions {
+  trafficMultiplier: number
+  failureRateOverrides: Record<string, number>
+  latencyMultiplierOverrides: Record<string, number>
+}
+
 export interface SimulationRunSpec {
   id: string
   seed: number
@@ -24,6 +30,7 @@ export interface SimulationRunSpec {
     simSeconds: number
     maxRequests?: number
   }
+  interventions?: SimulationInterventions
 }
 
 export const SIM_RUNTIME = `
@@ -44,17 +51,23 @@ class Unavailable(SimRuntimeError):
 class ContractRejected(SimRuntimeError):
     pass
 
+class RateLimited(SimRuntimeError):
+    pass
+
 class Simulation:
-    def __init__(self, ns, scenario, rng, budget):
+    def __init__(self, ns, scenario, latency_rng, failure_rng, budget):
         self.ns = ns
         self.scenario = scenario
-        self.rng = rng
+        self.latency_rng = latency_rng
+        self.failure_rng = failure_rng
         self.budget = budget
+        self.interventions = scenario.get("interventions") or {}
         self.now = 0
         self.events = []
         self.truncated = False
         self.span_counter = 0
         self.breakers = {}
+        self.admission_counts = {}
         self.components = {}
         for comp in scenario["components"]:
             self.components[comp["id"]] = comp
@@ -95,10 +108,14 @@ class Simulation:
     def latency_sample(self, comp):
         mean = math.log(comp["latency"]["p50"])
         sigma = math.log(comp["latency"]["p99"] / comp["latency"]["p50"]) / NINETY_NINE
-        z = self.rng.gauss(0, 1)
-        return HOP_OVERHEAD_MS + max(0.5, math.exp(mean + sigma * z))
+        z = self.latency_rng.gauss(0, 1)
+        multiplier = float((self.interventions.get("latencyMultiplierOverrides") or {}).get(comp["id"], 1.0))
+        return HOP_OVERHEAD_MS + max(0.5, math.exp(mean + sigma * z) * max(0.1, multiplier))
 
     def failure_rate(self, comp):
+        overrides = self.interventions.get("failureRateOverrides") or {}
+        if comp["id"] in overrides:
+            return float(overrides[comp["id"]])
         base = float(comp.get("failureRate", 0.0))
         win = comp.get("failureWindow")
         if win and win["from"] <= self.now / 1000.0 < win.get("until", 10 ** 9):
@@ -229,6 +246,18 @@ class Ctx:
     def emit(self, kind, **kw):
         self.sim.emit(kind, **kw)
 
+    def admit(self, name, per_second):
+        second = int(self.sim.now // 1000)
+        key = (str(name), second)
+        count = self.sim.admission_counts.get(key, 0)
+        limit = max(1, int(per_second))
+        if count >= limit:
+            self.sim.emit("admission.reject", name=str(name), limit=limit)
+            raise RateLimited("%s admission limit reached" % name)
+        self.sim.admission_counts[key] = count + 1
+        self.sim.emit("admission.accept", name=str(name), limit=limit)
+        return True
+
     def now(self):
         return self.sim.now
 
@@ -260,7 +289,7 @@ class Ctx:
             sim.emit("api.response", requestId=self.request_id, spanId=span_id, target=target, version=expected_version, status=503)
             sim.emit("request.end", requestId=self.request_id, spanId=span_id, status=503, latencyMs=sim.now - start)
             raise Unavailable("%s circuit open" % target)
-        if sim.rng.random() < sim.failure_rate(comp):
+        if sim.failure_rng.random() < sim.failure_rate(comp):
             sim.sleep(1)
             sim.emit("api.response", requestId=self.request_id, spanId=span_id, target=target, version=expected_version, status=502)
             sim.emit("request.end", requestId=self.request_id, spanId=span_id, status=502, latencyMs=sim.now - start)
@@ -357,13 +386,15 @@ class Ctx:
                 return None
 
 
-def __deriva_arrival_times(shape, rng):
+def __deriva_arrival_times(shape, rng, interventions=None):
     times = []
     now = 0.0
-    base = float(shape["baseRate"])
+    interventions = interventions or {}
+    traffic_multiplier = max(0.25, float(interventions.get("trafficMultiplier", 1.0)))
+    base = float(shape["baseRate"]) * traffic_multiplier
     burst = shape.get("burst")
     sim_seconds = float(shape["simSeconds"])
-    max_requests = int(shape.get("maxRequests", 400))
+    max_requests = int(shape.get("maxRequests", 400) * traffic_multiplier)
     while len(times) < max_requests:
         rate = base
         if burst and burst["at"] <= now < burst.get("until", sim_seconds):
@@ -377,16 +408,27 @@ def __deriva_arrival_times(shape, rng):
 
 def __deriva_run_simulation(scenario_json, budget, ns):
     scenario = json.loads(scenario_json)
-    rng = random.Random(scenario["seed"])
-    sim = Simulation(ns, scenario, rng, budget)
+    seed = int(scenario["seed"])
+    arrival_rng = random.Random(seed * 3 + 1)
+    latency_rng = random.Random(seed * 3 + 2)
+    failure_rng = random.Random(seed * 3 + 3)
+    sim = Simulation(ns, scenario, latency_rng, failure_rng, budget)
     root_id = scenario["rootComponent"]
     root_handler = sim.ns[sim.components[root_id]["handler"]]
-    arrival_times = __deriva_arrival_times(scenario["loadShape"], rng)
+    interventions = scenario.get("interventions") or {}
+    for control, value in sorted(interventions.get("failureRateOverrides", {}).items()):
+        sim.emit("control.changed", control="failure:%s" % control, value=value)
+    for control, value in sorted(interventions.get("latencyMultiplierOverrides", {}).items()):
+        sim.emit("control.changed", control="latency:%s" % control, value=value)
+    sim.emit("control.changed", control="traffic", value=interventions.get("trafficMultiplier", 1.0))
+    arrival_times = __deriva_arrival_times(scenario["loadShape"], arrival_rng, interventions)
     try:
-        for index, at in enumerate(arrival_times):
-            sim.now = at
+        for index, scheduled_at in enumerate(arrival_times):
+            sim.now = max(sim.now, scheduled_at)
             request_id = "r-%03d" % (index + 1)
-            sim.emit("load.arrival", requestId=request_id, at=at)
+            sim.emit("load.arrival", requestId=request_id, scheduledAt=scheduled_at)
+            if sim.now > scheduled_at:
+                sim.emit("queue.wait", requestId=request_id, queue="root", waitMs=sim.now - scheduled_at)
             root_span = request_id + ":root"
             ctx = Ctx(sim, request_id, root_span)
             sim.emit("request.start", requestId=request_id, spanId=root_span, component=root_id, parentId=None)
@@ -419,12 +461,15 @@ def __deriva_run_simulation(scenario_json, budget, ns):
             except ContractRejected as contract_error:
                 status = 502
                 error = str(contract_error)
+            except RateLimited as rate_error:
+                status = 429
+                error = str(rate_error)
             except Exception as exception:
                 status = 500
                 error = "%s: %s" % (type(exception).__name__, exception)
                 sim.emit("failure.detected", category="root-error")
             sim.emit("api.response", requestId=request_id, spanId=root_span, target=root_id, version=root_version, status=status)
-            sim.emit("request.end", requestId=request_id, spanId=root_span, status=status, latencyMs=sim.now - start)
+            sim.emit("request.end", requestId=request_id, spanId=root_span, status=status, latencyMs=sim.now - scheduled_at)
             if error is not None:
                 sim.emit("failure.detected", category=error)
             if sim.truncated:

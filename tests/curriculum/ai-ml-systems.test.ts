@@ -8,8 +8,8 @@ import { systemScenarios, toRuntimeSpec } from "../../src/curriculum/topics/ai-m
 
 describe("the scenario ladder", () => {
   it("registers the coupling pair (S1, S2)", () => {
-    expect(systemScenarios.length).toBe(2)
-    expect(systemScenarios.map(scenario => scenario.number)).toEqual([1, 2])
+    expect(systemScenarios.length).toBe(5)
+    expect(systemScenarios.map(scenario => scenario.number)).toEqual([1, 2, 3, 4, 5])
   })
 
   it("every scenario validates against the schema", () => {
@@ -72,5 +72,18 @@ describe("the scenario ladder", () => {
     expect(spec.components.map(component => component.id)).toEqual(["inference", "features"])
     expect(spec.components.every(component => component.handler === component.id)).toBe(true)
     expect(spec.loadShape.baseRate).toBeGreaterThan(0)
+  })
+
+  it("carries experiment interventions into the deterministic runtime spec", () => {
+    const spec = toRuntimeSpec(systemScenarios[1]!, {
+      trafficMultiplier: 2,
+      failureRateOverrides: { features: 0.1 },
+      latencyMultiplierOverrides: { features: 2 },
+    })
+    expect(spec.interventions).toEqual({
+      trafficMultiplier: 2,
+      failureRateOverrides: { features: 0.1 },
+      latencyMultiplierOverrides: { features: 2 },
+    })
   })
 })

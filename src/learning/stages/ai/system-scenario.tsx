@@ -14,9 +14,10 @@ import type { SystemScenario } from "@/curriculum/schema/system-scenario"
 import {
   loadScenarioProgress,
   saveScenarioProgress,
+  type ScenarioInterventions,
   type ScenarioRunSummary,
 } from "@/persistence/system-scenario-progress"
-import { evaluateSystemGates, foldSimulation, type GateResult, type SimulationFold } from "@/viz/replay/folds"
+import { evaluateSystemGates, findFirstSimulationDivergence, foldSimulation, type GateResult, type SimulationDivergence, type SimulationFold } from "@/viz/replay/folds"
 import {
   SimulationComponents,
   SimulationEvents,
@@ -33,6 +34,17 @@ type RunResult = {
   gates: GateResult[]
   truncated: boolean
   error: string | null
+}
+
+type Prediction = "latency" | "errors" | "both" | "nothing"
+
+function defaultInterventions(scenario: SystemScenario): ScenarioInterventions {
+  const upstream = scenario.components.find(component => component.role === "upstream")
+  return {
+    trafficMultiplier: 1,
+    failureRateOverrides: upstream && !upstream.failureWindow ? { [upstream.id]: upstream.failureRate } : {},
+    latencyMultiplierOverrides: upstream ? { [upstream.id]: 1 } : {},
+  }
 }
 
 function toSummary(fold: SimulationFold, gates: GateResult[]): ScenarioRunSummary {
@@ -53,6 +65,195 @@ function componentIds(scenario: SystemScenario): string[] {
   return scenario.components.map(component => component.id)
 }
 
+function observedPrediction(fold: SimulationFold): Prediction {
+  const errors = fold.metrics.errorRate >= 0.05
+  const latency = fold.metrics.latencyMs.p99 >= 200 || fold.metrics.timeoutCount > 0
+  if (errors && latency) return "both"
+  if (errors) return "errors"
+  if (latency) return "latency"
+  return "nothing"
+}
+
+const PREDICTION_LABEL: Record<Prediction, string> = {
+  latency: "latency tail",
+  errors: "error rate",
+  both: "both latency and errors",
+  nothing: "neither signal",
+}
+
+function eventEvidence(event: TraceEvent | undefined): string {
+  if (!event) return "no corresponding event"
+  if (event.t !== "structure") return event.t
+  const op = event.op as { kind: string } & Record<string, unknown>
+  const detail = ["target", "status", "latencyMs", "attempt", "reason"]
+    .filter(key => op[key] !== undefined)
+    .map(key => `${key}=${String(op[key])}`)
+    .join(" · ")
+  return `${op.kind}${detail ? ` · ${detail}` : ""}`
+}
+
+function IncidentBoard({
+  scenario,
+  naiveRun,
+  fixedRun,
+  prediction,
+  divergence,
+  evidenceSelected,
+  onSelectEvidence,
+}: {
+  scenario: SystemScenario
+  naiveRun: RunResult
+  fixedRun: RunResult
+  prediction: Prediction | null
+  divergence: SimulationDivergence | null
+  evidenceSelected: boolean
+  onSelectEvidence: () => void
+}) {
+  const actual = observedPrediction(naiveRun.fold)
+  const predictionCorrect = prediction === actual
+  return (
+    <section className="incident-board" aria-label="Incident investigation board">
+      <div className="incident-board-head">
+        <div>
+          <span className="experiment-kicker">Incident board · S{scenario.number} coupling failure</span>
+          <h3>Explain the first break</h3>
+          <p>Do not summarize the dashboard. Select the event where your policy changed the system.</p>
+        </div>
+        <span className={`incident-verdict${predictionCorrect ? " correct" : ""}`}>
+          {prediction ? (predictionCorrect ? "Prediction matched" : "Prediction needs revision") : "Prediction not recorded"}
+        </span>
+      </div>
+      <div className="incident-board-grid">
+        <div className="incident-fact">
+          <span className="experiment-kicker">Prediction</span>
+          <strong>{prediction ? PREDICTION_LABEL[prediction] : "—"}</strong>
+          <small>Trace observed: {PREDICTION_LABEL[actual]}</small>
+        </div>
+        <div className="incident-fact">
+          <span className="experiment-kicker">Naive → fixed</span>
+          <strong>p99 {Math.round(naiveRun.fold.metrics.latencyMs.p99)}ms → {Math.round(fixedRun.fold.metrics.latencyMs.p99)}ms</strong>
+          <small>errors {(naiveRun.fold.metrics.errorRate * 100).toFixed(1)}% → {(fixedRun.fold.metrics.errorRate * 100).toFixed(1)}%</small>
+        </div>
+      </div>
+      <div className="divergence-card">
+        <span className="experiment-kicker">First semantic divergence · event {divergence?.index ?? "—"}</span>
+        {divergence ? (
+          <div className="divergence-events">
+            <div><b>naive</b><code>{eventEvidence(divergence.naive)}</code></div>
+            <span aria-hidden="true">→</span>
+            <div><b>fixed</b><code>{eventEvidence(divergence.fixed)}</code></div>
+          </div>
+        ) : <p>No semantic divergence found yet. Change the policy before comparing.</p>}
+        <button type="button" className={`evidence-button${evidenceSelected ? " selected" : ""}`} disabled={!divergence} onClick={onSelectEvidence}>
+          {evidenceSelected ? "Evidence selected for artifact" : "Use this divergence as evidence"}
+        </button>
+      </div>
+      <p className="incident-objective"><b>Objective:</b> {scenario.systemGates[0]?.invariant}</p>
+    </section>
+  )
+}
+
+function ExperimentConsole({
+  scenario,
+  interventions,
+  locked,
+  prediction,
+  running,
+  onChange,
+  onPrediction,
+  onRunBaseline,
+  onReset,
+}: {
+  scenario: SystemScenario
+  interventions: ScenarioInterventions
+  locked: boolean
+  prediction: Prediction | null
+  running: boolean
+  onChange: (next: ScenarioInterventions) => void
+  onPrediction: (value: Prediction) => void
+  onRunBaseline: () => void
+  onReset: () => void
+}) {
+  const root = scenario.components.find(component => component.role === "root")
+  const upstream = scenario.components.find(component => component.role === "upstream")
+  if (!root || !upstream) return null
+
+  const failureRate = interventions.failureRateOverrides[upstream.id] ?? upstream.failureWindow?.rate ?? upstream.failureRate
+  const latencyMultiplier = interventions.latencyMultiplierOverrides[upstream.id] ?? 1
+  const requestRate = Math.round(scenario.loadShape.baseRate * interventions.trafficMultiplier)
+  const dependencyState = failureRate >= 0.2 ? "degraded" : failureRate > 0 ? "at risk" : "ready"
+  const predictedLatency = Math.round(upstream.latency.p50 * latencyMultiplier)
+
+  const update = (patch: Partial<ScenarioInterventions>) => onChange({ ...interventions, ...patch })
+
+  return (
+    <section className="experiment-console" aria-label="SignalDesk experiment console">
+      <div className="console-heading">
+        <div>
+          <span className="experiment-kicker">Play the incident before code</span>
+          <h3>SignalDesk control room</h3>
+          <p>Change one condition, predict the consequence, then run the same world through your handlers.</p>
+        </div>
+        {locked ? (
+          <button type="button" className="btn-ghost console-reset" onClick={onReset}>Reset experiment</button>
+        ) : (
+          <span className="console-seed">seed {scenario.loadShape.seed}</span>
+        )}
+      </div>
+
+      <div className="experiment-topology" aria-label="Live system topology">
+        <div className="topology-node topology-root">
+          <span className="topology-status">{root.id} · serving</span>
+          <strong>Service A</strong>
+          <small>{requestRate} r/s entering</small>
+        </div>
+        <span className="topology-arrow" aria-hidden="true">→</span>
+        <div className={`topology-node topology-upstream state-${dependencyState}`}>
+          <span className="topology-status">{upstream.id} · {dependencyState}</span>
+          <strong>Service B</strong>
+          <small>p50 {predictedLatency}ms · {Math.round(failureRate * 100)}% failures</small>
+        </div>
+      </div>
+
+      <div className="console-controls">
+        <label className="console-control">
+          <span><b>Traffic</b><output>{interventions.trafficMultiplier}× · {requestRate} r/s</output></span>
+          <input type="range" min="0.5" max="2" step="0.5" value={interventions.trafficMultiplier} disabled={locked} onChange={event => update({ trafficMultiplier: Number(event.target.value) })} />
+          <small>How much work enters the system?</small>
+        </label>
+        <label className="console-control">
+          <span><b>Dependency failures</b><output>{Math.round(failureRate * 100)}%</output></span>
+          <input type="range" min="0" max="0.3" step="0.05" value={failureRate} disabled={locked} onChange={event => update({ failureRateOverrides: { ...interventions.failureRateOverrides, [upstream.id]: Number(event.target.value) } })} />
+          <small>What happens when B stops keeping its promise?</small>
+        </label>
+        <label className="console-control">
+          <span><b>Slow-tail multiplier</b><output>{latencyMultiplier}× · p50 {predictedLatency}ms</output></span>
+          <input type="range" min="1" max="3" step="0.5" value={latencyMultiplier} disabled={locked} onChange={event => update({ latencyMultiplierOverrides: { ...interventions.latencyMultiplierOverrides, [upstream.id]: Number(event.target.value) } })} />
+          <small>How much latency does A inherit from B?</small>
+        </label>
+      </div>
+
+      <div className="prediction-checkpoint">
+        <span className="experiment-kicker">Make a prediction</span>
+        <p>Before the baseline runs, what will the injected condition change first?</p>
+        <div className="prediction-options">
+          {([
+            ["latency", "latency tail"],
+            ["errors", "error rate"],
+            ["both", "both"],
+            ["nothing", "nothing"],
+          ] as const).map(([value, label]) => (
+            <button type="button" key={value} className={`prediction-option${prediction === value ? " picked" : ""}`} onClick={() => onPrediction(value)}>{label}</button>
+          ))}
+        </div>
+        <button type="button" className="btn-primary console-run" disabled={!prediction || running || locked} onClick={onRunBaseline}>
+          {running ? "Running the world…" : locked ? "Baseline captured" : prediction ? "Run the baseline incident →" : "Choose a prediction first"}
+        </button>
+      </div>
+    </section>
+  )
+}
+
 export function SystemScenarioStage({ scenario }: { scenario: SystemScenario }) {
   const [hydrated, setHydrated] = useState(false)
   const [stage, setStage] = useState<"design" | "atelier" | "artifact">("design")
@@ -71,6 +272,9 @@ export function SystemScenarioStage({ scenario }: { scenario: SystemScenario }) 
   const [eventFilter, setEventFilter] = useState<string | null>(null)
   const [artifactValues, setArtifactValues] = useState<Record<string, string>>({})
   const [reflection, setReflection] = useState("")
+  const [interventions, setInterventions] = useState<ScenarioInterventions>(() => defaultInterventions(scenario))
+  const [prediction, setPrediction] = useState<Prediction | null>(null)
+  const [evidenceSelected, setEvidenceSelected] = useState(false)
 
   useEffect(() => {
     const saved = loadScenarioProgress(scenario.id)
@@ -86,6 +290,8 @@ export function SystemScenarioStage({ scenario }: { scenario: SystemScenario }) 
     if (saved.draft) setDraft(saved.draft)
     setArtifactValues(saved.artifactValues)
     setReflection(saved.reflection)
+    setInterventions(saved.interventions ?? defaultInterventions(scenario))
+    setEvidenceSelected(saved.evidenceSelected ?? false)
     setHydrated(true)
   }, [scenario.id])
 
@@ -100,6 +306,8 @@ export function SystemScenarioStage({ scenario }: { scenario: SystemScenario }) 
       draft: "",
       artifactValues: {},
       reflection: "",
+      interventions: defaultInterventions(scenario),
+      evidenceSelected: false,
     }
     const next: Parameters<typeof saveScenarioProgress>[1] = { ...current, ...patch }
     const fixedSummary = next.fixedSummary
@@ -138,23 +346,24 @@ export function SystemScenarioStage({ scenario }: { scenario: SystemScenario }) 
   }
 
   const run = async (which: "naive" | "fixed" | "contract") => {
-    if (running) return
+    if (running || (which === "naive" && !prediction)) return
     setRunning(which)
     setShown(which)
+    setPane("output")
     setRunError(null)
     try {
       const code = which === "naive" ? scenario.naiveCode : which === "contract" ? scenario.contractDrillCode : draft
-      const response = await workerBridge.runSimulation(code, toRuntimeSpec(scenario), RUN_BUDGET)
+      const response = await workerBridge.runSimulation(code, toRuntimeSpec(scenario, interventions), RUN_BUDGET)
       const events: TraceEvent[] = response.events
       const fold = foldSimulation(events, events.length, { error: response.error, truncated: response.truncated })
       const gates = evaluateSystemGates(scenario.systemGates, fold.metrics, fold.eligible)
       const result: RunResult = { events, fold, gates, truncated: response.truncated, error: response.error }
       if (which === "naive") {
         setNaiveRun(result)
-        persist({ naiveRunDone: true, naiveSummary: toSummary(fold, gates) })
+        persist({ naiveRunDone: fold.eligible, naiveSummary: fold.eligible ? toSummary(fold, gates) : undefined })
       } else if (which === "fixed") {
         setFixedRun(result)
-        persist({ fixedRunDone: true, fixedSummary: toSummary(fold, gates) })
+        persist({ fixedRunDone: fold.eligible, fixedSummary: fold.eligible ? toSummary(fold, gates) : undefined })
       } else {
         setContractRun(result)
       }
@@ -173,6 +382,24 @@ export function SystemScenarioStage({ scenario }: { scenario: SystemScenario }) 
 
   const selected = shown === "naive" ? naiveRun : shown === "fixed" ? fixedRun : contractRun
   const hasBoth = naiveRun && fixedRun
+  const divergence = hasBoth ? findFirstSimulationDivergence(naiveRun.events, fixedRun.events) : null
+  const updateInterventions = (next: ScenarioInterventions) => {
+    setInterventions(next)
+    persist({ interventions: next })
+  }
+  const resetExperiment = () => {
+    const next = defaultInterventions(scenario)
+    setInterventions(next)
+    setPrediction(null)
+    setNaiveRun(null)
+    setFixedRun(null)
+    setContractRun(null)
+    setShown("naive")
+    setEventFilter(null)
+    setRunError(null)
+    setEvidenceSelected(false)
+    persist({ interventions: next, naiveRunDone: false, fixedRunDone: false, naiveSummary: undefined, fixedSummary: undefined, evidenceSelected: false })
+  }
 
   return (
     <div className="stage-shell scenario-page">
@@ -251,6 +478,17 @@ export function SystemScenarioStage({ scenario }: { scenario: SystemScenario }) 
 
           <div className="workbench-panes">
             <div className={`workbench-pane${pane === "spec" ? " active" : ""}`}>
+              <ExperimentConsole
+                scenario={scenario}
+                interventions={interventions}
+                locked={Boolean(naiveRun)}
+                prediction={prediction}
+                running={running === "naive"}
+                onChange={updateInterventions}
+                onPrediction={setPrediction}
+                onRunBaseline={() => run("naive")}
+                onReset={resetExperiment}
+              />
               <section className="spec-block">
                 <span className="experiment-kicker">The system</span>
                 <p className="spec-brief">{scenario.pitch} The thinking move: <strong>{scenario.thinkingMove}</strong>.</p>
@@ -294,8 +532,8 @@ export function SystemScenarioStage({ scenario }: { scenario: SystemScenario }) 
                     <p>See the broken behavior first. Then change the policy and compare the trace. The contract drill is a separate failure.</p>
                   </div>
                   <div className="sim-run-buttons">
-                    <button type="button" className="btn-ghost" onClick={() => run("naive")} disabled={running !== null}>
-                      {running === "naive" ? "Loading Python…" : naiveRun ? "Run naive again" : "1. Run broken policy"}
+                     <button type="button" className="btn-ghost" onClick={() => run("naive")} disabled={running !== null || !prediction}>
+                       {running === "naive" ? "Loading Python…" : naiveRun ? "Run naive again" : "1. Run broken policy"}
                     </button>
                     <button type="button" className="btn-primary run-tests" onClick={() => run("fixed")} disabled={running !== null || !naiveRun?.fold.eligible || fixedRun?.gates.every(gate => gate.passed)}>
                       {running === "fixed" ? "Loading Python…" : !naiveRun?.fold.eligible ? "2. Run broken policy first" : fixedRun ? "Run handlers again" : "2. Run my handlers"}
@@ -345,19 +583,28 @@ export function SystemScenarioStage({ scenario }: { scenario: SystemScenario }) 
                     </div>
                   </div>
                   <SimulationWaterfall fold={selected.fold} components={components} />
-                  <SimulationTimeline fold={selected.fold} />
-                  <SimulationComponents fold={selected.fold} components={components} />
-                  <SimulationEvents events={selected.events} filter={eventFilter} onFilter={setEventFilter} />
-                </>
-              )}
+                   <SimulationTimeline fold={selected.fold} />
+                   <SimulationComponents fold={selected.fold} components={components} />
+                   <SimulationEvents events={selected.events} filter={eventFilter} onFilter={setEventFilter} />
+                   <IncidentBoard
+                     scenario={scenario}
+                     naiveRun={naiveRun}
+                     fixedRun={fixedRun}
+                     prediction={prediction}
+                     divergence={divergence}
+                     evidenceSelected={evidenceSelected}
+                     onSelectEvidence={() => { setEvidenceSelected(true); persist({ evidenceSelected: true }) }}
+                   />
+                 </>
+               )}
             </div>
           )}
 
           {gatesAllPassed && (
             <div className="exit-gate">
-              <span className="experiment-kicker">All system gates pass — your policy changed the system's behavior</span>
+              <span className="experiment-kicker">{evidenceSelected ? "Evidence selected — your policy changed the system's behavior" : "Select the first divergence before writing the artifact"}</span>
               <div className="level-actions">
-                <button className="btn-primary" onClick={() => { setStage("artifact"); persist({}) }}>Save the engineering artifact →</button>
+                <button className="btn-primary" disabled={!evidenceSelected} onClick={() => { setStage("artifact"); persist({}) }}>Save the engineering artifact →</button>
               </div>
             </div>
           )}

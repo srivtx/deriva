@@ -2,8 +2,13 @@
 
 ## Status
 
-The current Systems Atelier is an S1/S2 experimental vertical slice. It is not
+The current Systems Atelier is an S1-S5 experimental vertical slice. It is not
 production-ready and must not be described as an eight-scenario finished lane.
+
+The product/world expansion is specified in
+`system-ai/systems-atelier-world-plan.md`. That plan defines the shared SignalDesk
+world, the proposed S0-S14 mission map, intervention-driven learning loop, and
+authoring sequence. This document remains the runtime and release plan beneath it.
 
 This plan turns the experiment into a reliable curriculum product for learning
 how systems interact at scale. The first production concept is explicit:
@@ -154,7 +159,7 @@ passing system gates, evidence-backed reflection, and a transfer answer.
 - Worker errors are visible and recoverable.
 - Fixed execution is locked until the naive run completes.
 - Resume status derives from the persisted run summary, not stale React state.
-- Scenario map is labeled S1/S2 beta until the remaining scenarios exist.
+- Scenario map is labeled S1-S5 beta until the remaining scenarios exist.
 - Add regression tests for every release-blocking case.
 
 ### P1 — Correct simulation semantics
@@ -243,5 +248,5 @@ Systems Atelier is production-ready only when:
 - every authored scenario passes CI with its reference and failure programs;
 - the map claims exactly the number of scenarios actually authored.
 
-Until then, the UI must say `Systems Atelier beta · S1–S2` rather than implying
+Until then, the UI must say `Systems Atelier beta · S1–S5` rather than implying
 an eight-scenario production curriculum.

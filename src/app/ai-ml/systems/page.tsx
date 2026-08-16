@@ -1,7 +1,7 @@
 "use client"
 
 // /ai-ml/systems — the Systems Atelier ladder (system-ai/systems-atelier-plan.md
-// §Routes). Eight scenarios, one interaction phenomenon each. Cards show the
+// §Routes). Each scenario teaches one interaction phenomenon. Cards show the
 // thinking move, the naive/fixed run state, and gate progress.
 
 import { useEffect, useState } from "react"
@@ -41,7 +41,7 @@ export default function SystemsPage() {
         <span className="home-eyebrow"><span>Systems Atelier</span></span>
         <h1 className="lab-title">Build systems. Watch them interact.</h1>
         <p className="narrative">
-          Beta slice: two scenarios, one interaction phenomenon each. You write the component
+           Beta slice: five scenarios, one interaction phenomenon each. You write the component
           handlers and the policies — timeouts, retries, caches, workers. The platform
           supplies the load and the failure. The naive policy runs first, always, because
           the collapse is the lesson.
