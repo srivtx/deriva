@@ -1,37 +1,18 @@
 // Systems Projects registry (system-ai/ml-projects-plan.md).
-// Project 1 is fully authored (vertical slice). Projects 2–15 are registered
-// with complete level metadata and marked planned — cards are real, content
-// lands in later phases. Parse-all at module scope → invalid projects fail the
-// build.
+// Every project is executable: Project 1 is hand-authored as the vertical
+// slice, and Projects 2–15 are adapted from the deterministic Build Everything
+// contracts into the same five-level workbench shape. Parse-all at module scope
+// means an incomplete contract fails the build instead of becoming a dead card.
 
 import { SystemsProjectSchema, type SystemsProject, type SystemsProjectLevel } from "../../../schema/project"
 import project01 from "./project-01-data-contract"
+import { authoredLevelsForProject } from "./authored-levels"
 
 interface PlannedLevelInput {
   id: string
   number: number
   title: string
   minutes: number
-}
-
-// L1–L5 systems progression moves (plan §Relationship to the nine-stage flow).
-const PROGRESSION = [
-  "define the contract",
-  "preserve an invariant",
-  "measure behavior",
-  "bound a failure",
-  "make an operational decision",
-] as const
-
-function plannedLevels(levels: PlannedLevelInput[]): SystemsProjectLevel[] {
-  return levels.map(level => ({
-    status: "planned" as const,
-    id: level.id,
-    number: level.number,
-    title: level.title,
-    durationMinutes: level.minutes,
-    thinkingMove: PROGRESSION[level.number - 1]!,
-  }))
 }
 
 function plannedProject(
@@ -45,7 +26,13 @@ function plannedProject(
   prerequisites: string[] = [],
   artifactInputs: string[] = [],
 ): SystemsProject {
-  return { id, number, family, title, pitch, userStory, prerequisites, artifactInputs, levels: plannedLevels(levels) }
+  return {
+    id, number, family, title, pitch, userStory, prerequisites, artifactInputs,
+    levels: authoredLevelsForProject(
+      { id, number, title, userStory },
+      levels.map(level => ({ id: level.id, number: level.number, title: level.title, durationMinutes: level.minutes })),
+    ),
+  }
 }
 
 const projects: SystemsProject[] = [

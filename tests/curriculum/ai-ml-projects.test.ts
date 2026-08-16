@@ -25,11 +25,10 @@ describe("the project ladder", () => {
     }
   })
 
-  it("project 1 is fully authored; projects 2–15 are fully planned (never mixed)", () => {
-    const statuses = (id: string) => new Set(systemsProjects.find(p => p.id === id)!.levels.map(l => l.status))
-    expect(statuses("document-intelligence")).toEqual(new Set(["authored"]))
-    for (const project of systemsProjects.slice(1)) {
-      expect(statuses(project.id), `${project.id} uniform status`).toEqual(new Set(["planned"]))
+  it("every project is fully authored (never mixed)", () => {
+    for (const project of systemsProjects) {
+      const statuses = new Set(project.levels.map(level => level.status))
+      expect(statuses, `${project.id} uniform status`).toEqual(new Set(["authored"]))
     }
   })
 
@@ -51,51 +50,56 @@ describe("the project ladder", () => {
   })
 })
 
-describe("authored level content (Project 1)", () => {
-  const project = systemsProjects[0]!
+describe("authored level content (all systems projects)", () => {
 
   it("every level has spec, design gate, implementation, trace, artifact, drill, and exit gate", () => {
-    for (const level of project.levels) {
-      expect(level.status).toBe("authored")
-      if (level.status !== "authored") continue
-      expect(level.spec.brief.length).toBeGreaterThan(20)
-      expect(level.spec.requiredApi).toContain("def ")
-      expect(level.spec.behavior.length).toBeGreaterThanOrEqual(2)
-      expect(level.designQuestion.options.length).toBeGreaterThanOrEqual(2)
-      expect(level.implementation.entryPoint.length).toBeGreaterThan(0)
-      expect(level.implementation.starter).toContain("def ")
-      expect(level.implementation.visibleTests.length).toBeGreaterThanOrEqual(2)
-      expect(level.implementation.hiddenTestCases.length).toBeGreaterThanOrEqual(2)
-      expect(level.failureDrill.prompt.length).toBeGreaterThan(20)
-      expect(level.exitGate.options.length).toBeGreaterThanOrEqual(2)
-      expect(level.trace.budget).toBeGreaterThanOrEqual(100)
-      expect(level.artifact.fields.length).toBeGreaterThanOrEqual(1)
-      expect(level.artifact.outputs.length).toBeGreaterThanOrEqual(1)
+    for (const project of systemsProjects) {
+      for (const level of project.levels) {
+        expect(level.status).toBe("authored")
+        if (level.status !== "authored") continue
+        expect(level.spec.brief.length).toBeGreaterThan(20)
+        expect(level.spec.requiredApi).toContain("def ")
+        expect(level.spec.behavior.length).toBeGreaterThanOrEqual(2)
+        expect(level.designQuestion.options.length).toBeGreaterThanOrEqual(2)
+        expect(level.implementation.entryPoint.length).toBeGreaterThan(0)
+        expect(level.implementation.starter).toContain("def ")
+        expect(level.implementation.visibleTests.length).toBeGreaterThanOrEqual(2)
+        expect(level.implementation.hiddenTestCases.length).toBeGreaterThanOrEqual(2)
+        expect(level.failureDrill.prompt.length).toBeGreaterThan(20)
+        expect(level.exitGate.options.length).toBeGreaterThanOrEqual(2)
+        expect(level.trace.budget).toBeGreaterThanOrEqual(100)
+        expect(level.artifact.fields.length).toBeGreaterThanOrEqual(1)
+        expect(level.artifact.outputs.length).toBeGreaterThanOrEqual(1)
+      }
     }
   })
 
   it("every hint ladder has ≥3 questions before any assertion (B3-style)", () => {
-    for (const level of project.levels) {
-      if (level.status !== "authored") continue
-      const hints = [...level.implementation.hints].sort((a, b) => a.level - b.level)
-      const firstAssertion = hints.findIndex(h => h.type === "assertion")
-      const questionsBefore = hints
-        .slice(0, firstAssertion === -1 ? hints.length : firstAssertion)
-        .filter(h => h.type === "question")
-      expect(questionsBefore.length, `${level.id} hints`).toBeGreaterThanOrEqual(3)
+    for (const project of systemsProjects) {
+      for (const level of project.levels) {
+        if (level.status !== "authored") continue
+        const hints = [...level.implementation.hints].sort((a, b) => a.level - b.level)
+        const firstAssertion = hints.findIndex(h => h.type === "assertion")
+        const questionsBefore = hints
+          .slice(0, firstAssertion === -1 ? hints.length : firstAssertion)
+          .filter(h => h.type === "question")
+        expect(questionsBefore.length, `${project.id}/${level.id} hints`).toBeGreaterThanOrEqual(3)
+      }
     }
   })
 
   it("the artifact chain is acyclic: dependencies come from earlier levels", () => {
-    const produced = new Set<string>()
-    for (const level of project.levels) {
-      if (level.status !== "authored") continue
-      for (const dep of level.dependencies) {
-        expect(produced.has(dep), `${level.id} depends on ${dep} which no earlier level produces`).toBe(true)
+    for (const project of systemsProjects) {
+      const produced = new Set<string>()
+      for (const level of project.levels) {
+        if (level.status !== "authored") continue
+        for (const dep of level.dependencies) {
+          expect(produced.has(dep), `${project.id}/${level.id} depends on ${dep} which no earlier level produces`).toBe(true)
+        }
+        for (const output of level.artifact.outputs) produced.add(output)
       }
-      for (const output of level.artifact.outputs) produced.add(output)
     }
-    expect(produced.has("dataset-release")).toBe(true)
+    expect(systemsProjects[0]!.levels.some(level => level.status === "authored" && level.artifact.outputs.includes("dataset-release"))).toBe(true)
   })
 })
 
