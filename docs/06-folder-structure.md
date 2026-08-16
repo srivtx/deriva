@@ -30,6 +30,9 @@ deriva/
 │   │   │   │   ├── [projectId]/       #   brief, five levels, artifact chain
 │   │   │   │   │   └── level/[levelId]/ # level workbench: spec→design gate→code→artifact
 │   │   │   │   └── …/level/[levelId]/artifact/ # saved artifact + reflection + next decision
+│   │   │   ├── systems/               #   Systems Atelier (system-ai/systems-atelier-plan.md)
+│   │   │   │   ├── page.tsx           #   S1–S8 scenario ladder with run/gate progress
+│   │   │   │   └── [scenarioId]/      #   gates → atelier (naive run first) → artifact
 │   │   │   ├── projects/page.tsx      #   (legacy) — superseded by the project map
 │   │   │   └── patterns/page.tsx      #   pattern journal derived from the question bank
 │   │   ├── patterns/                  #   pattern directory, quiz, and earned journal
@@ -42,6 +45,8 @@ deriva/
 │   │   │                               #   rubric, hints, pattern, nextQuestionId
 │   │   ├── schema/project.ts          #   Systems Projects contract: five levels, spec,
 │   │   │                               #   design gate, tests, artifact, drill, exit gate
+│   │   ├── schema/system-scenario.ts  #   Systems Atelier contract: load shape, component
+│   │   │                               #   latencies/failures, design gates, system gates
 │   │   ├── patterns/                  #   the 36 named patterns (04 §4) as data
 │   │   ├── topics/
 │   │   │   ├── trees/
@@ -67,7 +72,13 @@ deriva/
 │   │   │       │   ├── index.ts       #   registry: 15 projects, parse-all
 │   │   │       │   ├── project-01-data-contract.ts # Project 1, L1–L5 authored slice
 │   │   │       │   └── project-01-fixtures.ts      # per-level trace fixtures + wrappers
+│   │   │       ├── systems/           #   Systems Atelier ladder (system-ai plan)
+│   │   │       │   └── index.ts       #   S1–S2 authored scenarios + toRuntimeSpec
 │   │   │       └── …/                 #   one lesson per module (A–F)
+│   ├── learning/stages/ai/system-scenario.tsx # atelier shell: gates → runs → artifact
+│   ├── execution/simulation/runtime.ts       # in-worker Python sim runtime (load, transport)
+│   ├── viz/panels/simulation.tsx             # observation studio (waterfall, timeline, gates)
+│   └── persistence/system-scenario-progress.ts # local-first scenario state (bounded summaries)
 │   ├── learning/stages/ai/build-everything-workbench.tsx # A1 executable workspace
 │   └── persistence/build-everything-progress.ts          # local-first workspace state
 │   │   └── index.ts                   #   registry: dependency graph, build-time checks

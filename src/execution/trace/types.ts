@@ -40,9 +40,22 @@ export type StructureOp =
   | { kind: "model.score"; rowId: number; score: number }
   | { kind: "loss.update"; value: number }
   | { kind: "gradient.update"; parameter: string; value: number }
-  | { kind: "request.start"; requestId: string }
-  | { kind: "request.end"; requestId: string; status: number; latencyMs: number }
+  | { kind: "request.start"; requestId: string; spanId?: string; component?: string; parentId?: string | null }
+  | { kind: "request.end"; requestId: string; spanId?: string; status: number; latencyMs: number }
   | { kind: "failure.detected"; category: string }
+  | { kind: "api.request"; requestId: string; spanId: string; target: string; version: string }
+  | { kind: "api.response"; requestId: string; spanId: string; target: string; version: string; status: number }
+  | { kind: "contract.reject"; requestId: string; spanId: string; target: string; side: "request" | "response"; reason: string }
+  // ── Systems Atelier events (system-ai/systems-atelier-plan.md) — the
+  // distributed request path: hops, queues, caches, circuits, retries, load.
+  | { kind: "cache.hit"; key: string }
+  | { kind: "cache.miss"; key: string }
+  | { kind: "queue.enqueue"; queue: string; item: string }
+  | { kind: "queue.dequeue"; queue: string; item: string }
+  | { kind: "retry.attempt"; requestId: string; target: string; attempt: number }
+  | { kind: "circuit.open"; target: string }
+  | { kind: "circuit.close"; target: string }
+  | { kind: "load.arrival"; requestId: string; at: number }
 
 export interface Trace {
   version: 1

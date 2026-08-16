@@ -176,6 +176,15 @@ counterexample fixture fails the build.
   (clean Trace with `truncated`). Wall-clock timeout → `worker.terminate()` + respawn
   (the UI never freezes; this is why the worker, not a synchronous in-page run).
 - **Warm pool:** one worker kept warm after first load; respawn on terminate.
+- **Simulation message (Systems Atelier, system-ai plan):** `runSimulation(scenario, code,
+  budget) → events[]` runs learner component handlers inside the same Pyodide sandbox
+  under a deterministic load shape. The in-process runtime provides the transport
+  (`ctx.call` with seeded latency/failure sampling), caches, queues, circuits, and a
+  simulated clock; every dependency call has its own child span and validates the
+  declared request/response fields and API version, emitting `api.request`,
+  `api.response`, or `contract.reject`. Events carry a sim-clock `at`. Metrics are
+  folded client-side, never computed in prose; the worker enforces event and
+  wall-clock budgets.
 
 ### 4.3 Viz Layer
 - **Replay engine:** owns `cursor: number` into the trace; stepping = cursor ±; scrubbing

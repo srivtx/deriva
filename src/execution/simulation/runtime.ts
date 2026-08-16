@@ -1,0 +1,435 @@
+// Systems Atelier runtime (system-ai/systems-atelier-plan.md §Runtime contract).
+// The learner writes component handlers + a POLICY dict; this module provides
+// the runtime: in-process transport (ctx.call), seeded latency/failure sampling,
+// caches, queues, circuits, retries, and the deterministic load generator.
+// Pure Python string executed inside the Pyodide worker — no browser APIs.
+
+export interface SimulationComponentSpec {
+  id: string
+  handler: string
+  api: { version: string; requestFields: string[]; responseFields: string[] }
+  latency: { p50: number; p99: number }
+  failureRate: number
+  failureWindow?: { from: number; until: number; rate: number }
+}
+
+export interface SimulationRunSpec {
+  id: string
+  seed: number
+  rootComponent: string
+  components: SimulationComponentSpec[]
+  loadShape: {
+    baseRate: number
+    burst?: { at: number; until?: number; rate: number }
+    simSeconds: number
+    maxRequests?: number
+  }
+}
+
+export const SIM_RUNTIME = `
+import json, math, random
+
+HOP_OVERHEAD_MS = 2
+NINETY_NINE = 2.326  # z-score for p99 of a normal
+
+class SimRuntimeError(Exception):
+    pass
+
+class Timeout(SimRuntimeError):
+    pass
+
+class Unavailable(SimRuntimeError):
+    pass
+
+class ContractRejected(SimRuntimeError):
+    pass
+
+class Simulation:
+    def __init__(self, ns, scenario, rng, budget):
+        self.ns = ns
+        self.scenario = scenario
+        self.rng = rng
+        self.budget = budget
+        self.now = 0
+        self.events = []
+        self.truncated = False
+        self.span_counter = 0
+        self.breakers = {}
+        self.components = {}
+        for comp in scenario["components"]:
+            self.components[comp["id"]] = comp
+            handler = ns.get(comp["handler"])
+            if handler is None:
+                raise SimRuntimeError("missing handler for component %r: define %s(request, ctx)" % (comp["id"], comp["handler"]))
+        if scenario["rootComponent"] not in self.components:
+            raise SimRuntimeError("root component %r is not declared" % scenario["rootComponent"])
+        policy = ns.get("POLICY") or {}
+        cache_cfg = policy.get("cache") or {}
+        self.cache = Cache(self, int(cache_cfg.get("capacity", 0)), str(cache_cfg.get("eviction", "lru")))
+        circuit_cfg = policy.get("circuit") or {}
+        self.circuit_threshold = int(circuit_cfg.get("threshold", 0))
+        self.queues = {}
+        shape = scenario["loadShape"]
+        self.end_ms = int(shape["simSeconds"] * 1000) + 30_000
+
+    def new_span_id(self, request_id):
+        self.span_counter += 1
+        return "%s:call-%d" % (request_id, self.span_counter)
+
+    def emit(self, kind, **kw):
+        if self.truncated:
+            return
+        if len(self.events) >= self.budget:
+            self.truncated = True
+            return
+        kw.setdefault("at", self.now)
+        self.events.append({"t": "structure", "op": {"kind": kind, **kw}})
+
+    def sleep(self, ms):
+        if ms < 0:
+            ms = 0
+        self.now += ms
+        if self.now > self.end_ms:
+            raise SimRuntimeError("simulation clock exceeded its window; a handler is sleeping forever")
+
+    def latency_sample(self, comp):
+        mean = math.log(comp["latency"]["p50"])
+        sigma = math.log(comp["latency"]["p99"] / comp["latency"]["p50"]) / NINETY_NINE
+        z = self.rng.gauss(0, 1)
+        return HOP_OVERHEAD_MS + max(0.5, math.exp(mean + sigma * z))
+
+    def failure_rate(self, comp):
+        base = float(comp.get("failureRate", 0.0))
+        win = comp.get("failureWindow")
+        if win and win["from"] <= self.now / 1000.0 < win.get("until", 10 ** 9):
+            return float(win.get("rate", base))
+        return base
+
+    def queue(self, name):
+        if name not in self.queues:
+            self.queues[name] = SimQueue(self, name)
+        return self.queues[name]
+
+
+class Circuit:
+    def __init__(self, sim, target, threshold):
+        self.sim = sim
+        self.target = target
+        self.threshold = threshold
+        self.consecutive = 0
+        self.open_ = False
+
+    def is_open(self):
+        return self.open_
+
+    def record_failure(self):
+        if self.open_:
+            return
+        if self.threshold > 0:
+            self.consecutive += 1
+            if self.consecutive >= self.threshold:
+                self.open_ = True
+                self.sim.emit("circuit.open", target=self.target)
+
+    def record_success(self):
+        if self.open_:
+            self.open_ = False
+            self.sim.emit("circuit.close", target=self.target)
+        self.consecutive = 0
+
+    def open(self):
+        if not self.open_:
+            self.open_ = True
+            self.sim.emit("circuit.open", target=self.target)
+
+    def close(self):
+        if self.open_:
+            self.open_ = False
+            self.sim.emit("circuit.close", target=self.target)
+        self.consecutive = 0
+
+
+class Cache:
+    def __init__(self, sim, capacity, eviction):
+        self.sim = sim
+        self.capacity = capacity
+        self.eviction = eviction
+        self.items = {}
+        self.order = []
+
+    def get(self, key):
+        if self.capacity <= 0:
+            self.sim.emit("cache.miss", key=key)
+            return None
+        entry = self.items.get(key)
+        if entry is None:
+            self.sim.emit("cache.miss", key=key)
+            return None
+        value, expires = entry
+        if expires is not None and self.sim.now >= expires:
+            self._drop(key)
+            self.sim.emit("cache.miss", key=key)
+            return None
+        if self.eviction == "lru":
+            self.order.remove(key)
+            self.order.append(key)
+        self.sim.emit("cache.hit", key=key)
+        return value
+
+    def set(self, key, value, ttl_s=None):
+        if self.capacity <= 0:
+            return
+        expires = None
+        if ttl_s is not None:
+            expires = self.sim.now + int(ttl_s * 1000)
+        if key not in self.items:
+            if len(self.items) >= self.capacity:
+                victim = self.order.pop(0) if self.order else next(iter(self.items))
+                self._drop(victim)
+            self.order.append(key)
+        elif self.eviction == "lru":
+            self.order.remove(key)
+            self.order.append(key)
+        self.items[key] = [value, expires]
+
+    def _drop(self, key):
+        self.items.pop(key, None)
+        if key in self.order:
+            self.order.remove(key)
+
+
+class SimQueue:
+    def __init__(self, sim, name):
+        self.sim = sim
+        self.name = name
+        self.items = []
+
+    def enqueue(self, item):
+        self.items.append(item)
+        self.sim.emit("queue.enqueue", queue=self.name, item=item)
+
+    def dequeue(self):
+        if not self.items:
+            return None
+        item = self.items.pop(0)
+        self.sim.emit("queue.dequeue", queue=self.name, item=item)
+        return item
+
+    def depth(self):
+        return len(self.items)
+
+
+class Ctx:
+    def __init__(self, sim, request_id, span_id):
+        self.sim = sim
+        self.request_id = request_id
+        self.span_id = span_id
+        self.breakers = {}
+
+    def emit(self, kind, **kw):
+        self.sim.emit(kind, **kw)
+
+    def now(self):
+        return self.sim.now
+
+    def sleep(self, ms):
+        self.sim.sleep(ms)
+
+    def call(self, target, payload, timeout_ms=None, api_version=None):
+        sim = self.sim
+        comp = sim.components.get(target)
+        if comp is None:
+            raise SimRuntimeError("ctx.call to unknown target %r" % target)
+        span_id = sim.new_span_id(self.request_id)
+        breaker = self.breaker(target)
+        expected_version = comp["api"]["version"]
+        sent_version = api_version or "unspecified"
+        sim.emit("request.start", requestId=self.request_id, spanId=span_id, component=target, parentId=self.span_id)
+        sim.emit("api.request", requestId=self.request_id, spanId=span_id, target=target, version=sent_version)
+        start = sim.now
+        missing = [field for field in comp["api"]["requestFields"] if field not in payload]
+        if missing or sent_version != expected_version:
+            reason = "missing request fields: %s" % ", ".join(missing) if missing else "expected version %s, got %s" % (expected_version, sent_version)
+            status = 400 if missing else 409
+            sim.emit("contract.reject", requestId=self.request_id, spanId=span_id, target=target, side="request", reason=reason)
+            sim.emit("api.response", requestId=self.request_id, spanId=span_id, target=target, version=expected_version, status=status)
+            sim.emit("request.end", requestId=self.request_id, spanId=span_id, status=status, latencyMs=0)
+            raise ContractRejected("%s request contract: %s" % (target, reason))
+        if breaker.is_open():
+            sim.sleep(1)
+            sim.emit("api.response", requestId=self.request_id, spanId=span_id, target=target, version=expected_version, status=503)
+            sim.emit("request.end", requestId=self.request_id, spanId=span_id, status=503, latencyMs=sim.now - start)
+            raise Unavailable("%s circuit open" % target)
+        if sim.rng.random() < sim.failure_rate(comp):
+            sim.sleep(1)
+            sim.emit("api.response", requestId=self.request_id, spanId=span_id, target=target, version=expected_version, status=502)
+            sim.emit("request.end", requestId=self.request_id, spanId=span_id, status=502, latencyMs=sim.now - start)
+            sim.emit("failure.detected", category="unavailable:%s" % target)
+            breaker.record_failure()
+            raise Unavailable("%s unavailable" % target)
+        latency = sim.latency_sample(comp)
+        if timeout_ms is not None and latency > timeout_ms:
+            sim.sleep(timeout_ms)
+            sim.emit("api.response", requestId=self.request_id, spanId=span_id, target=target, version=expected_version, status=504)
+            sim.emit("request.end", requestId=self.request_id, spanId=span_id, status=504, latencyMs=sim.now - start)
+            sim.emit("failure.detected", category="timeout:%s" % target)
+            breaker.record_failure()
+            raise Timeout("%s exceeded %sms" % (target, timeout_ms))
+        sim.sleep(latency)
+        handler = sim.ns[comp["handler"]]
+        child_ctx = Ctx(sim, self.request_id, span_id)
+        try:
+            result = handler(payload, child_ctx)
+        except Timeout:
+            sim.emit("api.response", requestId=self.request_id, spanId=span_id, target=target, version=expected_version, status=504)
+            sim.emit("request.end", requestId=self.request_id, spanId=span_id, status=504, latencyMs=sim.now - start)
+            breaker.record_failure()
+            raise
+        except (Unavailable, ContractRejected):
+            sim.emit("api.response", requestId=self.request_id, spanId=span_id, target=target, version=expected_version, status=503)
+            sim.emit("request.end", requestId=self.request_id, spanId=span_id, status=503, latencyMs=sim.now - start)
+            breaker.record_failure()
+            raise
+        except Exception:
+            sim.emit("api.response", requestId=self.request_id, spanId=span_id, target=target, version=expected_version, status=500)
+            sim.emit("request.end", requestId=self.request_id, spanId=span_id, status=500, latencyMs=sim.now - start)
+            sim.emit("failure.detected", category="handler-error:%s" % target)
+            breaker.record_failure()
+            raise
+        else:
+            missing_response = [field for field in comp["api"]["responseFields"] if not isinstance(result, dict) or field not in result]
+            if not missing_response and "version" in comp["api"]["responseFields"] and result.get("version") != expected_version:
+                missing_response = ["version=%s (expected %s)" % (result.get("version"), expected_version)]
+            if missing_response:
+                reason = "missing response fields: %s" % ", ".join(missing_response)
+                sim.emit("contract.reject", requestId=self.request_id, spanId=span_id, target=target, side="response", reason=reason)
+                sim.emit("api.response", requestId=self.request_id, spanId=span_id, target=target, version=expected_version, status=502)
+                sim.emit("request.end", requestId=self.request_id, spanId=span_id, status=502, latencyMs=sim.now - start)
+                sim.emit("failure.detected", category="contract:%s" % target)
+                breaker.record_failure()
+                raise ContractRejected("%s response contract: %s" % (target, reason))
+            breaker.record_success()
+            sim.emit("api.response", requestId=self.request_id, spanId=span_id, target=target, version=expected_version, status=200)
+            sim.emit("request.end", requestId=self.request_id, spanId=span_id, status=200, latencyMs=sim.now - start)
+            return result
+
+    def call_with_retry(self, target, payload, timeout_ms=None, max_attempts=3, backoff_ms=100, api_version=None):
+        last = None
+        for attempt in range(1, max_attempts + 1):
+            if attempt > 1:
+                self.sim.emit("retry.attempt", requestId=self.request_id, target=target, attempt=attempt)
+                self.sim.sleep(backoff_ms * (attempt - 1))
+            try:
+                return self.call(target, payload, timeout_ms=timeout_ms, api_version=api_version)
+            except (Timeout, Unavailable, ContractRejected) as error:
+                last = error
+        if last is not None:
+            raise last
+        raise SimRuntimeError("call_with_retry needs max_attempts >= 1")
+
+    def breaker(self, target):
+        if target not in self.sim.breakers:
+            self.sim.breakers[target] = Circuit(self.sim, target, self.sim.circuit_threshold)
+        return self.sim.breakers[target]
+
+    def circuit(self, target):
+        return self.breaker(target)
+
+    def cache_get(self, key):
+        return self.sim.cache.get(key)
+
+    def cache_set(self, key, value, ttl_s=None):
+        self.sim.cache.set(key, value, ttl_s)
+
+    def enqueue(self, queue_name, item):
+        self.sim.queue(queue_name).enqueue(item)
+
+    def dequeue(self, queue_name, poll_ms=None):
+        queue = self.sim.queue(queue_name)
+        while True:
+            item = queue.dequeue()
+            if item is not None:
+                return item
+            if poll_ms is None:
+                return None
+            self.sim.sleep(poll_ms)
+            if self.sim.now > self.sim.end_ms:
+                return None
+
+
+def __deriva_arrival_times(shape, rng):
+    times = []
+    now = 0.0
+    base = float(shape["baseRate"])
+    burst = shape.get("burst")
+    sim_seconds = float(shape["simSeconds"])
+    max_requests = int(shape.get("maxRequests", 400))
+    while len(times) < max_requests:
+        rate = base
+        if burst and burst["at"] <= now < burst.get("until", sim_seconds):
+            rate = float(burst["rate"])
+        now += rng.expovariate(max(rate, 0.01))
+        if now >= sim_seconds:
+            break
+        times.append(int(now * 1000))
+    return times
+
+
+def __deriva_run_simulation(scenario_json, budget, ns):
+    scenario = json.loads(scenario_json)
+    rng = random.Random(scenario["seed"])
+    sim = Simulation(ns, scenario, rng, budget)
+    root_id = scenario["rootComponent"]
+    root_handler = sim.ns[sim.components[root_id]["handler"]]
+    arrival_times = __deriva_arrival_times(scenario["loadShape"], rng)
+    try:
+        for index, at in enumerate(arrival_times):
+            sim.now = at
+            request_id = "r-%03d" % (index + 1)
+            sim.emit("load.arrival", requestId=request_id, at=at)
+            root_span = request_id + ":root"
+            ctx = Ctx(sim, request_id, root_span)
+            sim.emit("request.start", requestId=request_id, spanId=root_span, component=root_id, parentId=None)
+            root_component = sim.components[root_id]
+            root_version = root_component["api"]["version"]
+            sim.emit("api.request", requestId=request_id, spanId=root_span, target=root_id, version=root_version)
+            start = sim.now
+            sim.sleep(sim.latency_sample(sim.components[root_id]))
+            payload = {"request_id": request_id, "query": "query-%03d" % (index + 1), "__deriva_request": request_id}
+            status = 200
+            error = None
+            try:
+                missing = [field for field in root_component["api"]["requestFields"] if field not in payload]
+                if missing:
+                    reason = "missing request fields: %s" % ", ".join(missing)
+                    sim.emit("contract.reject", requestId=request_id, spanId=root_span, target=root_id, side="request", reason=reason)
+                    raise ContractRejected("%s request contract: %s" % (root_id, reason))
+                result = root_handler(payload, ctx)
+                missing_response = [field for field in root_component["api"]["responseFields"] if not isinstance(result, dict) or field not in result]
+                if missing_response:
+                    reason = "missing response fields: %s" % ", ".join(missing_response)
+                    sim.emit("contract.reject", requestId=request_id, spanId=root_span, target=root_id, side="response", reason=reason)
+                    raise ContractRejected("%s response contract: %s" % (root_id, reason))
+            except Timeout:
+                status = 504
+                error = "root timed out"
+            except Unavailable:
+                status = 503
+                error = "dependency unavailable"
+            except ContractRejected as contract_error:
+                status = 502
+                error = str(contract_error)
+            except Exception as exception:
+                status = 500
+                error = "%s: %s" % (type(exception).__name__, exception)
+                sim.emit("failure.detected", category="root-error")
+            sim.emit("api.response", requestId=request_id, spanId=root_span, target=root_id, version=root_version, status=status)
+            sim.emit("request.end", requestId=request_id, spanId=root_span, status=status, latencyMs=sim.now - start)
+            if error is not None:
+                sim.emit("failure.detected", category=error)
+            if sim.truncated:
+                break
+    except SimRuntimeError as runtime_error:
+        return json.dumps({"events": sim.events, "truncated": True, "error": str(runtime_error)})
+    return json.dumps({"events": sim.events, "truncated": sim.truncated, "error": None})
+`

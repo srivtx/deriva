@@ -3,6 +3,7 @@
 // terminates the worker so student code cannot keep executing in the background.
 
 import type { Trace } from "../trace/types"
+import type { SimulationRunSpec } from "../simulation/runtime"
 
 export interface WorkerTestResult {
   call: string
@@ -18,6 +19,8 @@ type WorkerRequest =
   | { type: "runTrace"; code: string; entryPoint: string; arg: number; budget: number }
   // docs/13 Step 6: tiny deterministic AI/ML experiments, same sandbox
   | { type: "runAiTrace"; code: string; entryPoint: string; payload: unknown; budget: number }
+  // systems-atelier-plan.md: run a system under a deterministic load shape
+  | { type: "runSimulation"; code: string; scenario: SimulationRunSpec; budget: number }
   | { type: "warmup" }
 
 export type WorkerMessage = WorkerRequest & { id: string }
@@ -26,6 +29,7 @@ export type WorkerResponse =
   | { type: "test-result"; id: string; results: WorkerTestResult[]; syntaxError?: string }
   | { type: "script-result"; id: string; output: string; error: string | null }
   | { type: "trace"; id: string; trace: Trace; result: unknown; error: string | null }
+  | { type: "simulation-result"; id: string; events: Trace["events"]; truncated: boolean; error: string | null }
   | { type: "error"; id?: string; message: string }
   | { type: "ready"; id?: string }
   | { type: "status"; id?: string; message: string }
@@ -34,6 +38,7 @@ type Pending = {
   resolve: (response: WorkerResponse) => void
   reject: (error: Error) => void
   timer: ReturnType<typeof setTimeout>
+  cleanup: () => void
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000
@@ -64,6 +69,7 @@ class WorkerBridge {
     if (!request) return
     this.pending.delete(response.id)
     clearTimeout(request.timer)
+    request.cleanup()
     if (response.type === "error") request.reject(new Error(response.message))
     else request.resolve(response)
   }
@@ -75,6 +81,7 @@ class WorkerBridge {
     if (reason) {
       for (const request of this.pending.values()) {
         clearTimeout(request.timer)
+        request.cleanup()
         request.reject(reason)
       }
       this.pending.clear()
@@ -89,12 +96,12 @@ class WorkerBridge {
         const error = new Error("Python execution timed out; the worker was terminated")
         this.reset(error)
       }, timeoutMs)
-      this.pending.set(id, { resolve, reject, timer })
-
       const abort = () => {
         signal?.removeEventListener("abort", abort)
         this.reset(new Error("Python execution cancelled"))
       }
+      const cleanup = () => signal?.removeEventListener("abort", abort)
+      this.pending.set(id, { resolve, reject, timer, cleanup })
       if (signal?.aborted) {
         abort()
         return
@@ -106,6 +113,7 @@ class WorkerBridge {
       } catch (error) {
         signal?.removeEventListener("abort", abort)
         clearTimeout(timer)
+        cleanup()
         this.pending.delete(id)
         reject(error instanceof Error ? error : new Error(String(error)))
       }
@@ -133,6 +141,12 @@ class WorkerBridge {
   async runAiTrace(code: string, entryPoint: string, payload: unknown, budget: number, signal?: AbortSignal) {
     const response = await this.request({ type: "runAiTrace", code, entryPoint, payload, budget }, DEFAULT_TIMEOUT_MS, signal)
     if (response.type !== "trace") throw new Error("Worker returned an invalid trace response")
+    return response
+  }
+
+  async runSimulation(code: string, scenario: SimulationRunSpec, budget: number, signal?: AbortSignal) {
+    const response = await this.request({ type: "runSimulation", code, scenario, budget }, 20_000, signal)
+    if (response.type !== "simulation-result") throw new Error("Worker returned an invalid simulation response")
     return response
   }
 

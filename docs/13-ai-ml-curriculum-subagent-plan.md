@@ -1069,10 +1069,11 @@ route URL.
     /ai-ml/lab/[lessonId]
     /ai-ml/question/[questionId]
     /ai-ml/projects
+    /ai-ml/systems
     /ai-ml/patterns
 
 The AI/ML home screen shows Continue, Current Build, Tracks, Labs, Practice Queue,
-Projects, and Patterns. Every card has Start or Resume. Any question is reachable in
+Projects, Systems, and Patterns. Every card has Start or Resume. Any question is reachable in
 three taps: track, lab, question.
 
 Track pages filter by status, type, prerequisite, artifact, and review date. Persist

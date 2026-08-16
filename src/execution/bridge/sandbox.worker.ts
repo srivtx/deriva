@@ -3,6 +3,7 @@
 
 import type { WorkerMessage, WorkerResponse } from "../bridge/worker-client"
 import type { Trace } from "../trace/types"
+import { SIM_RUNTIME } from "../simulation/runtime"
 
 const ctx: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope
 const PYODIDE_VERSION = "0.25.0"
@@ -214,6 +215,24 @@ async function runAiTrace(msg: Extract<WorkerMessage, { type: "runAiTrace" }>) {
   ctx.postMessage({ type: "trace", id: msg.id, trace, result: parsed.result, error: parsed.error } satisfies WorkerResponse)
 }
 
+// Systems Atelier simulation runner (system-ai/systems-atelier-plan.md §Worker
+// contract). The runtime executes the learner's handlers under a deterministic
+// load shape and returns the full event log; metrics are folded on the client.
+async function runSimulation(msg: Extract<WorkerMessage, { type: "runSimulation" }>) {
+  const py = await loadPyodide()
+  py.runPython(SIM_RUNTIME)
+  py.runPython("__deriva_ns = {}")
+  try {
+    py.runPython(`exec(${JSON.stringify(msg.code)}, __deriva_ns)`)
+  } catch (error) {
+    ctx.postMessage({ type: "simulation-result", id: msg.id, events: [], truncated: true, error: String(error).split("\\n").slice(-3).join("\\n") } satisfies WorkerResponse)
+    return
+  }
+  const json = py.runPython(`__deriva_run_simulation(${JSON.stringify(JSON.stringify(msg.scenario))}, ${msg.budget}, __deriva_ns)`)
+  const parsed = JSON.parse(json)
+  ctx.postMessage({ type: "simulation-result", id: msg.id, events: parsed.events, truncated: parsed.truncated, error: parsed.error } satisfies WorkerResponse)
+}
+
 ctx.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   const msg = event.data
   try {
@@ -228,6 +247,8 @@ ctx.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       await runTrace(msg)
     } else if (msg.type === "runAiTrace") {
       await runAiTrace(msg)
+    } else if (msg.type === "runSimulation") {
+      await runSimulation(msg)
     }
   } catch (error) {
     ctx.postMessage({ type: "error", id: msg.id, message: error instanceof Error ? error.message : String(error) } satisfies WorkerResponse)
