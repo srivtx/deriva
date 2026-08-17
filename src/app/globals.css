@@ -103,6 +103,7 @@
 .pwa-status-dot.ready { background: var(--viz-settled); box-shadow: 0 0 0 4px color-mix(in srgb, var(--viz-settled) 15%, transparent); }
 .pwa-status-card strong { font: 700 13px var(--font-ui); }
 .pwa-status-card p { margin: 4px 0 0; color: var(--ink-soft); font: 12px/1.45 var(--font-ui); }
+.pwa-install-button { min-height: 38px; margin-top: 10px; padding: 8px 11px; font-size: 11px; }
 .settings-field { display: grid; gap: 6px; margin-top: 10px; color: var(--ink-soft); font: 700 11px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; }
 .settings-field input:not([type="file"]) { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-raised); color: var(--ink); font: 15px var(--font-ui); letter-spacing: 0; }
 .settings-field small { color: var(--ink-soft); font: 11px var(--font-ui); letter-spacing: 0; text-transform: none; }

@@ -6,6 +6,26 @@ import { applyPreferences, loadPreferences, type Preferences } from "@/persisten
 const MANIFEST_SELECTOR = "link[data-deriva-dynamic-manifest]"
 let dynamicManifestUrl: string | null = null
 
+type AndroidInstallEvent = Event & {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
+}
+
+let deferredInstall: AndroidInstallEvent | null = null
+
+export function canPromptPwaInstall() {
+  return deferredInstall !== null
+}
+
+export async function promptPwaInstall() {
+  if (!deferredInstall) return false
+  const event = deferredInstall
+  await event.prompt()
+  const choice = await event.userChoice
+  deferredInstall = null
+  return choice.outcome === "accepted"
+}
+
 function updateIconLink(rel: "icon" | "apple-touch-icon", href: string) {
   const selector = `link[rel="${rel}"][data-deriva-dynamic-icon]`
   let link = document.head.querySelector<HTMLLinkElement>(selector)
@@ -94,12 +114,25 @@ export default function PwaBranding() {
   useEffect(() => {
     const next = loadPreferences()
     applyPwaBranding(next)
+    const onBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault()
+      deferredInstall = event as AndroidInstallEvent
+      window.dispatchEvent(new Event("deriva-pwa-install-available"))
+    }
+    const onAppInstalled = () => {
+      deferredInstall = null
+      window.dispatchEvent(new Event("deriva-pwa-install-complete"))
+    }
     const onPreferencesChange = (event: Event) => {
       const detail = (event as CustomEvent<Preferences>).detail
       if (detail) applyPwaBranding(detail)
     }
+    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt)
+    window.addEventListener("appinstalled", onAppInstalled)
     window.addEventListener("deriva-preferences-change", onPreferencesChange)
     return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt)
+      window.removeEventListener("appinstalled", onAppInstalled)
       window.removeEventListener("deriva-preferences-change", onPreferencesChange)
       document.head.querySelector(MANIFEST_SELECTOR)?.remove()
       if (dynamicManifestUrl) URL.revokeObjectURL(dynamicManifestUrl)

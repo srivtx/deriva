@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { applyPreferences, defaultPreferences, loadPreferences, savePreferences, type AccentPreference, type DensityPreference, type Preferences, type ShapePreference, type TexturePreference, type ThemePreference, type TypePreference } from "@/persistence/preferences"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
+import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 
 const themes: { value: ThemePreference; title: string; body: string; swatch: string }[] = [
   { value: "system", title: "System", body: "Follow your device.", swatch: "linear-gradient(135deg, #FAF9F6 50%, #14161A 50%)" },
@@ -178,10 +179,19 @@ function ChoiceGroup<T extends string>({ label, value, options, onChange }: { la
 
 function PwaInstallStatus({ logoReady }: { logoReady: boolean }) {
   const [standalone, setStandalone] = useState(false)
+  const [android, setAndroid] = useState(false)
+  const [canInstall, setCanInstall] = useState(false)
   useEffect(() => {
     setStandalone(window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
+    setAndroid(/Android/i.test(navigator.userAgent))
+    setCanInstall(canPromptPwaInstall())
+    const refresh = () => setCanInstall(canPromptPwaInstall())
+    window.addEventListener("deriva-pwa-install-available", refresh)
+    window.addEventListener("deriva-pwa-install-complete", refresh)
+    return () => { window.removeEventListener("deriva-pwa-install-available", refresh); window.removeEventListener("deriva-pwa-install-complete", refresh) }
   }, [])
-  return <div className="pwa-status-card"><div className={`pwa-status-dot${logoReady ? " ready" : ""}`} /><div><strong>{logoReady ? "Custom icon prepared" : "Default icon active"}</strong><p>{standalone ? "You are viewing the installed app. Remove the old home-screen icon and add Deriva again to apply a new upload." : "New installs will use the prepared 512px icon. On iPhone, use Share → Add to Home Screen after uploading."}</p></div></div>
+  const install = async () => { await promptPwaInstall(); setCanInstall(canPromptPwaInstall()) }
+  return <div className="pwa-status-card"><div className={`pwa-status-dot${logoReady ? " ready" : ""}`} /><div><strong>{logoReady ? "Custom icon prepared" : "Default icon active"}</strong><p>{standalone ? "This Android app is already installed. Remove it from the home screen and install again to replace its icon." : android ? "Chrome will use this icon for a new install. If the install prompt is ready, install it here." : "New installs use this icon. On iPhone, use Share → Add to Home Screen after uploading."}</p>{android && !standalone && canInstall && <button type="button" className="btn-primary pwa-install-button" onClick={install}>{logoReady ? "Install custom Android app" : "Install Android app"} →</button>}</div></div>
 }
 
 function PreferenceRow({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (checked: boolean) => void }) {
