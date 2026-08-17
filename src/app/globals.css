@@ -109,6 +109,8 @@
 .pwa-install-actions span { color: var(--ink-soft); font: 10px/1.35 var(--font-ui); }
 .pwa-download-link { display: inline-block; margin-top: 9px; color: var(--accent); font: 600 11px var(--font-ui); text-decoration: none; }
 .pwa-download-link:hover { text-decoration: underline; }
+.pwa-native-icon-link { display: inline-block; margin-top: 9px; color: var(--viz-settled); font: 600 11px var(--font-ui); text-decoration: none; }
+.pwa-native-icon-link:hover { text-decoration: underline; }
 .settings-field { display: grid; gap: 6px; margin-top: 10px; color: var(--ink-soft); font: 700 11px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; }
 .settings-field input:not([type="file"]) { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-raised); color: var(--ink); font: 15px var(--font-ui); letter-spacing: 0; }
 .settings-field small { color: var(--ink-soft); font: 11px var(--font-ui); letter-spacing: 0; text-transform: none; }
@@ -238,12 +240,12 @@
 .android-download { display: inline-flex; align-items: center; gap: 8px; margin-top: 25px; padding: 13px 16px; border-radius: calc(var(--radius) - 2px); background: var(--android-accent); color: var(--paper-raised); font: 700 13px var(--font-ui); text-decoration: none; transition: transform var(--dur-fast), box-shadow var(--dur-fast); }
 .android-download:hover { transform: translateY(-2px); box-shadow: var(--shadow-raised); }
 .android-note { margin: 12px 0 0; color: var(--ink-soft); font: 11px/1.45 var(--font-ui); }
-.android-icon-choice { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 22px; padding-top: 18px; border-top: 1px solid color-mix(in srgb, var(--android-accent) 22%, var(--line)); }
-.android-icon-choice-kicker { color: var(--android-accent); font: 700 9px var(--font-ui); letter-spacing: .12em; }
-.android-icon-choice h2 { margin: 4px 0 3px; color: var(--ink); font: 700 18px/1.15 var(--font-narrative); }
-.android-icon-choice p { max-width: 460px; margin: 0; color: var(--ink-soft); font: 11px/1.45 var(--font-ui); }
-.android-icon-choice-button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; padding: 10px 12px; border: 1px solid var(--android-accent); border-radius: calc(var(--radius) - 2px); background: transparent; color: var(--android-accent); font: 700 11px var(--font-ui); cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast); }
-.android-icon-choice-button:hover { background: var(--android-accent); color: var(--paper-raised); }
+.android-pwa-option { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 22px; padding-top: 18px; border-top: 1px solid color-mix(in srgb, var(--android-accent) 22%, var(--line)); }
+.android-pwa-option-kicker { color: var(--android-accent); font: 700 9px var(--font-ui); letter-spacing: .12em; }
+.android-pwa-option h2 { margin: 4px 0 3px; color: var(--ink); font: 700 18px/1.15 var(--font-narrative); }
+.android-pwa-option p { max-width: 460px; margin: 0; color: var(--ink-soft); font: 11px/1.45 var(--font-ui); }
+.android-pwa-option-button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; padding: 10px 12px; border: 1px solid var(--android-accent); border-radius: calc(var(--radius) - 2px); background: transparent; color: var(--android-accent); font: 700 11px var(--font-ui); cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast); }
+.android-pwa-option-button:hover { background: var(--android-accent); color: var(--paper-raised); }
 .android-install-guide { margin-top: 16px; padding: clamp(20px, 4vw, 32px); }
 .android-install-guide h2 { margin: 8px 0 22px; color: var(--android-accent); font: 700 clamp(26px, 4vw, 38px)/1.05 var(--font-narrative); letter-spacing: -.025em; }
 .android-install-guide ol { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; counter-reset: android-step; }
@@ -1369,8 +1371,8 @@ code, pre { font-family: var(--font-mono); }
    .android-title-row p { font-size: 15px; }
    .android-build-meta { grid-template-columns: 1fr; margin-top: 26px; }
    .android-download { width: 100%; min-height: 48px; justify-content: center; }
-   .android-icon-choice { align-items: stretch; flex-direction: column; gap: 12px; }
-   .android-icon-choice-button { justify-content: center; min-height: 44px; }
+   .android-pwa-option { align-items: stretch; flex-direction: column; gap: 12px; }
+   .android-pwa-option-button { justify-content: center; min-height: 44px; }
    .android-app-callout { align-items: stretch; flex-direction: column; gap: 14px; margin-bottom: 24px; padding: 16px; }
    .android-app-callout-link { justify-content: center; }
    .theme-options { grid-template-columns: 1fr; }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { applyPreferences, defaultPreferences, loadPreferences, savePreferences, type AccentPreference, type DensityPreference, type Preferences, type ShapePreference, type TexturePreference, type ThemePreference, type TypePreference } from "@/persistence/preferences"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
-import { canPromptPwaInstall } from "@/components/pwa-branding"
+import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 
 const themes: { value: ThemePreference; title: string; body: string; swatch: string }[] = [
   { value: "system", title: "System", body: "Follow your device.", swatch: "linear-gradient(135deg, #FAF9F6 50%, #14161A 50%)" },
@@ -191,8 +191,8 @@ function PwaInstallStatus({ logoReady }: { logoReady: boolean }) {
     window.addEventListener("deriva-pwa-install-complete", refresh)
     return () => { window.removeEventListener("deriva-pwa-install-available", refresh); window.removeEventListener("deriva-pwa-install-complete", refresh) }
   }, [])
-  const reloadInstallCheck = () => window.location.reload()
-  return <div className="pwa-status-card"><div className={`pwa-status-dot${logoReady ? " ready" : ""}`} /><div><strong>{logoReady ? "Custom icon prepared" : "Default icon active"}</strong><p>{standalone ? "This Android app is already installed. Remove it from the home screen and install again to replace its icon." : android ? "Open the Android install page to download the signed app." : "New installs use this icon. On iPhone, use Share → Add to Home Screen after uploading."}</p>{android && !standalone && <Link className="btn-primary pwa-install-button" href="/android">Install Android app →</Link>}{!android && <Link className="pwa-download-link" href="/android">Download the signed Android app</Link>}{android && !standalone && !canInstall && <div className="pwa-install-actions"><button type="button" className="btn-ghost pwa-install-button" onClick={reloadInstallCheck}>Reload browser install check</button><span>For the browser PWA, use Chrome&rsquo;s menu → <b>Install app</b>.</span></div>}</div></div>
+  const installPwa = async () => { await promptPwaInstall(); setCanInstall(canPromptPwaInstall()) }
+  return <div className="pwa-status-card"><div className={`pwa-status-dot${logoReady || android ? " ready" : ""}`} /><div><strong>{android ? "Bundled icons available" : logoReady ? "Custom icon prepared" : "Default icon active"}</strong><p>{standalone ? "This Android app is already installed. Remove it from the home screen and install again to replace its icon." : android ? "Choose the signed APK page or the browser PWA below." : "New installs use this icon. On iPhone, use Share → Add to Home Screen after uploading."}</p>{android && !standalone && <Link className="btn-primary pwa-install-button" href="/android">Install signed Android app →</Link>}{!standalone && canInstall && <button type="button" className="btn-ghost pwa-install-button" onClick={installPwa}>Install browser PWA</button>}{android && <a className="pwa-native-icon-link" href="deriva://settings/icons">Change app icon in Android app</a>}{!android && <Link className="pwa-download-link" href="/android">Download the signed Android app</Link>}</div></div>
 }
 
 function PreferenceRow({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (checked: boolean) => void }) {

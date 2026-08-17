@@ -83,9 +83,12 @@ cp android/deriva-twa/app/build/outputs/apk/release/app-release.apk public/downl
 If the signing key changes, update `public/.well-known/assetlinks.json` with the new
 SHA-256 certificate fingerprint before publishing the APK.
 
-The green Android page also offers a browser-installed app using the logo saved in
-Settings. That custom-icon install is separate from the signed APK, whose launcher icon
-is packaged at build time.
+The APK includes bundled launcher icon variants. From the installed app, open Settings
+and choose `Change app icon in Android app`; the native Android screen switches the
+launcher component without opening Chrome or downloading another app.
+
+The green Android page also exposes a separate browser PWA install option when Chrome
+offers it. The PWA can use a logo saved in Settings; it does not replace the signed APK.
 
 ## Project Structure
 

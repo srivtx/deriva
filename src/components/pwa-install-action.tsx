@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 import { loadPreferences } from "@/persistence/preferences"
 
-export default function AndroidInstallActions() {
+export default function PwaInstallAction() {
   const [android, setAndroid] = useState(false)
   const [standalone, setStandalone] = useState(false)
   const [canInstall, setCanInstall] = useState(false)
@@ -35,13 +35,13 @@ export default function AndroidInstallActions() {
   }
 
   return (
-    <section className="android-icon-choice" aria-labelledby="android-icon-choice-heading">
+    <section className="android-pwa-option" aria-labelledby="android-pwa-heading">
       <div>
-        <span className="android-icon-choice-kicker">PERSONAL ICON</span>
-        <h2 id="android-icon-choice-heading">Install with {customLogo ? "your saved logo" : "the current icon"}.</h2>
-        <p>This browser-installed Android app can use the icon from Settings. It is separate from the signed APK download above.</p>
+        <span className="android-pwa-option-kicker">BROWSER PWA</span>
+        <h2 id="android-pwa-heading">Prefer the installable web app?</h2>
+        <p>This option stays in Chrome and can use {customLogo ? "your saved logo" : "the current icon"} from Settings. It is separate from the signed APK.</p>
       </div>
-      <button type="button" className="android-icon-choice-button" onClick={install}>Install custom app <span aria-hidden="true">-&gt;</span></button>
+      <button type="button" className="android-pwa-option-button" onClick={install}>Install browser PWA <span aria-hidden="true">-&gt;</span></button>
     </section>
   )
 }

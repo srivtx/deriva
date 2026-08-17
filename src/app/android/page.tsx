@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import AndroidInstallActions from "@/components/android-install-actions"
+import PwaInstallAction from "@/components/pwa-install-action"
 
 export const metadata: Metadata = {
   title: "Deriva for Android",
@@ -19,7 +19,7 @@ export default function AndroidPage() {
           </div>
         </div>
         <div className="android-build-meta">
-          <div><span>BUILD</span><strong>1</strong></div>
+          <div><span>BUILD</span><strong>1.1</strong></div>
           <div><span>PACKAGE</span><strong>xyz.srivtx.deriva</strong></div>
           <div><span>FORMAT</span><strong>APK</strong></div>
         </div>
@@ -27,7 +27,8 @@ export default function AndroidPage() {
           Download Android app <span aria-hidden="true">-&gt;</span>
         </a>
         <p className="android-note">Android may ask you to allow installs from this browser before opening the downloaded APK.</p>
-        <AndroidInstallActions />
+        <p className="android-note">After installation, open Settings inside the app and choose <strong>Change app icon in Android app</strong> to select a bundled launcher icon.</p>
+        <PwaInstallAction />
       </section>
 
       <section className="android-install-guide" aria-labelledby="android-install-heading">
