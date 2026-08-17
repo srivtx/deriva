@@ -19,7 +19,7 @@ export default function AndroidPage() {
           </div>
         </div>
         <div className="android-build-meta">
-          <div><span>BUILD</span><strong>1.1</strong></div>
+          <div><span>BUILD</span><strong>1.2</strong></div>
           <div><span>PACKAGE</span><strong>xyz.srivtx.deriva</strong></div>
           <div><span>FORMAT</span><strong>APK</strong></div>
         </div>
