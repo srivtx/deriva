@@ -10,28 +10,32 @@ export default function AndroidPage() {
   return (
     <main className="android-page">
       <section className="android-hero">
-        <span className="android-kicker">ANDROID / SIGNED BUILD</span>
-        <div className="android-title-row">
-          <div className="android-brand-pair">
-            <img className="android-icon" src="/icons/icon-maskable.png" alt="Deriva app icon" width={96} height={96} />
-            <AndroidMascot />
+        <div className="android-hero-grid">
+          <div className="android-hero-copy">
+            <span className="android-kicker">ANDROID / SIGNED BUILD</span>
+            <h1>Deriva for Android.</h1>
+            <p>One quiet, green workspace for deriving algorithms wherever you think best. Install the signed app, then make the launcher feel like yours.</p>
+            <div className="android-build-meta">
+              <div><span>BUILD</span><strong>1.2</strong></div>
+              <div><span>PACKAGE</span><strong>xyz.srivtx.deriva</strong></div>
+              <div><span>FORMAT</span><strong>APK</strong></div>
+            </div>
+            <a className="android-download" href="/downloads/deriva-android.apk" download>
+              Download Android app <span aria-hidden="true">-&gt;</span>
+            </a>
+            <p className="android-note">Android may ask you to allow installs from this browser before opening the downloaded APK.</p>
+            <p className="android-note">After installation, open Settings inside the app and choose <strong>Change app icon in Android app</strong> to select a bundled launcher icon.</p>
+            <PwaInstallAction />
           </div>
-          <div>
-            <h1>Deriva for Android</h1>
-            <p>Carry the derivation with you. The signed app opens Deriva as a focused Android surface.</p>
+          <div className="android-hero-visual" aria-label="Deriva moss Android app mark">
+            <div className="android-visual-orbit" />
+            <div className="android-visual-stamp">
+              <img className="android-icon" src="/icons/icon-moss.svg" alt="Moss Deriva app icon" width={176} height={176} />
+              <AndroidMascot />
+            </div>
+            <span className="android-visual-caption">DERIVA / MOSS BUILD / 1.2</span>
           </div>
         </div>
-        <div className="android-build-meta">
-          <div><span>BUILD</span><strong>1.2</strong></div>
-          <div><span>PACKAGE</span><strong>xyz.srivtx.deriva</strong></div>
-          <div><span>FORMAT</span><strong>APK</strong></div>
-        </div>
-        <a className="android-download" href="/downloads/deriva-android.apk" download>
-          Download Android app <span aria-hidden="true">-&gt;</span>
-        </a>
-        <p className="android-note">Android may ask you to allow installs from this browser before opening the downloaded APK.</p>
-        <p className="android-note">After installation, open Settings inside the app and choose <strong>Change app icon in Android app</strong> to select a bundled launcher icon.</p>
-        <PwaInstallAction />
       </section>
 
       <section className="android-install-guide" aria-labelledby="android-install-heading">

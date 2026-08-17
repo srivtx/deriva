@@ -1,59 +1,106 @@
 <div align="center">
-  <img src="public/favicon.svg" width="96" height="96" alt="Deriva logo" />
+  <img src="public/icons/icon-moss.svg" width="96" height="96" alt="Deriva moss logo" />
   <h1>Deriva</h1>
   <p><strong>Derive the algorithm. Don't memorize it.</strong></p>
-  <p>An interactive platform for mastering DSA, System Design, and Low-Level Design through first-principles reasoning.</p>
+  <p>A reasoning-first workspace for DSA, system design, low-level design, and AI/ML systems.</p>
+  <p>
+    <a href="https://deriva.srivtx.xyz">Open Deriva</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://deriva.srivtx.xyz/android">Android install</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://deriva.srivtx.xyz/downloads/deriva-android.apk">Download APK</a>
+  </p>
 </div>
 
----
+<p align="center">
+  <strong>Moss green by default.</strong> Technical voice. Local-first progress. Python in the browser.
+</p>
 
-## What is Deriva?
+## The Product
 
-Deriva trains you to *derive* solutions from first principles instead of memorizing patterns. Every lesson follows a **9-stage guided flow**: each stage reuses the skeleton from the previous one and adds exactly **one new mental model** — so you always think *"I already know 90% of this problem."*
+Most learning platforms show an algorithm and ask you to recognize it later. Deriva reverses
+that order. It creates the need for the idea, gives you a small space to experiment, and
+only exposes implementation after you have designed the reasoning.
 
-Three tracks, one philosophy:
+Every lesson follows the same nine-stage arc:
 
-| Track | Problems | What you practice |
-|---|---|---|
-| **DSA** | 700 | 14 topics (Trees, Graphs, DP, Backtracking…) × 50 problems each, with in-browser Python execution |
-| **System Design (HLD)** | 45 | Requirements → API contracts → capacity math → components → naive → optimized → full designs (URL shortener, Twitter, WhatsApp) on an interactive architecture canvas |
-| **Low-Level Design (OOP)** | 35 | Entities → responsibilities → relationships → state machines → god classes → design patterns → full systems (parking lot, LRU cache, Splitwise) |
-
-## The 9-Stage Guided Flow
-
-Every problem moves through the same arc:
-
-```
-Understand → Play → Reason → Discover → Design
-  → Implement → Execute → Reflect → Generalize
+```text
+Understand -> Play -> Reason -> Discover -> Design
+    -> Implement -> Execute -> Reflect -> Generalize
 ```
 
-- **Naive before optimized** — you build the O(n²) version first and *feel* why it breaks, so the optimization is a relief, not a trick.
-- **Progressive hints** — 3 levels per problem: direction → specifics → near-solution.
-- **Solutions revealed only on demand** — struggle first, always.
-- **Everything runs locally** — progress persists in your browser. Nothing is uploaded.
+The goal is not to finish another list. The goal is to leave with a method you can recreate
+on a problem you have never seen.
 
-## Tech Stack
+## What You Can Do
 
-- **Next.js 16** (App Router, static export-friendly) + **React 19** + **TypeScript**
-- **Pyodide** (CPython WASM) — Python runs entirely in your browser
-- **@xyflow/react** — the interactive system-design canvas (drag, connect, validate architectures)
-- **Zero backend** — static site; localStorage/IndexedDB persistence
-- **PWA** — installable, offline-capable shell
+| Surface | What it is for |
+| --- | --- |
+| DSA | 700 problems across 14 topics, with first-principles scaffolding and in-browser Python |
+| System Design | 45 architecture problems with requirements, capacity math, components, and validation |
+| Low-Level Design | 35 object-design problems with entities, relationships, state machines, and patterns |
+| AI/ML Systems | Labs, question tracks, production projects, and systems scenarios |
+| Pattern Journal | A personal record of the reusable thinking moves you have earned |
+| Learning Observatory | Progress, next actions, review cues, and transfer evidence in one view |
+| Game Mode | Interactive practice for invariants, decisions, compression, and system behavior |
 
-## Getting Started
+## The Learning Contract
+
+- Concepts come before reasoning, patterns, and implementation.
+- Hints are questions before they become explanations.
+- Naive solutions appear before optimizations when the contrast teaches something.
+- Your own execution produces the trace and the visualization.
+- Progress stays local to the browser in the v0 product.
+- There are no streaks, leaderboards, or urgency mechanics.
+
+## Install
+
+### Web App
+
+Open the production app at [deriva.srivtx.xyz](https://deriva.srivtx.xyz). The site is
+installable as a PWA and can use a logo saved from Settings when Chrome offers the browser
+install prompt.
+
+### Android APK
+
+Use the [Android install page](https://deriva.srivtx.xyz/android) to download the signed
+Trusted Web Activity APK. The current release is version `1.2` with package ID
+`xyz.srivtx.deriva`.
+
+The installed APK includes native launcher icon controls. Open Settings inside the app and
+choose **Change app icon in Android app** to preview and apply:
+
+- Moss green
+- Deriva blue
+- Ember warm
+- Violet night
+- Cipher deep green
+- Crypto gold
+- Orbit electric blue
+
+The APK also lets you choose a local image and pin it as a custom home-screen shortcut on
+supported launchers. The signed APK launcher icon itself uses the bundled choices above;
+arbitrary APK resource replacement requires rebuilding and signing a new release.
+
+## Local Development
+
+Requirements: Node.js, pnpm, and Python 3 for the optional curriculum-bank checks.
 
 ```bash
 pnpm install
-pnpm dev        # http://localhost:3000
+pnpm dev
 ```
+
+Open `http://localhost:3000`.
+
+Production build and server:
 
 ```bash
-pnpm build      # production build (static routes prerender)
-pnpm start      # serve the production build
+pnpm build
+pnpm start
 ```
 
-Validation commands:
+Validation:
 
 ```bash
 pnpm typecheck
@@ -62,14 +109,10 @@ node scripts/extract-bank.mjs
 python3 scripts/verify-bank.py /tmp/deriva-bank.json
 ```
 
-## Android App
+## Android Release Build
 
-The signed Android Trusted Web Activity is available at [/android](/android), with the
-APK served from [/downloads/deriva-android.apk](/downloads/deriva-android.apk). The
-Digital Asset Links declaration lives at `public/.well-known/assetlinks.json`.
-
-To rebuild the release APK locally, keep the keystore outside the repository and expose
-its password through the macOS Keychain entry used by the project:
+The repeatable Trusted Web Activity project lives in `android/deriva-twa`. The signing
+keystore stays outside the repository and its password is read from the macOS Keychain.
 
 ```bash
 JAVA_HOME="$(/usr/libexec/java_home -v 17)" \
@@ -77,79 +120,59 @@ ANDROID_HOME="$HOME/.bubblewrap/android-sdk" \
 DERIVA_KEYSTORE_PATH="$HOME/.config/deriva-android/deriva-release.jks" \
 DERIVA_KEYSTORE_PASSWORD="$(security find-generic-password -s deriva-android-keystore -w)" \
 android/deriva-twa/gradlew -p android/deriva-twa assembleRelease
-cp android/deriva-twa/app/build/outputs/apk/release/app-release.apk public/downloads/deriva-android.apk
+
+cp android/deriva-twa/app/build/outputs/apk/release/app-release.apk \
+  public/downloads/deriva-android.apk
 ```
 
 If the signing key changes, update `public/.well-known/assetlinks.json` with the new
-SHA-256 certificate fingerprint before publishing the APK.
+SHA-256 certificate fingerprint before publishing. Never commit the keystore or its
+password.
 
-The APK includes bundled launcher icon variants: Default blue, Moss green, Ember,
-Violet, Cipher, Crypto gold, and Orbit blue. From the installed app, open Settings and
-choose `Change app icon in Android app`; the native Android screen previews the choices
-and switches the launcher component only after Apply, without opening Chrome or
-downloading another app. A local image can also be pinned as a custom home-screen
-shortcut on supported Android launchers.
+## Architecture
 
-The green Android page also exposes a separate browser PWA install option when Chrome
-offers it. The PWA can use a logo saved in Settings; it does not replace the signed APK.
-
-## Project Structure
-
-```
-src/
-  app/
-    page.tsx              # landing — all tracks
-    practice/             # DSA: 14 topics × 50 problems, Pyodide execution
-    design/               # HLD: React Flow canvas + checklists + estimation
-    lld/                  # LLD: OOP design with test-driven execution
-    topic/[id]/           # topic hub — stage map + progress
-    dashboard/            # cross-track progress
-  components/
-    app-shell.tsx         # global header, breadcrumbs, progress
-    mobile-problem-nav.tsx# mobile navigation (stage-grouped select)
-    logo.tsx              # editorial d monogram and wordmark
-  data/
-    *.ts                  # 14 DSA topic files (50 problems each)
-    system-design.ts      # 45 HLD problems
-    lld.ts                # 35 LLD problems
-    index.ts              # topic registry
-public/
-  favicon.svg             # browser favicon
-  icons/                  # PWA icons (180/192/512 + maskable)
-  manifest.webmanifest
-  .well-known/assetlinks.json # Android app/site association
-  downloads/deriva-android.apk # signed Android release artifact
-  sw.js                   # service worker — cache-first assets, offline pages
-android/deriva-twa/       # repeatable Trusted Web Activity release project
-docs/                     # product & curriculum design docs
+```text
+typed curriculum
+      |
+      v
+9-stage learning engine -----> local progress and preferences
+      |
+      v
+Pyodide in a Web Worker -----> immutable execution trace
+                                    |
+                                    v
+                         visualizers, replay, reflection
 ```
 
-## Authoring Content
+The application has no runtime backend in the v0 architecture. Python execution runs in a
+dedicated worker, progress is local-first, and the visualization layer reads traces rather
+than executing student code itself.
 
-Each problem is typed data with the same shape:
+## Repository Shape
 
-```ts
-{
-  id, stage, title, pattern, skill,
-  statement, examples, why,
-  starterCode, hints[3], solution, walkthrough, testCode
-}
+```text
+src/app/                 Next.js routes and product surfaces
+src/curriculum/          Typed lesson and question data
+src/learning/             Nine-stage learning engine
+src/execution/            Pyodide bridge, tracing, and simulation runtime
+src/viz/                  Pure trace replay and visualization panels
+src/persistence/          Local preferences and progress boundaries
+public/                   PWA assets, manifest, APK, and Asset Links
+android/deriva-twa/       Rebuildable signed Android project
+docs/                     Product, curriculum, and architecture constitution
 ```
-
-`testCode` runs against the student's code in Pyodide; `All tests passed!` marks completion. HLD problems add `requiredNodes`/`requiredEdges` (canvas validation), `checklist` (requirement scoping), or `estimation` (capacity-math reveal).
 
 ## Roadmap
 
-- [x] DSA track — 700 problems with Pyodide execution
-- [x] HLD track — 45 problems with React Flow architecture canvas
-- [x] LLD track — 35 problems with test-driven OOP design
-- [x] PWA — installable, offline shell
-- [x] Signed Android app — TWA build, download page, and app/site verification
-- [x] Reference nine-stage guided lesson — Trees recursion reflex (`/learn/trees/sum-1-to-n`): derive the contract before the editor exists
-- [ ] Port remaining topics into nine-stage lesson modules
-- [ ] CS fundamentals track (OS / DB / networking / concurrency)
-- [ ] Mock interview mode — timed random problems across tracks
-- [ ] Trace-based visualizations for all structure families
+- [x] DSA, HLD, LLD, AI/ML, games, and pattern surfaces
+- [x] Nine-stage reference lesson for tree recursion
+- [x] PWA install flow with local identity customization
+- [x] Signed Android APK with native icon settings
+- [x] Moss-green product identity and technical default voice
+- [ ] Port every legacy problem into the full nine-stage lesson engine
+- [ ] Trace-based visualizations for every structure family
+- [ ] CS fundamentals track: operating systems, databases, networking, and concurrency
+- [ ] Mock interview mode without turning practice into a leaderboard
 
 ## License
 
