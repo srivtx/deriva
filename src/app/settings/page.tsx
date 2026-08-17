@@ -181,17 +181,21 @@ function PwaInstallStatus({ logoReady }: { logoReady: boolean }) {
   const [standalone, setStandalone] = useState(false)
   const [android, setAndroid] = useState(false)
   const [canInstall, setCanInstall] = useState(false)
+  const [secure, setSecure] = useState(false)
   useEffect(() => {
     setStandalone(window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
     setAndroid(/Android/i.test(navigator.userAgent))
     setCanInstall(canPromptPwaInstall())
+    setSecure(window.isSecureContext)
     const refresh = () => setCanInstall(canPromptPwaInstall())
     window.addEventListener("deriva-pwa-install-available", refresh)
     window.addEventListener("deriva-pwa-install-complete", refresh)
     return () => { window.removeEventListener("deriva-pwa-install-available", refresh); window.removeEventListener("deriva-pwa-install-complete", refresh) }
   }, [])
   const install = async () => { await promptPwaInstall(); setCanInstall(canPromptPwaInstall()) }
-  return <div className="pwa-status-card"><div className={`pwa-status-dot${logoReady ? " ready" : ""}`} /><div><strong>{logoReady ? "Custom icon prepared" : "Default icon active"}</strong><p>{standalone ? "This Android app is already installed. Remove it from the home screen and install again to replace its icon." : android ? "Chrome will use this icon for a new install. If the install prompt is ready, install it here." : "New installs use this icon. On iPhone, use Share → Add to Home Screen after uploading."}</p>{android && !standalone && canInstall && <button type="button" className="btn-primary pwa-install-button" onClick={install}>{logoReady ? "Install custom Android app" : "Install Android app"} →</button>}</div></div>
+  const reloadInstallCheck = () => window.location.reload()
+  const unavailableReason = !secure ? "Open the deployed HTTPS address; Chrome will not offer PWA installation from an insecure network address." : "Chrome has not offered the install prompt in this session. Use Chrome ⋮ → Install app, or reload after saving the logo."
+  return <div className="pwa-status-card"><div className={`pwa-status-dot${logoReady ? " ready" : ""}`} /><div><strong>{logoReady ? "Custom icon prepared" : "Default icon active"}</strong><p>{standalone ? "This Android app is already installed. Remove it from the home screen and install again to replace its icon." : android ? (canInstall ? "Chrome is ready to install this Android app with the current icon." : unavailableReason) : "New installs use this icon. On iPhone, use Share → Add to Home Screen after uploading."}</p>{android && !standalone && canInstall && <button type="button" className="btn-primary pwa-install-button" onClick={install}>{logoReady ? "Install custom Android app" : "Install Android app"} →</button>}{android && !standalone && !canInstall && <div className="pwa-install-actions"><button type="button" className="btn-ghost pwa-install-button" onClick={reloadInstallCheck}>Reload install check</button><span>Then open Chrome&rsquo;s menu → <b>Install app</b>.</span></div>}</div></div>
 }
 
 function PreferenceRow({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (checked: boolean) => void }) {

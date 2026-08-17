@@ -104,6 +104,9 @@
 .pwa-status-card strong { font: 700 13px var(--font-ui); }
 .pwa-status-card p { margin: 4px 0 0; color: var(--ink-soft); font: 12px/1.45 var(--font-ui); }
 .pwa-install-button { min-height: 38px; margin-top: 10px; padding: 8px 11px; font-size: 11px; }
+.pwa-install-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pwa-install-actions .pwa-install-button { margin-top: 10px; }
+.pwa-install-actions span { color: var(--ink-soft); font: 10px/1.35 var(--font-ui); }
 .settings-field { display: grid; gap: 6px; margin-top: 10px; color: var(--ink-soft); font: 700 11px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; }
 .settings-field input:not([type="file"]) { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-raised); color: var(--ink); font: 15px var(--font-ui); letter-spacing: 0; }
 .settings-field small { color: var(--ink-soft); font: 11px var(--font-ui); letter-spacing: 0; text-transform: none; }
