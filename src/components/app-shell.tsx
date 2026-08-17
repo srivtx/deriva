@@ -7,9 +7,10 @@ import { TOPICS, TOPIC_LIST } from "@/data"
 import { useState, useEffect } from "react"
 import Logo from "./logo"
 import NotificationCenter from "./notification-center"
+import CommandCenter from "./command-center"
 import { applyPreferences, defaultPreferences, loadPreferences, type Preferences } from "@/persistence/preferences"
 
-type AppIconName = "home" | "practice" | "progress" | "design" | "settings" | "more"
+type AppIconName = "home" | "practice" | "progress" | "design" | "settings" | "more" | "search"
 
 function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number }) {
   const paths: Record<AppIconName, ReactNode> = {
@@ -18,6 +19,7 @@ function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number }) {
     progress: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></>,
     design: <><circle cx="6" cy="6" r="3" /><circle cx="18" cy="6" r="3" /><circle cx="12" cy="18" r="3" /><path d="m8.5 8.3 2.1 6.8M15.5 8.3l-2.1 6.8" /></>,
     more: <><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" /></>,
+    search: <><circle cx="10.8" cy="10.8" r="6.2" /><path d="m16 16 4.5 4.5" /></>,
     settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.08 2.08-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20.3h-3v-.12A1.7 1.7 0 0 0 10.76 18.6a1.7 1.7 0 0 0-1.88.34l-.06.06-2.08-2.08.06-.06A1.7 1.7 0 0 0 7.14 15a1.7 1.7 0 0 0-1.56-1.03H5.5v-3h.08A1.7 1.7 0 0 0 7.14 9.94a1.7 1.7 0 0 0-.34-1.88L6.74 8 8.82 5.92l.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.56V4.68h3v.08a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.84 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.03h.08v3H21a1.7 1.7 0 0 0-1.6 1.03Z" /></>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
@@ -117,6 +119,7 @@ function ProgressBadge({ className = "" }: { className?: string }) {
 export default function AppShell() {
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [commandOpen, setCommandOpen] = useState(false)
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
   useEffect(() => {
     const next = loadPreferences()
@@ -130,6 +133,13 @@ export default function AppShell() {
     }
     window.addEventListener("deriva-preferences-change", onPreferencesChange)
     return () => window.removeEventListener("deriva-preferences-change", onPreferencesChange)
+  }, [])
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setCommandOpen(true) }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
   const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
   const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings"
@@ -154,7 +164,8 @@ export default function AppShell() {
             <Link href="/learn/trees/sum-1-to-n" className={`nav-link${pathname === "/practice" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") ? " active" : ""}`}>Learn</Link>
             <Link href="/ai-ml" className={`nav-link${pathname.startsWith("/ai-ml") || pathname.startsWith("/lab") ? " active" : ""}`}>AI/ML</Link>
             <Link href="/patterns" className={`nav-link${pathname.startsWith("/patterns") ? " active" : ""}`}>Patterns</Link>
-            <Link href="/observatory" className={`nav-link${pathname === "/dashboard" || pathname === "/observatory" ? " active" : ""}`}>Observe</Link>
+           <Link href="/observatory" className={`nav-link${pathname === "/dashboard" || pathname === "/observatory" ? " active" : ""}`}>Observe</Link>
+            <button type="button" className="command-trigger" onClick={() => setCommandOpen(true)} aria-label="Open Command Center"><span>Search</span><kbd>⌘K</kbd></button>
             <button className={`nav-more${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>More <span aria-hidden="true">⌄</span></button>
             <NotificationCenter />
             <ProgressBadge />
@@ -172,7 +183,7 @@ export default function AppShell() {
         <div className="mobile-shell">
            <Link href="/" className="mobile-brand" aria-label={`${preferences.brandName} home`}><Logo size={24} label={preferences.brandName} mark={preferences.logoMark} imageUrl={preferences.logoDataUrl} /></Link>
           <span className="mobile-page-title">{mobileTitle}</span>
-           <div className="mobile-header-actions"><NotificationCenter /><ProgressBadge className="mobile-progress" /></div>
+            <div className="mobile-header-actions"><button type="button" className="command-mobile-trigger" onClick={() => setCommandOpen(true)} aria-label="Open Command Center"><AppIcon name="search" size={19} /></button><NotificationCenter /><ProgressBadge className="mobile-progress" /></div>
         </div>
       </header>
        <nav className="mobile-tabbar" aria-label="Primary navigation">
@@ -202,6 +213,7 @@ export default function AppShell() {
             </div>
          </section>
        </div>}
+       <CommandCenter open={commandOpen} onClose={() => setCommandOpen(false)} />
        <style>{`
          .app-shell-header { height: var(--app-header-height); border-bottom: 1px solid var(--line); background: var(--paper-raised); display: flex; align-items: center; padding: 0 16px; position: sticky; top: 0; z-index: 50; }
          .desktop-shell { display: flex; }
