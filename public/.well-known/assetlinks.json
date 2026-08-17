@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "xyz.srivtx.deriva",
+      "sha256_cert_fingerprints": [
+        "C1:46:FE:85:A0:F3:57:9E:B3:DA:33:A3:2E:6A:0B:61:37:84:0C:47:48:36:B8:DD:34:3B:CE:84:26:8E:9C:FC"
+      ]
+    }
+  }
+]

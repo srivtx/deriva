@@ -62,6 +62,27 @@ node scripts/extract-bank.mjs
 python3 scripts/verify-bank.py /tmp/deriva-bank.json
 ```
 
+## Android App
+
+The signed Android Trusted Web Activity is available at [/android](/android), with the
+APK served from [/downloads/deriva-android.apk](/downloads/deriva-android.apk). The
+Digital Asset Links declaration lives at `public/.well-known/assetlinks.json`.
+
+To rebuild the release APK locally, keep the keystore outside the repository and expose
+its password through the macOS Keychain entry used by the project:
+
+```bash
+JAVA_HOME="$(/usr/libexec/java_home -v 17)" \
+ANDROID_HOME="$HOME/.bubblewrap/android-sdk" \
+DERIVA_KEYSTORE_PATH="$HOME/.config/deriva-android/deriva-release.jks" \
+DERIVA_KEYSTORE_PASSWORD="$(security find-generic-password -s deriva-android-keystore -w)" \
+android/deriva-twa/gradlew -p android/deriva-twa assembleRelease
+cp android/deriva-twa/app/build/outputs/apk/release/app-release.apk public/downloads/deriva-android.apk
+```
+
+If the signing key changes, update `public/.well-known/assetlinks.json` with the new
+SHA-256 certificate fingerprint before publishing the APK.
+
 ## Project Structure
 
 ```
@@ -86,7 +107,10 @@ public/
   favicon.svg             # browser favicon
   icons/                  # PWA icons (180/192/512 + maskable)
   manifest.webmanifest
+  .well-known/assetlinks.json # Android app/site association
+  downloads/deriva-android.apk # signed Android release artifact
   sw.js                   # service worker — cache-first assets, offline pages
+android/deriva-twa/       # repeatable Trusted Web Activity release project
 docs/                     # product & curriculum design docs
 ```
 
@@ -110,6 +134,7 @@ Each problem is typed data with the same shape:
 - [x] HLD track — 45 problems with React Flow architecture canvas
 - [x] LLD track — 35 problems with test-driven OOP design
 - [x] PWA — installable, offline shell
+- [x] Signed Android app — TWA build, download page, and app/site verification
 - [x] Reference nine-stage guided lesson — Trees recursion reflex (`/learn/trees/sum-1-to-n`): derive the contract before the editor exists
 - [ ] Port remaining topics into nine-stage lesson modules
 - [ ] CS fundamentals track (OS / DB / networking / concurrency)
