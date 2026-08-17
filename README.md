@@ -83,6 +83,10 @@ cp android/deriva-twa/app/build/outputs/apk/release/app-release.apk public/downl
 If the signing key changes, update `public/.well-known/assetlinks.json` with the new
 SHA-256 certificate fingerprint before publishing the APK.
 
+The green Android page also offers a browser-installed app using the logo saved in
+Settings. That custom-icon install is separate from the signed APK, whose launcher icon
+is packaged at build time.
+
 ## Project Structure
 
 ```

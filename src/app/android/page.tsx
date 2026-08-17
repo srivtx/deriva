@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import AndroidInstallActions from "@/components/android-install-actions"
 
 export const metadata: Metadata = {
   title: "Deriva for Android",
@@ -26,6 +27,7 @@ export default function AndroidPage() {
           Download Android app <span aria-hidden="true">-&gt;</span>
         </a>
         <p className="android-note">Android may ask you to allow installs from this browser before opening the downloaded APK.</p>
+        <AndroidInstallActions />
       </section>
 
       <section className="android-install-guide" aria-labelledby="android-install-heading">
