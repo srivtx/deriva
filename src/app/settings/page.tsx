@@ -8,10 +8,10 @@ import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding
 import Logo from "@/components/logo"
 
 const themes: { value: ThemePreference; title: string; body: string; swatch: string }[] = [
+  { value: "moss", title: "Moss", body: "Grounded, green, and clear.", swatch: "#2F8F5B" },
   { value: "system", title: "System", body: "Follow your device.", swatch: "linear-gradient(135deg, #FAF9F6 50%, #14161A 50%)" },
   { value: "paper", title: "Paper", body: "Warm, quiet, editorial.", swatch: "#FAF9F6" },
   { value: "ink", title: "Ink", body: "Low-light workbench.", swatch: "#1C1F24" },
-  { value: "moss", title: "Moss", body: "Grounded and organic.", swatch: "#2B6B51" },
   { value: "violet", title: "Violet", body: "Night study, vivid focus.", swatch: "#B79CFF" },
   { value: "sunset", title: "Sunset", body: "Warm studio light.", swatch: "#B55335" },
 ]
@@ -25,12 +25,13 @@ const accents: { value: AccentPreference; title: string; color: string }[] = [
 ]
 
 const typeVoices: { value: TypePreference; title: string; body: string }[] = [
-  { value: "editorial", title: "Editorial", body: "Newsreader ideas + Inter controls" },
   { value: "technical", title: "Technical", body: "One precise sans-serif voice" },
+  { value: "editorial", title: "Editorial", body: "Newsreader ideas + Inter controls" },
   { value: "humanist", title: "Humanist", body: "Classic reading rhythm" },
 ]
 
 const presets: { title: string; body: string; values: Partial<Preferences> }[] = [
+  { title: "Moss Technical", body: "Green, precise, instrument-like", values: { theme: "moss", accent: "mint", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "Deriva Classic", body: "Paper, cobalt, editorial", values: { theme: "paper", accent: "cobalt", type: "editorial", density: "calm", shape: "soft", texture: "plain" } },
   { title: "Field Notes", body: "Moss, mint, textured", values: { theme: "moss", accent: "mint", type: "humanist", density: "calm", shape: "soft", texture: "grid" } },
   { title: "Night Lab", body: "Violet, precise, focused", values: { theme: "violet", accent: "violet", type: "technical", density: "focused", shape: "precise", texture: "grid" } },

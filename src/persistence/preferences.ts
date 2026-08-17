@@ -28,7 +28,7 @@ export const defaultPreferences: Preferences = {
   theme: "moss",
   accent: "mint",
   customAccent: "#2F8F5B",
-  type: "editorial",
+  type: "technical",
   density: "calm",
   shape: "soft",
   texture: "plain",
