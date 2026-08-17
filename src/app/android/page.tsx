@@ -12,7 +12,10 @@ export default function AndroidPage() {
       <section className="android-hero">
         <span className="android-kicker">ANDROID / SIGNED BUILD</span>
         <div className="android-title-row">
-          <img className="android-icon" src="/icons/icon-maskable.png" alt="Deriva app icon" width={96} height={96} />
+          <div className="android-brand-pair">
+            <img className="android-icon" src="/icons/icon-maskable.png" alt="Deriva app icon" width={96} height={96} />
+            <AndroidMascot />
+          </div>
           <div>
             <h1>Deriva for Android</h1>
             <p>Carry the derivation with you. The signed app opens Deriva as a focused Android surface.</p>
@@ -41,5 +44,18 @@ export default function AndroidPage() {
         </ol>
       </section>
     </main>
+  )
+}
+
+function AndroidMascot() {
+  return (
+    <svg className="android-mascot" viewBox="0 0 160 160" role="img" aria-label="Android mascot">
+      <path d="M58 32 48 17M102 32l10-15" fill="none" stroke="var(--android-mascot)" strokeWidth="6" strokeLinecap="round" />
+      <rect x="34" y="28" width="92" height="62" rx="31" fill="var(--android-mascot)" />
+      <circle cx="62" cy="59" r="5" fill="var(--paper-raised)" />
+      <circle cx="98" cy="59" r="5" fill="var(--paper-raised)" />
+      <rect x="34" y="82" width="92" height="53" rx="14" fill="var(--android-mascot)" />
+      <path d="M24 91v34M136 91v34M58 132v16M102 132v16" fill="none" stroke="var(--android-mascot)" strokeWidth="10" strokeLinecap="round" />
+    </svg>
   )
 }

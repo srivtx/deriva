@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <title>Deriva</title>
   <rect width="512" height="512" rx="112" fill="#2F8F5B"/>
-  <path fill="#F2F4EC" fill-rule="evenodd" d="M128 256a128 128 0 1 0 256 0 128 128 0 1 0-256 0Zm64 0a64 64 0 1 1 128 0 64 64 0 1 1-128 0Zm128-152h64v304h-64z"/>
+  <path fill="#F2F4EC" fill-rule="evenodd" d="M128 256a128 128 0 1 0 256 0 128 128 0 1 0-256 0Zm64 0a64 64 0 1 1 128 0 64 64 0 1 1-128 0Z"/>
+  <path fill="#F2F4EC" d="M352 88h64v336h-64z"/>
   <path fill="#1E2922" d="m96 368 272-272 48 48-272 272z"/>
 </svg>

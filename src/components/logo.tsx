@@ -11,7 +11,8 @@ function Mark({ size, label, imageUrl }: { size: number; label: string; imageUrl
   return (
     <svg width={size} height={size} viewBox="0 0 512 512" fill="none" role="img" aria-label={`${label} logo`}>
       <rect width="512" height="512" rx="112" fill="var(--accent)" />
-      <path fill="var(--paper)" fillRule="evenodd" d="M128 256a128 128 0 1 0 256 0 128 128 0 1 0-256 0Zm64 0a64 64 0 1 1 128 0 64 64 0 1 1-128 0Zm128-152h64v304h-64z" />
+      <path fill="var(--paper)" fillRule="evenodd" d="M128 256a128 128 0 1 0 256 0 128 128 0 1 0-256 0Zm64 0a64 64 0 1 1 128 0 64 64 0 1 1-128 0Z" />
+      <path fill="var(--paper)" d="M352 88h64v336h-64z" />
       <path fill="var(--ink)" d="m96 368 272-272 48 48-272 272z" />
     </svg>
   )
