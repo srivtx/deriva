@@ -83,9 +83,12 @@ cp android/deriva-twa/app/build/outputs/apk/release/app-release.apk public/downl
 If the signing key changes, update `public/.well-known/assetlinks.json` with the new
 SHA-256 certificate fingerprint before publishing the APK.
 
-The APK includes bundled launcher icon variants. From the installed app, open Settings
-and choose `Change app icon in Android app`; the native Android screen switches the
-launcher component without opening Chrome or downloading another app.
+The APK includes bundled launcher icon variants: Default blue, Moss green, Ember,
+Violet, Cipher, Crypto gold, and Orbit blue. From the installed app, open Settings and
+choose `Change app icon in Android app`; the native Android screen previews the choices
+and switches the launcher component only after Apply, without opening Chrome or
+downloading another app. A local image can also be pinned as a custom home-screen
+shortcut on supported Android launchers.
 
 The green Android page also exposes a separate browser PWA install option when Chrome
 offers it. The PWA can use a logo saved in Settings; it does not replace the signed APK.

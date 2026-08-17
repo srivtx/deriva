@@ -1,0 +1,9 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path android:fillColor="@color/icon_orbit" android:pathData="M0,0h512v512h-512z" />
+    <path android:fillColor="@color/icon_orbit_foreground" android:fillType="evenOdd" android:pathData="M128,256a128,128 0,1 0,256 0a128,128 0,1 0,-256 0M192,256a64,64 0,1 1,128 0a64,64 0,1 1,-128 0M320,104h64v304h-64z" />
+    <path android:fillColor="@color/icon_orbit_slash" android:pathData="M96,368L368,96l48,48L144,416z" />
+</vector>

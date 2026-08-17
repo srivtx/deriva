@@ -218,6 +218,45 @@
             </intent-filter>
         </activity-alias>
 
+        <activity-alias
+            android:name=".LauncherCipherAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/icon_cipher"
+            android:label="@string/launcherName"
+            android:targetActivity=".LauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherCryptoAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/icon_crypto"
+            android:label="@string/launcherName"
+            android:targetActivity=".LauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherOrbitAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/icon_orbit"
+            android:label="@string/launcherName"
+            android:targetActivity=".LauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <activity android:name="com.google.androidbrowserhelper.trusted.FocusActivity" />
 
         <activity android:name="com.google.androidbrowserhelper.trusted.WebViewFallbackActivity"

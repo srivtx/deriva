@@ -45,4 +45,7 @@
   <string name="icon_moss_label">Moss / green</string>
   <string name="icon_ember_label">Ember / warm</string>
   <string name="icon_violet_label">Violet / night</string>
+  <string name="icon_cipher_label">Cipher / deep green</string>
+  <string name="icon_crypto_label">Crypto / gold</string>
+  <string name="icon_orbit_label">Orbit / electric blue</string>
 </resources>

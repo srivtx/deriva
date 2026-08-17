@@ -20,4 +20,13 @@
     <color name="icon_violet">#7655B8</color>
     <color name="icon_foreground">#FAF9F6</color>
     <color name="icon_slash">#1A1D21</color>
+    <color name="icon_cipher">#123C35</color>
+    <color name="icon_cipher_foreground">#C8FFE1</color>
+    <color name="icon_cipher_slash">#9BFFD0</color>
+    <color name="icon_crypto">#17120A</color>
+    <color name="icon_crypto_foreground">#FFF3C4</color>
+    <color name="icon_crypto_slash">#F1B84B</color>
+    <color name="icon_orbit">#0D223A</color>
+    <color name="icon_orbit_foreground">#E5F4FF</color>
+    <color name="icon_orbit_slash">#67D2FF</color>
 </resources>
