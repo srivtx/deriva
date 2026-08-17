@@ -68,7 +68,25 @@ export default function SettingsPage() {
   const readLogo = (file: File) => {
     if (file.size > 240_000 || !file.type.startsWith("image/")) return
     const reader = new FileReader()
-    reader.onload = () => { if (typeof reader.result === "string") update({ ...preferences, logoDataUrl: reader.result }) }
+    reader.onload = () => {
+      if (typeof reader.result !== "string") return
+      const image = new Image()
+      image.onload = () => {
+        const canvas = document.createElement("canvas")
+        canvas.width = 512
+        canvas.height = 512
+        const context = canvas.getContext("2d")
+        if (!context) return
+        context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#1A1D21"
+        context.fillRect(0, 0, 512, 512)
+        const scale = Math.min(376 / image.width, 376 / image.height)
+        const width = image.width * scale
+        const height = image.height * scale
+        context.drawImage(image, (512 - width) / 2, (512 - height) / 2, width, height)
+        update({ ...preferences, logoDataUrl: canvas.toDataURL("image/png") })
+      }
+      image.src = reader.result
+    }
     reader.readAsDataURL(file)
   }
   const resetIdentity = () => update({ ...preferences, brandName: defaultPreferences.brandName, tagline: defaultPreferences.tagline, logoMark: defaultPreferences.logoMark, logoDataUrl: undefined })
@@ -106,6 +124,11 @@ export default function SettingsPage() {
         <label className="settings-field"><span>Tagline</span><input value={preferences.tagline} maxLength={80} onChange={event => update({ ...preferences, tagline: event.target.value })} /></label>
         <div className="logo-controls"><label className="settings-field"><span>Logo letter</span><input value={preferences.logoMark} maxLength={2} onChange={event => update({ ...preferences, logoMark: event.target.value.slice(0, 2) })} /></label><div className="settings-field"><span>Logo image</span><button type="button" className="btn-ghost" onClick={() => logoInput.current?.click()}>Upload image</button><input ref={logoInput} className="visually-hidden-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={event => { const file = event.target.files?.[0]; if (file) readLogo(file); event.currentTarget.value = "" }} /><small>PNG, JPG, WEBP, or SVG under 240 KB.</small></div></div>
         {preferences.logoDataUrl && <button type="button" className="settings-remove-logo" onClick={() => update({ ...preferences, logoDataUrl: undefined })}>Remove uploaded logo</button>}
+      </section>
+
+      <section className="settings-section" aria-labelledby="pwa-heading">
+        <h2 id="pwa-heading">Phone app icon</h2>
+        <PwaInstallStatus logoReady={Boolean(preferences.logoDataUrl)} />
       </section>
 
       <section className="settings-section" aria-labelledby="type-heading">
@@ -151,6 +174,14 @@ function LogoPreview({ preferences }: { preferences: Preferences }) {
 
 function ChoiceGroup<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: { value: T; title: string; body: string }[]; onChange: (value: T) => void }) {
   return <div className="choice-group"><span className="choice-group-label">{label}</span><div className="choice-group-options">{options.map(option => <button type="button" key={option.value} className={`choice-group-option${value === option.value ? " selected" : ""}`} onClick={() => onChange(option.value)}><strong>{option.title}</strong><small>{option.body}</small></button>)}</div></div>
+}
+
+function PwaInstallStatus({ logoReady }: { logoReady: boolean }) {
+  const [standalone, setStandalone] = useState(false)
+  useEffect(() => {
+    setStandalone(window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
+  }, [])
+  return <div className="pwa-status-card"><div className={`pwa-status-dot${logoReady ? " ready" : ""}`} /><div><strong>{logoReady ? "Custom icon prepared" : "Default icon active"}</strong><p>{standalone ? "You are viewing the installed app. Remove the old home-screen icon and add Deriva again to apply a new upload." : "New installs will use the prepared 512px icon. On iPhone, use Share → Add to Home Screen after uploading."}</p></div></div>
 }
 
 function PreferenceRow({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (checked: boolean) => void }) {

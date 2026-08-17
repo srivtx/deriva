@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import AppShell from "@/components/app-shell"
 import ServiceWorkerRegister from "@/components/sw-register"
+import PwaBranding from "@/components/pwa-branding"
 
 export const metadata: Metadata = {
   title: "Deriva — Derive the Algorithm",
@@ -49,6 +50,7 @@ export default function RootLayout({
         <AppShell />
         <div className="app-content">{children}</div>
         <ServiceWorkerRegister />
+        <PwaBranding />
       </body>
     </html>
   )

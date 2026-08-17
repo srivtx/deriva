@@ -98,6 +98,11 @@
 .identity-logo-preview { display: grid; width: 52px; height: 52px; place-items: center; overflow: hidden; border-radius: 15px; background: var(--ink); color: var(--paper); }
 .settings-logo-letter { font: 700 34px/1 var(--font-narrative); font-style: italic; }
 .settings-logo-image { width: 100%; height: 100%; object-fit: cover; }
+.pwa-status-card { display: flex; align-items: flex-start; gap: 11px; padding: 13px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); }
+.pwa-status-dot { width: 10px; height: 10px; flex: 0 0 auto; margin-top: 4px; border-radius: 50%; background: var(--ink-soft); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink-soft) 12%, transparent); }
+.pwa-status-dot.ready { background: var(--viz-settled); box-shadow: 0 0 0 4px color-mix(in srgb, var(--viz-settled) 15%, transparent); }
+.pwa-status-card strong { font: 700 13px var(--font-ui); }
+.pwa-status-card p { margin: 4px 0 0; color: var(--ink-soft); font: 12px/1.45 var(--font-ui); }
 .settings-field { display: grid; gap: 6px; margin-top: 10px; color: var(--ink-soft); font: 700 11px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; }
 .settings-field input:not([type="file"]) { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-raised); color: var(--ink); font: 15px var(--font-ui); letter-spacing: 0; }
 .settings-field small { color: var(--ink-soft); font: 11px var(--font-ui); letter-spacing: 0; text-transform: none; }

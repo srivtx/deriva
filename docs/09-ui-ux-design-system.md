@@ -158,6 +158,14 @@ root data attributes and CSS custom properties, and migrated from the original
 `system/light/dark` preference values. Components must consume semantic tokens;
 they must not branch on a user's selected preset or embed a second palette.
 
+### 4.2 PWA Identity
+
+An uploaded logo is normalized in-browser to a padded 512px PNG. Before a new
+install, the client replaces the manifest, favicon, and Apple touch icon links
+with that generated asset. Installed home-screen applications keep the icon
+captured at installation time; Settings must explain that changing a local logo
+requires removing and reinstalling the PWA, especially on iOS.
+
 ## 5. Typography Rules
 
 - **Narrative is serif, instruction is sans.** The moment the platform *asks the student
