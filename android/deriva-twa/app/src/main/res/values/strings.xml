@@ -41,7 +41,7 @@
   </string>
 
   <string name="icon_settings_title">Deriva app icon</string>
-  <string name="icon_default_label">Default / Deriva blue</string>
+  <string name="icon_default_label">Deriva blue</string>
   <string name="icon_moss_label">Moss / green</string>
   <string name="icon_ember_label">Ember / warm</string>
   <string name="icon_violet_label">Violet / night</string>

@@ -30,6 +30,7 @@ import java.io.InputStream;
 public class IconSettingsActivity extends Activity {
     private static final String PREFS = "deriva-icon-settings";
     private static final String SELECTED = "selected-alias";
+    private static final String DEFAULT_ALIAS = "xyz.srivtx.deriva.twa.LauncherMossAlias";
     private static final int REQUEST_PICK_IMAGE = 4101;
     private static final int PAPER = Color.rgb(250, 249, 246);
     private static final int INK = Color.rgb(26, 29, 33);
@@ -37,8 +38,8 @@ public class IconSettingsActivity extends Activity {
     private static final int GREEN = Color.rgb(47, 143, 91);
 
     private static final IconChoice[] CHOICES = {
-            new IconChoice("Default / Deriva blue", "xyz.srivtx.deriva.twa.LauncherAlias", 0xff2e5aac, R.mipmap.ic_launcher),
             new IconChoice("Moss / green", "xyz.srivtx.deriva.twa.LauncherMossAlias", 0xff2f8f5b, R.drawable.icon_moss),
+            new IconChoice("Deriva blue", "xyz.srivtx.deriva.twa.LauncherAlias", 0xff2e5aac, R.mipmap.ic_launcher),
             new IconChoice("Ember / warm", "xyz.srivtx.deriva.twa.LauncherEmberAlias", 0xffb55335, R.drawable.icon_ember),
             new IconChoice("Violet / night", "xyz.srivtx.deriva.twa.LauncherVioletAlias", 0xff7655b8, R.drawable.icon_violet),
             new IconChoice("Cipher / deep green", "xyz.srivtx.deriva.twa.LauncherCipherAlias", 0xff123c35, R.drawable.icon_cipher),
@@ -90,7 +91,7 @@ public class IconSettingsActivity extends Activity {
         statusParams.topMargin = dp(20);
         root.addView(status, statusParams);
 
-        String selected = preferences.getString(SELECTED, CHOICES[0].alias);
+        String selected = preferences.getString(SELECTED, DEFAULT_ALIAS);
         selectedPreview = new ImageView(this);
         selectedPreview.setImageResource(iconForAlias(selected));
         selectedPreview.setPadding(dp(12), dp(12), dp(12), dp(12));

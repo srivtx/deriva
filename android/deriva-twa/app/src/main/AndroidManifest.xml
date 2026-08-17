@@ -34,7 +34,7 @@
     <application
         android:name="Application"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/icon_moss"
         android:label="@string/appName"
 
         android:manageSpaceActivity="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
@@ -168,7 +168,7 @@
 
         <activity-alias
             android:name=".LauncherAlias"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/launcherName"
@@ -181,7 +181,7 @@
 
         <activity-alias
             android:name=".LauncherMossAlias"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:icon="@drawable/icon_moss"
             android:label="@string/launcherName"

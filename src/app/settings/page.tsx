@@ -5,6 +5,7 @@ import Link from "next/link"
 import { applyPreferences, defaultPreferences, loadPreferences, savePreferences, type AccentPreference, type DensityPreference, type Preferences, type ShapePreference, type TexturePreference, type ThemePreference, type TypePreference } from "@/persistence/preferences"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
+import Logo from "@/components/logo"
 
 const themes: { value: ThemePreference; title: string; body: string; swatch: string }[] = [
   { value: "system", title: "System", body: "Follow your device.", swatch: "linear-gradient(135deg, #FAF9F6 50%, #14161A 50%)" },
@@ -19,7 +20,7 @@ const accents: { value: AccentPreference; title: string; color: string }[] = [
   { value: "cobalt", title: "Cobalt", color: "#2E5AAC" },
   { value: "ember", title: "Ember", color: "#B55335" },
   { value: "violet", title: "Violet", color: "#7655B8" },
-  { value: "mint", title: "Mint", color: "#2B8063" },
+  { value: "mint", title: "Moss green", color: "#2F8F5B" },
   { value: "gold", title: "Gold", color: "#A26C19" },
 ]
 
@@ -124,7 +125,7 @@ export default function SettingsPage() {
         <div className="identity-preview"><div><span className="experiment-kicker">Preview</span><strong>{preferences.brandName}</strong><small>{preferences.tagline}</small></div><div className="identity-logo-preview"><LogoPreview preferences={preferences} /></div></div>
         <label className="settings-field"><span>Workspace name</span><input value={preferences.brandName} maxLength={28} onChange={event => update({ ...preferences, brandName: event.target.value })} /></label>
         <label className="settings-field"><span>Tagline</span><input value={preferences.tagline} maxLength={80} onChange={event => update({ ...preferences, tagline: event.target.value })} /></label>
-        <div className="logo-controls"><label className="settings-field"><span>Logo letter</span><input value={preferences.logoMark} maxLength={2} onChange={event => update({ ...preferences, logoMark: event.target.value.slice(0, 2) })} /></label><div className="settings-field"><span>Logo image</span><button type="button" className="btn-ghost" onClick={() => logoInput.current?.click()}>Upload image</button><input ref={logoInput} className="visually-hidden-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={event => { const file = event.target.files?.[0]; if (file) readLogo(file); event.currentTarget.value = "" }} /><small>PNG, JPG, WEBP, or SVG under 240 KB.</small></div></div>
+        <div className="logo-controls"><div className="settings-field"><span>Logo image</span><button type="button" className="btn-ghost" onClick={() => logoInput.current?.click()}>Upload image</button><input ref={logoInput} className="visually-hidden-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={event => { const file = event.target.files?.[0]; if (file) readLogo(file); event.currentTarget.value = "" }} /><small>PNG, JPG, WEBP, or SVG under 240 KB. The moss mark stays as the default.</small></div></div>
         {preferences.logoDataUrl && <button type="button" className="settings-remove-logo" onClick={() => update({ ...preferences, logoDataUrl: undefined })}>Remove uploaded logo</button>}
       </section>
 
@@ -171,7 +172,7 @@ export default function SettingsPage() {
 }
 
 function LogoPreview({ preferences }: { preferences: Preferences }) {
-  return preferences.logoDataUrl ? <img className="settings-logo-image" src={preferences.logoDataUrl} alt="Workspace logo preview" /> : <span className="settings-logo-letter">{preferences.logoMark || "d"}</span>
+  return <Logo size={52} label={preferences.brandName} mark={preferences.logoMark} imageUrl={preferences.logoDataUrl} />
 }
 
 function ChoiceGroup<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: { value: T; title: string; body: string }[]; onChange: (value: T) => void }) {

@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#FAF9F6",
+  themeColor: "#2F8F5B",
   width: "device-width",
   initialScale: 1,
 }
@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="moss" data-accent="mint">
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png" />

@@ -25,9 +25,9 @@ export type Preferences = {
 const key = "deriva-preferences-v2"
 const legacyKey = "deriva-preferences-v1"
 export const defaultPreferences: Preferences = {
-  theme: "system",
-  accent: "cobalt",
-  customAccent: "#2E5AAC",
+  theme: "moss",
+  accent: "mint",
+  customAccent: "#2F8F5B",
   type: "editorial",
   density: "calm",
   shape: "soft",
@@ -37,7 +37,7 @@ export const defaultPreferences: Preferences = {
   keyboardHints: true,
   brandName: "Deriva",
   tagline: "Derive the algorithm.",
-  logoMark: "d",
+  logoMark: "m",
 }
 
 const THEME_VALUES = new Set<ThemePreference>(["system", "paper", "ink", "moss", "violet", "sunset"])
@@ -53,6 +53,12 @@ function hex(value: unknown, fallback: string) {
 
 function shortText(value: unknown, fallback: string, max: number) {
   return typeof value === "string" && value.trim() ? value.trim().slice(0, max) : fallback
+}
+
+function isLegacyBaseline(value: unknown) {
+  if (!value || typeof value !== "object") return false
+  const raw = value as Record<string, unknown>
+  return raw.theme === "system" && raw.accent === "cobalt" && raw.customAccent === "#2E5AAC" && raw.type === "editorial" && raw.density === "calm" && raw.shape === "soft" && raw.texture === "plain" && raw.reducedMotion === false && raw.textScale === "standard" && raw.keyboardHints === true && raw.brandName === "Deriva" && raw.tagline === "Derive the algorithm." && raw.logoMark === "d" && !raw.logoDataUrl
 }
 
 function normalize(value: unknown): Preferences {
@@ -87,7 +93,8 @@ export function loadPreferences(): Preferences {
       if (!value) return undefined
       try { return JSON.parse(value) } catch { return undefined }
     }
-    return normalize(parse(current) ?? parse(legacy) ?? {})
+    const stored = parse(current) ?? parse(legacy) ?? {}
+    return isLegacyBaseline(stored) ? defaultPreferences : normalize(stored)
   } catch { return defaultPreferences }
 }
 

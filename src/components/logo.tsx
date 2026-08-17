@@ -6,21 +6,20 @@ type LogoProps = {
   imageUrl?: string
 }
 
-function Mark({ size, label, mark, imageUrl }: { size: number; label: string; mark: string; imageUrl?: string }) {
+function Mark({ size, label, imageUrl }: { size: number; label: string; imageUrl?: string }) {
   if (imageUrl) return <img className="custom-logo-image" src={imageUrl} width={size} height={size} alt={`${label} logo`} />
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" role="img" aria-label={`${label} logo`}>
-      <rect x="2" y="2" width="44" height="44" rx="14" fill="var(--ink)" />
-      <text x="24" y="36" textAnchor="middle" fill="var(--paper)" fontFamily="Georgia, Times New Roman, serif" fontSize="32" fontStyle="italic" fontWeight="700">{mark}</text>
-      <path d="M11 36 36 12" stroke="var(--accent)" strokeWidth="2.8" strokeLinecap="round" />
-      <circle cx="36" cy="12" r="2.7" fill="var(--accent)" />
+    <svg width={size} height={size} viewBox="0 0 512 512" fill="none" role="img" aria-label={`${label} logo`}>
+      <rect width="512" height="512" rx="112" fill="var(--accent)" />
+      <path fill="var(--paper)" fillRule="evenodd" d="M128 256a128 128 0 1 0 256 0 128 128 0 1 0-256 0Zm64 0a64 64 0 1 1 128 0 64 64 0 1 1-128 0Zm128-152h64v304h-64z" />
+      <path fill="var(--ink)" d="m96 368 272-272 48 48-272 272z" />
     </svg>
   )
 }
 
-export default function Logo({ size = 28, variant = "mark", label = "Deriva", mark = "d", imageUrl }: LogoProps) {
+export default function Logo({ size = 28, variant = "mark", label = "Deriva", imageUrl }: LogoProps) {
   if (variant === "wordmark") {
-    return <span className="logo-wordmark"><Mark size={size} label={label} mark={mark} imageUrl={imageUrl} /><span>{label}</span></span>
+    return <span className="logo-wordmark"><Mark size={size} label={label} imageUrl={imageUrl} /><span>{label}</span></span>
   }
-  return <Mark size={size} label={label} mark={mark} imageUrl={imageUrl} />
+  return <Mark size={size} label={label} imageUrl={imageUrl} />
 }

@@ -26,13 +26,13 @@ def twaManifest = [
     launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
     name: 'Deriva — Derive the Algorithm', // The application name.
     launcherName: 'Deriva', // The name shown on the Android Launcher.
-    themeColor: '#FAF9F6', // The color used for the status bar.
-    themeColorDark: '#000000', // The color used for the dark status bar.
-    navigationColor: '#000000', // The color used for the navigation bar.
-    navigationColorDark: '#000000', // The color used for the dark navbar.
-    navigationDividerColor: '#000000', // The navbar divider color.
-    navigationDividerColorDark: '#000000', // The dark navbar divider color.
-    backgroundColor: '#FAF9F6', // The color used for the splash screen background.
+    themeColor: '#2F8F5B', // The color used for the status bar.
+    themeColorDark: '#123C35', // The color used for the dark status bar.
+    navigationColor: '#123C35', // The color used for the navigation bar.
+    navigationColorDark: '#123C35', // The color used for the dark navbar.
+    navigationDividerColor: '#123C35', // The navbar divider color.
+    navigationDividerColorDark: '#123C35', // The dark navbar divider color.
+    backgroundColor: '#F2F4EC', // The color used for the splash screen background.
     enableNotifications: true, // Set to true to enable notification delegation.
     // Every shortcut must include the following fields:
     // - name: String that will show up in the shortcut.

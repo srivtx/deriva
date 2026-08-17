@@ -81,7 +81,9 @@ function applyPwaBranding(preferences: Preferences) {
   document.head.querySelectorAll('link[rel="manifest"]').forEach(link => link.remove())
   document.head.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(link => link.remove())
 
-  const color = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim() || "#FAF9F6"
+   const styles = getComputedStyle(document.documentElement)
+   const color = styles.getPropertyValue("--paper").trim() || "#F2F4EC"
+   const accent = styles.getPropertyValue("--accent").trim() || "#2F8F5B"
   const iconType = /^data:(image\/[^;]+)/.exec(preferences.logoDataUrl)?.[1] || "image/png"
   const manifest = {
     name: `${preferences.brandName} — ${preferences.tagline}`,
@@ -92,7 +94,7 @@ function applyPwaBranding(preferences: Preferences) {
     display: "standalone",
     orientation: "any",
     background_color: color,
-    theme_color: color,
+     theme_color: accent,
     icons: [
       { src: preferences.logoDataUrl, sizes: "192x192", type: iconType, purpose: "any" },
       { src: preferences.logoDataUrl, sizes: "512x512", type: iconType, purpose: "any maskable" },
