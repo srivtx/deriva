@@ -118,6 +118,15 @@ export default function HomePage() {
           <span className="today-session-progress">{guidedDone ? "9 of 9 stages complete. Transfer is next." : `${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}</span>
         </section>
 
+        <section className="android-app-callout" aria-labelledby="android-app-heading">
+          <div className="android-app-callout-copy">
+            <span className="android-app-callout-kicker">Android app</span>
+            <h2 id="android-app-heading">Need the Android app?</h2>
+            <p>Open the green install page to download the signed Deriva app and follow the three install steps.</p>
+          </div>
+          <Link href="/android" className="android-app-callout-link">Open install page <span aria-hidden="true">-&gt;</span></Link>
+        </section>
+
         <section className="stuck-callout" aria-labelledby="stuck-heading">
           <div><span className="discovery-kicker">No shame route</span><h2 id="stuck-heading">Stuck is part of the lesson.</h2></div>
           <p>Use a smaller example, ask for the next question, or switch to code practice. You can always return to the derivation without losing your work.</p>
