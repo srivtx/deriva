@@ -149,6 +149,7 @@ export default function HomePage() {
             <Link href="/patterns" className="explore-link"><b>Pattern Journal</b><span>Recognize the thinking moves</span></Link>
             <Link href="/expedition" className="explore-link"><b>Expedition</b><span>Retrieve, break, and transfer an idea</span></Link>
             <Link href="/games" className="explore-link"><b>Game Mode</b><span>Practice invariants through play</span></Link>
+            <Link href="/icpc" className="explore-link"><b>ICPC Ladder</b><span>75 contest problems, in order</span></Link>
             <Link href="/design" className="explore-link"><b>System Design</b><span>45 architecture problems</span></Link>
             <Link href="/lld" className="explore-link"><b>Low-Level Design</b><span>35 object design problems</span></Link>
           </div>

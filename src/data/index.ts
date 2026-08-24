@@ -12,11 +12,13 @@ import { STAGES_INTERVALS, PROBLEMS_INTERVALS } from "./intervals"
 import { STAGES_ADVANCED_GRAPHS, PROBLEMS_ADVANCED_GRAPHS } from "./advanced-graphs"
 import { STAGES_BIT, PROBLEMS_BIT } from "./bit-manipulation"
 import { STAGES_MATH, PROBLEMS_MATH } from "./math"
+import { STAGES_ICPC, PROBLEMS_ICPC } from "./icpc"
 
 export interface Problem {
   id: number; stage: number; title: string; pattern: string; skill: string
   statement: string; examples: { input: string; output: string; explain?: string }[]
   why: string; starterCode: string; hints: string[]; solution: string; walkthrough: string; testCode: string
+  difficulty?: string
 }
 export interface Stage { id: number; name: string; desc: string }
 export interface Topic { id: string; name: string; stages: Stage[]; problems: Problem[]; buildCode: string }
@@ -36,6 +38,7 @@ export const TOPICS: Record<string, Topic> = {
   "advanced-graphs":{id: "advanced-graphs", name: "Advanced Graphs",      stages: STAGES_ADVANCED_GRAPHS as Stage[],problems: PROBLEMS_ADVANCED_GRAPHS, buildCode: "" },
   "bit-manipulation":{id:"bit-manipulation",name: "Bit Manipulation",     stages: STAGES_BIT as Stage[],            problems: PROBLEMS_BIT,             buildCode: "" },
   math:            { id: "math",            name: "Math",                 stages: STAGES_MATH as Stage[],           problems: PROBLEMS_MATH,           buildCode: "" },
+  icpc:            { id: "icpc",            name: "ICPC Ladder",          stages: STAGES_ICPC,                      problems: PROBLEMS_ICPC,           buildCode: "" },
 }
 
 export const TOPIC_LIST = Object.values(TOPICS)

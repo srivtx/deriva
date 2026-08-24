@@ -42,6 +42,8 @@ function Breadcrumbs() {
     parts.push({ label: "System Design", href: "/design" })
   } else if (pathname === "/lld") {
     parts.push({ label: "LLD", href: "/lld" })
+  } else if (pathname === "/icpc") {
+    parts.push({ label: "ICPC Ladder", href: "/icpc" })
   } else if (pathname === "/dashboard") {
     parts.push({ label: "Dashboard", href: "/dashboard" })
   } else if (pathname === "/observatory") {
@@ -141,8 +143,8 @@ export default function AppShell() {
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
-  const mobileTitle = pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
-  const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings"
+  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
+  const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc"
   const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
     { label: "Home", href: "/", icon: "home", active: pathname === "/" },
     { label: "Learn", href: "/learn/trees/sum-1-to-n", icon: "practice", active: pathname === "/practice" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") },
@@ -175,6 +177,7 @@ export default function AppShell() {
               <Link href="/lld" onClick={() => setMoreOpen(false)}>Low-Level Design</Link>
                <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition</Link>
                <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode</Link>
+               <Link href="/icpc" onClick={() => setMoreOpen(false)}>ICPC Ladder</Link>
                <Link href="/dashboard" onClick={() => setMoreOpen(false)}>Progress details</Link>
                <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings</Link>
             </div>}
@@ -206,9 +209,10 @@ export default function AppShell() {
               <Link href="/ai-ml" onClick={() => setMoreOpen(false)}>AI/ML Systems <span>Labs + 180 questions</span></Link>
               <Link href="/design" onClick={() => setMoreOpen(false)}>System Design <span>HLD</span></Link>
               <Link href="/lld" onClick={() => setMoreOpen(false)}>Low-Level Design <span>LLD</span></Link>
-               <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition <span>Retrieval</span></Link>
-               <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode <span>Play</span></Link>
-               <Link href="/dashboard" onClick={() => setMoreOpen(false)}>Progress details <span>History</span></Link>
+                <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition <span>Retrieval</span></Link>
+                <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode <span>Play</span></Link>
+                <Link href="/icpc" onClick={() => setMoreOpen(false)}>ICPC Ladder <span>75 contest problems</span></Link>
+                <Link href="/dashboard" onClick={() => setMoreOpen(false)}>Progress details <span>History</span></Link>
                <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings <span>Preferences</span></Link>
             </div>
          </section>

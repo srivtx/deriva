@@ -181,6 +181,7 @@ export default function PracticePage() {
             <div className="problem-tags" style={{ display: "flex", gap: 6, marginTop: 4 }}>
               <span className="tag tp">{problem.pattern}</span>
               <span className="tag ts">{problem.skill}</span>
+              {problem.difficulty && <span className={`tag td tag-${String(problem.difficulty).toLowerCase()}`}>{problem.difficulty}</span>}
             </div>
           </div>
           <div className="problem-pager" style={{ display: "flex", gap: 6 }}>
@@ -253,7 +254,17 @@ export default function PracticePage() {
 
         {currentRevealed && (
           <div className="card" style={{ marginTop: 14 }}>
-            <h3 className="card-h3">Solution</h3>
+            <div className="solution-head">
+              <h3 className="card-h3">Solution</h3>
+              <button
+                className="btn btn-load"
+                onClick={() => {
+                  setSavedCode({ ...savedCode, [topicId]: { ...tCode, [currentId]: problem.solution } })
+                  setOutput("Solution loaded into the editor — run it, then rewrite it from memory.")
+                }}
+                aria-label="Load solution into the editor"
+              >Load into editor</button>
+            </div>
             <pre className="sol">{problem.solution}</pre>
             <h3 className="card-h3" style={{ marginTop: 16 }}>Walkthrough</h3>
             <div className="wlk">{problem.walkthrough}</div>
@@ -286,6 +297,10 @@ export default function PracticePage() {
         .tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-family: var(--font-mono); }
         .tp { color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); }
         .ts { color: var(--viz-settled); background: var(--success-soft); border: 1px solid var(--success-line); }
+        .td { border: 1px solid var(--line); color: var(--ink-soft); background: var(--paper); }
+        .td.tag-easy { color: var(--viz-settled); border-color: var(--success-line); background: var(--success-soft); }
+        .td.tag-medium { color: var(--viz-cached); border-color: color-mix(in srgb, var(--viz-cached) 45%, var(--line)); background: color-mix(in srgb, var(--viz-cached) 9%, var(--paper)); }
+        .td.tag-hard { color: var(--viz-pruned); border-color: color-mix(in srgb, var(--viz-pruned) 45%, var(--line)); background: color-mix(in srgb, var(--viz-pruned) 9%, var(--paper)); }
 
         .pbar { display: flex; align-items: center; margin-bottom: 20px; }
         .pbar-track { flex: 1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
@@ -336,6 +351,9 @@ export default function PracticePage() {
         .hint-b { background: var(--accent); color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }
 
         .sol { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; overflow-x: auto; white-space: pre; }
+        .solution-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .btn-load { min-height: 32px; padding: 5px 12px; font-size: 11px; font-weight: 700; border: 1px solid var(--accent); color: var(--accent); background: var(--paper-raised); }
+        .btn-load:hover { background: var(--accent); color: #fff; }
         .wlk { font-size: 14px; line-height: 1.8; font-family: var(--font-narrative); }
         .kbd { text-align: center; color: var(--ink-soft); font-size: 11px; margin-top: 16px; font-family: var(--font-mono); }
 
