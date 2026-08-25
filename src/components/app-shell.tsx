@@ -14,6 +14,9 @@ import NavSlotIcon from "./nav-slot-icon"
 import { NAV_ITEM_MAP } from "@/data/nav-items"
 import { currentIconPack } from "@/data/icon-packs"
 import { clearContentAnimations } from "@/lib/app-transition"
+import { installRecoveryGuards } from "@/lib/recovery"
+import { installDiagnostics } from "@/lib/diagnostics"
+import ShellErrorBoundary from "./shell-error-boundary"
 import { applyPreferences, defaultPreferences, loadPreferences, type Preferences } from "@/persistence/preferences"
 import { todayKey } from "@/persistence/daily"
 import { dueCards, seedQueueFromMastery } from "@/persistence/review-queue"
@@ -29,6 +32,12 @@ const MORE_GROUPS: MoreGroup[] = [
       { label: "Review Queue", href: "/review", desc: "spaced repetition" },
       { label: "Contest Simulator", href: "/contest", desc: "3 problems, one clock" },
       { label: "Mock Interview", href: "/interview", desc: "hints locked" },
+    ],
+  },
+  {
+    label: "Studio",
+    links: [
+      { label: "Glyph Studio", href: "/glyph", desc: "draw dot glyphs, export art" },
     ],
   },
   {
@@ -212,7 +221,7 @@ function ProgressBadge({ className = "" }: { className?: string }) {
   )
 }
 
-  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store", "/expenses", "/calendar", "/translate"]
+  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph"]
 
 export default function AppShell() {
   const pathname = usePathname()
@@ -233,6 +242,10 @@ export default function AppShell() {
     setMoreOpen(false)
     setCommandOpen(false)
   }, [pathname])
+  useEffect(() => {
+    installRecoveryGuards()
+    installDiagnostics()
+  }, [])
   useEffect(() => {
     const next = loadPreferences()
     setPreferences(next)
@@ -331,7 +344,7 @@ export default function AppShell() {
       document.removeEventListener("keydown", onKey)
     }
   }, [moreOpen])
-  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
+  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : pathname === "/focus" ? "Focus Dial" : pathname === "/glyph" ? "Glyph Studio" : "Deriva"
   const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/complexity" || pathname === "/notebook" || pathname === "/toolkit" || pathname === "/playground" || pathname === "/releases"
   const navSlots = preferences.navSlots.length ? preferences.navSlots : ["home", "learn", "patterns", "observe"]
   const slotItems = navSlots.map(id => NAV_ITEM_MAP[id]).filter(Boolean)
@@ -347,6 +360,7 @@ export default function AppShell() {
   })), [slotItems, pathname])
 
   return (
+    <ShellErrorBoundary>
     <div className={isAppMode ? "app-root app-mode-active" : "app-root"}>
       <header className="app-mode-header" aria-hidden={!isAppMode}>
         <button
@@ -499,5 +513,6 @@ export default function AppShell() {
          }
        `}</style>
     </div>
+    </ShellErrorBoundary>
   )
 }

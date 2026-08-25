@@ -1,5 +1,6 @@
 import { sanitizeNavSlots } from "@/data/nav-items"
 import { sanitizeNavIcons } from "@/data/nav-icons"
+import { sanitizePersonalDots, setPersonalDots } from "@/data/icon-packs"
 
 export type ThemePreference = "system" | "paper" | "ink" | "moss" | "ocean" | "carbon" | "violet" | "sunset" | "nothing" | "opone" | "swiss" | "nord" | "solarized" | "braun"
 export type AccentPreference = "cobalt" | "ember" | "violet" | "mint" | "gold" | "custom"
@@ -7,7 +8,7 @@ export type TypePreference = "editorial" | "technical" | "humanist" | "dotmatrix
 export type DensityPreference = "calm" | "focused" | "compact"
 export type ShapePreference = "soft" | "precise"
 export type TexturePreference = "plain" | "grid"
-export type IconPackPreference = "classic" | "nothing" | "teenage"
+export type IconPackPreference = "classic" | "nothing" | "teenage" | "personal"
 
 export type Preferences = {
   theme: ThemePreference
@@ -20,6 +21,7 @@ export type Preferences = {
   iconPack: IconPackPreference
   navSlots: string[]
   navIcons: Record<string, string>
+  personalDots: Record<string, string>
   reducedMotion: boolean
   textScale: "standard" | "large" | "xlarge"
   keyboardHints: boolean
@@ -43,6 +45,7 @@ export const defaultPreferences: Preferences = {
   iconPack: "classic",
   navSlots: ["home", "learn", "patterns", "observe"],
   navIcons: {},
+  personalDots: {},
   reducedMotion: false,
   textScale: "standard",
   keyboardHints: true,
@@ -58,7 +61,7 @@ const TYPE_VALUES = new Set<TypePreference>(["editorial", "technical", "humanist
 const DENSITY_VALUES = new Set<DensityPreference>(["calm", "focused", "compact"])
 const SHAPE_VALUES = new Set<ShapePreference>(["soft", "precise"])
 const TEXTURE_VALUES = new Set<TexturePreference>(["plain", "grid"])
-const ICON_VALUES = new Set<IconPackPreference>(["classic", "nothing", "teenage"])
+const ICON_VALUES = new Set<IconPackPreference>(["classic", "nothing", "teenage", "personal"])
 
 function hex(value: unknown, fallback: string) {
   return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback
@@ -90,6 +93,7 @@ function normalize(value: unknown): Preferences {
     iconPack: ICON_VALUES.has(raw.iconPack as IconPackPreference) ? raw.iconPack as IconPackPreference : defaultPreferences.iconPack,
     navSlots: sanitizeNavSlots(raw.navSlots),
     navIcons: sanitizeNavIcons(raw.navIcons),
+    personalDots: sanitizePersonalDots(raw.personalDots),
     reducedMotion: raw.reducedMotion === true,
     textScale: raw.textScale === "large" || raw.textScale === "xlarge" ? raw.textScale : "standard",
     keyboardHints: raw.keyboardHints !== false,
@@ -97,21 +101,23 @@ function normalize(value: unknown): Preferences {
     tagline: shortText(raw.tagline, defaultPreferences.tagline, 80),
     logoMark: shortText(raw.logoMark, defaultPreferences.logoMark, 2),
     logoStyle: raw.logoStyle === "nothing" || raw.logoStyle === "opone" || raw.logoStyle === "custom" ? raw.logoStyle : "classic",
-    logoDataUrl: typeof raw.logoDataUrl === "string" && raw.logoDataUrl.startsWith("data:image/") && raw.logoDataUrl.length < 350_000 ? raw.logoDataUrl : undefined,
+    logoDataUrl: typeof raw.logoDataUrl === "string" && raw.logoDataUrl.startsWith("data:image/") && raw.logoDataUrl.length < 120_000 ? raw.logoDataUrl : undefined,
   }
 }
+
+let prefsCache: { raw: string; parsed: Preferences } | null = null
 
 export function loadPreferences(): Preferences {
   if (typeof window === "undefined") return defaultPreferences
   try {
-    const current = localStorage.getItem(key)
-    const legacy = localStorage.getItem(legacyKey)
-    const parse = (value: string | null) => {
-      if (!value) return undefined
-      try { return JSON.parse(value) } catch { return undefined }
-    }
-    const stored = parse(current) ?? parse(legacy) ?? {}
-    return isLegacyBaseline(stored) ? defaultPreferences : normalize(stored)
+    const current = localStorage.getItem(key) ?? localStorage.getItem(legacyKey)
+    if (!current) return defaultPreferences
+    if (prefsCache && prefsCache.raw === current) return prefsCache.parsed
+    let stored: unknown
+    try { stored = JSON.parse(current) } catch { stored = {} }
+    const parsed = isLegacyBaseline(stored as Record<string, unknown>) ? defaultPreferences : normalize(stored)
+    prefsCache = { raw: current, parsed }
+    return parsed
   } catch { return defaultPreferences }
 }
 
@@ -119,6 +125,18 @@ export function savePreferences(preferences: Preferences) {
   const next = normalize(preferences)
   try { localStorage.setItem(key, JSON.stringify(next)) } catch {}
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("deriva-preferences-change", { detail: next }))
+}
+
+// WCAG-ish relative luminance → pick dark or light text for any accent.
+function readableOnColor(hex: string): string {
+  const value = hex.replace("#", "")
+  if (!/^[0-9a-fA-F]{6}$/.test(value)) return "#FFFFFF"
+  const channel = (i: number) => {
+    const raw = parseInt(value.slice(i, i + 2), 16) / 255
+    return raw <= 0.03928 ? raw / 12.92 : ((raw + 0.055) / 1.055) ** 2.4
+  }
+  const luminance = 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4)
+  return luminance > 0.25 ? "#111114" : "#FFFFFF"
 }
 
 export function applyPreferences(preferences: Preferences) {
@@ -132,7 +150,10 @@ export function applyPreferences(preferences: Preferences) {
   root.dataset.icons = preferences.iconPack
   root.dataset.textScale = preferences.textScale
   root.dataset.motion = preferences.reducedMotion ? "reduce" : "full"
+  setPersonalDots(preferences.personalDots)
   if (preferences.accent === "custom") root.style.setProperty("--accent", hex(preferences.customAccent, defaultPreferences.customAccent))
   else root.style.removeProperty("--accent")
   root.style.setProperty("--accent-soft", "color-mix(in srgb, var(--accent) 13%, var(--paper-raised))")
+  const resolvedAccent = getComputedStyle(root).getPropertyValue("--accent").trim()
+  if (resolvedAccent) root.style.setProperty("--on-accent", readableOnColor(resolvedAccent))
 }

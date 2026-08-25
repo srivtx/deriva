@@ -55,7 +55,15 @@ export function logoStyleDataUrl(style: LogoStyleId): string | null {
   if (style === "classic") return null
   let cached = DATA_URL_CACHE.get(style)
   if (!cached) {
-    cached = `data:image/svg+xml;utf8,${encodeURIComponent(MARK_BUILDERS[style]())}`
+    try {
+      const raw = MARK_BUILDERS[style]()
+      const base64 = typeof btoa === "function"
+        ? btoa(String.fromCharCode(...new TextEncoder().encode(raw)))
+        : Buffer.from(raw, "utf8").toString("base64")
+      cached = `data:image/svg+xml;base64,${base64}`
+    } catch {
+      return null
+    }
     DATA_URL_CACHE.set(style, cached)
   }
   return cached

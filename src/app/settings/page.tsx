@@ -8,12 +8,15 @@ import NavSlotIcon from "@/components/nav-slot-icon"
 import { NAV_ITEMS, NAV_ITEM_MAP, NAV_MAX_SLOTS, DEFAULT_NAV_SLOTS } from "@/data/nav-items"
 import { NAV_VARIANTS } from "@/data/nav-icons"
 import { LOGO_STYLES } from "@/data/logo-marks"
+import { encodeAppearance, decodeAppearance } from "@/data/share-code"
+import QRCode from "qrcode"
+import PackIcon from "@/components/pack-icon"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 import Logo from "@/components/logo"
 import { downloadWorkspace, importWorkspace, eraseWorkspace } from "@/persistence/data-transfer"
 
-const themes: { value: ThemePreference; title: string; body: string; swatch: string }[] = [
+const themes: { value: ThemePreference; title: string; body: string; swatch: string; isNew?: boolean }[] = [
   { value: "moss", title: "Moss", body: "Grounded, green, and clear.", swatch: "#2F8F5B" },
   { value: "system", title: "System", body: "Follow your device.", swatch: "linear-gradient(135deg, #FAF9F6 50%, #14161A 50%)" },
   { value: "paper", title: "Paper", body: "Warm, quiet, editorial.", swatch: "#FAF9F6" },
@@ -24,10 +27,10 @@ const themes: { value: ThemePreference; title: string; body: string; swatch: str
   { value: "sunset", title: "Sunset", body: "Warm studio light.", swatch: "#B55335" },
   { value: "nothing", title: "Nothing", body: "Dot-industrial black. Signal red.", swatch: "#E02020" },
   { value: "opone", title: "OP-1", body: "Teenage Engineering warm grey + orange.", swatch: "#E04A00" },
-  { value: "swiss", title: "Swiss", body: "International white, grid red.", swatch: "#D92B2B" },
-  { value: "nord", title: "Nord", body: "Frost-blue polar night.", swatch: "#88C0D0" },
-  { value: "solarized", title: "Solarized", body: "Classic terminal teal.", swatch: "#2AA198" },
-  { value: "braun", title: "Braun", body: "Rams functional grey, mustard dial.", swatch: "#C08A00" },
+  { value: "swiss", isNew: true, title: "Swiss", body: "International white, grid red.", swatch: "#D92B2B" },
+  { value: "nord", isNew: true, title: "Nord", body: "Frost-blue polar night.", swatch: "#88C0D0" },
+  { value: "solarized", isNew: true, title: "Solarized", body: "Classic terminal teal.", swatch: "#2AA198" },
+  { value: "braun", isNew: true, title: "Braun", body: "Rams functional grey, mustard dial.", swatch: "#C08A00" },
 ]
 
 const accents: { value: AccentPreference; title: string; color: string }[] = [
@@ -38,12 +41,12 @@ const accents: { value: AccentPreference; title: string; color: string }[] = [
   { value: "gold", title: "Gold", color: "#A26C19" },
 ]
 
-const typeVoices: { value: TypePreference; title: string; body: string }[] = [
+const typeVoices: { value: TypePreference; title: string; body: string; isNew?: boolean }[] = [
   { value: "technical", title: "Technical", body: "One precise sans-serif voice" },
   { value: "editorial", title: "Editorial", body: "Newsreader ideas + Inter controls" },
   { value: "humanist", title: "Humanist", body: "Classic reading rhythm" },
-  { value: "dotmatrix", title: "Dot Matrix", body: "Nothing-style Doto headlines" },
-  { value: "instrument", title: "Instrument", body: "Space Grotesk, hardware panel feel" },
+  { value: "dotmatrix", isNew: true, title: "Dot Matrix", body: "Nothing-style Doto headlines" },
+  { value: "instrument", isNew: true, title: "Instrument", body: "Space Grotesk, hardware panel feel" },
 ]
 
 const THEME_PREVIEW: Record<string, { bg: string; panel: string; ink: string; soft: string; line: string }> = {
@@ -72,7 +75,7 @@ const VOICE_FONT: Record<string, string> = {
   instrument: '"Space Grotesk", var(--font-ui)',
 }
 
-const presets: { title: string; body: string; values: Partial<Preferences> }[] = [
+const presets: { title: string; body: string; values: Partial<Preferences>; isNew?: boolean }[] = [
   { title: "Moss Technical", body: "Green, precise, instrument-like", values: { theme: "moss", accent: "mint", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "Nothing Dark", body: "Black, signal red, dot-industrial", values: { theme: "nothing", iconPack: "nothing", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "OP-1 Studio", body: "Warm grey, instrument orange, numbered", values: { theme: "opone", iconPack: "teenage", type: "technical", density: "calm", shape: "soft", texture: "plain" } },
@@ -80,7 +83,10 @@ const presets: { title: string; body: string; values: Partial<Preferences> }[] =
   { title: "Field Notes", body: "Moss, mint, textured", values: { theme: "moss", accent: "mint", type: "humanist", density: "calm", shape: "soft", texture: "grid" } },
   { title: "Night Lab", body: "Violet, precise, focused", values: { theme: "violet", accent: "violet", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "Sunset Studio", body: "Warm, compact, vivid", values: { theme: "sunset", accent: "ember", type: "editorial", density: "compact", shape: "soft", texture: "plain" } },
-  { title: "Braun Werk", body: "Rams grey, mustard dial, functional", values: { theme: "braun", accent: "gold", type: "instrument", density: "focused", shape: "precise", texture: "plain" } },
+  { title: "Braun Werk", isNew: true, body: "Rams grey, mustard dial, functional", values: { theme: "braun", accent: "gold", type: "instrument", density: "focused", shape: "precise", texture: "plain" } },
+  { title: "Ember Equinox", isNew: true, body: "Warm dusk, earned at day 3", values: { theme: "sunset", accent: "ember", type: "instrument", density: "calm", shape: "soft", texture: "grid" } },
+  { title: "Deep Frost", isNew: true, body: "Nord night, earned at day 7", values: { theme: "nord", accent: "cobalt", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
+  { title: "Lucent Ghost", isNew: true, body: "Frosted carbon, earned at day 14", values: { theme: "carbon", accent: "violet", type: "humanist", density: "calm", shape: "soft", texture: "plain" } },
 ]
 
 const densityOptions: { value: DensityPreference; title: string; body: string }[] = [
@@ -112,6 +118,49 @@ export default function SettingsPage() {
   const logoInput = useRef<HTMLInputElement>(null)
   const dragNav = useRef<{ id: string; pointerId: number } | null>(null)
   const [navDragging, setNavDragging] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+
+  const SECTION_SEARCH: Record<string, string> = {
+    "appearance-heading": "theme dark light moss paper ink ocean carbon violet sunset nothing opone swiss nord solarized braun palette background colour color",
+    "accent-heading": "accent focus color cobalt ember mint gold custom highlight",
+    "type-heading": "font type voice reading editorial technical humanist dotmatrix doto instrument grotesk serif",
+    "surface-heading": "surface density shape texture radius corners compact calm focused grid plain spacing",
+    "nav-heading": "navigation bar bottom tabs slots order drag icons slots more rearrange",
+    "icons-heading": "icon pack app icons nothing op-1 teenage personal classic style",
+    "glyph-heading": "glyph studio dot matrix editor draw led personal pack export png svg",
+    "identity-heading": "brand name tagline logo workspace identity upload image mark",
+    "presets-heading": "preset atmosphere mood curated bundle theme new",
+    "share-heading": "share qr code export appearance sync transfer device",
+  }
+  const sectionVisible = (headingId: string) => {
+    if (!search.trim()) return true
+    const haystack = `${SECTION_SEARCH[headingId] ?? ""} ${headingId}`.toLowerCase()
+    return haystack.includes(search.trim().toLowerCase())
+  }
+  const [shareDataUrl, setShareDataUrl] = useState("")
+  const [importCode, setImportCode] = useState("")
+  const [importMessage, setImportMessage] = useState("")
+
+  const makeShareQr = async () => {
+    const code = encodeAppearance(preferences)
+    try {
+      const url = await QRCode.toDataURL(code, { width: 320, margin: 2, errorCorrectionLevel: "M", color: { dark: "#111114", light: "#FFFFFF" } })
+      setShareDataUrl(url)
+      setImportMessage("")
+    } catch {
+      setImportMessage("Could not build the QR — copy the code below instead.")
+    }
+    setImportCode(code)
+  }
+  const applyImportedCode = () => {
+    const decoded = decodeAppearance(importCode)
+    if (!decoded) {
+      setImportMessage("That code doesn't look like a Deriva appearance.")
+      return
+    }
+    setImportMessage("Applied.")
+    update({ ...preferences, ...decoded })
+  }
 
   const beginNavDrag = (event: ReactPointerEvent, id: string) => {
     dragNav.current = { id, pointerId: event.pointerId }
@@ -177,17 +226,17 @@ export default function SettingsPage() {
       const image = new Image()
       image.onload = () => {
         const canvas = document.createElement("canvas")
-        canvas.width = 512
-        canvas.height = 512
+        canvas.width = 256
+        canvas.height = 256
         const context = canvas.getContext("2d")
         if (!context) return
         context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#1A1D21"
-        context.fillRect(0, 0, 512, 512)
-        const scale = Math.min(376 / image.width, 376 / image.height)
+        context.fillRect(0, 0, 256, 256)
+        const scale = Math.min(208 / image.width, 208 / image.height)
         const width = image.width * scale
         const height = image.height * scale
-        context.drawImage(image, (512 - width) / 2, (512 - height) / 2, width, height)
-        update({ ...preferences, logoStyle: "custom", logoDataUrl: canvas.toDataURL("image/png") })
+        context.drawImage(image, (256 - width) / 2, (256 - height) / 2, width, height)
+        update({ ...preferences, logoStyle: "custom", logoDataUrl: canvas.toDataURL("image/jpeg", 0.85) })
       }
       image.src = reader.result
     }
@@ -222,14 +271,60 @@ export default function SettingsPage() {
     <main className="settings-page">
       <section className="settings-intro"><div className="settings-intro-line"><span>{preferences.brandName.toUpperCase()} / SETTINGS</span><button type="button" className="settings-reset" onClick={resetAll}>Reset all</button></div><h1>Make the workspace yours.</h1><p>{preferences.tagline} Preferences stay on this device and never change the learning path.</p></section>
 
-      <section className="settings-section" aria-labelledby="appearance-heading">
+      <div className="settings-search">
+        <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search settings — themes, icons, logo…" aria-label="Search settings" />
+        {search && <button type="button" className="btn-ghost" onClick={() => setSearch("")}>Clear</button>}
+      </div>
+      <nav className="settings-toc" aria-label="Settings sections">
+        {[["appearance-heading","Look"],["type-heading","Voice"],["icons-heading","Icons"],["glyph-heading","Glyphs"],["nav-heading","Nav bar"],["identity-heading","Identity"],["presets-heading","Moods"],["share-heading","Share"],["system-heading","System"]].map(([id,label]) => (
+          <a key={id} href={`#${id}`} className="app-chip">{label}</a>
+        ))}
+      </nav>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      <section className="settings-section" aria-labelledby="appearance-heading" hidden={search.trim() !== "" && !sectionVisible("appearance-heading")}>
         <h2 id="appearance-heading">Appearance</h2>
         <div className="theme-options theme-options-expanded">
-          {themes.map(theme => <button type="button" key={theme.value} className={`theme-option${preferences.theme === theme.value ? " selected" : ""}`} onClick={() => update({ ...preferences, theme: theme.value })}><i style={{ background: theme.swatch }} /><strong>{theme.title}</strong><span>{theme.body}</span></button>)}
+          {themes.map(theme => <button type="button" key={theme.value} className={`theme-option${preferences.theme === theme.value ? " selected" : ""}`} onClick={() => update({ ...preferences, theme: theme.value })}><i style={{ background: theme.swatch }} /><strong>{theme.title}{theme.isNew && <span className="new-badge">NEW</span>}</strong><span>{theme.body}</span></button>)}
         </div>
       </section>
 
-      <section className="settings-section" aria-labelledby="nav-heading">
+      <section className="settings-section" aria-labelledby="accent-heading" hidden={search.trim() !== "" && !sectionVisible("accent-heading")}>
+        <h2 id="accent-heading">Focus color</h2>
+        <div className="accent-options">
+          {accents.map(accent => <button type="button" key={accent.value} className={`accent-option${preferences.accent === accent.value ? " selected" : ""}`} onClick={() => update({ ...preferences, accent: accent.value })}><i style={{ background: accent.color }} /><span>{accent.title}</span></button>)}
+          <label className={`accent-option custom-accent${preferences.accent === "custom" ? " selected" : ""}`}><i style={{ background: preferences.customAccent }} /><span>Custom</span><input type="color" value={preferences.customAccent} onChange={event => update({ ...preferences, accent: "custom", customAccent: event.target.value })} aria-label="Custom focus color" /></label>
+        </div>
+      </section>
+
+      <section className="settings-section" aria-labelledby="type-heading" hidden={search.trim() !== "" && !sectionVisible("type-heading")}>
+        <h2 id="type-heading">Reading voice</h2>
+        <div className="type-options">{typeVoices.map(voice => <button type="button" key={voice.value} className={`type-option${preferences.type === voice.value ? " selected" : ""}`} onClick={() => update({ ...preferences, type: voice.value })}><strong>{voice.title}{voice.isNew && <span className="new-badge">NEW</span>}</strong><span>{voice.body}</span></button>)}</div>
+      </section>
+
+      <section className="settings-section" aria-labelledby="surface-heading" hidden={search.trim() !== "" && !sectionVisible("surface-heading")}>
+        <h2 id="surface-heading">Surface language</h2>
+        <ChoiceGroup label="Density" value={preferences.density} options={densityOptions} onChange={density => update({ ...preferences, density })} />
+        <ChoiceGroup label="Shape" value={preferences.shape} options={shapeOptions} onChange={shape => update({ ...preferences, shape })} />
+        <ChoiceGroup label="Texture" value={preferences.texture} options={textureOptions} onChange={texture => update({ ...preferences, texture })} />
+      </section>
+
+      <section className="settings-section" aria-labelledby="nav-heading" hidden={search.trim() !== "" && !sectionVisible("nav-heading")}>
         <div className="settings-section-head"><h2 id="nav-heading">Navigation bar</h2><button type="button" className="settings-reset" onClick={() => update({ ...preferences, navSlots: ["home", "learn", "patterns", "observe"] })}>Reset bar</button></div>
         <p className="settings-hint">Choose up to four slots — “More” always closes the row. Icons follow your icon pack.</p>
         <div className="chip-row" role="group" aria-label="Navigation slots">
@@ -295,13 +390,13 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="settings-section" aria-labelledby="icons-heading">
+      <section className="settings-section" aria-labelledby="icons-heading" hidden={search.trim() !== "" && !sectionVisible("icons-heading")}>
         <h2 id="icons-heading">Icon pack</h2>
         <p className="settings-hint">App icons are independent of your theme — pair any pack with any palette and switch anytime.</p>
         <div className="icon-pack-grid">
           {ICON_PACKS.map(pack => (
             <button key={pack.id} type="button" className={`icon-pack-card${preferences.iconPack === pack.id ? " selected" : ""}`} onClick={() => update({ ...preferences, iconPack: pack.id })}>
-              <strong>{pack.name}</strong>
+              <strong>{pack.name}{pack.id === "personal" && <span className="new-badge">NEW</span>}</strong>
               <span>{pack.desc}</span>
               <div className="pack-preview-bar" aria-hidden="true">
                 {PREVIEW_SLOTS.map((slot, index) => (
@@ -321,41 +416,17 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="settings-section" aria-labelledby="presets-heading">
-        <h2 id="presets-heading">Curated atmospheres</h2>
-        <div className="style-presets">
-          {presets.map(preset => {
-            const theme = THEME_PREVIEW[preset.values.theme ?? "paper"] ?? THEME_PREVIEW.paper
-            const accent = preset.values.accent === "custom" ? "#E04A00" : PRESET_ACCENTS[preset.values.accent ?? "mint"] ?? PRESET_ACCENTS.mint
-            const radius = preset.values.shape === "precise" ? 5 : 11
-            return (
-              <button type="button" key={preset.title} className="style-preset" onClick={() => applyPreset(preset.values)}>
-                <span className="preset-mini" style={{ background: theme.bg, borderColor: theme.line, borderRadius: radius + 4 }} aria-hidden="true">
-                  <span className="preset-mini-bar" style={{ background: theme.panel, borderBottomColor: theme.line, borderRadius: radius }} />
-                  <span className="preset-mini-title" style={{ color: theme.ink, fontFamily: VOICE_FONT[preset.values.type ?? "technical"] }}>Derive</span>
-                  <span className="preset-mini-line" style={{ background: theme.soft, opacity: .55 }} />
-                  <span className="preset-mini-line short" style={{ background: theme.soft, opacity: .4 }} />
-                  <span className="preset-mini-cta" style={{ background: accent, borderRadius: Math.max(3, radius - 3) }} />
-                  {preset.values.texture === "grid" && <span className="preset-mini-grid" style={{ borderColor: theme.line }} />}
-                  {(preset.values.iconPack === "nothing") && <span className="preset-mini-dots" aria-hidden="true">{Array.from({ length: 9 }, (_, i) => <b key={i} />)}</span>}
-                </span>
-                <strong>{preset.title}</strong>
-                <small>{preset.body}</small>
-              </button>
-            )
-          })}
-        </div>
+      <section className="settings-section" aria-labelledby="glyph-heading" hidden={search.trim() !== "" && !sectionVisible("glyph-heading")}>
+        <div className="settings-section-head"><h2 id="glyph-heading">Glyph Studio</h2><button type="button" className="settings-reset" onClick={() => update({ ...preferences, personalDots: {} })}>Clear all</button></div>
+        <p className="settings-hint">A full dot-matrix editor lives in its own app — draw at 7×7, 12×12 or 16×16, tune color, glow and shape, then export PNG / SVG / JSON or save straight into your Personal icon pack.</p>
+        <a className="glyph-launcher" href="/glyph">
+          <span className="app-tile-icon" style={{ width: 56, height: 56, borderRadius: 16 }} aria-hidden="true"><PackIcon id="home" fallback="◆" pack="personal" /></span>
+          <span><strong>Open Glyph Studio</strong><small>draw · light · export · save to pack</small></span>
+          <i aria-hidden="true">→</i>
+        </a>
       </section>
 
-      <section className="settings-section" aria-labelledby="accent-heading">
-        <h2 id="accent-heading">Focus color</h2>
-        <div className="accent-options">
-          {accents.map(accent => <button type="button" key={accent.value} className={`accent-option${preferences.accent === accent.value ? " selected" : ""}`} onClick={() => update({ ...preferences, accent: accent.value })}><i style={{ background: accent.color }} /><span>{accent.title}</span></button>)}
-          <label className={`accent-option custom-accent${preferences.accent === "custom" ? " selected" : ""}`}><i style={{ background: preferences.customAccent }} /><span>Custom</span><input type="color" value={preferences.customAccent} onChange={event => update({ ...preferences, accent: "custom", customAccent: event.target.value })} aria-label="Custom focus color" /></label>
-        </div>
-      </section>
-
-      <section className="settings-section" aria-labelledby="identity-heading">
+      <section className="settings-section" aria-labelledby="identity-heading" hidden={search.trim() !== "" && !sectionVisible("identity-heading")}>
         <div className="settings-section-head"><h2 id="identity-heading">Workspace identity</h2><button type="button" className="settings-reset" onClick={resetIdentity}>Reset identity</button></div>
         <div className="identity-preview"><div><span className="experiment-kicker">Preview</span><strong>{preferences.brandName}</strong><small>{preferences.tagline}</small></div><div className="identity-logo-preview"><LogoPreview preferences={preferences} /></div></div>
         <label className="settings-field"><span>Workspace name</span><input value={preferences.brandName} maxLength={28} onChange={event => update({ ...preferences, brandName: event.target.value })} /></label>
@@ -374,22 +445,56 @@ export default function SettingsPage() {
         {preferences.logoDataUrl && <button type="button" className="settings-remove-logo" onClick={() => update({ ...preferences, logoDataUrl: undefined })}>Remove uploaded logo</button>}
       </section>
 
+      <section className="settings-section" aria-labelledby="presets-heading" hidden={search.trim() !== "" && !sectionVisible("presets-heading")}>
+        <h2 id="presets-heading">Curated atmospheres</h2>
+        <div className="style-presets">
+          {presets.map(preset => {
+            const theme = THEME_PREVIEW[preset.values.theme ?? "paper"] ?? THEME_PREVIEW.paper
+            const accent = preset.values.accent === "custom" ? "#E04A00" : PRESET_ACCENTS[preset.values.accent ?? "mint"] ?? PRESET_ACCENTS.mint
+            const radius = preset.values.shape === "precise" ? 5 : 11
+            return (
+              <button type="button" key={preset.title} className="style-preset" onClick={() => applyPreset(preset.values)}>
+                <span className="preset-mini" style={{ background: theme.bg, borderColor: theme.line, borderRadius: radius + 4 }} aria-hidden="true">
+                  <span className="preset-mini-bar" style={{ background: theme.panel, borderBottomColor: theme.line, borderRadius: radius }} />
+                  <span className="preset-mini-title" style={{ color: theme.ink, fontFamily: VOICE_FONT[preset.values.type ?? "technical"] }}>Derive</span>
+                  <span className="preset-mini-line" style={{ background: theme.soft, opacity: .55 }} />
+                  <span className="preset-mini-line short" style={{ background: theme.soft, opacity: .4 }} />
+                  <span className="preset-mini-cta" style={{ background: accent, borderRadius: Math.max(3, radius - 3) }} />
+                  {preset.values.texture === "grid" && <span className="preset-mini-grid" style={{ borderColor: theme.line }} />}
+                  {preset.values.iconPack === "nothing" && <span className="preset-mini-dots" aria-hidden="true">{Array.from({ length: 9 }, (_, i) => <b key={i} />)}</span>}
+                </span>
+                <strong>{preset.title}{preset.isNew && <span className="new-badge">NEW</span>}</strong>
+                <small>{preset.body}</small>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="settings-section" aria-labelledby="share-heading" hidden={search.trim() !== "" && !sectionVisible("share-heading")}>
+        <h2 id="share-heading">Share appearance</h2>
+        <p className="settings-hint">Pack your whole look into one QR or code. Scan it or paste it on another device to adopt the exact same atmosphere.</p>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          {shareDataUrl && <img src={shareDataUrl} alt="Appearance QR code" width={160} height={160} style={{ borderRadius: 14, border: "1px solid var(--line)" }} />}
+          <div style={{ display: "grid", gap: 8, minWidth: 220, flex: 1 }}>
+            <button type="button" className="super-primary" onClick={makeShareQr}>{shareDataUrl ? "Rebuild QR" : "Build my appearance QR"}</button>
+            <textarea className="settings-field-input" rows={2} value={importCode} onChange={event => setImportCode(event.target.value)} placeholder="Paste a deriva-theme code here…" spellCheck={false} />
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <button type="button" className="btn-ghost" onClick={applyImportedCode}>Apply pasted code</button>
+              {importMessage && <small style={{ color: "var(--ink-soft)", font: "600 11px var(--font-ui)" }}>{importMessage}</small>}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="settings-section" aria-labelledby="pwa-heading">
         <h2 id="pwa-heading">Phone app icon</h2>
         <PwaInstallStatus logoReady={Boolean(preferences.logoDataUrl)} />
       </section>
 
-      <section className="settings-section" aria-labelledby="type-heading">
-        <h2 id="type-heading">Reading voice</h2>
-        <div className="type-options">{typeVoices.map(voice => <button type="button" key={voice.value} className={`type-option${preferences.type === voice.value ? " selected" : ""}`} onClick={() => update({ ...preferences, type: voice.value })}><strong>{voice.title}</strong><span>{voice.body}</span></button>)}</div>
-      </section>
 
-      <section className="settings-section" aria-labelledby="surface-heading">
-        <h2 id="surface-heading">Surface language</h2>
-        <ChoiceGroup label="Density" value={preferences.density} options={densityOptions} onChange={density => update({ ...preferences, density })} />
-        <ChoiceGroup label="Shape" value={preferences.shape} options={shapeOptions} onChange={shape => update({ ...preferences, shape })} />
-        <ChoiceGroup label="Texture" value={preferences.texture} options={textureOptions} onChange={texture => update({ ...preferences, texture })} />
-      </section>
+
+
 
       <section className="settings-section" aria-labelledby="preview-heading">
         <h2 id="preview-heading">Live workspace preview</h2>

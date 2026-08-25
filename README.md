@@ -1,182 +1,89 @@
-<div align="center">
-  <img src="public/icons/icon-moss.svg" width="96" height="96" alt="Deriva moss logo" />
-  <h1>Deriva</h1>
-  <p><strong>Derive the algorithm. Don't memorize it.</strong></p>
-  <p>A reasoning-first workspace for DSA, system design, low-level design, and AI/ML systems.</p>
-  <p>
-    <a href="https://deriva.srivtx.xyz">Open Deriva</a>
-    &nbsp;&middot;&nbsp;
-    <a href="https://deriva.srivtx.xyz/android">Android install</a>
-    &nbsp;&middot;&nbsp;
-    <a href="https://deriva.srivtx.xyz/downloads/deriva-android.apk">Download APK</a>
-  </p>
-</div>
+# Deriva
 
-<p align="center">
-  <strong>Moss green by default.</strong> Technical voice. Local-first progress. Python in the browser.
-</p>
+**Derive the algorithm.** An interactive platform for learning data structures
+and algorithms through first-principles derivation — the trace is the product,
+code is the last stage, and every visualization is a pure function of
+`(trace, cursor)`.
 
-## The Product
+## What makes Deriva different
 
-Most learning platforms show an algorithm and ask you to recognize it later. Deriva reverses
-that order. It creates the need for the idea, gives you a small space to experiment, and
-only exposes implementation after you have designed the reasoning.
+- **Concepts → Reasoning → Patterns → Implementation.** Every problem follows a
+  nine-stage derivation flow; each stage teaches exactly one thinking move.
+- **Naive before optimized**, wherever the contrast teaches something (Rule A3).
+- **Typed curriculum.** Lessons are zod-validated data — content errors are
+  build errors.
+- **No gamification debt.** Progress is what you can derive again, not points.
 
-Every lesson follows the same nine-stage arc:
+## Product surface
 
-```text
-Understand -> Play -> Reason -> Discover -> Design
-    -> Implement -> Execute -> Reflect -> Generalize
-```
+| Area | Route | What it is |
+| --- | --- | --- |
+| Drill mode | `/practice`, `/topic/*` | Topic drills with full 9-stage derivations |
+| Guided lessons | `/learn/*` | Concept-first interactive lessons |
+| Daily challenge | `/daily` | One spaced pick per day, streak-tracked |
+| Review queue | `/review` | Spaced repetition over solved problems |
+| ICPC ladder | `/icpc` | 75 contest problems, ranked by difficulty |
+| Pattern quiz | `/patterns/quiz` | Recognition training across pattern families |
+| Algorithm Atlas | `/atlas` | Watch algorithms move, step by step |
+| Contest simulator | `/contest` | Three problems, one clock |
+| Mock interview | `/interview` | Timed hints-locked practice |
+| Complexity lab | `/complexity` | Interactive cost curves |
+| Playground | `/playground` | Python execution in a Web Worker (Pyodide) |
+| **Glyph Studio** | `/glyph` | Dot-matrix editor — draw light, animate frames, export PNG/SVG/JSON |
+| Focus Dial | `/focus` | Braun-style rotary timer that re-tints the shell while running |
+| Toolkit | `/toolkit` | Life toolkit: tasks, habits, focus and more |
+| Settings | `/settings` | Full appearance system + workspace identity, searchable |
 
-The goal is not to finish another list. The goal is to leave with a method you can recreate
-on a problem you have never seen.
+## Appearance system
 
-## What You Can Do
+Everything visual is user-owned and device-local:
 
-| Surface | What it is for |
-| --- | --- |
-| DSA | 700 problems across 14 topics, with first-principles scaffolding and in-browser Python |
-| ICPC Ladder | 75 contest problems across 13 linear sections, from ad-hoc warmups to geometry and game theory |
-| System Design | 45 architecture problems with requirements, capacity math, components, and validation |
-| Low-Level Design | 35 object-design problems with entities, relationships, state machines, and patterns |
-| AI/ML Systems | Labs, question tracks, production projects, and systems scenarios |
-| Pattern Journal | A personal record of the reusable thinking moves you have earned |
-| Learning Observatory | Progress, next actions, review cues, and transfer evidence in one view |
-| Game Mode | Interactive practice for invariants, decisions, compression, and system behavior |
+- **14 themes** (Moss, Paper, Nothing, OP-1, Swiss, Nord, Solarized, Braun…),
+  each combinable with accent colors, type voices (including Doto *Dot Matrix*
+  and Space Grotesk *Instrument*), density, shape and texture.
+- **4 icon-pack languages**: Classic strokes, Nothing dot-matrix bitmaps,
+  OP-1 thin-line pictograms, and a **Personal pack** you draw yourself.
+- **Customizable bottom navigation**: choose up to four slots, drag to reorder,
+  and pick each slot's icon style (Auto / Classic / Dots / Line / Mark).
+- **Logo marks**: Classic cipher, Nothing dot-D, or OP-1 line-D — one source
+  feeds the header, favicon, apple-touch-icon and installed-app icon.
+- A pre-paint boot script applies theme/pack/scale from localStorage before
+  first paint (no flash of default theme). Don't remove it.
+- Preferences never leave the device. Share codes (`deriva-theme:v1:…`) are
+  opt-in QR/portable strings that merge through the same normalize pipeline.
 
-## The Learning Contract
+## Architecture notes
 
-- Concepts come before reasoning, patterns, and implementation.
-- Hints are questions before they become explanations.
-- Naive solutions appear before optimizations when the contrast teaches something.
-- Your own execution produces the trace and the visualization.
-- Progress stays local to the browser in the v0 product.
-- There are no streaks, leaderboards, or urgency mechanics.
+- Next.js App Router + TypeScript + pnpm. `pnpm build` fails on any curriculum
+  or type error by design.
+- Design tokens in `src/app/globals.css` theme blocks; icons always render via
+  `currentColor` so packs adapt to every theme and active-tab tinting.
+- Service worker (`public/sw.js`): network-first HTML, cache-first immutable
+  assets, versioned cache bumped with every deploy. Self-healing guards
+  (`src/lib/recovery.ts`) detect stale-deploy chunk failures, purge caches once
+  and reload — plus an error ring-buffer (`src/lib/diagnostics.ts`) surfaced in
+  Settings → System for on-device debugging.
+- Android TWA under `android/deriva-twa` ships three launcher-icon product
+  flavors: `classic`, `nothing`, `opone`
+  (`./gradlew bundle<Variant>Release`).
 
-## Install
-
-### Web App
-
-Open the production app at [deriva.srivtx.xyz](https://deriva.srivtx.xyz). The site is
-installable as a PWA and can use a logo saved from Settings when Chrome offers the browser
-install prompt.
-
-### Android APK
-
-Use the [Android install page](https://deriva.srivtx.xyz/android) to download the signed
-Trusted Web Activity APK. The current release is version `1.2` with package ID
-`xyz.srivtx.deriva`.
-
-The installed APK includes native launcher icon controls. Open Settings inside the app and
-choose **Change app icon in Android app** to preview and apply:
-
-- Moss green
-- Deriva blue
-- Ember warm
-- Violet night
-- Cipher deep green
-- Crypto gold
-- Orbit electric blue
-
-The APK also lets you choose a local image and pin it as a custom home-screen shortcut on
-supported launchers. The signed APK launcher icon itself uses the bundled choices above;
-arbitrary APK resource replacement requires rebuilding and signing a new release.
-
-## Local Development
-
-Requirements: Node.js, pnpm, and Python 3 for the optional curriculum-bank checks.
+## Development
 
 ```bash
 pnpm install
-pnpm dev
+pnpm dev        # local dev server
+pnpm typecheck  # tsc --noEmit
+pnpm test       # vitest
+pnpm build      # production build (also runs validation)
 ```
 
-Open `http://localhost:3000`.
+## Documentation
 
-Production build and server:
-
-```bash
-pnpm build
-pnpm start
-```
-
-Validation:
-
-```bash
-pnpm typecheck
-pnpm test
-node scripts/extract-bank.mjs
-python3 scripts/verify-bank.py /tmp/deriva-bank.json
-```
-
-## Android Release Build
-
-The repeatable Trusted Web Activity project lives in `android/deriva-twa`. The signing
-keystore stays outside the repository and its password is read from the macOS Keychain.
-
-```bash
-JAVA_HOME="$(/usr/libexec/java_home -v 17)" \
-ANDROID_HOME="$HOME/.bubblewrap/android-sdk" \
-DERIVA_KEYSTORE_PATH="$HOME/.config/deriva-android/deriva-release.jks" \
-DERIVA_KEYSTORE_PASSWORD="$(security find-generic-password -s deriva-android-keystore -w)" \
-android/deriva-twa/gradlew -p android/deriva-twa assembleRelease
-
-cp android/deriva-twa/app/build/outputs/apk/release/app-release.apk \
-  public/downloads/deriva-android.apk
-```
-
-If the signing key changes, update `public/.well-known/assetlinks.json` with the new
-SHA-256 certificate fingerprint before publishing. Never commit the keystore or its
-password.
-
-## Architecture
-
-```text
-typed curriculum
-      |
-      v
-9-stage learning engine -----> local progress and preferences
-      |
-      v
-Pyodide in a Web Worker -----> immutable execution trace
-                                    |
-                                    v
-                         visualizers, replay, reflection
-```
-
-The application has no runtime backend in the v0 architecture. Python execution runs in a
-dedicated worker, progress is local-first, and the visualization layer reads traces rather
-than executing student code itself.
-
-## Repository Shape
-
-```text
-src/app/                 Next.js routes and product surfaces
-src/curriculum/          Typed lesson and question data
-src/learning/             Nine-stage learning engine
-src/execution/            Pyodide bridge, tracing, and simulation runtime
-src/viz/                  Pure trace replay and visualization panels
-src/persistence/          Local preferences and progress boundaries
-public/                   PWA assets, manifest, APK, and Asset Links
-android/deriva-twa/       Rebuildable signed Android project
-docs/                     Product, curriculum, and architecture constitution
-```
-
-## Roadmap
-
-- [x] DSA, HLD, LLD, AI/ML, games, and pattern surfaces
-- [x] Nine-stage reference lesson for tree recursion
-- [x] PWA install flow with local identity customization
-- [x] Signed Android APK with native icon settings
-- [x] Moss-green product identity and technical default voice
-- [x] ICPC ladder: 13 sections, 75 verified problems, difficulty tags, bookmarks
-- [x] Workspace data export/import and one-tap erase
-- [ ] Port every legacy problem into the full nine-stage lesson engine
-- [ ] Trace-based visualizations for every structure family
-- [ ] CS fundamentals track: operating systems, databases, networking, and concurrency
-- [ ] Mock interview mode without turning practice into a leaderboard
+The `docs/` suite is the constitution — start at `docs/01-product-requirements.md`
+and follow the reading order there. UI/appearance conventions live in
+`docs/09-ui-ux-design-system.md`; when work touches anything described in docs,
+update the corresponding doc in the same change.
 
 ## License
 
-MIT
+Private project © srivtx. All rights reserved.
