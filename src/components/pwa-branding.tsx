@@ -3,9 +3,7 @@
 import { useEffect } from "react"
 import { applyPreferences, loadPreferences, type Preferences } from "@/persistence/preferences"
 import { logoStyleDataUrl } from "@/data/logo-marks"
-
-const MANIFEST_SELECTOR = "link[data-deriva-dynamic-manifest]"
-let dynamicManifestUrl: string | null = null
+import { readErrorLog } from "@/lib/diagnostics"
 
 type AndroidInstallEvent = Event & {
   prompt: () => Promise<void>
@@ -27,45 +25,36 @@ export async function promptPwaInstall() {
   return choice.outcome === "accepted"
 }
 
-function updateIconLink(rel: "icon" | "apple-touch-icon", href: string) {
-  const selector = `link[rel="${rel}"][data-deriva-dynamic-icon]`
-  let link = document.head.querySelector<HTMLLinkElement>(selector)
+// React 19 owns server-rendered <head> nodes — NEVER remove them (that causes
+// hydration/render fights and breaks the whole app). Mutate hrefs in place.
+
+const STATIC_MANIFEST_HREF = "/manifest.webmanifest"
+
+function setManifestHref(href: string) {
+  let link = document.head.querySelector<HTMLLinkElement>('link[rel="manifest"]')
+  if (!link) {
+    link = document.createElement("link")
+    link.rel = "manifest"
+    document.head.appendChild(link)
+  }
+  if (link.href !== href) link.href = href
+}
+
+function setIconHref(rel: "icon" | "apple-touch-icon", href: string, type?: string) {
+  let link = document.head.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`)
   if (!link) {
     link = document.createElement("link")
     link.rel = rel
-    link.dataset.derivaDynamicIcon = "true"
+    if (type) link.type = type
     document.head.appendChild(link)
   }
-  link.href = href
+  if (link.href !== href) link.href = href
 }
 
-function removeDynamicLinks() {
-  document.head.querySelector(MANIFEST_SELECTOR)?.remove()
-  document.head.querySelectorAll("link[data-deriva-dynamic-icon]").forEach(link => link.remove())
-}
-
-function restoreDefaultManifest() {
-  if (document.head.querySelector('link[rel="manifest"]')) return
-  const link = document.createElement("link")
-  link.rel = "manifest"
-  link.href = "/manifest.webmanifest"
-  document.head.appendChild(link)
-}
-
-function restoreDefaultIcons() {
-  if (!document.head.querySelector('link[rel="icon"]')) {
-    const favicon = document.createElement("link")
-    favicon.rel = "icon"
-    favicon.href = "/favicon.svg"
-    favicon.type = "image/svg+xml"
-    document.head.appendChild(favicon)
-  }
-  if (!document.head.querySelector('link[rel="apple-touch-icon"]')) {
-    const apple = document.createElement("link")
-    apple.rel = "apple-touch-icon"
-    apple.href = "/icons/icon-180.png"
-    document.head.appendChild(apple)
-  }
+function restoreDefaultBranding() {
+  setManifestHref(STATIC_MANIFEST_HREF)
+  setIconHref("icon", "/favicon.svg", "image/svg+xml")
+  setIconHref("apple-touch-icon", "/icons/icon-180.png")
 }
 
 // Chrome's installability check requires real PNG icons — SVG data URLs are
@@ -99,30 +88,32 @@ function rasterizeToPng(src: string): Promise<string | null> {
 
 async function applyPwaBranding(preferences: Preferences) {
   try {
-  if (dynamicManifestUrl) URL.revokeObjectURL(dynamicManifestUrl)
-  dynamicManifestUrl = null
-  removeDynamicLinks()
-  applyPreferences(preferences)
-  document.title = `${preferences.brandName} — ${preferences.tagline}`
-  const curatedIcon = preferences.logoDataUrl ?? (preferences.logoStyle === "nothing" || preferences.logoStyle === "opone" ? logoStyleDataUrl(preferences.logoStyle) : null)
-  if (!curatedIcon) {
-    restoreDefaultManifest()
-    restoreDefaultIcons()
-    return
+    applyPreferences(preferences)
+    document.title = `${preferences.brandName} — ${preferences.tagline}`
+    const curatedIcon = preferences.logoDataUrl ?? (preferences.logoStyle === "nothing" || preferences.logoStyle === "opone" ? logoStyleDataUrl(preferences.logoStyle) : null)
+    if (!curatedIcon) {
+      restoreDefaultBranding()
+      return
+    }
+    const installable = await rasterizeToPng(curatedIcon)
+    if (!installable) {
+      restoreDefaultBranding()
+      return
+    }
+    setManifestHref(manifestBlobUrl(preferences, installable))
+    setIconHref("icon", installable, "image/png")
+    setIconHref("apple-touch-icon", installable, "image/png")
+  } catch (error) {
+    console.warn("[deriva] branding application failed", error)
+    try { sessionStorage.setItem("deriva-error-log", JSON.stringify([{ at: Date.now(), message: String(error).slice(0, 200), source: "branding" }, ...readErrorLog()].slice(0, 6))) } catch {}
+    restoreDefaultBranding()
   }
-  document.head.querySelectorAll('link[rel="manifest"]').forEach(link => link.remove())
-  document.head.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(link => link.remove())
+}
 
-   const styles = getComputedStyle(document.documentElement)
-   const color = styles.getPropertyValue("--paper").trim() || "#F2F4EC"
-   const accent = styles.getPropertyValue("--accent").trim() || "#2F8F5B"
-  const installable = await rasterizeToPng(curatedIcon)
-  if (!installable) {
-    restoreDefaultManifest()
-    restoreDefaultIcons()
-    return
-  }
-  const pngType = "image/png"
+let activeBlobUrl: string | null = null
+
+function manifestBlobUrl(preferences: Preferences, iconPng: string): string {
+  const styles = getComputedStyle(document.documentElement)
   const manifest = {
     name: `${preferences.brandName} — ${preferences.tagline}`,
     short_name: preferences.brandName,
@@ -131,28 +122,16 @@ async function applyPwaBranding(preferences: Preferences) {
     scope: "/",
     display: "standalone",
     orientation: "any",
-    background_color: color,
-     theme_color: accent,
+    background_color: styles.getPropertyValue("--paper").trim() || "#F2F4EC",
+    theme_color: styles.getPropertyValue("--accent").trim() || "#2F8F5B",
     icons: [
-      { src: installable, sizes: "512x512", type: pngType, purpose: "any" },
-      { src: installable, sizes: "512x512", type: pngType, purpose: "maskable" },
+      { src: iconPng, sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: iconPng, sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   }
-  const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" })
-  const manifestUrl = URL.createObjectURL(blob)
-  dynamicManifestUrl = manifestUrl
-  const manifestLink = document.createElement("link")
-  manifestLink.rel = "manifest"
-  manifestLink.href = manifestUrl
-  manifestLink.dataset.derivaDynamicManifest = "true"
-  document.head.appendChild(manifestLink)
-  updateIconLink("icon", installable)
-  updateIconLink("apple-touch-icon", installable)
-  } catch (error) {
-    console.warn("[deriva] branding application failed", error)
-    restoreDefaultManifest()
-    restoreDefaultIcons()
-  }
+  if (activeBlobUrl) URL.revokeObjectURL(activeBlobUrl)
+  activeBlobUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" }))
+  return activeBlobUrl
 }
 
 export default function PwaBranding() {
@@ -189,10 +168,7 @@ export default function PwaBranding() {
       window.removeEventListener("appinstalled", onAppInstalled)
       window.removeEventListener("deriva-preferences-change", onPreferencesChange)
       if (debounceTimer) clearTimeout(debounceTimer)
-      document.head.querySelector(MANIFEST_SELECTOR)?.remove()
-      if (dynamicManifestUrl) URL.revokeObjectURL(dynamicManifestUrl)
-      dynamicManifestUrl = null
-      document.head.querySelectorAll("link[data-deriva-dynamic-icon]").forEach(link => link.remove())
+
     }
   }, [])
 

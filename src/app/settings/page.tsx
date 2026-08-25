@@ -118,6 +118,25 @@ export default function SettingsPage() {
   const logoInput = useRef<HTMLInputElement>(null)
   const dragNav = useRef<{ id: string; pointerId: number } | null>(null)
   const [navDragging, setNavDragging] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+
+  const SECTION_SEARCH: Record<string, string> = {
+    "appearance-heading": "theme dark light moss paper ink ocean carbon violet sunset nothing opone swiss nord solarized braun palette background colour color",
+    "accent-heading": "accent focus color cobalt ember mint gold custom highlight",
+    "type-heading": "font type voice reading editorial technical humanist dotmatrix doto instrument grotesk serif",
+    "surface-heading": "surface density shape texture radius corners compact calm focused grid plain spacing",
+    "nav-heading": "navigation bar bottom tabs slots order drag icons slots more rearrange",
+    "icons-heading": "icon pack app icons nothing op-1 teenage personal classic style",
+    "glyph-heading": "glyph studio dot matrix editor draw led personal pack export png svg",
+    "identity-heading": "brand name tagline logo workspace identity upload image mark",
+    "presets-heading": "preset atmosphere mood curated bundle theme new",
+    "share-heading": "share qr code export appearance sync transfer device",
+  }
+  const sectionVisible = (headingId: string) => {
+    if (!search.trim()) return true
+    const haystack = `${SECTION_SEARCH[headingId] ?? ""} ${headingId}`.toLowerCase()
+    return haystack.includes(search.trim().toLowerCase())
+  }
   const [shareDataUrl, setShareDataUrl] = useState("")
   const [importCode, setImportCode] = useState("")
   const [importMessage, setImportMessage] = useState("")
@@ -252,20 +271,60 @@ export default function SettingsPage() {
     <main className="settings-page">
       <section className="settings-intro"><div className="settings-intro-line"><span>{preferences.brandName.toUpperCase()} / SETTINGS</span><button type="button" className="settings-reset" onClick={resetAll}>Reset all</button></div><h1>Make the workspace yours.</h1><p>{preferences.tagline} Preferences stay on this device and never change the learning path.</p></section>
 
+      <div className="settings-search">
+        <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search settings — themes, icons, logo…" aria-label="Search settings" />
+        {search && <button type="button" className="btn-ghost" onClick={() => setSearch("")}>Clear</button>}
+      </div>
       <nav className="settings-toc" aria-label="Settings sections">
         {[["appearance-heading","Look"],["type-heading","Voice"],["icons-heading","Icons"],["glyph-heading","Glyphs"],["nav-heading","Nav bar"],["identity-heading","Identity"],["presets-heading","Moods"],["share-heading","Share"],["system-heading","System"]].map(([id,label]) => (
           <a key={id} href={`#${id}`} className="app-chip">{label}</a>
         ))}
       </nav>
 
-      <section className="settings-section" aria-labelledby="appearance-heading">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      <section className="settings-section" aria-labelledby="appearance-heading" hidden={search.trim() !== "" && !sectionVisible("appearance-heading")}>
         <h2 id="appearance-heading">Appearance</h2>
         <div className="theme-options theme-options-expanded">
           {themes.map(theme => <button type="button" key={theme.value} className={`theme-option${preferences.theme === theme.value ? " selected" : ""}`} onClick={() => update({ ...preferences, theme: theme.value })}><i style={{ background: theme.swatch }} /><strong>{theme.title}{theme.isNew && <span className="new-badge">NEW</span>}</strong><span>{theme.body}</span></button>)}
         </div>
       </section>
 
-      <section className="settings-section" aria-labelledby="nav-heading">
+      <section className="settings-section" aria-labelledby="accent-heading" hidden={search.trim() !== "" && !sectionVisible("accent-heading")}>
+        <h2 id="accent-heading">Focus color</h2>
+        <div className="accent-options">
+          {accents.map(accent => <button type="button" key={accent.value} className={`accent-option${preferences.accent === accent.value ? " selected" : ""}`} onClick={() => update({ ...preferences, accent: accent.value })}><i style={{ background: accent.color }} /><span>{accent.title}</span></button>)}
+          <label className={`accent-option custom-accent${preferences.accent === "custom" ? " selected" : ""}`}><i style={{ background: preferences.customAccent }} /><span>Custom</span><input type="color" value={preferences.customAccent} onChange={event => update({ ...preferences, accent: "custom", customAccent: event.target.value })} aria-label="Custom focus color" /></label>
+        </div>
+      </section>
+
+      <section className="settings-section" aria-labelledby="type-heading" hidden={search.trim() !== "" && !sectionVisible("type-heading")}>
+        <h2 id="type-heading">Reading voice</h2>
+        <div className="type-options">{typeVoices.map(voice => <button type="button" key={voice.value} className={`type-option${preferences.type === voice.value ? " selected" : ""}`} onClick={() => update({ ...preferences, type: voice.value })}><strong>{voice.title}{voice.isNew && <span className="new-badge">NEW</span>}</strong><span>{voice.body}</span></button>)}</div>
+      </section>
+
+      <section className="settings-section" aria-labelledby="surface-heading" hidden={search.trim() !== "" && !sectionVisible("surface-heading")}>
+        <h2 id="surface-heading">Surface language</h2>
+        <ChoiceGroup label="Density" value={preferences.density} options={densityOptions} onChange={density => update({ ...preferences, density })} />
+        <ChoiceGroup label="Shape" value={preferences.shape} options={shapeOptions} onChange={shape => update({ ...preferences, shape })} />
+        <ChoiceGroup label="Texture" value={preferences.texture} options={textureOptions} onChange={texture => update({ ...preferences, texture })} />
+      </section>
+
+      <section className="settings-section" aria-labelledby="nav-heading" hidden={search.trim() !== "" && !sectionVisible("nav-heading")}>
         <div className="settings-section-head"><h2 id="nav-heading">Navigation bar</h2><button type="button" className="settings-reset" onClick={() => update({ ...preferences, navSlots: ["home", "learn", "patterns", "observe"] })}>Reset bar</button></div>
         <p className="settings-hint">Choose up to four slots — “More” always closes the row. Icons follow your icon pack.</p>
         <div className="chip-row" role="group" aria-label="Navigation slots">
@@ -331,7 +390,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="settings-section" aria-labelledby="icons-heading">
+      <section className="settings-section" aria-labelledby="icons-heading" hidden={search.trim() !== "" && !sectionVisible("icons-heading")}>
         <h2 id="icons-heading">Icon pack</h2>
         <p className="settings-hint">App icons are independent of your theme — pair any pack with any palette and switch anytime.</p>
         <div className="icon-pack-grid">
@@ -357,7 +416,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="settings-section" aria-labelledby="glyph-heading">
+      <section className="settings-section" aria-labelledby="glyph-heading" hidden={search.trim() !== "" && !sectionVisible("glyph-heading")}>
         <div className="settings-section-head"><h2 id="glyph-heading">Glyph Studio</h2><button type="button" className="settings-reset" onClick={() => update({ ...preferences, personalDots: {} })}>Clear all</button></div>
         <p className="settings-hint">A full dot-matrix editor lives in its own app — draw at 7×7, 12×12 or 16×16, tune color, glow and shape, then export PNG / SVG / JSON or save straight into your Personal icon pack.</p>
         <a className="glyph-launcher" href="/glyph">
@@ -367,7 +426,26 @@ export default function SettingsPage() {
         </a>
       </section>
 
-      <section className="settings-section" aria-labelledby="presets-heading">
+      <section className="settings-section" aria-labelledby="identity-heading" hidden={search.trim() !== "" && !sectionVisible("identity-heading")}>
+        <div className="settings-section-head"><h2 id="identity-heading">Workspace identity</h2><button type="button" className="settings-reset" onClick={resetIdentity}>Reset identity</button></div>
+        <div className="identity-preview"><div><span className="experiment-kicker">Preview</span><strong>{preferences.brandName}</strong><small>{preferences.tagline}</small></div><div className="identity-logo-preview"><LogoPreview preferences={preferences} /></div></div>
+        <label className="settings-field"><span>Workspace name</span><input value={preferences.brandName} maxLength={28} onChange={event => update({ ...preferences, brandName: event.target.value })} /></label>
+        <label className="settings-field"><span>Tagline</span><input value={preferences.tagline} maxLength={80} onChange={event => update({ ...preferences, tagline: event.target.value })} /></label>
+        <div className="logo-controls"><div className="settings-field"><span>Logo image</span><button type="button" className="btn-ghost" onClick={() => logoInput.current?.click()}>Upload image</button><input ref={logoInput} className="visually-hidden-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={event => { const file = event.target.files?.[0]; if (file) readLogo(file); event.currentTarget.value = "" }} /><small>PNG, JPG, WEBP, or SVG under 240 KB. An uploaded image overrides the styles below.</small></div></div>
+        <div className="logo-style-grid" role="group" aria-label="App logo mark">
+          {LOGO_STYLES.map(style => (
+            <button key={style.id} type="button" className={`logo-style-card${preferences.logoStyle === style.id && !preferences.logoDataUrl ? " selected" : ""}`} onClick={() => update({ ...preferences, logoStyle: style.id, logoDataUrl: undefined })}>
+              <Logo size={44} label={preferences.brandName} style={style.id} />
+              <strong>{style.name}</strong>
+              <small>{style.body}</small>
+              <span className="logo-style-note">Header · favicon · installed app icon</span>
+            </button>
+          ))}
+        </div>
+        {preferences.logoDataUrl && <button type="button" className="settings-remove-logo" onClick={() => update({ ...preferences, logoDataUrl: undefined })}>Remove uploaded logo</button>}
+      </section>
+
+      <section className="settings-section" aria-labelledby="presets-heading" hidden={search.trim() !== "" && !sectionVisible("presets-heading")}>
         <h2 id="presets-heading">Curated atmospheres</h2>
         <div className="style-presets">
           {presets.map(preset => {
@@ -393,7 +471,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="settings-section" aria-labelledby="share-heading">
+      <section className="settings-section" aria-labelledby="share-heading" hidden={search.trim() !== "" && !sectionVisible("share-heading")}>
         <h2 id="share-heading">Share appearance</h2>
         <p className="settings-hint">Pack your whole look into one QR or code. Scan it or paste it on another device to adopt the exact same atmosphere.</p>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
@@ -409,49 +487,14 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="settings-section" aria-labelledby="accent-heading">
-        <h2 id="accent-heading">Focus color</h2>
-        <div className="accent-options">
-          {accents.map(accent => <button type="button" key={accent.value} className={`accent-option${preferences.accent === accent.value ? " selected" : ""}`} onClick={() => update({ ...preferences, accent: accent.value })}><i style={{ background: accent.color }} /><span>{accent.title}</span></button>)}
-          <label className={`accent-option custom-accent${preferences.accent === "custom" ? " selected" : ""}`}><i style={{ background: preferences.customAccent }} /><span>Custom</span><input type="color" value={preferences.customAccent} onChange={event => update({ ...preferences, accent: "custom", customAccent: event.target.value })} aria-label="Custom focus color" /></label>
-        </div>
-      </section>
-
-      <section className="settings-section" aria-labelledby="identity-heading">
-        <div className="settings-section-head"><h2 id="identity-heading">Workspace identity</h2><button type="button" className="settings-reset" onClick={resetIdentity}>Reset identity</button></div>
-        <div className="identity-preview"><div><span className="experiment-kicker">Preview</span><strong>{preferences.brandName}</strong><small>{preferences.tagline}</small></div><div className="identity-logo-preview"><LogoPreview preferences={preferences} /></div></div>
-        <label className="settings-field"><span>Workspace name</span><input value={preferences.brandName} maxLength={28} onChange={event => update({ ...preferences, brandName: event.target.value })} /></label>
-        <label className="settings-field"><span>Tagline</span><input value={preferences.tagline} maxLength={80} onChange={event => update({ ...preferences, tagline: event.target.value })} /></label>
-        <div className="logo-controls"><div className="settings-field"><span>Logo image</span><button type="button" className="btn-ghost" onClick={() => logoInput.current?.click()}>Upload image</button><input ref={logoInput} className="visually-hidden-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={event => { const file = event.target.files?.[0]; if (file) readLogo(file); event.currentTarget.value = "" }} /><small>PNG, JPG, WEBP, or SVG under 240 KB. An uploaded image overrides the styles below.</small></div></div>
-        <div className="logo-style-grid" role="group" aria-label="App logo mark">
-          {LOGO_STYLES.map(style => (
-            <button key={style.id} type="button" className={`logo-style-card${preferences.logoStyle === style.id && !preferences.logoDataUrl ? " selected" : ""}`} onClick={() => update({ ...preferences, logoStyle: style.id, logoDataUrl: undefined })}>
-              <Logo size={44} label={preferences.brandName} style={style.id} />
-              <strong>{style.name}</strong>
-              <small>{style.body}</small>
-              <span className="logo-style-note">Header · favicon · installed app icon</span>
-            </button>
-          ))}
-        </div>
-        {preferences.logoDataUrl && <button type="button" className="settings-remove-logo" onClick={() => update({ ...preferences, logoDataUrl: undefined })}>Remove uploaded logo</button>}
-      </section>
-
       <section className="settings-section" aria-labelledby="pwa-heading">
         <h2 id="pwa-heading">Phone app icon</h2>
         <PwaInstallStatus logoReady={Boolean(preferences.logoDataUrl)} />
       </section>
 
-      <section className="settings-section" aria-labelledby="type-heading">
-        <h2 id="type-heading">Reading voice</h2>
-        <div className="type-options">{typeVoices.map(voice => <button type="button" key={voice.value} className={`type-option${preferences.type === voice.value ? " selected" : ""}`} onClick={() => update({ ...preferences, type: voice.value })}><strong>{voice.title}{voice.isNew && <span className="new-badge">NEW</span>}</strong><span>{voice.body}</span></button>)}</div>
-      </section>
 
-      <section className="settings-section" aria-labelledby="surface-heading">
-        <h2 id="surface-heading">Surface language</h2>
-        <ChoiceGroup label="Density" value={preferences.density} options={densityOptions} onChange={density => update({ ...preferences, density })} />
-        <ChoiceGroup label="Shape" value={preferences.shape} options={shapeOptions} onChange={shape => update({ ...preferences, shape })} />
-        <ChoiceGroup label="Texture" value={preferences.texture} options={textureOptions} onChange={texture => update({ ...preferences, texture })} />
-      </section>
+
+
 
       <section className="settings-section" aria-labelledby="preview-heading">
         <h2 id="preview-heading">Live workspace preview</h2>

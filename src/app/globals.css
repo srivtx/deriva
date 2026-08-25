@@ -66,6 +66,9 @@
 :root[data-theme="sunset"] { color-scheme: light; --paper: #FBF4EC; --paper-raised: #FFFDF9; --ink: #33251F; --ink-soft: #806C60; --line: #E8D9CB; --accent: #B55335; --success-soft: #F2EBDD; --success-line: #D8B88E; }
 :root[data-theme="ocean"] { color-scheme: light; --paper: #EFF5FA; --paper-raised: #FBFDFF; --ink: #13202B; --ink-soft: #57708A; --line: #D2E2EE; --accent: #1E6FA8; --success-soft: #E3F1EA; --success-line: #A9CFBE; }
 :root[data-theme="carbon"] { color-scheme: dark; --paper: #15171A; --paper-raised: #1E2125; --ink: #EAEAE7; --ink-soft: #9AA2AB; --line: #2B2F35; --accent: #7DA5E8; --success-soft: #1A2B23; --success-line: #2F8F5B; }
+:root { --on-accent: #FFFFFF; }
+:root[data-theme="nord"] { --on-accent: #2E3440; }
+:root[data-theme="solarized"] { --on-accent: #002B36; }
 :root[data-theme="nothing"] { color-scheme: dark; --paper: #0A0A0B; --paper-raised: #141416; --ink: #F4F3EF; --ink-soft: #8E8E93; --line: #27272A; --accent: #E02020; --success-soft: #14201A; --success-line: #3AA06B; }
 :root[data-theme="opone"] { color-scheme: light; --paper: #E9E7DE; --paper-raised: #F6F4EB; --ink: #191813; --ink-soft: #6D6A5D; --line: #D2CFC0; --accent: #E04A00; --success-soft: #E9EFE0; --success-line: #A9BF8E; }
 :root[data-theme="swiss"] { color-scheme: light; --paper: #F1F0ED; --paper-raised: #FFFFFF; --ink: #111114; --ink-soft: #55555C; --line: #DEDDD8; --accent: #D92B2B; --success-soft: #E7EEE7; --success-line: #AFC7AF; }
@@ -169,6 +172,8 @@
 .preview-instrument b { font: 700 22px var(--font-mono); }
 .preview-instrument small { color: var(--ink-soft); font: 10px var(--font-ui); }
 .custom-logo-image { display: block; }
+img, svg, canvas, video { max-width: 100%; }
+pre, code { overflow-wrap: anywhere; }
 .identity-logo-preview .custom-logo-image { width: 100%; height: 100%; object-fit: cover; }
 
 /* Learning Observatory */
@@ -350,7 +355,7 @@
 /* ── Super app surfaces (daily / review / contest / interview / cheatsheets / playground / releases) ── */
 .super-page { max-width: 860px; min-height: calc(100dvh - var(--app-header-height)); margin: 0 auto; padding: clamp(24px, 5vw, 56px) clamp(16px, 4vw, 40px) calc(128px + env(safe-area-inset-bottom)); display: grid; gap: 16px; }
 .super-kicker { color: var(--accent); font: 700 10px var(--font-ui); letter-spacing: .13em; }
-.super-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: calc(var(--radius) - 2px); background: var(--accent); color: var(--paper-raised); font: 700 13px var(--font-ui); text-decoration: none; transition: transform var(--dur-fast), box-shadow var(--dur-fast); }
+.super-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: calc(var(--radius) - 2px); background: var(--accent); color: var(--on-accent); font: 700 13px var(--font-ui); text-decoration: none; transition: transform var(--dur-fast), box-shadow var(--dur-fast); }
 .super-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-raised); }
 .super-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); background: var(--paper-raised); color: var(--ink); font: 600 13px var(--font-ui); cursor: pointer; transition: border-color var(--dur-fast), color var(--dur-fast); }
 .super-ghost:hover { border-color: var(--accent); color: var(--accent); }
@@ -861,9 +866,12 @@ textarea.settings-field-input { width: 100%; padding: 10px 12px; border: 1px sol
 textarea.settings-field-input:focus { outline: none; border-color: var(--accent); }
 
 /* ── NEW badge + settings organisation ── */
-.new-badge { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: var(--accent); color: var(--paper-raised); font: 800 8.5px var(--font-ui); letter-spacing: .1em; vertical-align: middle; }
+.new-badge { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font: 800 8.5px var(--font-ui); letter-spacing: .1em; vertical-align: middle; }
 .settings-toc { display: flex; gap: 7px; flex-wrap: wrap; padding: 0 0 4px; }
 .settings-toc .app-chip { text-decoration: none; }
+.settings-search { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+.settings-search input[type="search"] { flex: 1; min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-raised); color: var(--ink); font: 600 13px var(--font-ui); }
+.settings-search input[type="search"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .glyph-launcher { display: flex; align-items: center; gap: 14px; max-width: 460px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink); text-decoration: none; transition: border-color var(--dur-fast), transform var(--dur-fast), box-shadow var(--dur-fast); }
 .glyph-launcher:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow-raised); }
 .glyph-launcher strong { display: block; font: 700 14px var(--font-ui); }
@@ -874,7 +882,9 @@ textarea.settings-field-input:focus { outline: none; border-color: var(--accent)
 .glyph-app { min-height: 100dvh; max-width: 1060px; margin: 0 auto; padding: 26px 18px calc(40px + env(safe-area-inset-bottom)); }
 .glyph-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .glyph-head h1 { font: 700 clamp(24px, 5vw, 32px)/1.1 var(--font-narrative); letter-spacing: -.02em; }
-.glyph-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; align-items: start; }
+.glyph-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 22px; align-items: start; }
+.glyph-canvas-col, .glyph-panel { min-width: 0; }
+.glyph-canvas { max-width: 100%; overflow-x: auto; }
 @media (max-width: 900px) { .glyph-layout { grid-template-columns: 1fr; } }
 .glyph-canvas-col { display: grid; gap: 14px; }
 .glyph-toolbar { display: grid; gap: 8px; }
@@ -899,6 +909,15 @@ textarea.settings-field-input:focus { outline: none; border-color: var(--accent)
 .swatch.selected { box-shadow: 0 0 0 3px var(--accent-soft), inset 0 0 0 1px rgb(128 128 128 / .35); }
 .glyph-export-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .glyph-message { color: var(--ink-soft); font: 600 11px/1.5 var(--font-ui); }
+.glyph-frames-bar { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper-raised); }
+.glyph-frames-label { color: var(--ink-soft); font: 700 9.5px var(--font-ui); letter-spacing: .12em; text-transform: uppercase; }
+.glyph-thumb { position: relative; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; overflow: hidden; padding: 0; transition: border-color var(--dur-fast), box-shadow var(--dur-fast); }
+.glyph-thumb.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.glyph-thumb b { position: absolute; }
+.glyph-inline-field { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); font: 700 11px var(--font-ui); }
+.glyph-inline-field input[type="range"] { accent-color: var(--accent); width: 90px; }
+.glyph-patterns { display: grid; gap: 8px; }
+.onion-layer { position: absolute; inset: clamp(10px, 3vw, 20px); pointer-events: none; }
 
 /* ── Lucent motion pass (Nothing OS 5.0 frosted feel) ── */
 @media (prefers-reduced-motion: no-preference) {
@@ -1072,6 +1091,9 @@ body.app-mode-active .practice-wrap .main { padding-bottom: 28px; }
 
 /* ── Base ── */
 html { font-family: "Inter", system-ui, sans-serif; overflow-x: clip; }
+html, body { max-width: 100%; }
+html { overflow-x: clip; }
+body { overflow-x: clip; }
 body { overflow-x: clip; background: var(--paper); background-image: radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 28rem), radial-gradient(circle at 8% 32%, color-mix(in srgb, var(--viz-pointer) 4%, transparent), transparent 24rem), var(--paper-grid); background-attachment: fixed; background-size: auto, auto, 28px 28px; color: var(--ink); margin: 0; }
 .logo-wordmark { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); }
 .logo-wordmark > span { font: 700 19px/1 var(--font-narrative); letter-spacing: -.04em; font-style: italic; }
