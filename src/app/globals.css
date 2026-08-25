@@ -3043,3 +3043,10 @@ code, pre { font-family: var(--font-mono); }
 .ghost-inputrow { box-shadow: 0 3px 16px rgba(0,0,0,0.07); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
 .ghost-send, .ghost-minibtn { transition: transform 0.13s ease, filter 0.13s ease, opacity 0.13s ease, color 0.13s ease, border-color 0.13s ease; }
 .ghost-send:active:not(:disabled), .ghost-minibtn:active:not(:disabled) { transform: scale(0.96); }
+
+/* ── Ghost v7: avatar lock, jump pill, touch fix ──────────── */
+.ghost-msg .ghost-face { width: 22px !important; height: 22px !important; min-width: 22px; flex: 0 0 auto; align-self: flex-end; }
+.ghost-face svg { display: block; }
+.ghost-messages { overscroll-behavior: contain; touch-action: pan-y; }
+.ghost-jump { position: absolute; bottom: 86px; left: 50%; transform: translateX(-50%); z-index: 5; appearance: none; border: 1px solid var(--line); background: var(--paper-raised); color: var(--ink); font: 700 11px/1 var(--font-ui); padding: 9px 14px; border-radius: 999px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.12); animation: ghost-rise-in 0.16s ease both; }
+.ghost-jump:hover { border-color: var(--accent); color: var(--accent); }

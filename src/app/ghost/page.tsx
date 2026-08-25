@@ -94,8 +94,9 @@ export default function GhostPage() {
   const [error, setError] = useState<string | null>(null)
   const [everSet] = useState<Set<string>>(() => everDownloaded())
   const [pendingGet, setPendingGet] = useState<GhostModel | null>(null)
-  const bottomRef = useRef<HTMLDivElement | null>(null)
   const busyRef = useRef(false)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [follow, setFollow] = useState(true)
 
   const sizeOf = useCallback((url: string) => storage.find(s => s.url === url)?.sizeMb ?? 0, [storage])
   const isCached = useCallback((url: string) => storage.some(s => s.url === url), [storage])
@@ -138,8 +139,16 @@ export default function GhostPage() {
   }, [])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
-  }, [messages])
+    if (!follow) return
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [messages, follow])
+
+  const onMessagesScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setFollow(el.scrollHeight - el.scrollTop - el.clientHeight < 90)
+  }, [])
 
   const persistSession = useCallback((next: ChatMessage[], firstUserText?: string) => {
     setSessions(prev => {
@@ -243,6 +252,7 @@ export default function GhostPage() {
     if (!text || busyRef.current) return
     busyRef.current = true
     setBusy(true)
+    setFollow(true)
     setInput("")
     setError(null)
 
@@ -317,6 +327,7 @@ export default function GhostPage() {
     setSessions(prev => { const l = upsertCurrentBeforeSwitch(prev); saveSessions(l); return l })
     setMessages([])
     setActiveId(null)
+    setFollow(true)
     setHistoryOpen(false)
     try { localStorage.removeItem(ACTIVE_KEY) } catch {}
   }, [upsertCurrentBeforeSwitch])
@@ -326,6 +337,7 @@ export default function GhostPage() {
       const l = upsertCurrentBeforeSwitch(prev); saveSessions(l)
       const found = l.find(s => s.id === id)
       if (found) { setMessages(found.messages); setActiveId(found.id); try { localStorage.setItem(ACTIVE_KEY, id) } catch {} }
+      setFollow(true)
       setHistoryOpen(false)
       return l
     })
@@ -342,12 +354,11 @@ export default function GhostPage() {
   const deleteByUrl = useCallback(async (url: string) => {
     if (action) return
     setAction(`del:${url}`)
-    const freed = sizeOf(url)
-    await ghostEngine.delete(url)
+    const result = await ghostEngine.delete(url)
     await refreshStorage()
     setAction(null)
-    if (freed > 0) setError(null)
-  }, [action, sizeOf, refreshStorage])
+    if (!result.verified) setError("Could not fully free that brain's storage — tap DELETE again.")
+  }, [action, refreshStorage])
 
   const useModel = useCallback(async (m: GhostModel) => {
     if (action || m.id === model.id) return
@@ -455,7 +466,7 @@ export default function GhostPage() {
                 <button type="button" className="ghost-gear-inline" aria-label="Ghost settings" onClick={() => setSheetOpen(true)}>⚙</button>
               </span>
             </div>
-          <div className="ghost-messages">
+          <div className="ghost-messages" ref={scrollRef} onScroll={onMessagesScroll}>
             {busy && (
               <div className="ghost-thinking-chip"><GhostFace size={18} thinking /> thinking…{tps != null && tps > 0 ? ` ${tps.toFixed(1)} tok/s` : ""}</div>
             )}
@@ -475,9 +486,11 @@ export default function GhostPage() {
                 </div>
               </div>
             ))}
-            <div ref={bottomRef} />
           </div>
 
+          {!follow && (
+            <button type="button" className="ghost-jump" onClick={() => setFollow(true)}>↓ latest</button>
+          )}
           <footer className="ghost-composer">
             {error && <p className="ghost-error">{error}</p>}
             <form onSubmit={event => { event.preventDefault(); void send() }} className="ghost-inputrow">

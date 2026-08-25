@@ -208,18 +208,27 @@ class GhostEngine {
     })
   }
 
-  delete(url: string): Promise<void> {
-    if (!this.worker) return Promise.resolve()
-    return this.request<void>("delete", { url }).catch(() => {})
+  // Cold-worker delete: a live wasm runtime keeps OPFS handles open, so
+  // removeEntry fails silently. Terminate first (releases every lock),
+  // then a fresh worker performs the delete and we demand verification.
+  async delete(url: string): Promise<{ verified: boolean }> {
+    this.worker?.terminate()
+    this.worker = null
+    try {
+      const res = await this.request<{ deleted?: boolean; verified?: boolean }>("delete", { url })
+      return { verified: res.verified !== false }
+    } catch {
+      return { verified: false }
+    }
   }
 
   async clearAll(): Promise<void> {
+    this.worker?.terminate()
+    this.worker = null
     const urls = [...GHOST_MODELS.map(m => m.url), ...GHOST_LEGACY_URLS]
     for (const url of urls) {
       await this.request<void>("delete", { url }).catch(() => {})
     }
-    this.worker?.terminate()
-    this.worker = null
     try { localStorage.removeItem("deriva-ghost-ready") } catch {}
   }
 }
