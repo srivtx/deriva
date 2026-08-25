@@ -23,3 +23,9 @@ export function saveTheoryNote(noteId: string, note: string) {
   else delete notes[noteId]
   try { localStorage.setItem(KEY, JSON.stringify(notes)) } catch {}
 }
+
+export function listTheoryNotes(): { id: string; note: string }[] {
+  return Object.entries(readNotes())
+    .map(([id, note]) => ({ id, note }))
+    .sort((a, b) => a.id.localeCompare(b.id))
+}

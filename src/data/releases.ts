@@ -20,6 +20,9 @@ export const RELEASES: ReleaseEntry[] = [
       { title: "Cheatsheet Hub", body: "Ten contest templates — binary search to KMP — each one tap from copy or the related practice set." },
       { title: "Python Playground", body: "A free sandbox with no problem attached. Run anything, keep the worker warm." },
       { title: "Android shortcuts + haptics", body: "Long-press the app icon for Daily, Practice, and ICPC. Solving now buzzes. New signed APK." },
+      { title: "Life Toolkit", body: "Tasks, focus timer, habits, calculator, unit converter, regex tester, JSON formatter, password generator — everyday utilities, all local." },
+      { title: "Complexity Lab + Notebook", body: "Time real executions at growing sizes and watch the Big-O curve appear. Every theory note you write lands in one searchable notebook." },
+      { title: "Playground 2.0", body: "Line numbers, autosave, ⌘+Enter, copy and download — a real sandbox instead of a bare textarea." },
     ],
   },
   {

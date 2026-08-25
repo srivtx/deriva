@@ -12,9 +12,63 @@ import { loadPreferences, type Preferences } from "@/persistence/preferences"
 import { dailyPickForDate, todayKey } from "@/persistence/daily"
 import { dueCards, seedQueueFromMastery } from "@/persistence/review-queue"
 import ProgressRing from "@/components/progress-ring"
+import AppTile from "@/components/app-tile"
+import { loadTasks } from "@/persistence/toolkit"
 
 type HomeMomentum = { practiceDone: number; practiceTotal: number; pathDone: number }
 type MasteryMomentum = { recognized: number; transferred: number; review: number }
+
+const G = {
+  green: "linear-gradient(135deg, #2F8F5B, #1E6B45)",
+  cobalt: "linear-gradient(135deg, #2E5AAC, #1D3D7A)",
+  violet: "linear-gradient(135deg, #7655B8, #55398F)",
+  ember: "linear-gradient(135deg, #B55335, #8C3A24)",
+  gold: "linear-gradient(135deg, #B07C24, #855C17)",
+  teal: "linear-gradient(135deg, #2B8063, #1D5C46)",
+  slate: "linear-gradient(135deg, #5C6470, #434A55)",
+  pink: "linear-gradient(135deg, #DB2777, #A31D58)",
+  dark: "linear-gradient(135deg, #1E2922, #0F1512)",
+  sky: "linear-gradient(135deg, #0891B2, #056680)",
+}
+
+const APP_SECTIONS = [
+  { label: "Today", apps: [
+    { href: "/daily", name: "Daily", glyph: "☀", gradient: G.green },
+    { href: "/review", name: "Review", glyph: "↻", gradient: G.violet },
+    { href: "/contest", name: "Contest", glyph: "⏱", gradient: G.ember },
+    { href: "/interview", name: "Interview", glyph: "◉", gradient: G.cobalt },
+  ] },
+  { label: "Practice", apps: [
+    { href: "/practice", name: "Drill", glyph: "▶", gradient: G.cobalt },
+    { href: "/icpc", name: "ICPC", glyph: "⚑", gradient: G.green },
+    { href: "/atlas", name: "Atlas", glyph: "◎", gradient: G.sky },
+    { href: "/cheatsheets", name: "Cheatsheets", glyph: "≡", gradient: G.gold },
+  ] },
+  { label: "Build", apps: [
+    { href: "/playground", name: "Playground", glyph: "❯_", gradient: G.dark },
+    { href: "/complexity", name: "Big-O Lab", glyph: "∿", gradient: G.violet },
+    { href: "/notebook", name: "Notebook", glyph: "✎", gradient: G.gold },
+  ] },
+  { label: "Life", apps: [
+    { href: "/toolkit", name: "Toolkit", glyph: "▦", gradient: G.teal },
+    { href: "/toolkit?tool=tasks", name: "Tasks", glyph: "☑", gradient: G.teal },
+    { href: "/toolkit?tool=focus", name: "Focus", glyph: "◔", gradient: G.ember },
+    { href: "/toolkit?tool=habits", name: "Habits", glyph: "▦", gradient: G.green },
+  ] },
+  { label: "Explore", apps: [
+    { href: "/ai-ml", name: "AI/ML", glyph: "✳", gradient: G.violet },
+    { href: "/design", name: "Design", glyph: "▣", gradient: G.cobalt },
+    { href: "/lld", name: "LLD", glyph: "◇", gradient: G.teal },
+    { href: "/expedition", name: "Expedition", glyph: "△", gradient: G.ember },
+    { href: "/games", name: "Games", glyph: "◆", gradient: G.pink },
+  ] },
+  { label: "System", apps: [
+    { href: "/observatory", name: "Observatory", glyph: "◔", gradient: G.slate },
+    { href: "/dashboard", name: "Progress", glyph: "▤", gradient: G.slate },
+    { href: "/releases", name: "What's new", glyph: "✦", gradient: G.green },
+    { href: "/settings", name: "Settings", glyph: "⚙", gradient: G.slate },
+  ] },
+] as const
 
 const TOPIC_STYLES = [
   { bg: "#eff6ff", border: "#bfdbfe", accent: "#2563eb", dot: "var(--accent)" },
@@ -41,6 +95,7 @@ export default function HomePage() {
   const [practiceAction, setPracticeAction] = useState<NextAction>()
   const [preferences, setPreferences] = useState<Preferences>()
   const [reviewDue, setReviewDue] = useState(0)
+  const [openTasks, setOpenTasks] = useState(0)
 
   useEffect(() => {
     setGuidedProgress(loadLessonProgress("trees/00-recursion-reflex/sum-1-to-n"))
@@ -59,6 +114,7 @@ export default function HomePage() {
     setMomentum({ practiceDone, practiceTotal, pathDone })
     seedQueueFromMastery()
     setReviewDue(dueCards().length)
+    setOpenTasks(loadTasks().filter(task => !task.done).length)
     setHydrated(true)
   }, [])
 
@@ -134,6 +190,18 @@ export default function HomePage() {
             <Link href="/review" className="super-day-tile tile-review"><span>Review Queue</span><strong>{hydrated ? (reviewDue > 0 ? `${reviewDue} patterns due` : "Deck clear") : "Checking…"}</strong><em>spaced repetition</em></Link>
             <Link href="/contest" className="super-day-tile tile-contest"><span>Contest Simulator</span><strong>3 problems · 90 min</strong><em>real penalty clock</em></Link>
           </div>
+        </section>
+
+        <section className="app-library" aria-label="All apps">
+          <div className="super-day-head"><div><span className="discovery-kicker">App library</span><h2>Everything inside {preferences?.brandName ?? "Deriva"}.</h2></div></div>
+          {APP_SECTIONS.map(section => (
+            <div key={section.label} className="app-library-group">
+              <span className="app-library-label">{section.label}</span>
+              <div className="app-library-grid">
+                {section.apps.map(app => <AppTile key={app.href + app.name} app={app} />)}
+              </div>
+            </div>
+          ))}
         </section>
 
         <section className="android-app-callout" aria-labelledby="android-app-heading">

@@ -31,7 +31,22 @@ const MORE_GROUPS: MoreGroup[] = [
       { label: "ICPC Ladder", href: "/icpc", desc: "75 contest problems" },
       { label: "Algorithm Atlas", href: "/atlas", desc: "watch algorithms move" },
       { label: "Cheatsheet Hub", href: "/cheatsheets", desc: "contest templates" },
+    ],
+  },
+  {
+    label: "Build",
+    links: [
       { label: "Playground", href: "/playground", desc: "free sandbox" },
+      { label: "Complexity Lab", href: "/complexity", desc: "measure Big-O" },
+      { label: "Notebook", href: "/notebook", desc: "all your notes" },
+    ],
+  },
+  {
+    label: "Life",
+    links: [
+      { label: "Life Toolkit", href: "/toolkit", desc: "tasks · focus · habits" },
+      { label: "Tasks", href: "/toolkit?tool=tasks", desc: "today's list" },
+      { label: "Focus Timer", href: "/toolkit?tool=focus", desc: "25/5 sessions" },
     ],
   },
   {
@@ -100,6 +115,12 @@ function Breadcrumbs() {
     parts.push({ label: "Cheatsheet Hub", href: "/cheatsheets" })
   } else if (pathname.startsWith("/atlas")) {
     parts.push({ label: "Algorithm Atlas", href: "/atlas" })
+  } else if (pathname === "/complexity") {
+    parts.push({ label: "Complexity Lab", href: "/complexity" })
+  } else if (pathname === "/notebook") {
+    parts.push({ label: "Notebook", href: "/notebook" })
+  } else if (pathname === "/toolkit") {
+    parts.push({ label: "Life Toolkit", href: "/toolkit" })
   } else if (pathname === "/playground") {
     parts.push({ label: "Playground", href: "/playground" })
   } else if (pathname === "/releases") {
@@ -227,8 +248,8 @@ export default function AppShell() {
       document.removeEventListener("keydown", onKey)
     }
   }, [moreOpen])
-  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
-  const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/playground" || pathname === "/releases"
+  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
+  const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/complexity" || pathname === "/notebook" || pathname === "/toolkit" || pathname === "/playground" || pathname === "/releases"
   const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
     { label: "Home", href: "/", icon: "home", active: pathname === "/" },
     { label: "Learn", href: "/learn/trees/sum-1-to-n", icon: "practice", active: pathname === "/practice" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") },
@@ -290,8 +311,8 @@ export default function AppShell() {
            <span>More</span>
          </button>
        </nav>
-       {moreOpen && <div className="mobile-more-backdrop" role="presentation" onClick={() => setMoreOpen(false)}>
-         <section className="mobile-more-sheet" role="dialog" aria-modal="true" aria-label="More destinations" onClick={event => event.stopPropagation()}>
+        {moreOpen && <div className="mobile-more-backdrop" role="presentation" onClick={() => setMoreOpen(false)}>
+          <section className="mobile-more-sheet" role="dialog" aria-modal="true" aria-label="More destinations" data-more-root onClick={event => event.stopPropagation()}>
            <div className="mobile-sheet-handle" />
            <div className="mobile-more-heading"><span className="notification-kicker">More destinations</span><button onClick={() => setMoreOpen(false)} aria-label="Close more destinations">×</button></div>
             <div className="mobile-more-links">
