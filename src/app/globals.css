@@ -722,8 +722,8 @@
 .ed-wrap:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
 
 /* ── App mode (full-screen app takeover on phones) ── */
-.app-mode-active .super-page, .app-mode-active .icpc-page, .app-mode-active .settings-page, .app-mode-active .dashboard-page, .app-mode-active .android-page, .app-mode-active .os-home { min-height: 100%; padding-bottom: 28px; }
-.app-mode-active .practice-wrap .main { padding-bottom: 28px; }
+body.app-mode-active .super-page, body.app-mode-active .icpc-page, body.app-mode-active .settings-page, body.app-mode-active .dashboard-page, body.app-mode-active .android-page, body.app-mode-active .os-home { min-height: auto; padding-bottom: 28px; }
+body.app-mode-active .practice-wrap .main { padding-bottom: 28px; }
 
 /* ── Android store listing ── */
 .android-store-hero { display: flex; align-items: center; gap: 20px; padding: clamp(18px, 4vw, 28px); border: 1px solid var(--line); border-radius: calc(var(--radius) + 8px); background: linear-gradient(135deg, var(--accent-soft), var(--paper-raised)); box-shadow: var(--shadow-raised); }

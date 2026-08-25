@@ -208,6 +208,10 @@ export default function AppShell() {
   const pathname = usePathname()
   const router = useRouter()
   const isAppMode = APP_MODE_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(prefix + "/"))
+  useEffect(() => {
+    document.body.classList.toggle("app-mode-active", isAppMode)
+    return () => document.body.classList.remove("app-mode-active")
+  }, [isAppMode])
   const [moreOpen, setMoreOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
@@ -458,9 +462,9 @@ export default function AppShell() {
            .mobile-progress .progress-badge > div { width: 30px !important; }
             .mobile-progress .progress-badge > span { display: none; }
             .mobile-header-actions { display: flex; align-items: center; gap: 2px; }
-            .app-mode-active .app-shell-header, .app-mode-active .mobile-tabbar { display: none !important; }
-            .app-mode-active.app-root { display: flex; flex-direction: column; min-height: 100dvh; }
-            .app-mode-active .app-content { flex: 1 1 auto; height: auto; padding-bottom: 0; }
+             .app-mode-active .app-shell-header, .app-mode-active .mobile-tabbar, body.app-mode-active .app-shell-header, body.app-mode-active .mobile-tabbar { display: none !important; }
+             body.app-mode-active { display: flex; flex-direction: column; min-height: 100dvh; }
+             body.app-mode-active .app-content { flex: 1 1 auto; height: auto; min-height: 0; overflow-y: visible; padding-bottom: 0; }
             .app-mode-header { display: flex; position: fixed; inset: 0 0 auto; z-index: 100; height: var(--mobile-header-height); padding: env(safe-area-inset-top) 8px 0; align-items: center; gap: 4px; background: color-mix(in srgb, var(--paper-raised) 94%, transparent); backdrop-filter: blur(18px); border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent); animation: menu-in .2s var(--ease-standard) both; }
             .app-back { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 auto; border: 0; border-radius: 12px; background: transparent; color: var(--accent); font-size: 22px; line-height: 1; cursor: pointer; }
             .app-back:active { background: var(--accent-soft); transform: scale(.94); }
