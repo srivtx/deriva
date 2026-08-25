@@ -134,64 +134,34 @@ self.onmessage = async event => {
         post({ id, evt: "token", piece })
       }
 
-      // Render ChatML ourselves and use the low-level completion primitive.
-      // This bypasses the chat-template machinery entirely — its mid-stream
-      // failures were producing one-word replies, "$$" artifacts and hangs.
+      // Render ChatML ourselves; single NON-streaming completion.
+      // Streaming through the v3 glue proved unstable in mobile Chrome
+      // (junk tokens, hangs, corrupted allocations) — one request, one
+      // response object is the reliable surface.
       const CHATML_STOP = ["<|im_end|>", "<|im_start|>"]
       const prompt = payload.messages
+              const msgs = Array.isArray(payload.messages) ? payload.messages : []
+      const promptStr = msgs
         .map(m => `<|im_start|>${m.role}\n${m.content}<|im_end|>`)
         .join("\n") + "\n<|im_start|>assistant\n"
       const clean = s => String(s ?? "").replace(/<\|[a-z_]+\|>/g, "")
-      const baseOpts = {
-        prompt,
-        max_tokens: Math.min(payload.maxTokens || 280, 280),
-        temperature: payload.temperature ?? 0.35,
-        top_p: 0.9,
-        stop: CHATML_STOP,
-        signal,
-      }
       try {
-        const stream = await wllama.createCompletion({
-          ...baseOpts,
-          stream: true,
+        const res = await wllama.createCompletion({
+          prompt: promptStr,
+          max_tokens: Math.min(payload.maxTokens || 280, 280),
+          temperature: payload.temperature ?? 0.35,
+          top_p: 0.9,
+          stop: CHATML_STOP,
         })
-        if (stream && typeof stream[Symbol.asyncIterator] === "function") {
-          for await (const chunk of stream) {
-            if (signal.aborted) break
-            emitToken(clean(chunk?.choices?.[0]?.delta?.content ?? chunk?.choices?.[0]?.text ?? ""))
-          }
-          const seconds = (performance.now() - started) / 1000
-          post({ id, evt: signal.aborted ? "stopped" : "done", data: { text, tokens, tps: seconds > 0 ? tokens / seconds : 0 } })
-          activeController = null
-          return
-        }
-      } catch (err) {
-        if (signal.aborted) {
-          post({ id, evt: "stopped", data: { text, tokens, tps: 0 } })
-          activeController = null
-          return
-        }
-        lastError = err
-      }
-
-      try {
-        const res = await wllama.createCompletion({ ...baseOpts })
-        text =
-          res?.choices?.[0]?.text ??
-          res?.choices?.[0]?.message?.content ??
-          (typeof res === "string" ? clean(res) : clean(text))
-        tokens = Math.max(1, Math.round(text.length / 4))
+        const text = clean(res?.choices?.[0]?.text ?? res?.choices?.[0]?.message?.content ?? "")
+        const tokens = Math.max(1, Math.round(text.length / 4))
         const seconds = (performance.now() - started) / 1000
         post({ id, evt: "done", data: { text, tokens, tps: seconds > 0 ? tokens / seconds : 0 } })
-        activeController = null
-        return
       } catch (err) {
-        lastError = lastError ?? err
+        // Corrupted runtime state after any failure — recycle before retry.
+        await releaseRuntime()
+        throw err
       }
-
-      activeController = null
-      const e = lastError || new Error("inference failed")
-      post({ id, evt: "error", message: String(e?.message || e), name: e?.name || "", hint: "both stream and fallback calls failed" })
       return
     }
 

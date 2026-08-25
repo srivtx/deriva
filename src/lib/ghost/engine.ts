@@ -177,13 +177,13 @@ class GhostEngine {
     model: GhostModel,
     messages: { role: string; content: string }[],
     maxTokens: number,
-    onToken: (piece: string) => void,
+    _onToken?: (piece: string) => void,
   ): Promise<{ text: string; tps: number }> {
-    return this.request<{ text: string; tps: number }>(
-      "chat",
-      { messages, maxTokens },
-      { onToken },
+    const req = this.request<{ text: string; tps: number }>("chat", { messages, maxTokens })
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Ghost timed out — the phone reclaimed the brain. Try again.")), 120000),
     )
+    return Promise.race([req, timeout])
   }
 
   // Hard stop: terminating releases the inference immediately and drops any
