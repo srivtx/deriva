@@ -242,6 +242,15 @@ export default function GhostPage() {
     }
   }, [action, refreshStorage])
 
+  const deleteByUrl = useCallback(async (url: string) => {
+    if (action) return
+    setAction(`del:${url}`)
+    const result = await ghostEngine.delete(url)
+    await refreshStorage()
+    setAction(null)
+    if (!result.verified) setError("Could not fully free that brain's storage — tap DELETE again.")
+  }, [action, refreshStorage])
+
   const startGet = useCallback(async (m: GhostModel) => {
     if (action) return
     setPendingGet(m)
@@ -281,13 +290,19 @@ export default function GhostPage() {
         setPhase("ready")
       } catch (err) {
         const msg = String((err as Error)?.message || "")
+        if (msg.includes("MODEL_CORRUPT")) {
+          setError(null)
+          await refreshStorage()
+          await startGet(model)
+          return
+        }
         setError(msg.includes("MODEL_NOT_CACHED") ? "Brain not on device yet — download it first." : msg)
         setPhase("intro")
       }
       return
     }
     await startGet(model)
-  }, [model, isCached, startGet])
+  }, [model, isCached, startGet, refreshStorage])
 
   const send = useCallback(async (raw?: string) => {
     const text = (raw ?? input).trim()
@@ -343,9 +358,17 @@ export default function GhostPage() {
     } catch (err) {
       const message = String((err as Error)?.message || err)
       const raw = message.toLowerCase()
-      if (/typed array|out of memory|invalid length/.test(raw)) setError("The brain ran out of room mid-thought — try a shorter question.")
-      else if (/kv_cache|context/.test(raw)) setError("Ghost's memory filled — start a new chat to reset it.")
-      else if (raw.includes("abort")) setError(null)
+      if (message.includes("MODEL_CORRUPT") || /typed array|out of memory|invalid length/.test(raw)) {
+        busyRef.current = false
+        setBusy(false)
+        setError(null)
+        await deleteByUrl(model.url).catch(() => {})
+        await refreshStorage()
+        await startGet(model)
+        return
+      }
+      if (/kv_cache|context/.test(raw)) setError("Ghost's memory filled — start a new chat to reset it.")
+      else if (raw.includes("abort") || raw.includes("timed out")) setError(message)
       else setError(message)
       if (!streamedText) {
         setMessages(prev => {
@@ -358,7 +381,7 @@ export default function GhostPage() {
       busyRef.current = false
       setBusy(false)
     }
-  }, [input, messages, persistSession, model])
+  }, [input, messages, persistSession, model, deleteByUrl, startGet])
 
   const stop = useCallback(() => {
     ghostEngine.stop()
@@ -418,15 +441,6 @@ export default function GhostPage() {
       return l
     })
   }, [activeId])
-
-  const deleteByUrl = useCallback(async (url: string) => {
-    if (action) return
-    setAction(`del:${url}`)
-    const result = await ghostEngine.delete(url)
-    await refreshStorage()
-    setAction(null)
-    if (!result.verified) setError("Could not fully free that brain's storage — tap DELETE again.")
-  }, [action, refreshStorage])
 
   const useModel = useCallback(async (m: GhostModel) => {
     if (action || m.id === model.id) return
