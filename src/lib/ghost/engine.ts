@@ -92,8 +92,13 @@ const CHATML_STOP = ["<|im_end|>", "<|im_start|>"]
 let modPromise: Promise<WllamaModule> | null = null
 function lib(): Promise<WllamaModule> {
   if (!modPromise) {
-    // Browser-native ESM from our own origin; bundler must leave it alone.
-    modPromise = import(/* webpackIgnore: true */ `${WLLAMA_BASE}/index.js`) as Promise<WllamaModule>
+    // Browser-native ESM from our own origin. The specifier goes through a
+    // runtime variable + ignore directives — bundlers (webpack AND
+    // turbopack) otherwise rewrite the path and break the import.
+    const specifier = `${WLLAMA_BASE}/index.js`
+    modPromise = import(
+      /* webpackIgnore: true */ /* turbopackIgnore: true */ specifier
+    ) as Promise<WllamaModule>
   }
   return modPromise
 }
