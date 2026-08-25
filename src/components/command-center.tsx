@@ -50,6 +50,7 @@ export default function CommandCenter({ open, onClose }: { open: boolean; onClos
       { id: "contest", title: "Start a Contest", meta: "Pressure · 3 problems, one clock", keywords: "contest simulator timer virtual icpc", href: "/contest" },
       { id: "interview", title: "Enter Mock Interview", meta: "Pressure · hints locked", keywords: "interview mock practice timed rubric", href: "/interview" },
       { id: "cheatsheets", title: "Open Cheatsheet Hub", meta: "Reference · contest templates", href: "/cheatsheets", keywords: "cheatsheet templates binary search dsu dijkstra kmp reference" },
+      { id: "atlas", title: "Open Algorithm Atlas", meta: "Watch · animated algorithms", keywords: "atlas visualize watch animation bubble merge sort bfs dfs dijkstra kadane call stack", href: "/atlas" },
       { id: "playground", title: "Open Playground", meta: "Sandbox · free Python", keywords: "playground sandbox run python free", href: "/playground" },
       { id: "releases", title: "See What's New", meta: "Releases · changelog", keywords: "releases changelog whats new updates", href: "/releases" },
       { id: "systems", title: "Enter Systems Atelier", meta: "AI/ML · incidents", keywords: "systems services queue retry failure", href: "/ai-ml/systems" },

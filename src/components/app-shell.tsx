@@ -9,6 +9,50 @@ import Logo from "./logo"
 import NotificationCenter from "./notification-center"
 import CommandCenter from "./command-center"
 import { applyPreferences, defaultPreferences, loadPreferences, type Preferences } from "@/persistence/preferences"
+import { todayKey } from "@/persistence/daily"
+import { dueCards, seedQueueFromMastery } from "@/persistence/review-queue"
+
+type MoreLink = { label: string; href: string; desc: string }
+type MoreGroup = { label: string; links: MoreLink[] }
+
+const MORE_GROUPS: MoreGroup[] = [
+  {
+    label: "Today",
+    links: [
+      { label: "Daily Challenge", href: "/daily", desc: "today's pick" },
+      { label: "Review Queue", href: "/review", desc: "spaced repetition" },
+      { label: "Contest Simulator", href: "/contest", desc: "3 problems, one clock" },
+      { label: "Mock Interview", href: "/interview", desc: "hints locked" },
+    ],
+  },
+  {
+    label: "Practice",
+    links: [
+      { label: "ICPC Ladder", href: "/icpc", desc: "75 contest problems" },
+      { label: "Algorithm Atlas", href: "/atlas", desc: "watch algorithms move" },
+      { label: "Cheatsheet Hub", href: "/cheatsheets", desc: "contest templates" },
+      { label: "Playground", href: "/playground", desc: "free sandbox" },
+    ],
+  },
+  {
+    label: "Explore",
+    links: [
+      { label: "AI/ML Systems", href: "/ai-ml", desc: "labs + 180 questions" },
+      { label: "System Design", href: "/design", desc: "HLD" },
+      { label: "Low-Level Design", href: "/lld", desc: "LLD" },
+      { label: "Expedition", href: "/expedition", desc: "retrieval" },
+      { label: "Game Mode", href: "/games", desc: "play" },
+    ],
+  },
+  {
+    label: "Workspace",
+    links: [
+      { label: "Progress details", href: "/dashboard", desc: "history" },
+      { label: "What's new", href: "/releases", desc: "release notes" },
+      { label: "Settings", href: "/settings", desc: "preferences" },
+    ],
+  },
+]
 
 type AppIconName = "home" | "practice" | "progress" | "design" | "settings" | "more" | "search"
 
@@ -54,6 +98,8 @@ function Breadcrumbs() {
     parts.push({ label: "Mock Interview", href: "/interview" })
   } else if (pathname === "/cheatsheets") {
     parts.push({ label: "Cheatsheet Hub", href: "/cheatsheets" })
+  } else if (pathname.startsWith("/atlas")) {
+    parts.push({ label: "Algorithm Atlas", href: "/atlas" })
   } else if (pathname === "/playground") {
     parts.push({ label: "Playground", href: "/playground" })
   } else if (pathname === "/releases") {
@@ -137,6 +183,7 @@ export default function AppShell() {
   const [moreOpen, setMoreOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
+  const [attention, setAttention] = useState(false)
   useEffect(() => {
     const next = loadPreferences()
     setPreferences(next)
@@ -148,6 +195,11 @@ export default function AppShell() {
       applyPreferences(detail)
     }
     window.addEventListener("deriva-preferences-change", onPreferencesChange)
+    try {
+      const daily = JSON.parse(localStorage.getItem("deriva-daily-v1") || "{}") as Record<string, unknown>
+      seedQueueFromMastery()
+      setAttention(!daily[todayKey()] || dueCards().length > 0)
+    } catch {}
     return () => window.removeEventListener("deriva-preferences-change", onPreferencesChange)
   }, [])
   useEffect(() => {
@@ -157,8 +209,8 @@ export default function AppShell() {
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
-  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
-  const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname === "/playground" || pathname === "/releases"
+  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
+  const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/playground" || pathname === "/releases"
   const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
     { label: "Home", href: "/", icon: "home", active: pathname === "/" },
     { label: "Learn", href: "/learn/trees/sum-1-to-n", icon: "practice", active: pathname === "/practice" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") },
@@ -182,24 +234,21 @@ export default function AppShell() {
             <Link href="/patterns" className={`nav-link${pathname.startsWith("/patterns") ? " active" : ""}`}>Patterns</Link>
            <Link href="/observatory" className={`nav-link${pathname === "/dashboard" || pathname === "/observatory" ? " active" : ""}`}>Observe</Link>
             <button type="button" className="command-trigger" onClick={() => setCommandOpen(true)} aria-label="Open Command Center"><span>Search</span><kbd>⌘K</kbd></button>
-            <button className={`nav-more${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>More <span aria-hidden="true">⌄</span></button>
+            <button className={`nav-more${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>More <span aria-hidden="true">⌄</span>{attention && <i className="more-dot" aria-hidden="true" />}</button>
             <NotificationCenter />
             <ProgressBadge />
             {moreOpen && <div className="desktop-more-menu" role="menu">
-              <Link href="/ai-ml" onClick={() => setMoreOpen(false)}>AI/ML Systems</Link>
-              <Link href="/design" onClick={() => setMoreOpen(false)}>System Design (HLD)</Link>
-              <Link href="/lld" onClick={() => setMoreOpen(false)}>Low-Level Design</Link>
-               <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition</Link>
-               <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode</Link>
-               <Link href="/icpc" onClick={() => setMoreOpen(false)}>ICPC Ladder</Link>
-               <Link href="/daily" onClick={() => setMoreOpen(false)}>Daily Challenge</Link>
-               <Link href="/review" onClick={() => setMoreOpen(false)}>Review Queue</Link>
-               <Link href="/contest" onClick={() => setMoreOpen(false)}>Contest Simulator</Link>
-               <Link href="/cheatsheets" onClick={() => setMoreOpen(false)}>Cheatsheet Hub</Link>
-               <Link href="/playground" onClick={() => setMoreOpen(false)}>Playground</Link>
-               <Link href="/releases" onClick={() => setMoreOpen(false)}>What&apos;s new</Link>
-               <Link href="/dashboard" onClick={() => setMoreOpen(false)}>Progress details</Link>
-               <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings</Link>
+              {MORE_GROUPS.map(group => (
+                <div key={group.label} className="more-group" role="group" aria-label={group.label}>
+                  <span className="more-group-label">{group.label}</span>
+                  {group.links.map(link => (
+                    <Link key={link.href} href={link.href} role="menuitem" onClick={() => setMoreOpen(false)}>
+                      <strong>{link.label}</strong>
+                      <small>{link.desc}</small>
+                    </Link>
+                  ))}
+                </div>
+              ))}
             </div>}
           </div>
         </div>
@@ -226,20 +275,16 @@ export default function AppShell() {
            <div className="mobile-sheet-handle" />
            <div className="mobile-more-heading"><span className="notification-kicker">More destinations</span><button onClick={() => setMoreOpen(false)} aria-label="Close more destinations">×</button></div>
             <div className="mobile-more-links">
-              <Link href="/ai-ml" onClick={() => setMoreOpen(false)}>AI/ML Systems <span>Labs + 180 questions</span></Link>
-              <Link href="/design" onClick={() => setMoreOpen(false)}>System Design <span>HLD</span></Link>
-              <Link href="/lld" onClick={() => setMoreOpen(false)}>Low-Level Design <span>LLD</span></Link>
-                <Link href="/expedition" onClick={() => setMoreOpen(false)}>Expedition <span>Retrieval</span></Link>
-                <Link href="/games" onClick={() => setMoreOpen(false)}>Game Mode <span>Play</span></Link>
-                <Link href="/icpc" onClick={() => setMoreOpen(false)}>ICPC Ladder <span>75 contest problems</span></Link>
-                <Link href="/daily" onClick={() => setMoreOpen(false)}>Daily Challenge <span>today&apos;s pick</span></Link>
-                <Link href="/review" onClick={() => setMoreOpen(false)}>Review Queue <span>spaced repetition</span></Link>
-                <Link href="/contest" onClick={() => setMoreOpen(false)}>Contest Simulator <span>3 problems, one clock</span></Link>
-                <Link href="/cheatsheets" onClick={() => setMoreOpen(false)}>Cheatsheet Hub <span>contest templates</span></Link>
-                <Link href="/playground" onClick={() => setMoreOpen(false)}>Playground <span>free sandbox</span></Link>
-                <Link href="/releases" onClick={() => setMoreOpen(false)}>What&apos;s new <span>release notes</span></Link>
-                <Link href="/dashboard" onClick={() => setMoreOpen(false)}>Progress details <span>History</span></Link>
-               <Link href="/settings" onClick={() => setMoreOpen(false)}>Settings <span>Preferences</span></Link>
+              {MORE_GROUPS.map(group => (
+                <div key={group.label} className="mobile-more-group" role="group" aria-label={group.label}>
+                  <span className="mobile-more-group-label">{group.label}</span>
+                  <div className="mobile-more-group-links">
+                    {group.links.map(link => (
+                      <Link key={link.href} href={link.href} onClick={() => setMoreOpen(false)}>{link.label} <span>{link.desc}</span></Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
          </section>
        </div>}
@@ -251,17 +296,26 @@ export default function AppShell() {
          .desktop-nav-actions { position: relative; display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
          .nav-link, .nav-more { border: 0; background: transparent; color: var(--ink-soft); font: 600 12px var(--font-ui); text-decoration: none; cursor: pointer; }
          .nav-link.active, .nav-more.active { color: var(--accent); }
-         .nav-more { display: inline-flex; align-items: center; gap: 4px; padding: 5px 0; }
-         .desktop-more-menu { position: absolute; top: 34px; right: 62px; z-index: 120; display: flex; min-width: 210px; flex-direction: column; gap: 2px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-raised); box-shadow: var(--shadow-raised); }
-         .desktop-more-menu a { padding: 10px 12px; border-radius: 8px; color: var(--ink); font: 600 12px var(--font-ui); text-decoration: none; }
-         .desktop-more-menu a:hover { background: var(--accent-soft); color: var(--accent); }
+          .nav-more { display: inline-flex; align-items: center; gap: 4px; padding: 5px 0; position: relative; }
+          .more-dot { position: absolute; top: 2px; right: -8px; width: 7px; height: 7px; border-radius: 50%; background: var(--viz-pruned); box-shadow: 0 0 0 3px color-mix(in srgb, var(--viz-pruned) 18%, transparent); }
+          .desktop-more-menu { position: absolute; top: 34px; right: 62px; z-index: 120; display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 4px 20px; width: max-content; max-width: calc(100vw - 32px); max-height: min(70vh, 560px); overflow-y: auto; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper-raised); box-shadow: var(--shadow-raised); animation: rise-in .22s var(--ease-standard) both; }
+          .more-group { display: grid; gap: 2px; align-content: start; }
+          .more-group-label { padding: 2px 10px 8px; color: var(--accent); font: 700 9px var(--font-ui); letter-spacing: .13em; text-transform: uppercase; }
+          .desktop-more-menu a { display: grid; gap: 1px; padding: 8px 10px; border-radius: 10px; text-decoration: none; transition: background var(--dur-fast); }
+          .desktop-more-menu a strong { color: var(--ink); font: 600 13px var(--font-ui); }
+          .desktop-more-menu a small { color: var(--ink-soft); font: 11px var(--font-ui); }
+          .desktop-more-menu a:hover { background: var(--accent-soft); }
+          .desktop-more-menu a:hover strong { color: var(--accent); }
          .mobile-more-backdrop { position: fixed; z-index: 110; inset: 0; display: flex; align-items: flex-end; background: rgb(26 29 33 / .25); }
          .mobile-more-sheet { width: 100%; padding: 10px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: var(--paper-raised); box-shadow: 0 -12px 34px rgb(26 29 33 / .16); }
          .mobile-more-heading { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 12px; }
          .mobile-more-heading button { width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); font-size: 22px; }
-         .mobile-more-links { display: flex; flex-direction: column; gap: 6px; }
-         .mobile-more-links a { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); font: 600 14px var(--font-ui); text-decoration: none; }
-         .mobile-more-links a span { color: var(--ink-soft); font: 11px var(--font-mono); }
+          .mobile-more-links { display: flex; flex-direction: column; gap: 14px; max-height: min(62vh, 480px); overflow-y: auto; padding-right: 2px; }
+          .mobile-more-group { display: grid; gap: 6px; }
+          .mobile-more-group-label { padding: 0 2px; color: var(--accent); font: 700 9px var(--font-ui); letter-spacing: .13em; text-transform: uppercase; }
+          .mobile-more-group-links { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+          .mobile-more-links a { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); font: 600 12px var(--font-ui); text-decoration: none; }
+          .mobile-more-links a span { overflow: hidden; color: var(--ink-soft); font: 10px var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
          @media (max-width: 700px) {
            .app-shell-header { position: fixed; inset: 0 0 auto; height: var(--mobile-header-height); padding: env(safe-area-inset-top) var(--sp-3) 0; background: color-mix(in srgb, var(--paper-raised) 94%, transparent); backdrop-filter: blur(18px); box-shadow: 0 8px 22px rgb(26 29 33 / .05); }
            .desktop-shell { display: none !important; }
