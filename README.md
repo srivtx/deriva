@@ -1,89 +1,120 @@
-# Deriva
+<div align="center">
 
-**Derive the algorithm.** An interactive platform for learning data structures
-and algorithms through first-principles derivation — the trace is the product,
-code is the last stage, and every visualization is a pure function of
-`(trace, cursor)`.
+<img src="public/readme-banner.svg" alt="Deriva — derive the algorithm" width="100%" />
 
-## What makes Deriva different
+**Derive the algorithm. Don't memorize it.**
 
-- **Concepts → Reasoning → Patterns → Implementation.** Every problem follows a
-  nine-stage derivation flow; each stage teaches exactly one thinking move.
-- **Naive before optimized**, wherever the contrast teaches something (Rule A3).
-- **Typed curriculum.** Lessons are zod-validated data — content errors are
-  build errors.
-- **No gamification debt.** Progress is what you can derive again, not points.
+An interactive platform for learning data structures & algorithms through
+first-principles derivation — plus a full suite of personal instruments,
+wrapped in an appearance system inspired by Nothing and Teenage Engineering.
 
-## Product surface
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](#)
+[![Tests](https://img.shields.io/badge/tests-vitest-passing-6DA55F?style=flat-square)](#)
+[![License](https://img.shields.io/badge/license-private-D97706?style=flat-square)](#)
 
-| Area | Route | What it is |
-| --- | --- | --- |
-| Drill mode | `/practice`, `/topic/*` | Topic drills with full 9-stage derivations |
-| Guided lessons | `/learn/*` | Concept-first interactive lessons |
-| Daily challenge | `/daily` | One spaced pick per day, streak-tracked |
-| Review queue | `/review` | Spaced repetition over solved problems |
-| ICPC ladder | `/icpc` | 75 contest problems, ranked by difficulty |
-| Pattern quiz | `/patterns/quiz` | Recognition training across pattern families |
-| Algorithm Atlas | `/atlas` | Watch algorithms move, step by step |
-| Contest simulator | `/contest` | Three problems, one clock |
-| Mock interview | `/interview` | Timed hints-locked practice |
-| Complexity lab | `/complexity` | Interactive cost curves |
-| Playground | `/playground` | Python execution in a Web Worker (Pyodide) |
-| **Glyph Studio** | `/glyph` | Dot-matrix editor — draw light, animate frames, export PNG/SVG/JSON |
-| Focus Dial | `/focus` | Braun-style rotary timer that re-tints the shell while running |
-| Toolkit | `/toolkit` | Life toolkit: tasks, habits, focus and more |
-| Settings | `/settings` | Full appearance system + workspace identity, searchable |
+</div>
+
+---
+
+## Why Deriva exists
+
+Most platforms train pattern-matching. Deriva trains **derivation** — every
+problem walks a nine-stage flow from concept to working code, each stage
+teaching exactly one thinking move. Naive solutions are taught before optimized
+ones wherever the contrast teaches something. The trace is the product; every
+visualization is a pure function of `(trace, cursor)`.
+
+> Concepts → Reasoning → Patterns → Implementation. Code is Stage 6.
+
+## The learning stack
+
+| | App | Route | What you do there |
+|---|---|---|---|
+| ▶ | **Drill Mode** | `/practice` | Topic drills with full 9-stage derivations |
+| ◈ | **Patterns** | `/patterns` | Learn the thinking moves, then quiz them |
+| ☀ | **Daily Challenge** | `/daily` | One spaced pick per day |
+| ⟳ | **Review Queue** | `/review` | Spaced repetition over everything solved |
+| ⚑ | **ICPC Ladder** | `/icpc` | 75 contest problems, ranked |
+| ◎ | **Algorithm Atlas** | `/atlas` | Watch algorithms move, step by step |
+| ◔ | **Observatory** | `/observatory` | Your progress, honestly visualized |
+
+## The instruments
+
+Deriva is also a personal toolkit — local-first apps that live on your device:
+
+| | App | What it does |
+|---|---|---|
+| ✺ | **Glyph Studio** | Draw dot-matrix light: 7/12/16 grids, animation frames, glow & material controls, export PNG / animated SVG / JSON — and save glyphs as your own icon pack |
+| ◔ | **Focus Dial** | Braun-style rotary timer that re-tints the entire shell while it runs |
+| ▤ | **Life Toolkit** | Tasks, habits, focus sessions |
+| ⛨ | **Vault** | Encrypted personal storage |
+| ❖ | **Apps Store** | Installable mini-apps: expenses, calendar, weather, translate, QR studio… |
+| ⌘ | **Command Center** | `⌘K` to reach everything |
 
 ## Appearance system
 
-Everything visual is user-owned and device-local:
+Your device, your atmosphere — 100% local, endlessly combinable:
 
-- **14 themes** (Moss, Paper, Nothing, OP-1, Swiss, Nord, Solarized, Braun…),
-  each combinable with accent colors, type voices (including Doto *Dot Matrix*
-  and Space Grotesk *Instrument*), density, shape and texture.
-- **4 icon-pack languages**: Classic strokes, Nothing dot-matrix bitmaps,
-  OP-1 thin-line pictograms, and a **Personal pack** you draw yourself.
-- **Customizable bottom navigation**: choose up to four slots, drag to reorder,
-  and pick each slot's icon style (Auto / Classic / Dots / Line / Mark).
-- **Logo marks**: Classic cipher, Nothing dot-D, or OP-1 line-D — one source
-  feeds the header, favicon, apple-touch-icon and installed-app icon.
-- A pre-paint boot script applies theme/pack/scale from localStorage before
-  first paint (no flash of default theme). Don't remove it.
-- Preferences never leave the device. Share codes (`deriva-theme:v1:…`) are
-  opt-in QR/portable strings that merge through the same normalize pipeline.
+- **14 themes** × accent colors × **5 type voices** (including Doto *Dot Matrix*
+  and Space Grotesk *Instrument*) × density × shape × texture
+- **4 icon-pack languages**: Classic strokes · Nothing dot-bitmaps · OP-1
+  thin-line pictograms · **Personal** (drawn by you in Glyph Studio)
+- **Custom bottom nav**: pick slots, drag to reorder, style every icon
+- **Logo marks**: Classic cipher / Nothing dot-D / OP-1 line-D — one source of
+  truth feeds header, favicon and installed-app icon
+- **Appearance QR codes**: carry your exact look between devices
 
-## Architecture notes
+A pre-paint boot script applies your theme before first paint — no flash of
+defaults, ever, even cold-starting the installed app.
 
-- Next.js App Router + TypeScript + pnpm. `pnpm build` fails on any curriculum
-  or type error by design.
-- Design tokens in `src/app/globals.css` theme blocks; icons always render via
-  `currentColor` so packs adapt to every theme and active-tab tinting.
-- Service worker (`public/sw.js`): network-first HTML, cache-first immutable
-  assets, versioned cache bumped with every deploy. Self-healing guards
-  (`src/lib/recovery.ts`) detect stale-deploy chunk failures, purge caches once
-  and reload — plus an error ring-buffer (`src/lib/diagnostics.ts`) surfaced in
-  Settings → System for on-device debugging.
-- Android TWA under `android/deriva-twa` ships three launcher-icon product
-  flavors: `classic`, `nothing`, `opone`
-  (`./gradlew bundle<Variant>Release`).
+## Architecture
 
-## Development
+```
+src/
+├── app/            # Next.js App Router — one route per app above
+├── components/     # Shell, editors, viewers, pack/icon system
+├── data/           # Icon packs, nav registry, logo marks, share codes
+├── persistence/    # Device-local preferences & daily state (localStorage)
+├── notifications/  # Desktop reminders
+└── lib/            # Self-healing recovery, diagnostics ring-buffer
+docs/               # The constitution — read 01 → 06 before contributing
+android/            # TWA project with launcher-icon product flavors
+public/sw.js        # Network-first HTML, cache-first assets, self-healing
+```
+
+- **Typed curriculum**: lessons are zod-validated data — content errors are build errors
+- **Self-healing PWA**: stale-deploy chunk failures purge caches and reload once; on-device error telemetry surfaces in Settings → System
+- **Android TWA**: `./gradlew bundleClassicRelease | bundleNothingRelease | bundleOponeRelease`
+
+## Getting started
 
 ```bash
 pnpm install
-pnpm dev        # local dev server
-pnpm typecheck  # tsc --noEmit
-pnpm test       # vitest
-pnpm build      # production build (also runs validation)
+pnpm dev          # develop at localhost:3000
+pnpm typecheck    # strict tsc --noEmit
+pnpm test         # vitest
+pnpm build        # production build — fails on any curriculum/type error by design
 ```
+
+Install it as an app from your browser's install prompt — everything works offline.
 
 ## Documentation
 
-The `docs/` suite is the constitution — start at `docs/01-product-requirements.md`
-and follow the reading order there. UI/appearance conventions live in
-`docs/09-ui-ux-design-system.md`; when work touches anything described in docs,
-update the corresponding doc in the same change.
+The [`docs/`](docs) suite is the constitution. Start at
+[`01-product-requirements.md`](docs/01-product-requirements.md), then follow the
+reading order. UI/appearance law lives in
+[`09-ui-ux-design-system.md`](docs/09-ui-ux-design-system.md). Changes that touch
+documented behavior update the doc in the same commit.
 
-## License
+## Changelog & releases
 
-Private project © srivtx. All rights reserved.
+See [CHANGELOG.md](CHANGELOG.md) and
+[GitHub Releases](../../releases). Current: **v1.5.0 — Lucent Lab**.
+
+---
+
+<div align="center">
+<sub>Built for one user first: me. Preferences stay on this device and never change the learning path.</sub>
+</div>
