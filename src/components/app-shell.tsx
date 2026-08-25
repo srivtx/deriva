@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Suspense, type ReactNode } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
 import { useState, useEffect, useRef } from "react"
@@ -200,8 +200,12 @@ function ProgressBadge({ className = "" }: { className?: string }) {
   )
 }
 
+const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory"]
+
 export default function AppShell() {
   const pathname = usePathname()
+  const router = useRouter()
+  const isAppMode = APP_MODE_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(prefix + "/"))
   const [moreOpen, setMoreOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
@@ -313,7 +317,22 @@ export default function AppShell() {
   ]
 
   return (
-    <>
+    <div className={isAppMode ? "app-root app-mode-active" : "app-root"}>
+      <header className="app-mode-header" aria-hidden={!isAppMode}>
+        <button
+          type="button"
+          className="app-back"
+          aria-label="Go back"
+          onClick={() => {
+            if ("vibrate" in navigator) navigator.vibrate(8)
+            if (window.history.length <= 1) router.push("/")
+            else router.back()
+          }}
+        >
+          ←
+        </button>
+        <span className="app-mode-title">{mobileTitle}</span>
+      </header>
       <header className="app-shell-header">
         <div className="desktop-shell" style={{ alignItems: "center", justifyContent: "space-between", width: "100%" }}>
           <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
@@ -429,19 +448,26 @@ export default function AppShell() {
            .mobile-brand { color: var(--ink); display: flex; align-items: center; padding: 8px; border-radius: 14px; }
            .mobile-brand:active { background: var(--accent-soft); }
            .mobile-page-title { text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-narrative); font-weight: 700; font-size: 19px; letter-spacing: -.02em; }
-          .mobile-progress { min-width: 44px; min-height: 44px; display: flex; justify-content: flex-end; align-items: center; }
-          .mobile-progress .progress-badge > div { width: 30px !important; }
-           .mobile-progress .progress-badge > span { display: none; }
-           .mobile-header-actions { display: flex; align-items: center; gap: 2px; }
+           .mobile-progress { min-width: 44px; min-height: 44px; display: flex; justify-content: flex-end; align-items: center; }
+           .mobile-progress .progress-badge > div { width: 30px !important; }
+            .mobile-progress .progress-badge > span { display: none; }
+            .mobile-header-actions { display: flex; align-items: center; gap: 2px; }
+            .app-mode-header { display: none; }
+            .app-mode-active .app-shell-header, .app-mode-active .mobile-tabbar { display: none !important; }
+            .app-mode-active .app-mode-header { display: flex; position: fixed; inset: 0 0 auto; z-index: 100; height: var(--mobile-header-height); padding: env(safe-area-inset-top) 8px 0; align-items: center; gap: 4px; background: color-mix(in srgb, var(--paper-raised) 94%, transparent); backdrop-filter: blur(18px); border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent); animation: menu-in .2s var(--ease-standard) both; }
+            .app-mode-active .app-content { height: 100dvh; padding-bottom: 0; }
+            .app-back { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 auto; border: 0; border-radius: 12px; background: transparent; color: var(--accent); font-size: 22px; line-height: 1; cursor: pointer; }
+            .app-back:active { background: var(--accent-soft); transform: scale(.94); }
+            .app-mode-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-narrative); font-weight: 700; font-size: 18px; letter-spacing: -.02em; }
             .mobile-tabbar { position: fixed; z-index: 100; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: var(--mobile-tabbar-height); padding: 5px 6px env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 96%, transparent); backdrop-filter: blur(18px); border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent); box-shadow: 0 -12px 30px rgb(26 29 33 / .1); }
            .mobile-tab { min-height: 56px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; border-radius: 15px; color: var(--ink-soft); text-decoration: none; font-family: var(--font-ui); font-size: 10px; font-weight: 650; transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast); }
            .mobile-tab:active { transform: scale(.96); }
            .mobile-tab.active { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent); }
            .mobile-tab.active::before { content: ""; width: 18px; height: 2px; position: absolute; top: 4px; border-radius: 999px; background: var(--accent); }
            .mobile-tab { position: relative; }
-           .mobile-tab.active svg { stroke-width: 2.4; }
-        }
-      `}</style>
-    </>
+            .mobile-tab.active svg { stroke-width: 2.4; }
+         }
+       `}</style>
+    </div>
   )
 }
