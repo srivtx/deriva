@@ -134,22 +134,31 @@ self.onmessage = async event => {
         post({ id, evt: "token", piece })
       }
 
+      // Render ChatML ourselves and use the low-level completion primitive.
+      // This bypasses the chat-template machinery entirely — its mid-stream
+      // failures were producing one-word replies, "$$" artifacts and hangs.
+      const CHATML_STOP = ["<|im_end|>", "<|im_start|>"]
+      const prompt = payload.messages
+        .map(m => `<|im_start|>${m.role}\n${m.content}<|im_end|>`)
+        .join("\n") + "\n<|im_start|>assistant\n"
+      const clean = s => String(s ?? "").replace(/<\|[a-z_]+\|>/g, "")
       const baseOpts = {
-        messages: payload.messages,
+        prompt,
         max_tokens: Math.min(payload.maxTokens || 280, 280),
         temperature: payload.temperature ?? 0.35,
         top_p: 0.9,
+        stop: CHATML_STOP,
+        signal,
       }
       try {
-        const stream = await wllama.createChatCompletion({
+        const stream = await wllama.createCompletion({
           ...baseOpts,
           stream: true,
-          signal,
         })
         if (stream && typeof stream[Symbol.asyncIterator] === "function") {
           for await (const chunk of stream) {
             if (signal.aborted) break
-            emitToken(chunk?.choices?.[0]?.delta?.content ?? "")
+            emitToken(clean(chunk?.choices?.[0]?.delta?.content ?? chunk?.choices?.[0]?.text ?? ""))
           }
           const seconds = (performance.now() - started) / 1000
           post({ id, evt: signal.aborted ? "stopped" : "done", data: { text, tokens, tps: seconds > 0 ? tokens / seconds : 0 } })
@@ -166,11 +175,11 @@ self.onmessage = async event => {
       }
 
       try {
-        const res = await wllama.createChatCompletion({ ...baseOpts })
+        const res = await wllama.createCompletion({ ...baseOpts })
         text =
-          res?.choices?.[0]?.message?.content ??
           res?.choices?.[0]?.text ??
-          (typeof res === "string" ? res : "")
+          res?.choices?.[0]?.message?.content ??
+          (typeof res === "string" ? clean(res) : clean(text))
         tokens = Math.max(1, Math.round(text.length / 4))
         const seconds = (performance.now() - started) / 1000
         post({ id, evt: "done", data: { text, tokens, tps: seconds > 0 ? tokens / seconds : 0 } })
