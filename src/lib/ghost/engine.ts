@@ -3,12 +3,56 @@
 // Ghost engine — typed client for the wllama worker. Zero bundle cost until used:
 // the Worker is only spawned on explicit user action.
 
-export const GHOST_MODEL_URL =
-  "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf"
-export const GHOST_MODEL_LABEL = "Qwen2.5 · 0.5B · Q4_K_M"
-const WORKER_URL = "/ghost/ghost-worker.js"
+export interface GhostModel {
+  id: string
+  label: string
+  name: string
+  url: string
+  sizeMb: number
+  blurb: string
+}
 
-export type GhostPhase = "probe" | "intro" | "downloading" | "loading" | "ready"
+export const GHOST_MODELS: GhostModel[] = [
+  {
+    id: "smollm2-135m",
+    label: "NANO · 100 MB",
+    name: "SmolLM2 135M",
+    url: "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf",
+    sizeMb: 101,
+    blurb: "downloads in seconds · runs anywhere",
+  },
+  {
+    id: "smollm2-360m",
+    label: "LITE · 258 MB",
+    name: "SmolLM2 360M",
+    url: "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf",
+    sizeMb: 258,
+    blurb: "light Q&A · very fast on phones",
+  },
+  {
+    id: "qwen25-05b",
+    label: "STANDARD · 469 MB",
+    name: "Qwen 2.5 0.5B",
+    url: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    sizeMb: 469,
+    blurb: "the tutor as designed · best balance",
+  },
+]
+
+export const DEFAULT_MODEL_ID = "qwen25-05b"
+
+export function getSelectedModel(): GhostModel {
+  try {
+    const id = localStorage.getItem("deriva-ghost-model")
+    return GHOST_MODELS.find(m => m.id === id) ?? GHOST_MODELS.find(m => m.id === DEFAULT_MODEL_ID)!
+  } catch {
+    return GHOST_MODELS.find(m => m.id === DEFAULT_MODEL_ID)!
+  }
+}
+
+export function setSelectedModel(id: string) {
+  try { localStorage.setItem("deriva-ghost-model", id) } catch {}
+}
 
 type Pending = {
   resolve: (value: unknown) => void
@@ -20,7 +64,6 @@ type Pending = {
 export interface GhostCapabilities {
   webgpu: boolean
   storageQuotaMb: number | null
-  cached: boolean
   cachedMb: number | null
 }
 
@@ -31,10 +74,10 @@ class GhostEngine {
 
   private spawn(): Worker {
     if (this.worker) return this.worker
-    const worker = new Worker(WORKER_URL, { type: "module" })
+    const worker = new Worker("/ghost/ghost-worker.js", { type: "module" })
     worker.onmessage = (event: MessageEvent) => this.handle(event.data)
     worker.onerror = () => {
-      for (const pending of this.pending.values()) pending.reject(new Error("Ghost engine crashed"))
+      for (const pending of this.pending.values()) pending.reject(new Error("Ghost engine crashed — reload the page"))
       this.pending.clear()
       this.worker = null
     }
@@ -57,7 +100,8 @@ class GhostEngine {
     if (msg.evt === "ok" || msg.evt === "done" || msg.evt === "stopped") {
       pending.resolve(msg.data ?? {})
     } else {
-      pending.reject(new Error(String(msg.message ?? "Ghost engine error")))
+      const detail = [msg.message, msg.name, msg.hint].filter(Boolean).join(" · ")
+      pending.reject(new Error(detail || "Ghost engine error"))
     }
   }
 
@@ -77,34 +121,43 @@ class GhostEngine {
       const estimate = await navigator.storage.estimate()
       if (typeof estimate.quota === "number") storageQuotaMb = Math.round(estimate.quota / (1024 * 1024))
     } catch {}
-    const cacheInfo = await this.request<{ cached: boolean; size: number }>("cached", { url: GHOST_MODEL_URL })
-    return {
-      webgpu: data.webgpu,
-      storageQuotaMb,
-      cached: cacheInfo.cached,
-      cachedMb: cacheInfo.size > 0 ? Math.round(cacheInfo.size / (1024 * 1024)) : null,
+    let cachedMb: number | null = null
+    for (const model of GHOST_MODELS) {
+      const info = await this.request<{ cached: boolean; size: number }>("cached", { url: model.url })
+      if (info.cached && info.size > 0) cachedMb = Math.round(info.size / (1024 * 1024))
     }
+    return { webgpu: data.webgpu, storageQuotaMb, cachedMb }
   }
 
-  download(onProgress: (fraction: number, mbLoaded: number, mbTotal: number) => void): Promise<void> {
+  async cachedModelId(): Promise<string | null> {
+    for (const model of GHOST_MODELS) {
+      const info = await this.request<{ cached: boolean; size: number }>("cached", { url: model.url })
+      if (info.cached) return model.id
+    }
+    return null
+  }
+
+  download(model: GhostModel, onProgress: (fraction: number, mbLoaded: number, mbTotal: number) => void): Promise<void> {
     return this.request<void>(
       "download",
-      { url: GHOST_MODEL_URL },
+      { url: model.url },
       {
         onProgress: (loaded, total) =>
           onProgress(total > 0 ? loaded / total : 0, loaded / (1024 * 1024), total / (1024 * 1024)),
       },
     ).then(() => {
+      setSelectedModel(model.id)
       try { localStorage.setItem("deriva-ghost-ready", "1") } catch {}
     })
   }
 
-  load(onProgress: (label: string) => void): Promise<void> {
-    onProgress("waking ghost")
-    return this.request<void>("load", { url: GHOST_MODEL_URL })
+  load(model: GhostModel, onProgress?: (label: string) => void): Promise<void> {
+    onProgress?.(`waking ${model.name}`)
+    return this.request<void>("load", { url: model.url })
   }
 
   chat(
+    model: GhostModel,
     messages: { role: string; content: string }[],
     maxTokens: number,
     onToken: (piece: string) => void,
@@ -122,10 +175,20 @@ class GhostEngine {
   }
 
   async eject(): Promise<void> {
-    await this.request<void>("eject", { url: GHOST_MODEL_URL }).catch(() => {})
+    const model = getSelectedModel()
+    await this.request<void>("eject", { url: model.url }).catch(() => {})
     this.worker?.terminate()
     this.worker = null
     try { localStorage.removeItem("deriva-ghost-ready") } catch {}
+  }
+
+  swapModel(next: GhostModel): Promise<void> {
+    const previous = getSelectedModel()
+    return this.request<void>("eject", { url: previous.url }).catch(() => {}).then(async () => {
+      this.worker?.terminate()
+      this.worker = null
+      setSelectedModel(next.id)
+    })
   }
 }
 

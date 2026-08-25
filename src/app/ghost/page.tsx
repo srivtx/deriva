@@ -1,7 +1,15 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { ghostEngine, ghostWasReady, GHOST_MODEL_LABEL, type GhostCapabilities } from "@/lib/ghost/engine"
+import {
+  ghostEngine,
+  ghostWasReady,
+  GHOST_MODELS,
+  getSelectedModel,
+  setSelectedModel,
+  type GhostCapabilities,
+  type GhostModel,
+} from "@/lib/ghost/engine"
 
 interface ChatMessage {
   role: "user" | "assistant"
@@ -39,6 +47,8 @@ function GhostFace({ size = 96, thinking = false }: { size?: number; thinking?: 
 export default function GhostPage() {
   const [phase, setPhase] = useState<"probe" | "intro" | "downloading" | "loading" | "ready">("probe")
   const [caps, setCaps] = useState<GhostCapabilities | null>(null)
+  const [cachedId, setCachedId] = useState<string | null>(null)
+  const [model, setModel] = useState<GhostModel>(() => getSelectedModel())
   const [progress, setProgress] = useState({ fraction: 0, loaded: 0, total: 0 })
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
@@ -58,13 +68,18 @@ export default function GhostPage() {
 
   useEffect(() => {
     let alive = true
-    ghostEngine.probe().then(info => {
-      if (!alive) return
-      setCaps(info)
-      setPhase(info.cached || ghostWasReady() ? "ready" : "intro")
-    }).catch(() => {
-      if (alive) setPhase("intro")
-    })
+    ;(async () => {
+      try {
+        const info = await ghostEngine.probe()
+        const cached = await ghostEngine.cachedModelId()
+        if (!alive) return
+        setCaps(info)
+        setCachedId(cached)
+        setPhase(cached && ghostWasReady() ? "ready" : "intro")
+      } catch {
+        if (alive) setPhase("intro")
+      }
+    })()
     return () => { alive = false }
   }, [])
 
@@ -76,30 +91,33 @@ export default function GhostPage() {
     try { localStorage.setItem("deriva-ghost-chat", JSON.stringify(next.slice(-40))) } catch {}
   }, [])
 
+  const chooseModel = useCallback((next: GhostModel) => {
+    setModel(next)
+    setSelectedModel(next.id)
+    setError(null)
+  }, [])
+
   const startDownload = useCallback(async () => {
     setError(null)
     setPhase("downloading")
     setProgress({ fraction: 0, loaded: 0, total: 0 })
     try {
-      await ghostEngine.download((fraction, loaded, total) =>
+      await ghostEngine.download(model, (fraction, loaded, total) =>
         setProgress({ fraction, loaded, total }),
       )
+      setCachedId(model.id)
       setPhase("loading")
-      await ghostEngine.load(() => {})
+      await ghostEngine.load(model)
       setPhase("ready")
       setMessages(prev => {
         if (prev.length > 0) return prev
-        return [{ role: "assistant", content: "I live here now. Ask me anything about your algorithms — I nudge, you derive." }]
+        return [{ role: "assistant", content: `I live here now — ${model.name} on your device, no cloud involved. Ask me anything about your algorithms; I nudge, you derive.` }]
       })
     } catch (err) {
       setError(String((err as Error)?.message || err))
       setPhase("intro")
     }
-  }, [])
-
-  const ensureLoaded = useCallback(async () => {
-    await ghostEngine.load(() => {})
-  }, [])
+  }, [model])
 
   const send = useCallback(async (raw?: string) => {
     const text = (raw ?? input).trim()
@@ -115,14 +133,14 @@ export default function GhostPage() {
 
     let streamedText = ""
     try {
-      await ensureLoaded()
+      await ghostEngine.load(model)
       const systemPrompt = hintMode ? HINT_SYSTEM : DIRECT_SYSTEM
       const result = await ghostEngine.chat(
+        model,
         [{ role: "system", content: systemPrompt }, ...history.slice(-10)],
         hintMode ? 300 : 380,
         piece => {
           streamedText += piece
-          setTps(null)
           setMessages(prev => {
             const next = [...prev]
             const last = next[next.length - 1]
@@ -146,7 +164,7 @@ export default function GhostPage() {
       })
     } catch (err) {
       const message = String((err as Error)?.message || err)
-      setError(message.includes("abort") ? null : message)
+      setError(message.toLowerCase().includes("abort") ? null : message)
       if (!streamedText) {
         setMessages(prev => {
           const next = prev.filter((m, i) => !(i === prev.length - 1 && m.role === "assistant"))
@@ -158,7 +176,7 @@ export default function GhostPage() {
       busyRef.current = false
       setBusy(false)
     }
-  }, [input, messages, hintMode, persist, ensureLoaded])
+  }, [input, messages, hintMode, persist, model])
 
   const stop = useCallback(async () => {
     await ghostEngine.stop().catch(() => {})
@@ -171,7 +189,9 @@ export default function GhostPage() {
 
   const eject = useCallback(async () => {
     await ghostEngine.eject()
+    setCachedId(null)
     setCaps(null)
+    setTps(null)
     setPhase("intro")
   }, [])
 
@@ -188,9 +208,27 @@ export default function GhostPage() {
           <GhostFace size={104} />
           <h1 className="ghost-wordmark">GHOST</h1>
           <p className="ghost-tagline">The tutor that lives in your phone.</p>
+
+          <div className="ghost-picker">
+            {GHOST_MODELS.map(m => (
+              <button
+                key={m.id}
+                type="button"
+                className={`ghost-model${model.id === m.id ? " active" : ""}`}
+                onClick={() => chooseModel(m)}
+              >
+                <span className="ghost-model-name">{m.name}</span>
+                <span className="ghost-model-meta">{m.label}</span>
+                <span className="ghost-model-blurb">
+                  {m.blurb}{cachedId === m.id ? " · CACHED ✓" : ""}
+                </span>
+              </button>
+            ))}
+          </div>
+
           <div className="ghost-spec">
-            <div className="ghost-spec-row"><span>MODEL</span><strong>{GHOST_MODEL_LABEL}</strong></div>
-            <div className="ghost-spec-row"><span>SIZE</span><strong>≈ 400 MB · once</strong></div>
+            <div className="ghost-spec-row"><span>BRAIN</span><strong>{model.name} · {model.sizeMb} MB</strong></div>
+            <div className="ghost-spec-row"><span>STATUS</span><strong>{cachedId === model.id ? "downloaded — no network needed" : "not downloaded yet"}</strong></div>
             <div className="ghost-spec-row"><span>NETWORK</span><strong>offline after setup</strong></div>
             <div className="ghost-spec-row"><span>PRIVACY</span><strong>nothing leaves this device</strong></div>
             <div className="ghost-spec-row"><span>ENGINE</span><strong>{caps?.webgpu ? "WASM · WebGPU ready" : "WASM"}</strong></div>
@@ -198,8 +236,14 @@ export default function GhostPage() {
               <div className="ghost-spec-row"><span>FREE SPACE</span><strong>{caps.storageQuotaMb} MB</strong></div>
             )}
           </div>
-          <p className="ghost-note">Nothing downloads until you say so. Eject anytime from the chat.</p>
-          <button type="button" className="ghost-summon" onClick={startDownload}>SUMMON GHOST</button>
+          <p className="ghost-note">
+            {cachedId === model.id
+              ? "Already materialised. Nothing will download."
+              : "Nothing downloads until you say so. Eject anytime from the chat."}
+          </p>
+          <button type="button" className="ghost-summon" onClick={startDownload}>
+            {cachedId === model.id ? "WAKE GHOST" : "SUMMON GHOST"}
+          </button>
           {error && <p className="ghost-error">{error}</p>}
         </div>
       )}
@@ -208,6 +252,7 @@ export default function GhostPage() {
         <div className="ghost-intro">
           <GhostFace size={88} thinking />
           <h1 className="ghost-wordmark">MATERIALISING</h1>
+          <p className="ghost-tagline mono">{model.name}</p>
           <div className="ghost-progress" role="progressbar" aria-valuenow={Math.round(progress.fraction * 100)}>
             <div className="ghost-progress-fill" style={{ width: `${Math.max(2, progress.fraction * 100)}%` }} />
           </div>
@@ -228,7 +273,7 @@ export default function GhostPage() {
             <GhostFace size={30} thinking={busy} />
             <span className={`ghost-led${busy ? " on" : ""}`} />
             <span className="ghost-status-text">{busy ? "thinking" : "present"}</span>
-            <span className="ghost-gauge">{tps != null ? `${tps.toFixed(1)} tok/s` : GHOST_MODEL_LABEL}</span>
+            <span className="ghost-gauge">{tps != null ? `${tps.toFixed(1)} tok/s · ${model.name}` : `${model.name} · resident`}</span>
             <button type="button" className="ghost-minibtn" onClick={eject}>EJECT</button>
           </header>
 

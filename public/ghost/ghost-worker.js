@@ -73,6 +73,7 @@ self.onmessage = async event => {
       const started = performance.now()
       let tokens = 0
       let text = ""
+      let lastError = null
 
       const emitToken = piece => {
         if (!piece) return
@@ -81,7 +82,7 @@ self.onmessage = async event => {
         post({ id, evt: "token", piece })
       }
 
-      let streamed = false
+      // Attempt 1: streaming, async-iterator shape (per v3 guide)
       try {
         const stream = await wllama.createChatCompletion({
           messages: payload.messages,
@@ -95,35 +96,46 @@ self.onmessage = async event => {
             if (signal.aborted) break
             emitToken(chunk?.choices?.[0]?.delta?.content ?? "")
           }
-          streamed = true
+          post({
+            id,
+            evt: signal.aborted ? "stopped" : "done",
+            data: { text, tokens, tps: ((performance.now() - started) / 1000) > 0 ? tokens / ((performance.now() - started) / 1000) : 0 },
+          })
+          activeController = null
+          return
         }
       } catch (err) {
         if (signal.aborted) {
-          // fall through — treated as stop
-        } else {
-          throw err
+          post({ id, evt: "stopped", data: { text, tokens, tps: 0 } })
+          activeController = null
+          return
         }
+        lastError = err
       }
 
-      if (!streamed && !signal.aborted) {
+      // Attempt 2: plain non-streaming call, minimal args
+      try {
         const res = await wllama.createChatCompletion({
           messages: payload.messages,
           max_tokens: payload.maxTokens || 320,
           temperature: payload.temperature ?? 0.7,
-          signal,
         })
-        text = res?.choices?.[0]?.message?.content ?? ""
+        text =
+          res?.choices?.[0]?.message?.content ??
+          res?.choices?.[0]?.text ??
+          (typeof res === "string" ? res : "")
         tokens = Math.max(1, Math.round(text.length / 4))
+        const seconds = (performance.now() - started) / 1000
+        post({ id, evt: "done", data: { text, tokens, tps: seconds > 0 ? tokens / seconds : 0 } })
+        activeController = null
+        return
+      } catch (err) {
+        lastError = lastError ?? err
       }
 
-      const seconds = (performance.now() - started) / 1000
-      const aborted = signal.aborted
       activeController = null
-      post({
-        id,
-        evt: aborted ? "stopped" : "done",
-        data: { text, tokens, tps: seconds > 0 ? tokens / seconds : 0 },
-      })
+      const e = lastError || new Error("inference failed")
+      post({ id, evt: "error", message: String(e?.message || e), name: e?.name || "", hint: "both stream and fallback calls failed" })
       return
     }
 
@@ -147,6 +159,12 @@ self.onmessage = async event => {
     post({ id, evt: "error", message: `unknown cmd ${cmd}` })
   } catch (err) {
     activeController = null
-    post({ id, evt: "error", message: String(err?.message || err) })
+    post({
+      id,
+      evt: "error",
+      message: String(err?.message || err),
+      name: err?.name || "",
+      hint: typeof err?.stack === "string" ? err.stack.split("\n")[1]?.trim().slice(0, 160) : "",
+    })
   }
 }
