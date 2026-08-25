@@ -9,6 +9,7 @@ import Logo from "./logo"
 import NotificationCenter from "./notification-center"
 import CommandCenter from "./command-center"
 import FloatingFocus from "./floating-focus"
+import { clearContentAnimations } from "@/lib/app-transition"
 import { applyPreferences, defaultPreferences, loadPreferences, type Preferences } from "@/persistence/preferences"
 import { todayKey } from "@/persistence/daily"
 import { dueCards, seedQueueFromMastery } from "@/persistence/review-queue"
@@ -239,6 +240,10 @@ export default function AppShell() {
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
   useEffect(() => { setMoreOpen(false) }, [pathname])
+  useEffect(() => {
+    clearContentAnimations(document.querySelector(".app-content"))
+    window.scrollTo(0, 0)
+  }, [pathname])
   useEffect(() => {
     const open = () => setCommandOpen(true)
     window.addEventListener("deriva-open-command", open)

@@ -472,7 +472,7 @@
 /* ── Motion system ── */
 @keyframes rise-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes app-open { from { opacity: 0; transform: translateY(12px) scale(.99); } to { opacity: 1; transform: none; } }
-.super-page, .icpc-page, .practice-wrap, .os-home { animation: app-open .3s var(--ease-standard) both; }
+.super-page, .icpc-page, .practice-wrap, .os-home, .settings-page, .dashboard-page, .android-page { animation: app-open .32s var(--ease-standard) both; }
 @keyframes orb-drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(-20px, 16px) scale(1.18); } }
 @keyframes shimmer-slide { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 @keyframes burst-pop { 0% { transform: translate(0, 0) scale(.4); opacity: 1; } 75% { opacity: 1; } 100% { transform: translate(var(--bx, 40px), var(--by, -60px)) scale(1); opacity: 0; } }
@@ -720,12 +720,6 @@
 .ed::-webkit-scrollbar, .complexity-ed::-webkit-scrollbar, .atlas-code::-webkit-scrollbar, .out::-webkit-scrollbar, .json-output::-webkit-scrollbar, .playground-gutter::-webkit-scrollbar, .mobile-more-links::-webkit-scrollbar, .desktop-more-menu::-webkit-scrollbar { display: none; }
 .ed-wrap { transition: border-color var(--dur-fast); }
 .ed-wrap:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; }
-.super-page, .icpc-page, .practice-wrap { view-transition-name: app-tile; }
-::view-transition-old(app-tile), ::view-transition-new(app-tile) { animation-duration: .3s; animation-timing-function: var(--ease-standard); }
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
-}
 @media (min-width: 640px) { .app-library-grid { grid-template-columns: repeat(6, 1fr); } }
 @media (min-width: 1000px) { .app-library-grid { grid-template-columns: repeat(8, 1fr); } }
 
