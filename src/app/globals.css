@@ -693,13 +693,14 @@
 .app-library-label { color: var(--ink-soft); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
 .app-library-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 8px; }
 .app-tile { display: grid; gap: 6px; justify-items: center; text-decoration: none; }
-.app-tile-icon { display: grid; width: 58px; height: 58px; place-items: center; border-radius: 16px; color: #fff; font: 700 22px/1 var(--font-ui); box-shadow: var(--shadow-raised); transition: transform var(--dur-fast), box-shadow var(--dur-fast); }
+.app-tile-icon { display: grid; width: 62px; height: 62px; place-items: center; border-radius: 18px; color: #fff; font: 700 22px/1 var(--font-ui); box-shadow: inset 0 1px 0 rgb(255 255 255 / .3), var(--shadow-raised); transition: transform var(--dur-fast), box-shadow var(--dur-fast); }
 .app-tile:hover .app-tile-icon { transform: translateY(-3px) scale(1.04); box-shadow: 0 10px 24px color-mix(in srgb, var(--ink) 22%, transparent); }
 .app-tile:active .app-tile-icon { transform: scale(.94); }
 .app-tile-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font: 600 11px var(--font-ui); }
-.app-tile-icon { position: relative; }
-.app-tile-badge { position: absolute; top: -6px; right: -8px; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--viz-pruned); color: var(--paper-raised); font: 700 11px var(--font-mono); font-style: normal; box-shadow: 0 0 0 2px var(--paper); }
-.app-tile-dot { position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; background: var(--viz-cached); box-shadow: 0 0 0 2.5px var(--paper); }
+.app-tile-icon { position: relative; overflow: hidden; width: 62px; height: 62px; border-radius: 18px; text-shadow: 0 1px 2px rgb(0 0 0 / .28); box-shadow: inset 0 1px 0 rgb(255 255 255 / .3), var(--shadow-raised); }
+.app-tile-icon::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgb(255 255 255 / .24), transparent 46%); pointer-events: none; }
+.app-tile-badge { position: absolute; top: -6px; right: -8px; z-index: 2; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--viz-pruned); color: var(--paper-raised); font: 700 11px var(--font-mono); font-style: normal; box-shadow: 0 0 0 2px var(--paper); }
+.app-tile-dot { position: absolute; top: -3px; right: -3px; z-index: 2; width: 12px; height: 12px; border-radius: 50%; background: var(--viz-cached); box-shadow: 0 0 0 2.5px var(--paper); }
 
 /* ── Native app feel ── */
 .offline-banner { padding: 7px 16px; background: color-mix(in srgb, var(--viz-cached) 18%, var(--paper-raised)); border-bottom: 1px solid color-mix(in srgb, var(--viz-cached) 45%, var(--line)); color: var(--ink); font: 600 12px var(--font-ui); text-align: center; }
@@ -713,6 +714,10 @@
 .page-loading::before { content: "◆"; display: block; margin-bottom: 12px; font-size: 30px; color: var(--accent); animation: splash-pulse 1.1s var(--ease-standard) infinite alternate; }
 @keyframes splash-pulse { from { transform: scale(.82) rotate(-8deg); opacity: .55; } to { transform: scale(1.06) rotate(6deg); opacity: 1; } }
 .mobile-more-sheet { touch-action: pan-y; }
+.ed, .complexity-ed, .atlas-code, .out, .json-output, .playground-gutter, .mobile-more-links, .desktop-more-menu { scrollbar-width: none; }
+.ed::-webkit-scrollbar, .complexity-ed::-webkit-scrollbar, .atlas-code::-webkit-scrollbar, .out::-webkit-scrollbar, .json-output::-webkit-scrollbar, .playground-gutter::-webkit-scrollbar, .mobile-more-links::-webkit-scrollbar, .desktop-more-menu::-webkit-scrollbar { display: none; }
+.ed-wrap { transition: border-color var(--dur-fast); }
+.ed-wrap:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; }
 .super-page, .icpc-page, .practice-wrap { view-transition-name: app-tile; }
 ::view-transition-old(app-tile), ::view-transition-new(app-tile) { animation-duration: .3s; animation-timing-function: var(--ease-standard); }
@@ -760,6 +765,18 @@
   .atlas-bars { height: 150px; }
   .observatory-stage-map { grid-template-columns: repeat(9, 1fr); width: 100%; }
   .observatory-stage-map span { width: auto; height: auto; aspect-ratio: 1; font-size: 9px; }
+  .toolkit-tabs { grid-template-columns: repeat(2, 1fr); }
+  .toolkit-tab { min-height: 76px; }
+  .super-field .segmented { display: grid; grid-template-columns: 1fr; gap: 6px; width: 100%; }
+  .super-field .segmented button { min-height: 46px; }
+}
+@media (max-width: 480px) {
+  .tool-input-row { flex-wrap: wrap; }
+  .tool-input-row input { flex: 1 1 100%; }
+  .tool-input-row select { flex: 1; }
+  .tool-input-row .super-primary { flex: 1 1 100%; }
+  .converter-arrow { display: none; }
+  .os-widgets { gap: 6px; }
 }
 @media (max-width: 700px) {
   .contest-hero, .review-hero, .daily-hero { grid-template-columns: 1fr; }
@@ -769,11 +786,16 @@
   .release-rail { grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 10px; }
   .review-grades { grid-template-columns: repeat(2, 1fr); }
   .daily-calendar { grid-template-columns: repeat(7, 1fr); }
-  .super-day-tiles { grid-template-columns: 1fr; }
-  .super-day-tile { min-height: 88px; }
   .interview-rubric-row { align-items: stretch; flex-direction: column; gap: 8px; }
   .interview-rubric-row .segmented { width: 100%; }
   .interview-rubric-row .segmented button { flex: 1; }
+  .contest-hero h1, .review-hero h1, .daily-hero h1 { font-size: clamp(26px, 7.5vw, 34px); }
+  .contest-hero p, .review-hero p, .daily-hero p { font-size: 13px; }
+  .contest-clock strong { font-size: clamp(34px, 10vw, 44px); }
+  .daily-card h2 { font-size: clamp(20px, 5.5vw, 26px); }
+  .review-cue { font-size: clamp(19px, 5.5vw, 24px); }
+  .atlas-head h1 { font-size: clamp(26px, 7.5vw, 34px); }
+  .os-greeting { font-size: clamp(22px, 6.5vw, 30px); }
 }
 @media (min-width: 701px) {
   .super-page { padding-bottom: 64px; }

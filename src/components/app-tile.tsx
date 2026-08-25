@@ -25,6 +25,8 @@ export default function AppTile({ app, badge, dot }: AppTileProps) {
       startViewTransition?: (cb: () => Promise<void> | void) => { skipTransition: () => void }
     }
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
+    // Touch devices: skip the morph entirely — instant open feels faster and more native.
+    if (window.matchMedia("(hover: none)").matches) return
     if (!doc.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
     event.preventDefault()
     const icon = event.currentTarget.querySelector<HTMLSpanElement>(".app-tile-icon")
@@ -53,7 +55,14 @@ export default function AppTile({ app, badge, dot }: AppTileProps) {
   }
 
   return (
-    <Link href={app.href} className="app-tile" title={app.name} onClick={open}>
+    <Link
+      href={app.href}
+      className="app-tile"
+      title={app.name}
+      onClick={open}
+      onPointerEnter={() => router.prefetch(app.href)}
+      onTouchStart={() => router.prefetch(app.href)}
+    >
       <span className="app-tile-icon" style={{ background: app.gradient }} aria-hidden="true">
         {app.glyph}
         {badge != null && badge > 0 && <i className="app-tile-badge">{badge > 9 ? "9+" : badge}</i>}
