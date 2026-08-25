@@ -331,12 +331,17 @@ export default function GhostPage() {
   }, [])
 
   const clearChat = useCallback(() => {
+    setSessions(prev => {
+      const list = prev.filter(s => s.id !== activeId)
+      saveSessions(list)
+      return list
+    })
     setMessages([])
     setActiveId(null)
     setSheetOpen(false)
     try { localStorage.removeItem(ACTIVE_KEY) } catch {}
     try { localStorage.removeItem("deriva-ghost-chat") } catch {}
-  }, [])
+  }, [activeId])
 
   const upsertCurrentBeforeSwitch = useCallback((list: GhostSession[]): GhostSession[] => {
     if (!activeId || messages.length === 0) return list
@@ -477,9 +482,6 @@ export default function GhostPage() {
 
       {phase === "ready" && (
         <>
-          {busy && (
-            <div className="ghost-thinking-chip"><GhostFace size={18} thinking /> thinking…{tps != null && tps > 0 ? ` ${tps.toFixed(1)} tok/s` : ""}</div>
-          )}
           <div className="ghost-chatbar">
               <span className="ghost-chatbar-title">{sessions.find(s => s.id === activeId)?.title ?? "new conversation"}</span>
               <span className="ghost-chatbar-actions">
@@ -502,7 +504,7 @@ export default function GhostPage() {
             )}
             {messages.map((m, i) => (
               <div key={i} className={`ghost-msg ${m.role === "user" ? "from-user" : "from-ghost"}`}>
-                {m.role === "assistant" && <GhostFace size={22} thinking={busy && i === messages.length - 1} />}
+                {m.role === "assistant" && <GhostFace size={22} />}
                 <div className="ghost-msg-body">
                   <p>{m.content}{busy && i === messages.length - 1 && m.role === "assistant" && <span className="ghost-cursor" />}</p>
                 </div>
