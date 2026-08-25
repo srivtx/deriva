@@ -119,15 +119,27 @@ export default function GhostPage() {
 
   useEffect(() => {
     try {
-      const list = loadSessions()
+      let list = loadSessions()
+      // One-time migration from the pre-sessions storage shape.
+      if (!localStorage.getItem("deriva-ghost-migrated-v2")) {
+        const legacyRaw = localStorage.getItem("deriva-ghost-chat")
+        if (legacyRaw) {
+          const msgs = JSON.parse(legacyRaw)
+          if (Array.isArray(msgs) && msgs.length > 0 && !list.some(s => s.title === (msgs[0]?.content || "").slice(0, 44))) {
+            list = [{ id: `${Date.now()}`, title: (msgs[0]?.content || "conversation").slice(0, 44), updatedAt: Date.now(), messages: msgs.slice(-60) }, ...list]
+            saveSessions(list)
+          }
+        }
+        localStorage.setItem("deriva-ghost-migrated-v2", "1")
+        localStorage.removeItem("deriva-ghost-chat")
+      }
       setSessions(list)
       const active = localStorage.getItem(ACTIVE_KEY)
       if (active) {
         const found = list.find(s => s.id === active)
-        if (found) { setActiveId(found.id); setMessages(found.messages) ; return }
+        if (found) { setActiveId(found.id); setMessages(found.messages) }
+        else { localStorage.removeItem(ACTIVE_KEY) }
       }
-      const legacy = localStorage.getItem("deriva-ghost-chat")
-      if (legacy) setMessages(JSON.parse(legacy))
     } catch {}
   }, [])
 
@@ -191,7 +203,6 @@ export default function GhostPage() {
       saveSessions(list)
       return list
     })
-    try { localStorage.setItem("deriva-ghost-chat", JSON.stringify(next.slice(-40))) } catch {}
   }, [activeId])
 
   const refreshStorage = useCallback(async () => {
@@ -383,7 +394,11 @@ export default function GhostPage() {
     if (busyRef.current) return
     setSessions(prev => {
       const l = prev.filter(s => s.id !== id); saveSessions(l)
-      if (id === activeId) { setMessages([]); setActiveId(null); try { localStorage.removeItem(ACTIVE_KEY) } catch {} }
+      if (id === activeId) {
+        setMessages([]); setActiveId(null)
+        try { localStorage.removeItem(ACTIVE_KEY) } catch {}
+        try { localStorage.removeItem("deriva-ghost-chat") } catch {}
+      }
       return l
     })
   }, [activeId])
