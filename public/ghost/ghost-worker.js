@@ -4,12 +4,13 @@
    Protocol is unchanged: probe/status/cached/download/load/chat/stop/
    eject/delete/clear — engine.ts and page.tsx need no edits. */
 
-import { Wllama, CacheManager } from "https://cdn.jsdelivr.net/npm/@wllama/wllama@2.4.0/esm/index.js";
+// Vendored same-origin copy — no CDN dependency, fully offline-capable.
+import { Wllama, CacheManager } from "/ghost/vendor/wllama/index.js";
 
-const CDN = "https://cdn.jsdelivr.net/npm/@wllama/wllama@2.4.0/esm";
+const BASE = "/ghost/vendor/wllama";
 const CONFIG_PATHS = {
-  "single-thread/wllama.wasm": `${CDN}/single-thread/wllama.wasm`,
-  "multi-thread/wllama.wasm": `${CDN}/multi-thread/wllama.wasm`,
+  "single-thread/wllama.wasm": `${BASE}/single-thread/wllama.wasm`,
+  "multi-thread/wllama.wasm": `${BASE}/multi-thread/wllama.wasm`,
 };
 const CHATML_STOP = ["<|im_end|>", "<|im_start|>"];
 
@@ -19,7 +20,7 @@ let loadedUrl = null;
 const post = (msg) => self.postMessage(msg);
 
 function emitToken(id, piece) {
-  post({ id, evt: "token", data: { text: piece } });
+  post({ id, evt: "token", piece });
 }
 
 async function releaseRuntime() {
@@ -100,8 +101,8 @@ self.onmessage = async (e) => {
   try {
     /* ---------- probe ---------- */
     if (cmd === "probe") {
-      const ready = localStorage.getItem("deriva-ghost-ready") === "1";
-      post({ id, evt: "done", data: { ready } });
+      // Workers have no localStorage — readiness is tracked client-side.
+      post({ id, evt: "done", data: { ready: true } });
       return;
     }
 
@@ -150,11 +151,16 @@ self.onmessage = async (e) => {
         if (done) break;
         chunks.push(value);
         received += value.byteLength;
-        post({ id, evt: "progress", data: {
-          fraction: total > 0 ? Math.min(1, received / total) : 0,
-          loadedMb: Math.round(received / 1048576),
-          totalMb: Math.round(total / 1048576),
-        }});
+        post({
+          id, evt: "progress",
+          loaded: received,
+          total,
+          data: {
+            fraction: total > 0 ? Math.min(1, received / total) : 0,
+            loadedMb: Math.round(received / 1048576),
+            totalMb: Math.round(total / 1048576),
+          },
+        });
       }
       const name = await cm.getNameFromURL(payload.url);
       await cm.write(

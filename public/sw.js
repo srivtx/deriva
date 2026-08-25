@@ -1,5 +1,5 @@
 // Deriva service worker — cache-first for static assets, network-first for pages.
-const CACHE = "deriva-v28"
+const CACHE = "deriva-v29"
 const STATIC = ["/", "/practice", "/design", "/lld", "/dashboard", "/patterns", "/patterns/quiz", "/settings", "/expedition", "/games", "/icpc", "/daily", "/review", "/contest", "/interview", "/cheatsheets", "/playground", "/releases", "/android", "/atlas", "/complexity", "/notebook", "/toolkit", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store", "/expenses", "/calendar", "/translate", "/manifest.webmanifest", "/favicon.svg", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable.png"]
 
 self.addEventListener("install", (e) => {
@@ -19,6 +19,7 @@ self.addEventListener("fetch", (e) => {
 
   // Next.js build assets + icons + Ghost engine files: cache-first (immutable)
   const isGhostEngine = url.pathname === "/ghost/ghost-worker.js" ||
+    url.pathname.startsWith("/ghost/vendor/wllama/") ||
     (url.hostname === "cdn.jsdelivr.net" && url.pathname.startsWith("/npm/@wllama/wllama/"))
   if (url.pathname.startsWith("/_next/static") || url.pathname.startsWith("/icons") || isGhostEngine) {
     e.respondWith(

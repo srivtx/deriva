@@ -73,8 +73,9 @@ class GhostEngine {
     if (this.worker) return this.worker
     const worker = new Worker("/ghost/ghost-worker.js", { type: "module" })
     worker.onmessage = (event: MessageEvent) => this.handle(event.data)
-    worker.onerror = () => {
-      for (const pending of this.pending.values()) pending.reject(new Error("Ghost engine crashed — reload the page"))
+    worker.onerror = (event: ErrorEvent) => {
+      const detail = event.message || "unknown worker error"
+      for (const pending of this.pending.values()) pending.reject(new Error(`Ghost engine crashed — ${detail}`))
       this.pending.clear()
       this.worker = null
     }
