@@ -269,9 +269,13 @@ export default function GhostPage() {
 
       {phase === "intro" && (
         <div className="ghost-intro">
-          <GhostFace size={104} />
-          <h1 className="ghost-wordmark">GHOST</h1>
-          <p className="ghost-tagline">The tutor that lives in your phone.</p>
+          <span className="ghost-kicker">GHOST · OFFLINE AI</span>
+          <h1 className="ghost-hero-title">A tutor that lives in your phone.</h1>
+          <p className="ghost-hero-sub">
+            A real language model running inside this app — no cloud, no account, no network after setup.
+            It nudges with questions; you keep the derivation.
+          </p>
+          <GhostFace size={88} />
 
           <div className="ghost-picker">
             {GHOST_MODELS.map(m => (
@@ -292,7 +296,14 @@ export default function GhostPage() {
 
           <div className="ghost-spec">
             <div className="ghost-spec-row"><span>BRAIN</span><strong>{model.name} · {model.sizeMb} MB</strong></div>
-            <div className="ghost-spec-row"><span>STATUS</span><strong>{cachedId === model.id ? "downloaded — no network needed" : "not downloaded yet"}</strong></div>
+            <div className="ghost-spec-row">
+              <span>ON DEVICE</span>
+              <strong>
+                {cachedUrls.length === 0
+                  ? "nothing yet"
+                  : GHOST_MODELS.filter(m => cachedUrls.includes(m.url)).map(m => m.name).join(" + ") + (cachedUrls.length > GHOST_MODELS.length ? " + legacy" : "")}
+              </strong>
+            </div>
             <div className="ghost-spec-row"><span>NETWORK</span><strong>offline after setup</strong></div>
             <div className="ghost-spec-row"><span>PRIVACY</span><strong>nothing leaves this device</strong></div>
             <div className="ghost-spec-row"><span>ENGINE</span><strong>{caps?.webgpu ? "WASM · WebGPU ready" : "WASM"}</strong></div>
@@ -397,8 +408,11 @@ export default function GhostPage() {
             )}
             {messages.map((m, i) => (
               <div key={i} className={`ghost-msg ${m.role === "user" ? "from-user" : "from-ghost"}`}>
-                <span className="ghost-msg-tag">{m.role === "user" ? "YOU" : "GHOST"}</span>
-                <p>{m.content}{busy && i === messages.length - 1 && m.role === "assistant" && <span className="ghost-cursor" />}</p>
+                {m.role === "assistant" && <GhostFace size={22} thinking={busy && i === messages.length - 1} />}
+                <div className="ghost-msg-body">
+                  <span className="ghost-msg-tag">{m.role === "user" ? "YOU" : "GHOST"}</span>
+                  <p>{m.content}{busy && i === messages.length - 1 && m.role === "assistant" && <span className="ghost-cursor" />}</p>
+                </div>
               </div>
             ))}
             <div ref={bottomRef} />
