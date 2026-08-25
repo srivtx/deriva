@@ -8,6 +8,7 @@ import {
   GHOST_LEGACY_URLS,
   getSelectedModel,
   setSelectedModel,
+  DEFAULT_MODEL_ID,
   type GhostModel,
 } from "@/lib/ghost/engine"
 
@@ -93,6 +94,7 @@ export default function GhostPage() {
   const [tps, setTps] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pendingGet, setPendingGet] = useState<GhostModel | null>(null)
+  const [caps, setCaps] = useState<{ webgpu: boolean; storageQuotaMb: number | null } | null>(null)
   const busyRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [follow, setFollow] = useState(true)
@@ -147,8 +149,12 @@ export default function GhostPage() {
     let alive = true
     ;(async () => {
       try {
-        const found = await ghostEngine.scanStorage()
+        const [found, info] = await Promise.all([
+          ghostEngine.scanStorage(),
+          ghostEngine.probe().catch(() => null),
+        ])
         if (!alive) return
+        if (info) setCaps({ webgpu: info.webgpu, storageQuotaMb: info.storageQuotaMb })
         setStorage(found)
         const activeCached = found.some(s => s.url === getSelectedModel().url)
         setPhase(activeCached && ghostWasReady() ? "ready" : "intro")
@@ -446,42 +452,79 @@ export default function GhostPage() {
 
       {phase === "intro" && (
         <div className="ghost-intro">
-          <span className="ghost-kicker">GHOST · OFFLINE AI</span>
-          <h1 className="ghost-hero-title">A tutor that lives in your phone.</h1>
-          <p className="ghost-hero-sub">
-            A real language model running inside this app — no cloud, no account, no network after setup.
-            It answers with questions and nudges; the derivation stays yours.
-          </p>
-          <GhostFace size={84} />
+          <div className="ghost-hero">
+            <GhostFace size={92} />
+            <span className="ghost-kicker">GHOST · OFFLINE AI</span>
+            <h1 className="ghost-hero-title">A tutor that lives in your phone.</h1>
+            <p className="ghost-hero-sub">
+              A real language model running inside this app. No cloud, no account,
+              no network after setup — and it answers with questions, so the derivation stays yours.
+            </p>
+            <div className="ghost-trust-row" aria-label="Guarantees">
+              <span>OFFLINE AFTER SETUP</span>
+              <i />
+              <span>NOTHING LEAVES THE DEVICE</span>
+              <i />
+              <span>RUNS ON THIS PHONE</span>
+            </div>
+          </div>
 
           <p className="ghost-section-label">CHOOSE ITS BRAIN</p>
-          <div className="ghost-picker">
+          <div className="ghost-picker" role="radiogroup" aria-label="Model">
             {GHOST_MODELS.map(m => {
               const cached = isCached(m.url)
               const selected = model.id === m.id
+              const recommended = m.id === DEFAULT_MODEL_ID
               return (
-                <button key={m.id} type="button" className={`ghost-model${selected ? " active" : ""}`} onClick={() => chooseModel(m)}>
-                  <span className="ghost-model-top">
-                    <span className="ghost-model-name">{m.name}</span>
-                    {cached && <span className="ghost-model-badge">ON DEVICE</span>}
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  className={`ghost-card${selected ? " active" : ""}`}
+                  onClick={() => chooseModel(m)}
+                >
+                  <span className="ghost-card-top">
+                    <span className="ghost-card-radio" aria-hidden="true" />
+                    <span className="ghost-card-name">{m.name}</span>
+                    {cached ? (
+                      <em className="ghost-card-badge on">ON DEVICE</em>
+                    ) : recommended ? (
+                      <em className="ghost-card-badge">RECOMMENDED</em>
+                    ) : (
+                      <em className="ghost-card-badge dim">DEEPER</em>
+                    )}
                   </span>
-                  <span className="ghost-model-meta">{m.sizeMb} MB · {cached ? `${sizeOf(m.url)} MB stored` : "one-time download"}</span>
-                  <span className="ghost-model-blurb">{m.blurb}</span>
+                  <span className="ghost-card-bar" aria-hidden="true">
+                    <i style={{ width: `${Math.round((m.sizeMb / Math.max(...GHOST_MODELS.map(x => x.sizeMb))) * 100)}%` }} />
+                  </span>
+                  <span className="ghost-card-meta">
+                    <b>{m.sizeMb} MB</b> one-time{cached && sizeOf(m.url) > 0 ? ` · ${sizeOf(m.url)} MB stored` : ""}
+                  </span>
+                  <span className="ghost-card-blurb">{m.blurb}</span>
                 </button>
               )
             })}
           </div>
 
-          <button type="button" className="ghost-summon" onClick={startSummon} disabled={!!action}>
-            {isCached(model.url) ? "WAKE GHOST" : `SUMMON · ${model.sizeMb} MB`}
+          {caps?.storageQuotaMb != null && (
+            <p className="ghost-spec-mini">{caps.webgpu ? "WASM · WebGPU ready" : "WASM engine"} · {caps.storageQuotaMb} MB free on this device{totalMb > 0 ? ` · ${totalMb} MB in use` : ""}</p>
+          )}
+
+          <button type="button" className={`ghost-summon${isCached(model.url) ? " wake" : ""}`} onClick={startSummon} disabled={!!action}>
+            {isCached(model.url) ? "WAKE GHOST" : `SUMMON GHOST · ${model.sizeMb} MB`}
+            <span className="ghost-summon-arrow" aria-hidden="true">→</span>
           </button>
 
           {totalMb > 0 && (
             <button type="button" className="ghost-storage-link" onClick={() => setSheetOpen(true)}>
-              {totalMb} MB stored on this device{legacyLeftovers.length > 0 ? ` · ${legacyLeftovers.reduce((s, l) => s + l.sizeMb, 0)} MB leftover` : ""} → manage
+              MANAGE STORED BRAINS ({totalMb} MB) →
             </button>
           )}
           {error && <p className="ghost-error">{error}</p>}
+          {cachedUrls.includes(model.url) && (
+            <button type="button" className="ghost-minibtn danger" onClick={deleteSelectedCache}>DELETE {model.name.toUpperCase()}'S CACHE</button>
+          )}
         </div>
       )}
 
