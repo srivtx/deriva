@@ -29,7 +29,7 @@ export default function PackIcon({
     const path = TEENAGE_PATHS[id]
     if (path) {
       return (
-        <svg className={`teicon${className ? ` ${className}` : ""}} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg className={`teicon${className ? ` ${className}` : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d={path} />
         </svg>
       )
