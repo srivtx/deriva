@@ -1,4 +1,4 @@
-export type ThemePreference = "system" | "paper" | "ink" | "moss" | "violet" | "sunset"
+export type ThemePreference = "system" | "paper" | "ink" | "moss" | "ocean" | "carbon" | "violet" | "sunset"
 export type AccentPreference = "cobalt" | "ember" | "violet" | "mint" | "gold" | "custom"
 export type TypePreference = "editorial" | "technical" | "humanist"
 export type DensityPreference = "calm" | "focused" | "compact"
@@ -14,7 +14,7 @@ export type Preferences = {
   shape: ShapePreference
   texture: TexturePreference
   reducedMotion: boolean
-  textScale: "standard" | "large"
+  textScale: "standard" | "large" | "xlarge"
   keyboardHints: boolean
   brandName: string
   tagline: string
@@ -40,7 +40,7 @@ export const defaultPreferences: Preferences = {
   logoMark: "m",
 }
 
-const THEME_VALUES = new Set<ThemePreference>(["system", "paper", "ink", "moss", "violet", "sunset"])
+const THEME_VALUES = new Set<ThemePreference>(["system", "paper", "ink", "moss", "ocean", "carbon", "violet", "sunset"])
 const ACCENT_VALUES = new Set<AccentPreference>(["cobalt", "ember", "violet", "mint", "gold", "custom"])
 const TYPE_VALUES = new Set<TypePreference>(["editorial", "technical", "humanist"])
 const DENSITY_VALUES = new Set<DensityPreference>(["calm", "focused", "compact"])
@@ -75,7 +75,7 @@ function normalize(value: unknown): Preferences {
     shape: SHAPE_VALUES.has(raw.shape as ShapePreference) ? raw.shape as ShapePreference : defaultPreferences.shape,
     texture: TEXTURE_VALUES.has(raw.texture as TexturePreference) ? raw.texture as TexturePreference : defaultPreferences.texture,
     reducedMotion: raw.reducedMotion === true,
-    textScale: raw.textScale === "large" ? "large" : "standard",
+    textScale: raw.textScale === "large" || raw.textScale === "xlarge" ? raw.textScale : "standard",
     keyboardHints: raw.keyboardHints !== false,
     brandName: shortText(raw.brandName, defaultPreferences.brandName, 28),
     tagline: shortText(raw.tagline, defaultPreferences.tagline, 80),

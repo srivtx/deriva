@@ -3,6 +3,7 @@
 const KEY = "deriva-practice-position-v1"
 const TOPIC_KEY = "deriva-topic-v1"
 const COMPLETED_KEY = "deriva-completed-v2"
+const BOOKMARKS_KEY = "deriva-bookmarks-v1"
 
 export type PracticePositions = Record<string, number>
 
@@ -42,4 +43,21 @@ export function loadPracticeCompletion(): Record<string, number[]> {
   } catch {
     return {}
   }
+}
+
+export function loadBookmarks(): Record<string, number[]> {
+  if (typeof window === "undefined") return {}
+  try {
+    const raw = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || "{}") as Record<string, unknown>
+    return Object.fromEntries(Object.entries(raw).map(([topicId, values]) => [
+      topicId,
+      Array.isArray(values) ? values.filter(value => Number.isInteger(Number(value))).map(Number) : [],
+    ]))
+  } catch {
+    return {}
+  }
+}
+
+export function saveBookmarks(bookmarks: Record<string, number[]>) {
+  try { localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks)) } catch {}
 }

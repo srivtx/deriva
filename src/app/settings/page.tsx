@@ -6,12 +6,15 @@ import { applyPreferences, defaultPreferences, loadPreferences, savePreferences,
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 import Logo from "@/components/logo"
+import { downloadWorkspace, importWorkspace, eraseWorkspace } from "@/persistence/data-transfer"
 
 const themes: { value: ThemePreference; title: string; body: string; swatch: string }[] = [
   { value: "moss", title: "Moss", body: "Grounded, green, and clear.", swatch: "#2F8F5B" },
   { value: "system", title: "System", body: "Follow your device.", swatch: "linear-gradient(135deg, #FAF9F6 50%, #14161A 50%)" },
   { value: "paper", title: "Paper", body: "Warm, quiet, editorial.", swatch: "#FAF9F6" },
   { value: "ink", title: "Ink", body: "Low-light workbench.", swatch: "#1C1F24" },
+  { value: "ocean", title: "Ocean", body: "Cool sea-air focus.", swatch: "#1E6FA8" },
+  { value: "carbon", title: "Carbon", body: "Neutral graphite night.", swatch: "#1E2125" },
   { value: "violet", title: "Violet", body: "Night study, vivid focus.", swatch: "#B79CFF" },
   { value: "sunset", title: "Sunset", body: "Warm studio light.", swatch: "#B55335" },
 ]
@@ -57,6 +60,7 @@ const textureOptions: { value: TexturePreference; title: string; body: string }[
 export default function SettingsPage() {
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">("default")
+  const [dataMessage, setDataMessage] = useState("")
   const logoInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -96,6 +100,27 @@ export default function SettingsPage() {
   const resetIdentity = () => update({ ...preferences, brandName: defaultPreferences.brandName, tagline: defaultPreferences.tagline, logoMark: defaultPreferences.logoMark, logoDataUrl: undefined })
   const applyPreset = (values: Partial<Preferences>) => update({ ...preferences, ...values })
   const resetAll = () => update({ ...defaultPreferences })
+  const handleExport = () => {
+    downloadWorkspace()
+    setDataMessage("Backup downloaded. Keep it somewhere safe — it holds every trace of your workspace.")
+  }
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.currentTarget.value = ""
+    if (!file) return
+    try {
+      const restored = await importWorkspace(file)
+      setDataMessage(`Restored ${restored} data keys. Reloading…`)
+      setTimeout(() => window.location.reload(), 800)
+    } catch (error) {
+      setDataMessage(error instanceof Error ? error.message : "Import failed.")
+    }
+  }
+  const handleErase = () => {
+    if (!window.confirm("Erase every trace of Deriva on this device? Export a backup first — this cannot be undone.")) return
+    eraseWorkspace()
+    window.location.reload()
+  }
 
   return (
     <main className="settings-page">
@@ -157,9 +182,30 @@ export default function SettingsPage() {
 
       <section className="settings-section" aria-labelledby="comfort-heading">
         <h2 id="comfort-heading">Comfort</h2>
-        <PreferenceRow label="Larger learning text" description="Increase reading comfort for explanations and prompts." checked={preferences.textScale === "large"} onChange={checked => update({ ...preferences, textScale: checked ? "large" : "standard" })} />
+        <div className="segmented-row">
+          <span><strong>Learning text size</strong><small>Scales the entire workspace, instantly.</small></span>
+          <div className="segmented" role="group" aria-label="Learning text size">
+            {(["standard", "large", "xlarge"] as const).map(size => (
+              <button key={size} type="button" className={preferences.textScale === size ? "selected" : ""} onClick={() => update({ ...preferences, textScale: size })}>{size === "standard" ? "A" : size === "large" ? "A+" : "A++"}</button>
+            ))}
+          </div>
+        </div>
         <PreferenceRow label="Reduce motion" description="Use instant transitions and quiet state changes." checked={preferences.reducedMotion} onChange={checked => update({ ...preferences, reducedMotion: checked })} />
         <PreferenceRow label="Show keyboard hints" description="Keep desktop shortcuts visible when a keyboard is connected." checked={preferences.keyboardHints} onChange={checked => update({ ...preferences, keyboardHints: checked })} />
+      </section>
+
+      <section className="settings-section" aria-labelledby="data-heading">
+        <h2 id="data-heading">Your data</h2>
+        <p className="data-intro">Everything lives on this device — nothing is uploaded. Export a backup file, restore it in any browser, or erase the workspace completely.</p>
+        <div className="data-actions">
+          <button type="button" className="btn-primary data-export" onClick={handleExport}>Export backup (.json)</button>
+          <label className="data-import">
+            Import backup
+            <input type="file" accept="application/json,.json" onChange={handleImport} aria-label="Import backup file" />
+          </label>
+          <button type="button" className="btn-danger" onClick={handleErase}>Erase all data</button>
+        </div>
+        {dataMessage && <p className="data-message" role="status">{dataMessage}</p>}
       </section>
 
       <section className="settings-section" aria-labelledby="notifications-heading">

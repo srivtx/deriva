@@ -17,6 +17,7 @@ type Command = {
 }
 
 const PRESETS = [
+  { id: "moss-technical", title: "Use Moss Technical atmosphere", values: { theme: "moss" as const, accent: "mint" as const, type: "technical" as const, density: "focused" as const, shape: "precise" as const, texture: "grid" as const } },
   { id: "classic", title: "Use Deriva Classic atmosphere", values: { theme: "paper" as const, accent: "cobalt" as const, type: "editorial" as const, density: "calm" as const, shape: "soft" as const, texture: "plain" as const } },
   { id: "field-notes", title: "Use Field Notes atmosphere", values: { theme: "moss" as const, accent: "mint" as const, type: "humanist" as const, density: "calm" as const, shape: "soft" as const, texture: "grid" as const } },
   { id: "night-lab", title: "Use Night Lab atmosphere", values: { theme: "violet" as const, accent: "violet" as const, type: "technical" as const, density: "focused" as const, shape: "precise" as const, texture: "grid" as const } },
@@ -43,10 +44,18 @@ export default function CommandCenter({ open, onClose }: { open: boolean; onClos
     return [
       { id: "today", title: "Continue today's derivation", meta: "Learn · Stage 1–9", keywords: "lesson recursion derive", href: "/learn/trees/sum-1-to-n" },
       { id: "observatory", title: "Open Learning Observatory", meta: "Observe · your evidence", keywords: "progress mastery patterns systems", href: "/observatory" },
+      { id: "icpc", title: "Open ICPC Ladder", meta: "Practice · 75 contest problems", keywords: "icpc contest ladder competitive programming", href: "/icpc" },
       { id: "systems", title: "Enter Systems Atelier", meta: "AI/ML · incidents", keywords: "systems services queue retry failure", href: "/ai-ml/systems" },
       { id: "patterns", title: "Open Pattern Journal", meta: "Recall · transfer", keywords: "patterns recognition review", href: "/patterns" },
       { id: "settings", title: "Open workspace settings", meta: "Customize · PWA identity", keywords: "settings theme logo pwa", href: "/settings" },
       ...styleCommands,
+      ...TOPIC_LIST.flatMap(topic => topic.problems.map(problem => ({
+        id: `problem-${topic.id}-${problem.id}`,
+        title: problem.title,
+        meta: `${topic.name} · P${problem.id}${problem.difficulty ? ` · ${problem.difficulty}` : ""}`,
+        keywords: `${problem.pattern} ${problem.skill} ${topic.name} ${problem.difficulty ?? ""} practice solve problem`,
+        href: `/practice?topic=${topic.id}&problem=${problem.id}`,
+      }))),
       ...TOPIC_LIST.map(topic => ({ id: `topic-${topic.id}`, title: topic.name, meta: `DSA · ${topic.problems.length} problems`, keywords: `topic ${topic.id} dsa`, href: `/topic/${topic.id}` })),
       ...PATTERN_DIRECTORY.map(pattern => ({ id: `pattern-${pattern.id}`, title: pattern.name, meta: `Pattern · ${pattern.family}`, keywords: `${pattern.family} ${pattern.cue} ${pattern.move}`, href: `/patterns?pattern=${pattern.id}` })),
       ...systemScenarios.map(scenario => ({ id: `system-${scenario.id}`, title: scenario.title, meta: `S${scenario.number} · ${scenario.thinkingMove}`, keywords: `${scenario.pitch} ${scenario.thinkingMove}`, href: `/ai-ml/systems/${scenario.id}` })),
@@ -91,8 +100,8 @@ export default function CommandCenter({ open, onClose }: { open: boolean; onClos
       <section className="command-center" role="dialog" aria-modal="true" aria-label="Command Center" onMouseDown={event => event.stopPropagation()}>
         <div className="command-input-wrap"><span aria-hidden="true">⌕</span><input ref={inputRef} value={query} onChange={event => { setQuery(event.target.value); setActiveIndex(0) }} placeholder="Search lessons, patterns, systems, or actions…" aria-label="Search Deriva" /><kbd>ESC</kbd></div>
         <div className="command-results" role="listbox" aria-label="Command results">
-          {filtered.map((command, index) => <button type="button" role="option" aria-selected={index === activeIndex} key={command.id} className={`command-result${index === activeIndex ? " active" : ""}`} onMouseEnter={() => setActiveIndex(index)} onClick={() => select(command)}><span className="command-result-mark">{command.id.startsWith("style-") ? "✦" : command.id.startsWith("pattern-") ? "◆" : command.id.startsWith("system-") ? "◎" : "→"}</span><span><strong>{command.title}</strong><small>{command.meta}</small></span><span className="command-result-enter">↵</span></button>)}
-          {filtered.length === 0 && <p className="command-empty">No matching move. Try a topic, pattern, system, or “night lab”.</p>}
+          {filtered.map((command, index) => <button type="button" role="option" aria-selected={index === activeIndex} key={command.id} className={`command-result${index === activeIndex ? " active" : ""}`} onMouseEnter={() => setActiveIndex(index)} onClick={() => select(command)}><span className="command-result-mark">{command.id.startsWith("style-") ? "✦" : command.id.startsWith("pattern-") ? "◆" : command.id.startsWith("system-") ? "◎" : command.id.startsWith("problem-") ? "#" : "→"}</span><span><strong>{command.title}</strong><small>{command.meta}</small></span><span className="command-result-enter">↵</span></button>)}
+          {filtered.length === 0 && <p className="command-empty">No matching move. Try a problem name, a topic, a pattern, or “night lab”.</p>}
         </div>
         <footer className="command-footer"><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> open</span><span><kbd>esc</kbd> close</span></footer>
       </section>

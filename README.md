@@ -37,6 +37,7 @@ on a problem you have never seen.
 | Surface | What it is for |
 | --- | --- |
 | DSA | 700 problems across 14 topics, with first-principles scaffolding and in-browser Python |
+| ICPC Ladder | 75 contest problems across 13 linear sections, from ad-hoc warmups to geometry and game theory |
 | System Design | 45 architecture problems with requirements, capacity math, components, and validation |
 | Low-Level Design | 35 object-design problems with entities, relationships, state machines, and patterns |
 | AI/ML Systems | Labs, question tracks, production projects, and systems scenarios |
@@ -169,6 +170,8 @@ docs/                     Product, curriculum, and architecture constitution
 - [x] PWA install flow with local identity customization
 - [x] Signed Android APK with native icon settings
 - [x] Moss-green product identity and technical default voice
+- [x] ICPC ladder: 13 sections, 75 verified problems, difficulty tags, bookmarks
+- [x] Workspace data export/import and one-tap erase
 - [ ] Port every legacy problem into the full nine-stage lesson engine
 - [ ] Trace-based visualizations for every structure family
 - [ ] CS fundamentals track: operating systems, databases, networking, and concurrency

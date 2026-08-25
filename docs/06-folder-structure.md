@@ -38,6 +38,7 @@ deriva/
 │   │   │   ├── observatory/page.tsx    #   living map: next move, patterns, systems, terrain
 │   │   ├── patterns/                  #   pattern directory, quiz, and earned journal
 │   │   ├── practice/                  #   daily queue (v0: simple; v1: spaced)
+│   │   ├── icpc/                      #   ICPC ladder hub: 13 linear sections, local progress
 │   │   └── layout.tsx                 #   design-system shell, fonts, theme
 │   │
 │   ├── curriculum/                    # ★ THE PRODUCT. Content as validated data.
@@ -146,6 +147,7 @@ deriva/
 │   │   ├── preferences.ts             #   theme / motion / text-scale prefs
 │   │   ├── lesson-progress.ts         #   9-stage progress, artifacts, pattern journal
 │   │   ├── practice-progress.ts       #   last-open problem per DSA topic
+│   │   ├── data-transfer.ts           #   whole-workspace export/import/erase (JSON backup)
 │   │   ├── ai-question-progress.ts    #   AI question status, drafts, attempts, review dates
 │   │   ├── project-progress.ts        #   project level: stage, pane, draft, artifact, gates
 │   │   ├── app-notifications.ts       #   derived next-move inbox + read state

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
 import MobileProblemNav, { MobileTopicPicker } from "@/components/mobile-problem-nav"
-import { loadPracticePositions, savePracticePosition, type PracticePositions } from "@/persistence/practice-progress"
+import { loadPracticePositions, savePracticePosition, loadBookmarks, saveBookmarks, type PracticePositions } from "@/persistence/practice-progress"
 import { loadTheoryNote, saveTheoryNote } from "@/persistence/theory-notes"
 import { runScript } from "@/execution/pyodide-client"
 
@@ -16,6 +16,8 @@ export default function PracticePage() {
   const [savedCode, setSavedCode] = useState<Record<string, Record<number, string>>>({})
   const [hintLevel, setHintLevel] = useState<Record<string, Record<number, number>>>({})
   const [revealed, setRevealed] = useState<Record<string, Record<number, boolean>>>({})
+  const [bookmarks, setBookmarks] = useState<Record<string, number[]>>({})
+  const [difficultyFilter, setDifficultyFilter] = useState<"all" | "Easy" | "Medium" | "Hard">("all")
   const [theoryNote, setTheoryNote] = useState("")
   const [output, setOutput] = useState("")
   const [running, setRunning] = useState(false)
@@ -30,6 +32,39 @@ export default function PracticePage() {
   const currentHint = tHints[currentId] || 0
   const currentRevealed = tRevealed[currentId] || false
   const currentCode = tCode[currentId] || problem.starterCode
+  const hasDifficulty = topic.problems.some(p => p.difficulty)
+  const visibleProblems = !hasDifficulty || difficultyFilter === "all" ? topic.problems : topic.problems.filter(p => p.difficulty === difficultyFilter)
+  const bookmarked = new Set(bookmarks[topicId] || [])
+  const isBookmarked = bookmarked.has(currentId)
+  const isFailure = output.startsWith("Error:") || output.includes("AssertionError")
+  const failingAssert = (() => {
+    if (!isFailure) return ""
+    const lines = output.split("\n")
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim()
+      if (line.startsWith("assert ")) return line
+    }
+    return ""
+  })()
+  const toggleBookmark = () => {
+    const cur = new Set(bookmarks[topicId] || [])
+    if (cur.has(currentId)) cur.delete(currentId)
+    else cur.add(currentId)
+    const next = { ...bookmarks, [topicId]: [...cur] }
+    setBookmarks(next)
+    saveBookmarks(next)
+  }
+  const randomUnsolved = () => {
+    const pool = topic.problems.filter(p => !tCompleted.has(p.id))
+    const source = pool.length ? pool : topic.problems
+    const pick = source[Math.floor(Math.random() * source.length)]
+    setCurrentId(pick.id)
+    setOutput("")
+  }
+  const revealNextHint = () => {
+    const h = { ...tHints, [currentId]: Math.min(currentHint + 1, 3) }
+    setHintLevel({ ...hintLevel, [topicId]: h })
+  }
   const chatGptPrompt = `I am practicing data structures and algorithms in Deriva. Act as a Socratic coach: do not give me the final code or solution immediately. Help me derive the next reasoning step by asking one focused question at a time.\n\nTopic: ${topic.name}\nProblem: ${problem.title}\nPattern: ${problem.pattern}\nStatement:\n${problem.statement}`
   const encodedChatGptPrompt = encodeURIComponent(chatGptPrompt)
   const chatGptWebHref = `https://chatgpt.com/?q=${encodedChatGptPrompt}`
@@ -64,6 +99,7 @@ export default function PracticePage() {
       if (s) setSavedCode(JSON.parse(s));
       const h = localStorage.getItem("deriva-hints-v2");
       if (h) setHintLevel(JSON.parse(h));
+      setBookmarks(loadBookmarks());
       setHydrated(true)
     } catch {} finally {
       setHydrated(true)
@@ -108,9 +144,9 @@ export default function PracticePage() {
   }
 
   const navigate = (dir: 1 | -1) => {
-    const idx = topic.problems.findIndex(p => p.id === currentId)
+    const idx = visibleProblems.findIndex(p => p.id === currentId)
     const next = idx + dir
-    if (next >= 0 && next < topic.problems.length) { setCurrentId(topic.problems[next].id); setOutput("") }
+    if (next >= 0 && next < visibleProblems.length) { setCurrentId(visibleProblems[next].id); setOutput("") }
   }
 
   const switchTopic = (id: string) => {
@@ -142,8 +178,18 @@ export default function PracticePage() {
             ))}
           </select>
         </div>
+        {hasDifficulty && (
+          <div className="topic-select">
+            <select value={difficultyFilter} onChange={e => setDifficultyFilter(e.target.value as "all" | "Easy" | "Medium" | "Hard")} className="topic-dropdown" aria-label="Filter problems by difficulty">
+              <option value="all">All difficulties</option>
+              <option value="Easy">Easy only</option>
+              <option value="Medium">Medium only</option>
+              <option value="Hard">Hard only</option>
+            </select>
+          </div>
+        )}
         {topic.stages.map(stage => {
-          const sp = topic.problems.filter(p => p.stage === stage.id)
+          const sp = visibleProblems.filter(p => p.stage === stage.id)
           return (
             <div key={stage.id} className="stage-group">
               <div className="stage-head">{stage.name} <span className="stage-desc">{stage.desc}</span></div>
@@ -162,9 +208,17 @@ export default function PracticePage() {
       <main className="main">
         <div className="mobile-only mobile-context">
           <MobileTopicPicker topics={TOPIC_LIST} currentId={topicId} onSelect={switchTopic} />
+          {hasDifficulty && (
+            <select value={difficultyFilter} onChange={e => setDifficultyFilter(e.target.value as "all" | "Easy" | "Medium" | "Hard")} className="topic-dropdown mobile-diff-filter" aria-label="Filter problems by difficulty">
+              <option value="all">All difficulties</option>
+              <option value="Easy">Easy only</option>
+              <option value="Medium">Medium only</option>
+              <option value="Hard">Hard only</option>
+            </select>
+          )}
           <MobileProblemNav
             stages={topic.stages}
-            problems={topic.problems}
+            problems={visibleProblems}
             currentId={currentId}
             done={tCompleted}
             onSelect={(id) => { setCurrentId(id); setOutput("") }}
@@ -185,8 +239,9 @@ export default function PracticePage() {
             </div>
           </div>
           <div className="problem-pager" style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => navigate(-1)} disabled={hydrated && currentId <= topic.problems[0].id} className="btn" aria-label="Previous problem">←</button>
-            <button onClick={() => navigate(1)} disabled={hydrated && currentId >= topic.problems[topic.problems.length-1].id} className="btn" aria-label="Next problem">→</button>
+            <button onClick={toggleBookmark} className={`bookmark-btn${isBookmarked ? " active" : ""}`} aria-label={isBookmarked ? "Remove bookmark" : "Bookmark this problem"} aria-pressed={isBookmarked} title={isBookmarked ? "Bookmarked — find it in the sidebar list" : "Bookmark this problem"}>{isBookmarked ? "★" : "☆"}</button>
+            <button onClick={() => navigate(-1)} disabled={hydrated && currentId <= visibleProblems[0].id} className="btn" aria-label="Previous problem">←</button>
+            <button onClick={() => navigate(1)} disabled={hydrated && currentId >= visibleProblems[visibleProblems.length-1].id} className="btn" aria-label="Next problem">→</button>
           </div>
         </header>
 
@@ -226,10 +281,23 @@ export default function PracticePage() {
           <button onClick={runCode} disabled={running} className="btn btn-p primary-run">{running ? "Running..." : "▶ Run Code"}</button>
           <button onClick={() => { const h = { ...tHints, [currentId]: Math.min(currentHint+1, 3) }; setHintLevel({ ...hintLevel, [topicId]: h }) }} disabled={currentHint>=3} className="btn">Hint ({currentHint}/3)</button>
           <button onClick={() => { const r = { ...tRevealed, [currentId]: !currentRevealed }; setRevealed({ ...revealed, [topicId]: r }) }} className={`btn${currentRevealed?" btn-s":""}`}>{currentRevealed?"Hide":"Show"} Solution</button>
+          <button onClick={randomUnsolved} className="btn" title="Jump to a random problem you haven't solved in this topic">Random</button>
           <button onClick={() => { setSavedCode({ ...savedCode, [topicId]: { ...tCode, [currentId]: problem.starterCode } }); setOutput("") }} className="btn">Reset</button>
         </div>
 
-        {output && <pre className="out">{output}</pre>}
+        {output && !isFailure && <pre className="out">{output}</pre>}
+
+        {isFailure && (
+          <aside className="fail-card" aria-label="Tests did not pass">
+            <span className="fail-kicker">Not through yet</span>
+            <strong>{failingAssert || "A test didn't pass."}</strong>
+            <p>That check is the wall. Re-read the failing case, trace it by hand once, or take the next hint — the fix is usually one honest re-read away.</p>
+            <div className="fail-actions">
+              <button type="button" onClick={revealNextHint} disabled={currentHint >= 3}>Reveal next hint ({currentHint}/3)</button>
+            </div>
+            <details className="raw-out"><summary>Raw output</summary><pre>{output}</pre></details>
+          </aside>
+        )}
 
         {tCompleted.has(currentId) && (
           <aside className="completion-card" aria-label="Learning checkpoint">
@@ -370,7 +438,23 @@ export default function PracticePage() {
           .prob-h2 { font-size: 22px; line-height: 1.15; }
           .problem-tags { flex-wrap: wrap; }
           .problem-pager { width: 100%; padding-left: 46px; }
-          .problem-pager .btn { flex: 1; }
+          .bookmark-btn { width: 44px; height: 44px; flex: 0 0 44px; font-size: 19px; }
+          .fail-card { padding: 14px; }
+          .fail-card strong { font-size: 12px; }
+          .fail-actions button { width: 100%; min-height: 44px; }
+        .problem-pager .btn { flex: 1; }
+        .bookmark-btn { display: inline-flex; width: 40px; height: 40px; flex: 0 0 40px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink-soft); font-size: 17px; cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+        .bookmark-btn.active { border-color: color-mix(in srgb, var(--viz-cached) 55%, var(--line)); background: color-mix(in srgb, var(--viz-cached) 12%, var(--paper-raised)); color: var(--viz-cached); }
+        .fail-card { margin-bottom: 14px; padding: 16px; border: 1px solid color-mix(in srgb, var(--viz-pruned) 45%, var(--line)); border-radius: var(--radius); background: color-mix(in srgb, var(--viz-pruned) 7%, var(--paper-raised)); }
+        .fail-kicker { display: block; margin-bottom: 5px; color: var(--viz-pruned); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+        .fail-card strong { display: block; font: 700 13px var(--font-mono); overflow-wrap: anywhere; }
+        .fail-card p { margin: 8px 0 12px; color: var(--ink-soft); font: 13px/1.55 var(--font-ui); }
+        .fail-actions button { min-height: 38px; padding: 0 14px; border: 1px solid var(--viz-pruned); border-radius: var(--radius); background: transparent; color: var(--viz-pruned); font: 700 12px var(--font-ui); cursor: pointer; }
+        .fail-actions button:disabled { opacity: .4; cursor: default; }
+        .raw-out { margin-top: 12px; }
+        .raw-out summary { color: var(--ink-soft); font: 600 12px var(--font-ui); cursor: pointer; }
+        .raw-out pre { margin: 8px 0 0; max-height: 200px; }
+        .mobile-diff-filter { width: 100%; padding: 8px 10px; background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius); font-size: 13px; color: var(--ink); font-family: var(--font-ui); }
           .pbar { margin-bottom: var(--sp-4); }
           .pbar-label { min-width: 72px; text-align: right; font-size: 11px; }
           .card { padding: var(--sp-4); margin-bottom: var(--sp-3); }
