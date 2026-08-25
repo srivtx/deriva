@@ -69,17 +69,60 @@ interface WllamaInstance {
   exit(): Promise<void>
 }
 
-interface CacheManagerInstance {
-  open(nameOrUrl: string): Promise<Blob | null>
-  write(name: string, stream: ReadableStream, metadata: Record<string, unknown>): Promise<void>
-  getMetadata(name: string): Promise<{ originalSize?: number } | null>
-  getNameFromURL(url: string): Promise<string>
-  delete(nameOrUrl: string): Promise<void>
-}
-
 interface WllamaModule {
   Wllama: new (paths: Record<string, string>) => WllamaInstance
-  CacheManager: new () => CacheManagerInstance
+}
+
+/* ---------- our own OPFS store (the vendored lib exports no usable one) --
+   Layout under OPFS dir "cache":
+     <basename>          model blob
+     <basename>.meta.json { originalURL, originalSize, createdAt }        */
+
+class GhostStore {
+  private async dir(): Promise<FileSystemDirectoryHandle> {
+    const root = await navigator.storage.getDirectory()
+    return root.getDirectoryHandle("cache", { create: true })
+  }
+  async open(url: string): Promise<Blob | null> {
+    try {
+      const d = await this.dir()
+      const f = await d.getFileHandle(baseName(url))
+      const file = await f.getFile()
+      return file.size > 0 ? file : null
+    } catch { return null }
+  }
+  async write(url: string, blob: Blob): Promise<void> {
+    const d = await this.dir()
+    const fh = await d.getFileHandle(baseName(url), { create: true })
+    const w = await fh.createWritable()
+    await w.write(blob)
+    await w.close()
+    const meta = JSON.stringify({ originalURL: url, originalSize: blob.size, createdAt: Date.now() })
+    const mh = await d.getFileHandle(`${baseName(url)}.meta.json`, { create: true })
+    const mw = await mh.createWritable()
+    await mw.write(meta)
+    await mw.close()
+  }
+  async getOriginalSize(url: string): Promise<number> {
+    try {
+      const d = await this.dir()
+      const f = await d.getFileHandle(`${baseName(url)}.meta.json`)
+      const parsed = JSON.parse(await (await f.getFile()).text())
+      return typeof parsed?.originalSize === "number" ? parsed.originalSize : 0
+    } catch { return 0 }
+  }
+  async delete(url: string): Promise<void> {
+    const d = await this.dir()
+    for (const name of [baseName(url), `${baseName(url)}.meta.json`]) {
+      try { await d.removeEntry(name) } catch {}
+    }
+  }
+}
+
+let storeSingleton: GhostStore | null = null
+function store(): GhostStore {
+  if (!storeSingleton) storeSingleton = new GhostStore()
+  return storeSingleton
 }
 
 const WLLAMA_BASE = "/ghost/vendor/wllama"
@@ -103,10 +146,7 @@ function lib(): Promise<WllamaModule> {
   return modPromise
 }
 
-async function cm(): Promise<CacheManagerInstance> {
-  const { CacheManager } = await lib()
-  return new CacheManager()
-}
+
 
 function baseName(url: string): string {
   try { return new URL(url).pathname.split("/").pop() || url } catch { return url }
@@ -137,14 +177,13 @@ class GhostEngine {
   private async ensureLoaded(url: string): Promise<void> {
     if (this.instance && this.loadedUrl === url) return
     const m = await lib()
-    const c = await cm()
+    const c = store()
     let blob = await c.open(url)
     // Integrity gate: truncated/corrupt files load "fine" then produce
     // garbage tokens and memory crashes. Verify before trusting.
     if (blob && blob.size > 4) {
       const magic = await blob.slice(0, 4).text()
-      const meta = await c.getMetadata(await c.getNameFromURL(url)).catch(() => null)
-      const expected = meta?.originalSize ?? 0
+      const expected = await c.getOriginalSize(url).catch(() => 0)
       if (magic !== "GGUF" || (expected > 0 && Math.abs(blob.size - expected) > 1024)) {
         await this.releaseRuntime()
         await c.delete(url).catch(() => {})
@@ -176,7 +215,7 @@ class GhostEngine {
       if (typeof estimate.quota === "number") storageQuotaMb = Math.round(estimate.quota / (1024 * 1024))
     } catch {}
     let cachedMb: number | null = null
-    const c = await cm()
+    const c = store()
     for (const model of GHOST_MODELS) {
       const blob = await c.open(model.url).catch(() => null)
       if (blob && blob.size > 0) { cachedMb = Math.round(blob.size / (1024 * 1024)); break }
@@ -186,7 +225,7 @@ class GhostEngine {
 
   async cachedUrls(): Promise<string[]> {
     const out: string[] = []
-    const c = await cm()
+    const c = store()
     for (const url of [...GHOST_MODELS.map(m => m.url), ...GHOST_LEGACY_URLS]) {
       const blob = await c.open(url).catch(() => null)
       if (blob && blob.size > 0) out.push(url)
@@ -196,7 +235,7 @@ class GhostEngine {
 
   async scanStorage(): Promise<Array<{ url: string; sizeMb: number }>> {
     const out: Array<{ url: string; sizeMb: number }> = []
-    const c = await cm()
+    const c = store()
     for (const url of [...GHOST_MODELS.map(m => m.url), ...GHOST_LEGACY_URLS]) {
       const blob = await c.open(url).catch(() => null)
       if (blob && blob.size > 0) out.push({ url, sizeMb: Math.round(blob.size / (1024 * 1024)) })
@@ -205,7 +244,7 @@ class GhostEngine {
   }
 
   async cachedBytesFor(url: string): Promise<number> {
-    const blob = await (await cm()).open(url).catch(() => null)
+    const blob = await store().open(url).catch(() => null)
     return blob?.size ?? 0
   }
 
@@ -228,15 +267,9 @@ class GhostEngine {
       received += value.byteLength
       onProgress(total > 0 ? Math.min(1, received / total) : 0, received / 1048576, total / 1048576)
     }
-    const c = await cm()
-    const name = await c.getNameFromURL(model.url)
     const blob = new Blob(chunks as BlobPart[])
-    // Same metadata contract as wllama's own OPFS writer.
-    await c.write(name, blob.stream(), {
-      originalURL: model.url,
-      originalSize: received,
-      etag: (res.headers.get("etag") || "").replace(/[^A-Za-z0-9]/g, ""),
-    })
+    if (blob.size !== received) throw new Error("Download verification failed — retry")
+    await store().write(model.url, blob)
     setSelectedModel(model.id)
     try { localStorage.setItem("deriva-ghost-ready", "1") } catch {}
   }
@@ -320,7 +353,7 @@ class GhostEngine {
   async delete(url: string): Promise<{ verified: boolean }> {
     await this.releaseRuntime()
     try {
-      const c = await cm()
+      const c = store()
       await c.delete(url).catch(() => {})
       let blob = await c.open(url).catch(() => null)
       if (blob && blob.size > 0) {
