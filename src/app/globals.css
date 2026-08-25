@@ -720,6 +720,22 @@
 .ed::-webkit-scrollbar, .complexity-ed::-webkit-scrollbar, .atlas-code::-webkit-scrollbar, .out::-webkit-scrollbar, .json-output::-webkit-scrollbar, .playground-gutter::-webkit-scrollbar, .mobile-more-links::-webkit-scrollbar, .desktop-more-menu::-webkit-scrollbar { display: none; }
 .ed-wrap { transition: border-color var(--dur-fast); }
 .ed-wrap:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+
+/* ── App mode (full-screen app takeover on phones) ── */
+.app-mode-active .super-page, .app-mode-active .icpc-page, .app-mode-active .settings-page, .app-mode-active .dashboard-page, .app-mode-active .android-page, .app-mode-active .os-home { min-height: 100%; padding-bottom: 28px; }
+.app-mode-active .practice-wrap .main { padding-bottom: 28px; }
+.out { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; font: 13px/1.7 var(--font-mono); color: var(--ink); overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
+.json-output { white-space: pre; }
+@media (max-width: 480px) {
+  .tool-center-row { flex-wrap: wrap; }
+  .tool-center-row .super-primary, .tool-center-row .super-ghost { flex: 1 1 100%; }
+}
+.out { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; font: 13px/1.7 var(--font-mono); color: var(--ink); overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
+.json-output { white-space: pre; }
+@media (max-width: 480px) {
+  .tool-center-row { flex-wrap: wrap; }
+  .tool-center-row .super-primary, .tool-center-row .super-ghost { flex: 1 1 100%; }
+}
 @media (min-width: 640px) { .app-library-grid { grid-template-columns: repeat(6, 1fr); } }
 @media (min-width: 1000px) { .app-library-grid { grid-template-columns: repeat(8, 1fr); } }
 

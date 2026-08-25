@@ -201,7 +201,7 @@ function ProgressBadge({ className = "" }: { className?: string }) {
   )
 }
 
-const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory"]
+const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/lab", "/expedition", "/games", "/learn"]
 
 export default function AppShell() {
   const pathname = usePathname()
@@ -338,8 +338,7 @@ export default function AppShell() {
         </button>
         <span className="app-mode-title">{mobileTitle}</span>
       </header>
-      <header className="app-shell-header">
-        <div className="desktop-shell" style={{ alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+      <header className="app-shell-header">        <div className="desktop-shell" style={{ alignItems: "center", justifyContent: "space-between", width: "100%" }}>
           <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
             <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
               <Logo size={26} variant="wordmark" label={preferences.brandName} mark={preferences.logoMark} imageUrl={preferences.logoDataUrl} />
@@ -416,6 +415,7 @@ export default function AppShell() {
         <FloatingFocus />
        <style>{`
          .app-shell-header { height: var(--app-header-height); border-bottom: 1px solid var(--line); background: var(--paper-raised); display: flex; align-items: center; padding: 0 16px; position: sticky; top: 0; z-index: 50; }
+         .app-mode-header { display: none; }
          .desktop-shell { display: flex; }
          .mobile-shell, .mobile-tabbar { display: none; }
          .desktop-nav-actions { position: relative; display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
@@ -457,10 +457,10 @@ export default function AppShell() {
            .mobile-progress .progress-badge > div { width: 30px !important; }
             .mobile-progress .progress-badge > span { display: none; }
             .mobile-header-actions { display: flex; align-items: center; gap: 2px; }
-            .app-mode-header { display: none; }
             .app-mode-active .app-shell-header, .app-mode-active .mobile-tabbar { display: none !important; }
-            .app-mode-active .app-mode-header { display: flex; position: fixed; inset: 0 0 auto; z-index: 100; height: var(--mobile-header-height); padding: env(safe-area-inset-top) 8px 0; align-items: center; gap: 4px; background: color-mix(in srgb, var(--paper-raised) 94%, transparent); backdrop-filter: blur(18px); border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent); animation: menu-in .2s var(--ease-standard) both; }
-            .app-mode-active .app-content { height: 100dvh; padding-bottom: 0; }
+            .app-mode-active.app-root { display: flex; flex-direction: column; min-height: 100dvh; }
+            .app-mode-active .app-content { flex: 1 1 auto; height: auto; padding-bottom: 0; }
+            .app-mode-header { display: flex; position: fixed; inset: 0 0 auto; z-index: 100; height: var(--mobile-header-height); padding: env(safe-area-inset-top) 8px 0; align-items: center; gap: 4px; background: color-mix(in srgb, var(--paper-raised) 94%, transparent); backdrop-filter: blur(18px); border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent); animation: menu-in .2s var(--ease-standard) both; }
             .app-back { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 auto; border: 0; border-radius: 12px; background: transparent; color: var(--accent); font-size: 22px; line-height: 1; cursor: pointer; }
             .app-back:active { background: var(--accent-soft); transform: scale(.94); }
             .app-mode-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-narrative); font-weight: 700; font-size: 18px; letter-spacing: -.02em; }
