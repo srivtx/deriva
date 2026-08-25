@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import Link from "next/link"
 import { applyPreferences, defaultPreferences, loadPreferences, savePreferences, type AccentPreference, type DensityPreference, type Preferences, type ShapePreference, type TexturePreference, type ThemePreference, type TypePreference } from "@/persistence/preferences"
 import { ICON_PACKS } from "@/data/icon-packs"
@@ -8,6 +8,7 @@ import PackIcon from "@/components/pack-icon"
 import NavSlotIcon from "@/components/nav-slot-icon"
 import { NAV_ITEMS, NAV_ITEM_MAP, NAV_MAX_SLOTS, DEFAULT_NAV_SLOTS } from "@/data/nav-items"
 import { NAV_VARIANTS } from "@/data/nav-icons"
+import { LOGO_STYLES } from "@/data/logo-marks"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 import Logo from "@/components/logo"
@@ -46,6 +47,32 @@ const typeVoices: { value: TypePreference; title: string; body: string }[] = [
   { value: "instrument", title: "Instrument", body: "Space Grotesk, hardware panel feel" },
 ]
 
+const THEME_PREVIEW: Record<string, { bg: string; panel: string; ink: string; soft: string; line: string }> = {
+  paper: { bg: "#F2F4EC", panel: "#FBFBF7", ink: "#1A1D21", soft: "#5C6470", line: "#DCE0D4" },
+  ink: { bg: "#14171B", panel: "#1D2126", ink: "#EDEDE8", soft: "#9AA3AD", line: "#2C3138" },
+  moss: { bg: "#EAF1E6", panel: "#FAFCF8", ink: "#16281D", soft: "#54685C", line: "#CFDFD0" },
+  ocean: { bg: "#E3EEF7", panel: "#F8FBFE", ink: "#0E2237", soft: "#50697F", line: "#C6DAEA" },
+  carbon: { bg: "#16181C", panel: "#202329", ink: "#E8EAF0", soft: "#98A0AE", line: "#2E333C" },
+  violet: { bg: "#171225", panel: "#211A31", ink: "#EFECF7", soft: "#A79BC4", line: "#332A49" },
+  sunset: { bg: "#FBEFDD", panel: "#FFFAF2", ink: "#3A2410", soft: "#8A6A48", line: "#EDD9BC" },
+  nothing: { bg: "#0A0A0B", panel: "#141416", ink: "#F4F3EF", soft: "#8E8E93", line: "#27272A" },
+  opone: { bg: "#E9E7DE", panel: "#F6F4EB", ink: "#191813", soft: "#6D6A5D", line: "#D2CFC0" },
+  swiss: { bg: "#F1F0ED", panel: "#FFFFFF", ink: "#111114", soft: "#55555C", line: "#DEDDD8" },
+  nord: { bg: "#2E3440", panel: "#3B4252", ink: "#ECEFF4", soft: "#AEB8C6", line: "#434C5E" },
+  solarized: { bg: "#002B36", panel: "#073642", ink: "#D5DCCE", soft: "#839496", line: "#12586A" },
+  braun: { bg: "#E6E5E0", panel: "#F4F3EF", ink: "#17171B", soft: "#6E6E74", line: "#CFCFC8" },
+}
+
+const PRESET_ACCENTS: Record<string, string> = { cobalt: "#2E5AAC", ember: "#C2481F", violet: "#7C5CD6", mint: "#2F8F5B", gold: "#B8860B" }
+
+const VOICE_FONT: Record<string, string> = {
+  technical: "var(--font-ui)",
+  editorial: '"Newsreader", Georgia, serif',
+  humanist: 'Georgia, "Times New Roman", serif',
+  dotmatrix: '"Doto", monospace',
+  instrument: '"Space Grotesk", var(--font-ui)',
+}
+
 const presets: { title: string; body: string; values: Partial<Preferences> }[] = [
   { title: "Moss Technical", body: "Green, precise, instrument-like", values: { theme: "moss", accent: "mint", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "Nothing Dark", body: "Black, signal red, dot-industrial", values: { theme: "nothing", iconPack: "nothing", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
@@ -54,6 +81,7 @@ const presets: { title: string; body: string; values: Partial<Preferences> }[] =
   { title: "Field Notes", body: "Moss, mint, textured", values: { theme: "moss", accent: "mint", type: "humanist", density: "calm", shape: "soft", texture: "grid" } },
   { title: "Night Lab", body: "Violet, precise, focused", values: { theme: "violet", accent: "violet", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "Sunset Studio", body: "Warm, compact, vivid", values: { theme: "sunset", accent: "ember", type: "editorial", density: "compact", shape: "soft", texture: "plain" } },
+  { title: "Braun Werk", body: "Rams grey, mustard dial, functional", values: { theme: "braun", accent: "gold", type: "instrument", density: "focused", shape: "precise", texture: "plain" } },
 ]
 
 const densityOptions: { value: DensityPreference; title: string; body: string }[] = [
@@ -85,6 +113,24 @@ export default function SettingsPage() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">("default")
   const [dataMessage, setDataMessage] = useState("")
   const logoInput = useRef<HTMLInputElement>(null)
+  const dragNav = useRef<{ id: string; pointerId: number } | null>(null)
+  const [navDragging, setNavDragging] = useState<string | null>(null)
+
+  const beginNavDrag = (event: ReactPointerEvent, id: string) => {
+    dragNav.current = { id, pointerId: event.pointerId }
+    setNavDragging(id)
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  }
+  const onNavDragMove = (event: ReactPointerEvent) => {
+    const drag = dragNav.current
+    if (!drag) return
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-nav-slot]")?.getAttribute("data-nav-slot")
+    if (target && target !== drag.id) reorderNavSlots(drag.id, target)
+  }
+  const endNavDrag = () => {
+    dragNav.current = null
+    setNavDragging(null)
+  }
 
   useEffect(() => {
     setPreferences(loadPreferences())
@@ -101,6 +147,25 @@ export default function SettingsPage() {
     const next = { ...(record ?? {}) }
     delete next[key]
     return next
+  }
+  const moveNavSlot = (id: string, direction: -1 | 1) => {
+    const slots = [...preferences.navSlots]
+    const index = slots.indexOf(id)
+    const target = index + direction
+    if (index < 0 || target < 0 || target >= slots.length) return
+    ;[slots[index], slots[target]] = [slots[target], slots[index]]
+    update({ ...preferences, navSlots: slots })
+  }
+  const reorderNavSlots = (from: string, to: string) => {
+    if (from === to) return
+    const slots = [...preferences.navSlots]
+    const fromIndex = slots.indexOf(from)
+    const toIndex = slots.indexOf(to)
+    if (fromIndex < 0 || toIndex < 0) return
+    slots.splice(fromIndex, 1)
+    slots.splice(toIndex, 0, from)
+    if ("vibrate" in navigator) navigator.vibrate(6)
+    update({ ...preferences, navSlots: slots })
   }
   const enableNotifications = async () => {
     const permission = await requestDesktopNotifications()
@@ -125,13 +190,13 @@ export default function SettingsPage() {
         const width = image.width * scale
         const height = image.height * scale
         context.drawImage(image, (512 - width) / 2, (512 - height) / 2, width, height)
-        update({ ...preferences, logoDataUrl: canvas.toDataURL("image/png") })
+        update({ ...preferences, logoStyle: "custom", logoDataUrl: canvas.toDataURL("image/png") })
       }
       image.src = reader.result
     }
     reader.readAsDataURL(file)
   }
-  const resetIdentity = () => update({ ...preferences, brandName: defaultPreferences.brandName, tagline: defaultPreferences.tagline, logoMark: defaultPreferences.logoMark, logoDataUrl: undefined })
+  const resetIdentity = () => update({ ...preferences, brandName: defaultPreferences.brandName, tagline: defaultPreferences.tagline, logoMark: defaultPreferences.logoMark, logoStyle: defaultPreferences.logoStyle, logoDataUrl: undefined })
   const applyPreset = (values: Partial<Preferences>) => update({ ...preferences, ...values })
   const resetAll = () => update({ ...defaultPreferences })
   const handleExport = () => {
@@ -181,19 +246,31 @@ export default function SettingsPage() {
           })}
         </div>
         <div className="nav-slot-preview" aria-hidden="true">
-          {preferences.navSlots.map(id => {
-            const item = NAV_ITEM_MAP[id]
+          {[...preferences.navSlots, "more"].map(id => {
+            const label = id === "more" ? "More" : NAV_ITEM_MAP[id]?.label ?? id
             return (
-              <span key={id} className="nav-slot-cell">
+              <span
+                key={id}
+                className={`nav-slot-cell${navDragging === id ? " dragging" : ""}`}
+                {...(id === "more" ? {} : {
+                  "data-nav-slot": id,
+                  onPointerDown: event => beginNavDrag(event as React.PointerEvent, id),
+                  onPointerMove: onNavDragMove,
+                  onPointerUp: endNavDrag,
+                  onLostPointerCapture: endNavDrag,
+                })}
+              >
                 <NavSlotIcon itemId={id} variantId={preferences.navIcons?.[id]} autoPack={preferences.iconPack} size={20} />
-                {item.label}
+                {label}
+                {id !== "more" && (
+                  <span className="nav-slot-nudge">
+                    <button type="button" tabIndex={-1} aria-label={`Move ${label} left`} onClick={() => moveNavSlot(id, -1)}>‹</button>
+                    <button type="button" tabIndex={-1} aria-label={`Move ${label} right`} onClick={() => moveNavSlot(id, 1)}>›</button>
+                  </span>
+                )}
               </span>
             )
           })}
-          <span className="nav-slot-cell nav-slot-more">
-            <NavSlotIcon itemId="more" variantId={preferences.navIcons?.more} autoPack={preferences.iconPack} size={20} />
-            More
-          </span>
         </div>
         <div className="nav-style-list">
           {[...preferences.navSlots, "more"].map(id => {
@@ -243,7 +320,28 @@ export default function SettingsPage() {
 
       <section className="settings-section" aria-labelledby="presets-heading">
         <h2 id="presets-heading">Curated atmospheres</h2>
-        <div className="style-presets">{presets.map(preset => <button type="button" key={preset.title} className="style-preset" onClick={() => applyPreset(preset.values)}><span className="preset-spark" /><strong>{preset.title}</strong><small>{preset.body}</small></button>)}</div>
+        <div className="style-presets">
+          {presets.map(preset => {
+            const theme = THEME_PREVIEW[preset.values.theme ?? "paper"] ?? THEME_PREVIEW.paper
+            const accent = preset.values.accent === "custom" ? "#E04A00" : PRESET_ACCENTS[preset.values.accent ?? "mint"] ?? PRESET_ACCENTS.mint
+            const radius = preset.values.shape === "precise" ? 5 : 11
+            return (
+              <button type="button" key={preset.title} className="style-preset" onClick={() => applyPreset(preset.values)}>
+                <span className="preset-mini" style={{ background: theme.bg, borderColor: theme.line, borderRadius: radius + 4 }} aria-hidden="true">
+                  <span className="preset-mini-bar" style={{ background: theme.panel, borderBottomColor: theme.line, borderRadius: radius }} />
+                  <span className="preset-mini-title" style={{ color: theme.ink, fontFamily: VOICE_FONT[preset.values.type ?? "technical"] }}>Derive</span>
+                  <span className="preset-mini-line" style={{ background: theme.soft, opacity: .55 }} />
+                  <span className="preset-mini-line short" style={{ background: theme.soft, opacity: .4 }} />
+                  <span className="preset-mini-cta" style={{ background: accent, borderRadius: Math.max(3, radius - 3) }} />
+                  {preset.values.texture === "grid" && <span className="preset-mini-grid" style={{ borderColor: theme.line }} />}
+                  {(preset.values.iconPack === "nothing") && <span className="preset-mini-dots" aria-hidden="true">{Array.from({ length: 9 }, (_, i) => <b key={i} />)}</span>}
+                </span>
+                <strong>{preset.title}</strong>
+                <small>{preset.body}</small>
+              </button>
+            )
+          })}
+        </div>
       </section>
 
       <section className="settings-section" aria-labelledby="accent-heading">
@@ -259,7 +357,17 @@ export default function SettingsPage() {
         <div className="identity-preview"><div><span className="experiment-kicker">Preview</span><strong>{preferences.brandName}</strong><small>{preferences.tagline}</small></div><div className="identity-logo-preview"><LogoPreview preferences={preferences} /></div></div>
         <label className="settings-field"><span>Workspace name</span><input value={preferences.brandName} maxLength={28} onChange={event => update({ ...preferences, brandName: event.target.value })} /></label>
         <label className="settings-field"><span>Tagline</span><input value={preferences.tagline} maxLength={80} onChange={event => update({ ...preferences, tagline: event.target.value })} /></label>
-        <div className="logo-controls"><div className="settings-field"><span>Logo image</span><button type="button" className="btn-ghost" onClick={() => logoInput.current?.click()}>Upload image</button><input ref={logoInput} className="visually-hidden-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={event => { const file = event.target.files?.[0]; if (file) readLogo(file); event.currentTarget.value = "" }} /><small>PNG, JPG, WEBP, or SVG under 240 KB. The moss mark stays as the default.</small></div></div>
+        <div className="logo-controls"><div className="settings-field"><span>Logo image</span><button type="button" className="btn-ghost" onClick={() => logoInput.current?.click()}>Upload image</button><input ref={logoInput} className="visually-hidden-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={event => { const file = event.target.files?.[0]; if (file) readLogo(file); event.currentTarget.value = "" }} /><small>PNG, JPG, WEBP, or SVG under 240 KB. An uploaded image overrides the styles below.</small></div></div>
+        <div className="logo-style-grid" role="group" aria-label="App logo mark">
+          {LOGO_STYLES.map(style => (
+            <button key={style.id} type="button" className={`logo-style-card${preferences.logoStyle === style.id && !preferences.logoDataUrl ? " selected" : ""}`} onClick={() => update({ ...preferences, logoStyle: style.id, logoDataUrl: undefined })}>
+              <Logo size={44} label={preferences.brandName} style={style.id} />
+              <strong>{style.name}</strong>
+              <small>{style.body}</small>
+              <span className="logo-style-note">Header · favicon · installed app icon</span>
+            </button>
+          ))}
+        </div>
         {preferences.logoDataUrl && <button type="button" className="settings-remove-logo" onClick={() => update({ ...preferences, logoDataUrl: undefined })}>Remove uploaded logo</button>}
       </section>
 
@@ -327,7 +435,7 @@ export default function SettingsPage() {
 }
 
 function LogoPreview({ preferences }: { preferences: Preferences }) {
-  return <Logo size={52} label={preferences.brandName} mark={preferences.logoMark} imageUrl={preferences.logoDataUrl} />
+  return <Logo size={52} label={preferences.brandName} mark={preferences.logoMark} imageUrl={preferences.logoDataUrl} style={preferences.logoStyle} />
 }
 
 function ChoiceGroup<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: { value: T; title: string; body: string }[]; onChange: (value: T) => void }) {

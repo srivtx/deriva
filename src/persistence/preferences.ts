@@ -26,6 +26,7 @@ export type Preferences = {
   brandName: string
   tagline: string
   logoMark: string
+  logoStyle: "classic" | "nothing" | "opone" | "custom"
   logoDataUrl?: string
 }
 
@@ -48,6 +49,7 @@ export const defaultPreferences: Preferences = {
   brandName: "Deriva",
   tagline: "Derive the algorithm.",
   logoMark: "m",
+  logoStyle: "classic",
 }
 
 const THEME_VALUES = new Set<ThemePreference>(["system", "paper", "ink", "moss", "ocean", "carbon", "violet", "sunset", "nothing", "opone", "swiss", "nord", "solarized", "braun"])
@@ -94,6 +96,7 @@ function normalize(value: unknown): Preferences {
     brandName: shortText(raw.brandName, defaultPreferences.brandName, 28),
     tagline: shortText(raw.tagline, defaultPreferences.tagline, 80),
     logoMark: shortText(raw.logoMark, defaultPreferences.logoMark, 2),
+    logoStyle: raw.logoStyle === "nothing" || raw.logoStyle === "opone" || raw.logoStyle === "custom" ? raw.logoStyle : "classic",
     logoDataUrl: typeof raw.logoDataUrl === "string" && raw.logoDataUrl.startsWith("data:image/") && raw.logoDataUrl.length < 350_000 ? raw.logoDataUrl : undefined,
   }
 }

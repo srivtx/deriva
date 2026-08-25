@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { applyPreferences, loadPreferences, type Preferences } from "@/persistence/preferences"
+import { logoStyleDataUrl } from "@/data/logo-marks"
 
 const MANIFEST_SELECTOR = "link[data-deriva-dynamic-manifest]"
 let dynamicManifestUrl: string | null = null
@@ -73,7 +74,8 @@ function applyPwaBranding(preferences: Preferences) {
   removeDynamicLinks()
   applyPreferences(preferences)
   document.title = `${preferences.brandName} — ${preferences.tagline}`
-  if (!preferences.logoDataUrl) {
+  const curatedIcon = preferences.logoDataUrl ?? (preferences.logoStyle === "nothing" || preferences.logoStyle === "opone" ? logoStyleDataUrl(preferences.logoStyle) : null)
+  if (!curatedIcon) {
     restoreDefaultManifest()
     restoreDefaultIcons()
     return
@@ -84,7 +86,7 @@ function applyPwaBranding(preferences: Preferences) {
    const styles = getComputedStyle(document.documentElement)
    const color = styles.getPropertyValue("--paper").trim() || "#F2F4EC"
    const accent = styles.getPropertyValue("--accent").trim() || "#2F8F5B"
-  const iconType = /^data:(image\/[^;]+)/.exec(preferences.logoDataUrl)?.[1] || "image/png"
+  const iconType = /^data:(image\/[^;]+)/.exec(curatedIcon)?.[1] || "image/png"
   const manifest = {
     name: `${preferences.brandName} — ${preferences.tagline}`,
     short_name: preferences.brandName,
@@ -96,8 +98,8 @@ function applyPwaBranding(preferences: Preferences) {
     background_color: color,
      theme_color: accent,
     icons: [
-      { src: preferences.logoDataUrl, sizes: "192x192", type: iconType, purpose: "any" },
-      { src: preferences.logoDataUrl, sizes: "512x512", type: iconType, purpose: "any maskable" },
+      { src: curatedIcon, sizes: "192x192", type: iconType, purpose: "any" },
+      { src: curatedIcon, sizes: "512x512", type: iconType, purpose: "any maskable" },
     ],
   }
   const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" })
@@ -108,8 +110,8 @@ function applyPwaBranding(preferences: Preferences) {
   manifestLink.href = manifestUrl
   manifestLink.dataset.derivaDynamicManifest = "true"
   document.head.appendChild(manifestLink)
-  updateIconLink("icon", preferences.logoDataUrl)
-  updateIconLink("apple-touch-icon", preferences.logoDataUrl)
+  updateIconLink("icon", curatedIcon)
+  updateIconLink("apple-touch-icon", curatedIcon)
 }
 
 export default function PwaBranding() {

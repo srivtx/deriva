@@ -362,7 +362,7 @@ export default function AppShell() {
       <header className="app-shell-header">        <div className="desktop-shell" style={{ alignItems: "center", justifyContent: "space-between", width: "100%" }}>
           <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
             <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
-              <Logo size={26} variant="wordmark" label={preferences.brandName} mark={preferences.logoMark} imageUrl={preferences.logoDataUrl} />
+              <Logo size={26} variant="wordmark" label={preferences.brandName} mark={preferences.logoMark} imageUrl={preferences.logoDataUrl} style={preferences.logoStyle} />
             </Link>
             <Suspense fallback={null}><Breadcrumbs /></Suspense>
           </div>
@@ -393,7 +393,7 @@ export default function AppShell() {
           </div>
         </div>
         <div className="mobile-shell">
-           <Link href="/" className="mobile-brand" aria-label={`${preferences.brandName} home`}><Logo size={24} label={preferences.brandName} mark={preferences.logoMark} imageUrl={preferences.logoDataUrl} /></Link>
+           <Link href="/" className="mobile-brand" aria-label={`${preferences.brandName} home`}><Logo size={24} label={preferences.brandName} mark={preferences.logoMark} imageUrl={preferences.logoDataUrl} style={preferences.logoStyle} /></Link>
           <span className="mobile-page-title">{mobileTitle}</span>
             <div className="mobile-header-actions"><button type="button" className="command-mobile-trigger" onClick={() => setCommandOpen(true)} aria-label="Open Command Center"><AppIcon name="search" size={19} /></button><NotificationCenter /><ProgressBadge className="mobile-progress" /></div>
         </div>

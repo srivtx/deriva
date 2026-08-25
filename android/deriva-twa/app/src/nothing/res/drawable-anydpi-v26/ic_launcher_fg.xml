@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_bg" />
+    <foreground>
+        <vector android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+        <path android:pathData="M42.65,42.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M46.65,42.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M50.65,42.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M54.65,42.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M58.65,42.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M42.65,46.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M62.65,46.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M42.65,50.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M62.65,50.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M42.65,54.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M62.65,54.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M42.65,58.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M62.65,58.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M42.65,62.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M62.65,62.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M42.65,66.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M46.65,66.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M50.65,66.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M54.65,66.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        <path android:pathData="M58.65,66.0a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0" android:fillColor="#F4F3EF"/>
+        </vector>
+    </foreground>
+</adaptive-icon>

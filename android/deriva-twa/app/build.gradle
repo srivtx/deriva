@@ -64,6 +64,16 @@ android {
         versionCode 7
         versionName "1.4.3"
 
+        // Launcher icon pack variants: classic (default res/), nothing (dot-matrix D),
+        // opone (thin-line instrument D). Build with e.g.:
+        //   ./gradlew bundle<Variant>Release   where Variant = Classic | Nothing | Opone
+        flavorDimensions "iconpack"
+        productFlavors {
+            classic {}
+            nothing {}
+            opone {}
+        }
+
         // The name for the application
         resValue "string", "appName", twaManifest.name
 

@@ -1,13 +1,20 @@
+import { logoStyleDataUrl, type LogoStyleId } from "@/data/logo-marks"
+
 type LogoProps = {
   size?: number
   variant?: "mark" | "wordmark"
   label?: string
   mark?: string
   imageUrl?: string
+  style?: LogoStyleId | "custom"
 }
 
-function Mark({ size, label, imageUrl }: { size: number; label: string; imageUrl?: string }) {
+function Mark({ size, label, imageUrl, style }: { size: number; label: string; imageUrl?: string; style?: LogoStyleId | "custom" }) {
   if (imageUrl) return <img className="custom-logo-image" src={imageUrl} width={size} height={size} alt={`${label} logo`} />
+  if (style === "nothing" || style === "opone") {
+    const dataUrl = logoStyleDataUrl(style)
+    if (dataUrl) return <img className="custom-logo-image" src={dataUrl} width={size} height={size} alt={`${label} logo`} />
+  }
   return (
     <svg width={size} height={size} viewBox="0 0 512 512" fill="none" role="img" aria-label={`${label} logo`}>
       <rect width="512" height="512" rx="112" fill="var(--accent)" />
@@ -18,9 +25,9 @@ function Mark({ size, label, imageUrl }: { size: number; label: string; imageUrl
   )
 }
 
-export default function Logo({ size = 28, variant = "mark", label = "Deriva", imageUrl }: LogoProps) {
+export default function Logo({ size = 28, variant = "mark", label = "Deriva", imageUrl, style }: LogoProps) {
   if (variant === "wordmark") {
-    return <span className="logo-wordmark"><Mark size={size} label={label} imageUrl={imageUrl} /><span>{label}</span></span>
+    return <span className="logo-wordmark"><Mark size={size} label={label} imageUrl={imageUrl} style={style} /><span>{label}</span></span>
   }
-  return <Mark size={size} label={label} imageUrl={imageUrl} />
+  return <Mark size={size} label={label} imageUrl={imageUrl} style={style} />
 }

@@ -241,3 +241,29 @@ diameter code animating — call stack growing, tuples flowing up as green chips
 the grayed ghost of their Stage-4 naive trace with its re-computed subtrees flashing
 amber, and the counter showing 9 calls vs 25. That screen is the pitch: *you invented
 this, and here is the proof of why it wins.*
+
+## Appearance customization (device-local)
+
+The shell exposes a full appearance system persisted in `deriva-preferences-v2`
+(see 08): themes (14), accents, type voices (incl. Doto "Dot Matrix" and Space
+Grotesk "Instrument"), density, shape, texture, icon packs, text scale, reduced
+motion. A pre-paint boot script in `layout.tsx` applies theme/icon-pack/text-scale
+from localStorage before first paint — do not remove it; it prevents FOUC in the
+installed PWA.
+
+### Icon system
+- Three pack languages: **Classic** (native strokes, `AppIcon`), **Nothing**
+  (7×7 dot bitmaps, `.doticon`), **OP-1** (thin-line paths, `.teicon`). All render
+  through `currentColor` — never hardcode icon colors; they must adapt to every
+  theme and to active-tab accent tinting.
+- The bottom navigation bar is user-configurable: slot membership (`navSlots`,
+  max 4 + fixed More), per-slot style (`navIcons`: auto/classic/dots/line/mark),
+  and order (drag or nudge buttons in Settings). Registry: `src/data/nav-items.ts`,
+  variants: `src/data/nav-icons.ts`.
+
+### Logo marks
+`logoStyle` selects Classic / Nothing / OP-1 marks from `src/data/logo-marks.ts`.
+One SVG source feeds header logo, favicon, apple-touch-icon, and the dynamic PWA
+manifest (blob URL) — what you pick is what installs. Custom uploads override.
+Android TWA ships matching launcher icons via product flavors
+(classic/nothing/opone) in `android/deriva-twa/app/build.gradle`.
