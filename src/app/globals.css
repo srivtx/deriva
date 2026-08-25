@@ -740,26 +740,30 @@
 .app-tile-dot { position: absolute; top: -3px; right: -3px; z-index: 2; width: 12px; height: 12px; border-radius: 50%; background: var(--viz-cached); box-shadow: 0 0 0 2.5px var(--paper); }
 
 /* ── Icon packs (independent of color theme) ── */
-:root[data-icons="nothing"] .app-tile-icon, :root[data-icons="nothing"] .store-icon { background: linear-gradient(145deg, #26262A, #060607) !important; color: #F4F3EF !important; text-shadow: none; font-family: var(--font-mono); font-size: clamp(9px, 2.4vw, 11px) !important; letter-spacing: .14em; font-weight: 700; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .16), inset 0 1px 0 rgb(255 255 255 / .08); }
-:root[data-icons="nothing"] .app-tile-icon::after { background: radial-gradient(circle at 50% 118%, rgb(224 32 32 / .55), transparent 42%); }
-:root[data-icons="nothing"] .app-tile-badge { background: #E02020; }
-:root[data-icons="nothing"] .app-tile-dot { background: #E02020; }
-:root[data-icons="teenage"] .app-tile-icon, :root[data-icons="teenage"] .store-icon { background: linear-gradient(145deg, #F8F6EE, #DDD9C8) !important; color: #191813 !important; text-shadow: none; font-family: var(--font-mono); font-size: 15px !important; letter-spacing: .04em; font-weight: 800; box-shadow: inset 0 0 0 1px #C6C1AC, inset 0 -8px 14px rgb(25 24 19 / .05); }
-:root[data-icons="teenage"] .app-tile-icon::after { background: linear-gradient(180deg, rgb(255 255 255 / .5), transparent 40%); }
-:root[data-icons="teenage"] .app-tile-badge { background: #E04A00; }
-:root[data-icons="teenage"] .app-tile-dot { background: #E04A00; }
+:root[data-icons="nothing"] .app-tile-icon, :root[data-icons="nothing"] .store-icon, [data-icons="nothing"] .icon-pack-preview .app-tile-icon { background: linear-gradient(145deg, #26262A, #060607) !important; color: #F4F3EF !important; text-shadow: none; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .16), inset 0 1px 0 rgb(255 255 255 / .08); }
+:root[data-icons="nothing"] .app-tile-icon::after, [data-icons="nothing"] .icon-pack-preview .app-tile-icon::after { background: radial-gradient(circle at 50% 118%, rgb(224 32 32 / .55), transparent 46%); }
+:root[data-icons="teenage"] .app-tile-icon, :root[data-icons="teenage"] .store-icon, [data-icons="teenage"] .icon-pack-preview .app-tile-icon { background: linear-gradient(145deg, #F8F6EE, #DDD9C8) !important; color: #191813 !important; text-shadow: none; box-shadow: inset 0 0 0 1px #C6C1AC, inset 0 -8px 14px rgb(25 24 19 / .05); }
+:root[data-icons="teenage"] .app-tile-icon::after, [data-icons="teenage"] .icon-pack-preview .app-tile-icon::after { background: linear-gradient(180deg, rgb(255 255 255 / .5), transparent 40%); }
+:root[data-icons="nothing"] .app-tile-badge, :root[data-icons="nothing"] .app-tile-dot { background: #E02020; }
+:root[data-icons="teenage"] .app-tile-badge, :root[data-icons="teenage"] .app-tile-dot { background: #E04A00; }
+
+/* Nothing dot-matrix glyph: physical grid of dots, lit cells glow */
+.doticon { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6%; width: 30px; aspect-ratio: 1; }
+.doticon b { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; background: rgb(244 243 239 / .13); }
+.doticon b.on { background: #F4F3EF; box-shadow: 0 0 3px rgb(244 243 239 / .5); }
+
+/* Teenage Engineering pictogram: thin instrument stroke */
+.teicon { width: 26px; height: 26px; display: block; }
+
+/* Preview cards render smaller hardware */
+.icon-pack-preview .doticon { width: 21px; }
+.icon-pack-preview .teicon { width: 18px; height: 18px; }
 .icon-pack-preview .app-tile-icon { width: 46px; height: 46px; border-radius: 13px; font-size: 17px; }
-:root[data-icons="nothing"] .icon-pack-preview .app-tile-icon { font-size: 9px !important; }
-:root[data-icons="teenage"] .icon-pack-preview .app-tile-icon { font-size: 12px !important; }
 
 /* Perf: below-fold home sections skip rendering until scrolled near */
 .curriculum-explore { content-visibility: auto; contain-intrinsic-size: auto 620px; }
 
-/* Icon-pack preview cards (settings) — scoped so every card previews its own pack */
-[data-icons="nothing"] .icon-pack-preview .app-tile-icon { background: linear-gradient(145deg, #26262A, #060607) !important; color: #F4F3EF !important; text-shadow: none; font-family: var(--font-mono); letter-spacing: .14em; font-weight: 700; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .16); }
-[data-icons="nothing"] .icon-pack-preview .app-tile-icon::after { background: radial-gradient(circle at 50% 118%, rgb(224 32 32 / .55), transparent 42%); }
-[data-icons="teenage"] .icon-pack-preview .app-tile-icon { background: linear-gradient(145deg, #F8F6EE, #DDD9C8) !important; color: #191813 !important; text-shadow: none; font-family: var(--font-mono); letter-spacing: .04em; font-weight: 800; box-shadow: inset 0 0 0 1px #C6C1AC; }
-[data-icons="teenage"] .icon-pack-preview .app-tile-icon::after { background: linear-gradient(180deg, rgb(255 255 255 / .5), transparent 40%); }
+/* Icon-pack preview cards (settings) — sizing handled in the pack block above */
 .settings-hint { margin: -4px 0 12px; color: var(--ink-soft); font: 12px/1.5 var(--font-ui); }
 .icon-pack-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 .icon-pack-card { display: grid; gap: 6px; justify-items: start; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); text-align: left; cursor: pointer; transition: border-color var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast); }

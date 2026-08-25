@@ -4,8 +4,8 @@ import { memo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { AppTileDef } from "./app-tile-def"
+import PackIcon from "./pack-icon"
 import { navigateWithAppTransition, playIconPress } from "@/lib/app-transition"
-import { currentIconPack, glyphFor } from "@/data/icon-packs"
 
 export type { AppTileDef }
 
@@ -17,8 +17,6 @@ type AppTileProps = {
 
 function AppTile({ app, badge, dot }: AppTileProps) {
   const router = useRouter()
-  const pack = currentIconPack()
-  const glyph = (app.id && glyphFor(app.id, pack)) || app.glyph
 
   const open = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
@@ -40,7 +38,7 @@ function AppTile({ app, badge, dot }: AppTileProps) {
       }}
     >
       <span className="app-tile-icon" style={{ background: app.gradient }} aria-hidden="true">
-        {glyph}
+        {app.id ? <PackIcon id={app.id} fallback={app.glyph} /> : app.glyph}
         {badge != null && badge > 0 && <i className="app-tile-badge">{badge > 9 ? "9+" : badge}</i>}
         {dot && <i className="app-tile-dot" />}
       </span>

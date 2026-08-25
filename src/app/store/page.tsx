@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { APP_CATALOG, type AppMeta } from "@/data/apps"
 import { loadInstalled, setInstalled } from "@/persistence/app-store"
-import { currentIconPack, glyphFor } from "@/data/icon-packs"
+import PackIcon from "@/components/pack-icon"
 
 type Tab = "all" | "installed" | "available" | "soon"
 
@@ -58,7 +58,7 @@ export default function StorePage() {
           const isInstalled = app.status !== "soon" && installed.has(app.id)
           return (
             <article key={app.id} className={`store-card${app.status === "soon" ? " soon" : ""}`}>
-              <div className="store-icon" style={{ background: app.gradient }} aria-hidden="true">{glyphFor(app.id, currentIconPack()) ?? app.glyph}</div>
+              <div className="store-icon" style={{ background: app.gradient }} aria-hidden="true"><PackIcon id={app.id} fallback={app.glyph} /></div>
               <div className="store-card-body">
                 <h2>{app.name}</h2>
                 <p>{app.desc}</p>

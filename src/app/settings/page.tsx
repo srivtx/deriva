@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { applyPreferences, defaultPreferences, loadPreferences, savePreferences, type AccentPreference, type DensityPreference, type Preferences, type ShapePreference, type TexturePreference, type ThemePreference, type TypePreference } from "@/persistence/preferences"
-import { ICON_PACKS, glyphFor } from "@/data/icon-packs"
+import { ICON_PACKS } from "@/data/icon-packs"
+import PackIcon from "@/components/pack-icon"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 import Logo from "@/components/logo"
@@ -156,7 +157,9 @@ export default function SettingsPage() {
               <span>{pack.desc}</span>
               <div className="icon-pack-preview" data-icons={pack.id} aria-hidden="true">
                 {iconSamples.map(sample => (
-                  <span key={sample.id} className="app-tile-icon" style={{ background: sample.gradient }}>{glyphFor(sample.id, pack.id) ?? sample.glyph}</span>
+                  <span key={sample.id} className="app-tile-icon" style={{ background: sample.gradient }}>
+                    <PackIcon id={sample.id} fallback={sample.glyph} pack={pack.id} />
+                  </span>
                 ))}
               </div>
               {pack.themeHint && <small>{pack.themeHint}</small>}
