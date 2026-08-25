@@ -186,9 +186,13 @@ class GhostEngine {
     )
   }
 
-  stop(): Promise<void> {
-    if (!this.worker) return Promise.resolve()
-    return this.request<void>("stop")
+  // Hard stop: terminating releases the inference immediately and drops any
+  // glue state — next send spawns a fresh worker (model stays cached).
+  stop(): void {
+    if (!this.worker) return
+    try { this.worker.postMessage({ id: -1, cmd: "stop", payload: {} }) } catch {}
+    this.worker.terminate()
+    this.worker = null
   }
 
   async eject(): Promise<void> {

@@ -304,23 +304,30 @@ export default function GhostPage() {
     persistSession(history, text)
 
     let streamedText = ""
+    let flushTimer: ReturnType<typeof setTimeout> | null = null
+    const flushNow = () => {
+      flushTimer = null
+      setMessages(prev => {
+        if (!streamedText) return prev
+        const next = prev.slice()
+        const last = next[next.length - 1]
+        if (last?.role === "assistant") next[next.length - 1] = { role: "assistant", content: streamedText }
+        else next.push({ role: "assistant", content: streamedText })
+        return next
+      })
+    }
     try {
       await ghostEngine.load(model)
       const result = await ghostEngine.chat(
         model,
-        [{ role: "system", content: SYSTEM_PROMPT }, ...history.slice(-10)],
-        300,
+        [{ role: "system", content: SYSTEM_PROMPT }, ...history.slice(-8)],
+        280,
         piece => {
           streamedText += piece
-          setMessages(prev => {
-            const next = [...prev]
-            const last = next[next.length - 1]
-            if (last?.role === "assistant") last.content = streamedText
-            else next.push({ role: "assistant", content: streamedText })
-            return next
-          })
+          if (!flushTimer) flushTimer = setTimeout(flushNow, 90)
         },
       )
+      if (flushTimer) { clearTimeout(flushTimer); flushNow() }
       setTps(result.tps)
       setMessages(prev => {
         const next = prev.slice()
@@ -335,7 +342,11 @@ export default function GhostPage() {
       })
     } catch (err) {
       const message = String((err as Error)?.message || err)
-      setError(message.toLowerCase().includes("abort") ? null : message)
+      const raw = message.toLowerCase()
+      if (/typed array|out of memory|invalid length/.test(raw)) setError("The brain ran out of room mid-thought — try a shorter question.")
+      else if (/kv_cache|context/.test(raw)) setError("Ghost's memory filled — start a new chat to reset it.")
+      else if (raw.includes("abort")) setError(null)
+      else setError(message)
       if (!streamedText) {
         setMessages(prev => {
           const next = prev.filter((m, i) => !(i === prev.length - 1 && m.role === "assistant"))
@@ -349,8 +360,8 @@ export default function GhostPage() {
     }
   }, [input, messages, persistSession, model])
 
-  const stop = useCallback(async () => {
-    await ghostEngine.stop().catch(() => {})
+  const stop = useCallback(() => {
+    ghostEngine.stop()
   }, [])
 
   const clearChat = useCallback(() => {

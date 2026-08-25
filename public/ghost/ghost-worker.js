@@ -3,15 +3,6 @@
 import { Wllama, CacheManager } from "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.6.0/esm/index.min.js"
 
 const WASM_URL = "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.6.0/esm/wasm/wllama.wasm"
-// SmolLM2 speaks ChatML. Forcing the template removes any dependence on GGUF
-// metadata quality — wrong/missing templates are the classic cause of
-// "model says random unrelated things".
-const CHATML_TEMPLATE = [
-  "{% for message in messages %}",
-  "{{ '<|im_start|>' + message['role'] + '\\n' + message['content'] + '<|im_end|>' }}",
-  "{% endfor %}",
-  "{% if add_generation_prompt %}{{ '<|im_start|>assistant\\n' }}{% endif %}",
-].join("")
 
 let wllama = null
 let activeController = null
@@ -121,7 +112,6 @@ self.onmessage = async event => {
         await wllama.loadModel([blob], {
           n_ctx: payload.nCtx || 2048,
           jinja: true,
-          chat_template: CHATML_TEMPLATE,
         })
       }
       post({ id, evt: "ok", data: { loaded: true } })
@@ -147,16 +137,14 @@ self.onmessage = async event => {
       const baseOpts = {
         messages: payload.messages,
         max_tokens: Math.min(payload.maxTokens || 280, 280),
-        temperature: payload.temperature ?? 0.3,
+        temperature: payload.temperature ?? 0.35,
         top_p: 0.9,
-        repeat_penalty: 1.15,
-        cache_prompt: false,
-        abortSignal: signal,
       }
       try {
         const stream = await wllama.createChatCompletion({
           ...baseOpts,
           stream: true,
+          signal,
         })
         if (stream && typeof stream[Symbol.asyncIterator] === "function") {
           for await (const chunk of stream) {
