@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
 import { Suspense, type ReactNode } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Logo from "./logo"
 import NotificationCenter from "./notification-center"
 import CommandCenter from "./command-center"
@@ -205,6 +205,9 @@ export default function AppShell() {
   const [commandOpen, setCommandOpen] = useState(false)
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
   const [attention, setAttention] = useState(false)
+  const [online, setOnline] = useState(true)
+  const sheetRef = useRef<HTMLElement>(null)
+  const dragStart = useRef<number | null>(null)
   useEffect(() => {
     const next = loadPreferences()
     setPreferences(next)
@@ -234,8 +237,54 @@ export default function AppShell() {
   useEffect(() => {
     const open = () => setCommandOpen(true)
     window.addEventListener("deriva-open-command", open)
-    return () => window.removeEventListener("deriva-open-command", open)
+    const goOnline = () => setOnline(true)
+    const goOffline = () => setOnline(false)
+    setOnline(navigator.onLine)
+    window.addEventListener("online", goOnline)
+    window.addEventListener("offline", goOffline)
+    const haptic = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target?.closest(".mobile-tab, .app-chip, .app-tile, .toolkit-tab") && "vibrate" in navigator) navigator.vibrate(8)
+    }
+    document.addEventListener("pointerdown", haptic)
+    return () => {
+      window.removeEventListener("deriva-open-command", open)
+      window.removeEventListener("online", goOnline)
+      window.removeEventListener("offline", goOffline)
+      document.removeEventListener("pointerdown", haptic)
+    }
   }, [])
+
+  useEffect(() => {
+    const sheet = sheetRef.current
+    if (!moreOpen || !sheet) return
+    let current = 0
+    const onTouchStart = (event: TouchEvent) => {
+      if ((event.target as HTMLElement).closest(".mobile-more-links")) dragStart.current = event.touches[0].clientY
+    }
+    const onTouchMove = (event: TouchEvent) => {
+      if (dragStart.current == null) return
+      current = Math.max(0, event.touches[0].clientY - dragStart.current)
+      sheet.style.transform = `translateY(${current}px)`
+      sheet.style.transition = "none"
+    }
+    const onTouchEnd = () => {
+      if (dragStart.current == null) return
+      sheet.style.transform = ""
+      sheet.style.transition = "transform .22s var(--ease-standard)"
+      if (current > 110) setMoreOpen(false)
+      dragStart.current = null
+      current = 0
+    }
+    sheet.addEventListener("touchstart", onTouchStart, { passive: true })
+    sheet.addEventListener("touchmove", onTouchMove, { passive: true })
+    sheet.addEventListener("touchend", onTouchEnd)
+    return () => {
+      sheet.removeEventListener("touchstart", onTouchStart)
+      sheet.removeEventListener("touchmove", onTouchMove)
+      sheet.removeEventListener("touchend", onTouchEnd)
+    }
+  }, [moreOpen])
   useEffect(() => {
     if (!moreOpen) return
     const onPointer = (event: PointerEvent) => {
@@ -304,6 +353,7 @@ export default function AppShell() {
             <div className="mobile-header-actions"><button type="button" className="command-mobile-trigger" onClick={() => setCommandOpen(true)} aria-label="Open Command Center"><AppIcon name="search" size={19} /></button><NotificationCenter /><ProgressBadge className="mobile-progress" /></div>
         </div>
       </header>
+      {!online && <div className="offline-banner" role="status">You are offline — everything still works, progress stays on this device.</div>}
        <nav className="mobile-tabbar" aria-label="Primary navigation">
          {tabs.map(tab => (
           <Link key={tab.href} href={tab.href} className={`mobile-tab${tab.active ? " active" : ""}`} aria-current={tab.active ? "page" : undefined}>
@@ -317,7 +367,7 @@ export default function AppShell() {
          </button>
        </nav>
         {moreOpen && <div className="mobile-more-backdrop" role="presentation" onClick={() => setMoreOpen(false)}>
-          <section className="mobile-more-sheet" role="dialog" aria-modal="true" aria-label="More destinations" data-more-root onClick={event => event.stopPropagation()}>
+          <section className="mobile-more-sheet" role="dialog" aria-modal="true" aria-label="More destinations" data-more-root ref={sheetRef} onClick={event => event.stopPropagation()}>
            <div className="mobile-sheet-handle" />
            <div className="mobile-more-heading"><span className="notification-kicker">More destinations</span><button onClick={() => setMoreOpen(false)} aria-label="Close more destinations">×</button></div>
             <div className="mobile-more-links">

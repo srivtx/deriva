@@ -9,11 +9,12 @@ import { loadPracticeCompletion } from "@/persistence/practice-progress"
 import { loadPatternMastery } from "@/persistence/pattern-mastery"
 import { getNextActions, type NextAction } from "@/learning/next-actions"
 import { loadPreferences, type Preferences } from "@/persistence/preferences"
-import { dailyPickForDate, todayKey } from "@/persistence/daily"
+import { dailyPickForDate, todayKey, loadDailyHistory } from "@/persistence/daily"
 import { dueCards, seedQueueFromMastery } from "@/persistence/review-queue"
 import ProgressRing from "@/components/progress-ring"
 import AppTile from "@/components/app-tile"
 import { loadTasks } from "@/persistence/toolkit"
+import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 
 type HomeMomentum = { practiceDone: number; practiceTotal: number; pathDone: number }
 type MasteryMomentum = { recognized: number; transferred: number; review: number }
@@ -54,8 +55,7 @@ const APP_SECTIONS = [
     { href: "/toolkit?tool=tasks", name: "Tasks", glyph: "☑", gradient: G.teal },
     { href: "/toolkit?tool=focus", name: "Focus", glyph: "◔", gradient: G.ember },
     { href: "/toolkit?tool=habits", name: "Habits", glyph: "▦", gradient: G.green },
-  ] },
-  { label: "Explore", apps: [
+  ] },  { label: "Explore", apps: [
     { href: "/ai-ml", name: "AI/ML", glyph: "✳", gradient: G.violet },
     { href: "/design", name: "Design", glyph: "▣", gradient: G.cobalt },
     { href: "/lld", name: "LLD", glyph: "◇", gradient: G.teal },
@@ -96,6 +96,9 @@ export default function HomePage() {
   const [preferences, setPreferences] = useState<Preferences>()
   const [reviewDue, setReviewDue] = useState(0)
   const [openTasks, setOpenTasks] = useState(0)
+  const [dailyDone, setDailyDone] = useState(false)
+  const [installReady, setInstallReady] = useState(false)
+  const [installDismissed, setInstallDismissed] = useState(true)
   const [groupFilter, setGroupFilter] = useState("All")
   const [appQuery, setAppQuery] = useState("")
 
@@ -138,7 +141,13 @@ export default function HomePage() {
     seedQueueFromMastery()
     setReviewDue(dueCards().length)
     setOpenTasks(loadTasks().filter(task => !task.done).length)
+    setDailyDone(Boolean(loadDailyHistory()[todayKey()]))
+    try { setInstallDismissed(localStorage.getItem("deriva-install-dismissed-v1") === "1") } catch {}
+    const onInstallReady = () => setInstallReady(true)
+    window.addEventListener("deriva-pwa-install-available", onInstallReady)
+    if (canPromptPwaInstall()) setInstallReady(true)
     setHydrated(true)
+    return () => window.removeEventListener("deriva-pwa-install-available", onInstallReady)
   }, [])
 
   if (!hydrated) return <div className="page-loading" role="status">Loading your learning path…</div>
@@ -190,6 +199,16 @@ export default function HomePage() {
       </header>
 
       <main className="os-main">
+        {installReady && !installDismissed && (
+          <div className="install-banner" role="status">
+            <span><strong>Install Deriva.</strong> Full screen, home-screen icon, works offline.</span>
+            <div className="install-banner-actions">
+              <button type="button" className="super-primary install-cta" onClick={async () => { await promptPwaInstall() }}>Install</button>
+              <button type="button" className="install-dismiss" aria-label="Dismiss install suggestion" onClick={() => { setInstallDismissed(true); try { localStorage.setItem("deriva-install-dismissed-v1", "1") } catch {} }}>×</button>
+            </div>
+          </div>
+        )}
+
         <section className="app-library" aria-label="App library">
           <div className="app-library-toolbar">
             <div className="app-library-chips" role="group" aria-label="Filter apps">
@@ -204,7 +223,11 @@ export default function HomePage() {
             <div key={section.label} className="app-library-group">
               <span className="app-library-label">{section.label}</span>
               <div className="app-library-grid stagger">
-                {section.apps.map(app => <AppTile key={app.href + app.name} app={app} />)}
+                {section.apps.map(app => {
+                  const badge = app.href === "/review" ? (hydrated ? reviewDue : 0) : app.href === "/toolkit?tool=tasks" ? (hydrated ? openTasks : 0) : undefined
+                  const dot = app.href === "/daily" ? hydrated && !dailyDone : undefined
+                  return <AppTile key={app.href + app.name} app={app} badge={badge} dot={dot} />
+                })}
               </div>
             </div>
           ))}
