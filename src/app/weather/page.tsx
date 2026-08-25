@@ -114,6 +114,7 @@ export default function WeatherPage() {
             <div className="weather-now-icon" aria-hidden="true">{info(data.current.code).icon}</div>
             <div className="weather-now-temp">{conv(data.current.temp)}°</div>
             <div className="weather-now-meta">
+              <span className="weather-now-place">⌖ {coords.name}</span>
               <span>{info(data.current.code).label}</span>
               <span>Wind {Math.round(data.current.wind)} km/h · Humidity {data.current.humidity}%</span>
             </div>
@@ -147,6 +148,7 @@ export default function WeatherPage() {
         .weather-now-icon { font-size: 56px; line-height: 1; }
         .weather-now-temp { font: 700 clamp(44px, 12vw, 72px)/1 var(--font-mono); letter-spacing: -.03em; }
         .weather-now-meta { display: grid; gap: 3px; }
+        .weather-now-place { color: var(--accent); font: 700 12px var(--font-ui); letter-spacing: .02em; }
         .weather-now-meta span:first-child { font: 700 16px var(--font-ui); }
         .weather-now-meta span:last-child { color: var(--ink-soft); font: 12px var(--font-ui); }
         .weather-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; margin-top: 14px; }

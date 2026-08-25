@@ -1,9 +1,10 @@
-export type ThemePreference = "system" | "paper" | "ink" | "moss" | "ocean" | "carbon" | "violet" | "sunset"
+export type ThemePreference = "system" | "paper" | "ink" | "moss" | "ocean" | "carbon" | "violet" | "sunset" | "nothing" | "opone"
 export type AccentPreference = "cobalt" | "ember" | "violet" | "mint" | "gold" | "custom"
 export type TypePreference = "editorial" | "technical" | "humanist"
 export type DensityPreference = "calm" | "focused" | "compact"
 export type ShapePreference = "soft" | "precise"
 export type TexturePreference = "plain" | "grid"
+export type IconPackPreference = "classic" | "nothing" | "teenage"
 
 export type Preferences = {
   theme: ThemePreference
@@ -13,6 +14,7 @@ export type Preferences = {
   density: DensityPreference
   shape: ShapePreference
   texture: TexturePreference
+  iconPack: IconPackPreference
   reducedMotion: boolean
   textScale: "standard" | "large" | "xlarge"
   keyboardHints: boolean
@@ -32,6 +34,7 @@ export const defaultPreferences: Preferences = {
   density: "calm",
   shape: "soft",
   texture: "plain",
+  iconPack: "classic",
   reducedMotion: false,
   textScale: "standard",
   keyboardHints: true,
@@ -46,6 +49,7 @@ const TYPE_VALUES = new Set<TypePreference>(["editorial", "technical", "humanist
 const DENSITY_VALUES = new Set<DensityPreference>(["calm", "focused", "compact"])
 const SHAPE_VALUES = new Set<ShapePreference>(["soft", "precise"])
 const TEXTURE_VALUES = new Set<TexturePreference>(["plain", "grid"])
+const ICON_VALUES = new Set<IconPackPreference>(["classic", "nothing", "teenage"])
 
 function hex(value: unknown, fallback: string) {
   return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback
@@ -74,6 +78,7 @@ function normalize(value: unknown): Preferences {
     density: DENSITY_VALUES.has(raw.density as DensityPreference) ? raw.density as DensityPreference : defaultPreferences.density,
     shape: SHAPE_VALUES.has(raw.shape as ShapePreference) ? raw.shape as ShapePreference : defaultPreferences.shape,
     texture: TEXTURE_VALUES.has(raw.texture as TexturePreference) ? raw.texture as TexturePreference : defaultPreferences.texture,
+    iconPack: ICON_VALUES.has(raw.iconPack as IconPackPreference) ? raw.iconPack as IconPackPreference : defaultPreferences.iconPack,
     reducedMotion: raw.reducedMotion === true,
     textScale: raw.textScale === "large" || raw.textScale === "xlarge" ? raw.textScale : "standard",
     keyboardHints: raw.keyboardHints !== false,
@@ -112,6 +117,7 @@ export function applyPreferences(preferences: Preferences) {
   root.dataset.density = preferences.density
   root.dataset.shape = preferences.shape
   root.dataset.texture = preferences.texture
+  root.dataset.icons = preferences.iconPack
   root.dataset.textScale = preferences.textScale
   root.dataset.motion = preferences.reducedMotion ? "reduce" : "full"
   if (preferences.accent === "custom") root.style.setProperty("--accent", hex(preferences.customAccent, defaultPreferences.customAccent))

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { applyPreferences, defaultPreferences, loadPreferences, savePreferences, type AccentPreference, type DensityPreference, type Preferences, type ShapePreference, type TexturePreference, type ThemePreference, type TypePreference } from "@/persistence/preferences"
+import { ICON_PACKS, glyphFor } from "@/data/icon-packs"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 import Logo from "@/components/logo"
@@ -17,6 +18,8 @@ const themes: { value: ThemePreference; title: string; body: string; swatch: str
   { value: "carbon", title: "Carbon", body: "Neutral graphite night.", swatch: "#1E2125" },
   { value: "violet", title: "Violet", body: "Night study, vivid focus.", swatch: "#B79CFF" },
   { value: "sunset", title: "Sunset", body: "Warm studio light.", swatch: "#B55335" },
+  { value: "nothing", title: "Nothing", body: "Dot-industrial black. Signal red.", swatch: "#E02020" },
+  { value: "opone", title: "OP-1", body: "Teenage Engineering warm grey + orange.", swatch: "#E04A00" },
 ]
 
 const accents: { value: AccentPreference; title: string; color: string }[] = [
@@ -35,6 +38,8 @@ const typeVoices: { value: TypePreference; title: string; body: string }[] = [
 
 const presets: { title: string; body: string; values: Partial<Preferences> }[] = [
   { title: "Moss Technical", body: "Green, precise, instrument-like", values: { theme: "moss", accent: "mint", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
+  { title: "Nothing Dark", body: "Black, signal red, dot-industrial", values: { theme: "nothing", iconPack: "nothing", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
+  { title: "OP-1 Studio", body: "Warm grey, instrument orange, numbered", values: { theme: "opone", iconPack: "teenage", type: "technical", density: "calm", shape: "soft", texture: "plain" } },
   { title: "Deriva Classic", body: "Paper, cobalt, editorial", values: { theme: "paper", accent: "cobalt", type: "editorial", density: "calm", shape: "soft", texture: "plain" } },
   { title: "Field Notes", body: "Moss, mint, textured", values: { theme: "moss", accent: "mint", type: "humanist", density: "calm", shape: "soft", texture: "grid" } },
   { title: "Night Lab", body: "Violet, precise, focused", values: { theme: "violet", accent: "violet", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
@@ -55,6 +60,14 @@ const shapeOptions: { value: ShapePreference; title: string; body: string }[] = 
 const textureOptions: { value: TexturePreference; title: string; body: string }[] = [
   { value: "plain", title: "Plain", body: "Quiet paper" },
   { value: "grid", title: "Grid", body: "Subtle study graph" },
+]
+
+const iconSamples = [
+  { id: "daily", glyph: "☀", gradient: "linear-gradient(135deg, #2F8F5B, #1E6B45)" },
+  { id: "practice", glyph: "▶", gradient: "linear-gradient(135deg, #2E5AAC, #1D3D7A)" },
+  { id: "vault", glyph: "⚿", gradient: "linear-gradient(135deg, #5C6470, #434A55)" },
+  { id: "weather", glyph: "⛅", gradient: "linear-gradient(135deg, #0891B2, #056680)" },
+  { id: "store", glyph: "❖", gradient: "linear-gradient(135deg, #DB2777, #A31D58)" },
 ]
 
 export default function SettingsPage() {
@@ -130,6 +143,25 @@ export default function SettingsPage() {
         <h2 id="appearance-heading">Appearance</h2>
         <div className="theme-options theme-options-expanded">
           {themes.map(theme => <button type="button" key={theme.value} className={`theme-option${preferences.theme === theme.value ? " selected" : ""}`} onClick={() => update({ ...preferences, theme: theme.value })}><i style={{ background: theme.swatch }} /><strong>{theme.title}</strong><span>{theme.body}</span></button>)}
+        </div>
+      </section>
+
+      <section className="settings-section" aria-labelledby="icons-heading">
+        <h2 id="icons-heading">Icon pack</h2>
+        <p className="settings-hint">App icons are independent of your theme — pair any pack with any palette and switch anytime.</p>
+        <div className="icon-pack-grid">
+          {ICON_PACKS.map(pack => (
+            <button key={pack.id} type="button" className={`icon-pack-card${preferences.iconPack === pack.id ? " selected" : ""}`} onClick={() => update({ ...preferences, iconPack: pack.id })}>
+              <strong>{pack.name}</strong>
+              <span>{pack.desc}</span>
+              <div className="icon-pack-preview" data-icons={pack.id} aria-hidden="true">
+                {iconSamples.map(sample => (
+                  <span key={sample.id} className="app-tile-icon" style={{ background: sample.gradient }}>{glyphFor(sample.id, pack.id) ?? sample.glyph}</span>
+                ))}
+              </div>
+              {pack.themeHint && <small>{pack.themeHint}</small>}
+            </button>
+          ))}
         </div>
       </section>
 
