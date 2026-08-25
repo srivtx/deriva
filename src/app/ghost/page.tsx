@@ -68,6 +68,7 @@ export default function GhostPage() {
   const [tps, setTps] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [everSet] = useState<Set<string>>(() => everDownloaded())
+  const [pendingGet, setPendingGet] = useState<GhostModel | null>(null)
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const busyRef = useRef(false)
 
@@ -144,6 +145,37 @@ export default function GhostPage() {
     }
   }, [action, refreshStorage])
 
+  const startGet = useCallback(async (m: GhostModel) => {
+    if (action) return
+    setPendingGet(m)
+    setSheetOpen(false)
+    setError(null)
+    setPhase("downloading")
+    try {
+      await ghostEngine.download(m, (_f, loaded, total) =>
+        setGetProgress({ url: m.url, fraction: total > 0 ? loaded / total : 0, loadedMb: Math.round(loaded / 1048576), totalMb: Math.round(total / 1048576) }),
+      )
+      await refreshStorage()
+      setSelectedModel(m.id)
+      setModel(m)
+      markEverDownloaded(m.id)
+      setPhase("loading")
+      await ghostEngine.load(m)
+      setPhase("ready")
+      setMessages(prev => {
+        if (prev.length > 0) return prev
+        return [{ role: "assistant", content: `I live here now — ${m.name}, on your device, no cloud involved. Ask anything; I nudge, you derive.` }]
+      })
+    } catch (err) {
+      setError(String((err as Error)?.message || err))
+      setPhase("intro")
+    } finally {
+      setAction(null)
+      setPendingGet(null)
+      setGetProgress({ url: "", fraction: 0, loadedMb: 0, totalMb: 0 })
+    }
+  }, [action, refreshStorage])
+
   const startSummon = useCallback(async () => {
     if (isCached(model.url)) {
       setPhase("loading")
@@ -157,21 +189,8 @@ export default function GhostPage() {
       }
       return
     }
-    await downloadModel(model, async () => {
-      setPhase("loading")
-      try {
-        await ghostEngine.load(model)
-        setPhase("ready")
-        setMessages(prev => {
-          if (prev.length > 0) return prev
-          return [{ role: "assistant", content: `I live here now — ${model.name}, on your device, no cloud involved. Ask anything; I nudge, you derive.` }]
-        })
-      } catch (err) {
-        setError(String((err as Error)?.message || err))
-        setPhase("intro")
-      }
-    })
-  }, [model, isCached, downloadModel])
+    await startGet(model)
+  }, [model, isCached, startGet])
 
   const send = useCallback(async (raw?: string) => {
     const text = (raw ?? input).trim()
@@ -328,7 +347,8 @@ export default function GhostPage() {
         <div className="ghost-intro">
           <GhostFace size={88} thinking />
           <span className="ghost-kicker">MATERIALISING</span>
-          <p className="ghost-hero-title">{model.name}</p>
+          <p className="ghost-hero-title">{(pendingGet ?? model).name}</p>
+          <p className="ghost-tagline mono">{(pendingGet ?? model).sizeMb} MB · one-time</p>
           <div className="ghost-progress" role="progressbar" aria-valuenow={Math.round(getProgress.fraction * 100)}>
             <div className="ghost-progress-fill" style={{ width: `${Math.max(2, getProgress.fraction * 100)}%` }} />
           </div>
@@ -419,7 +439,7 @@ export default function GhostPage() {
                         <button type="button" className="ghost-minibtn danger" disabled={!!action} onClick={() => deleteByUrl(m.url)}>DELETE</button>
                       </>
                     ) : (
-                      <button type="button" className="ghost-minibtn" disabled={!!action} onClick={() => downloadModel(m, () => {})}>{everSet.has(m.id) ? "RESTORE" : "GET"}</button>
+                      <button type="button" className="ghost-minibtn" disabled={!!action} onClick={() => startGet(m)}>{everSet.has(m.id) ? "RESTORE" : "GET"}</button>
                     )}
                   </div>
                 </div>
