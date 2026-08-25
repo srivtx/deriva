@@ -10,6 +10,7 @@ import { runScript } from "@/execution/pyodide-client"
 import { dailyPickForDate, markDailySolved, todayKey } from "@/persistence/daily"
 import { getActiveContest, recordContestSolve } from "@/persistence/contest"
 import { getActiveInterview, recordInterviewSolved, type ActiveInterview } from "@/persistence/interview"
+import SolveBurst from "@/components/solve-burst"
 
 export default function PracticePage() {
   const [topicId, setTopicId] = useState("trees")
@@ -26,6 +27,7 @@ export default function PracticePage() {
   const [interviewSession, setInterviewSession] = useState<ActiveInterview | null>(null)
   const [interviewNow, setInterviewNow] = useState(Date.now())
   const [contestIds, setContestIds] = useState<number[]>([])
+  const [burst, setBurst] = useState(0)
   const [theoryNote, setTheoryNote] = useState("")
   const [output, setOutput] = useState("")
   const [running, setRunning] = useState(false)
@@ -139,6 +141,7 @@ export default function PracticePage() {
 
   const celebrateSolve = () => {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate([18, 40, 18])
+    setBurst(value => value + 1)
     const daily = dailyPickForDate(todayKey())
     if (daily.problem.id === currentId) markDailySolved(todayKey(), topicId, currentId)
     recordContestSolve(currentId)
@@ -314,6 +317,7 @@ export default function PracticePage() {
           <button onClick={() => { setSavedCode({ ...savedCode, [topicId]: { ...tCode, [currentId]: problem.starterCode } }); setOutput("") }} className="btn">Reset</button>
         </div>
 
+        {running && <div className="run-shimmer" aria-hidden="true" />}
         {output && !isFailure && <pre className="out">{output}</pre>}
 
         {isFailure && (
@@ -380,6 +384,8 @@ export default function PracticePage() {
             <strong>live</strong>
           </Link>
         )}
+
+        <SolveBurst trigger={burst} />
 
         <div className="kbd">← → navigate &nbsp; ⌘+Enter run</div>
       </main>

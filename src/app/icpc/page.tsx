@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { STAGES_ICPC, PROBLEMS_ICPC } from "@/data/icpc"
+import ProgressRing from "@/components/progress-ring"
 
 const DIFFICULTY_CLASS: Record<string, string> = {
   Easy: "icpc-diff-easy",
@@ -48,13 +49,11 @@ export default function IcpcPage() {
         </div>
         <div className="icpc-hero-signal" aria-label="Ladder progress">
           <span>SOLVED</span>
-          <strong>{hydrated ? `${doneCount}/${PROBLEMS_ICPC.length}` : `0/${PROBLEMS_ICPC.length}`}</strong>
-          <div className="icpc-signal-track"><div style={{ width: `${hydrated ? pct : 0}%` }} /></div>
-          <small>{hydrated ? `${Math.round(pct)}% of the ladder` : "loading progress"}</small>
+          <ProgressRing value={hydrated ? (doneCount / PROBLEMS_ICPC.length) * 100 : 0} size={80} stroke={8} label={hydrated ? `${doneCount}` : "0"} sub={`of ${PROBLEMS_ICPC.length}`} />
         </div>
       </section>
 
-      <ol className="icpc-ladder">
+      <ol className="icpc-ladder stagger">
         {STAGES_ICPC.map(stage => {
           const problems = PROBLEMS_ICPC.filter(p => p.stage === stage.id)
           const sectionDone = problems.filter(p => done.has(p.id)).length

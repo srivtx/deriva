@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { PATTERN_DIRECTORY } from "@/data/patterns"
 import { allCards, dueCards, gradeCard, removeCard, seedQueueFromMastery, type ReviewCard, type ReviewGrade } from "@/persistence/review-queue"
+import ProgressRing from "@/components/progress-ring"
 
 const GRADES: { grade: ReviewGrade; label: string; hint: string }[] = [
   { grade: "again", label: "Lost it", hint: "back in 10 minutes" },
@@ -62,8 +63,7 @@ export default function ReviewPage() {
         </div>
         <div className="review-signal" aria-label="Cards due">
           <span>DUE NOW</span>
-          <strong>{hydrated ? due.length : 0}</strong>
-          <small>{queue.length} patterns in the deck</small>
+          <ProgressRing value={hydrated && queue.length ? (due.length / queue.length) * 100 : 0} size={80} stroke={8} label={hydrated ? `${due.length}` : "0"} sub={`of ${queue.length}`} />
         </div>
       </section>
 
@@ -98,6 +98,13 @@ export default function ReviewPage() {
 
       {hydrated && !current && (
         <section className="review-empty">
+          <div className="empty-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" width="76" height="76" fill="none">
+              <rect x="4" y="4" width="56" height="56" rx="16" stroke="var(--line)" strokeWidth="2" strokeDasharray="6 6" />
+              <path d="M20 40 44 16" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="44" cy="16" r="4" fill="var(--accent)" />
+            </svg>
+          </div>
           <strong>Deck clear.</strong>
           <p>Nothing is due right now. Earn new patterns in the quiz, or come back when the schedule surfaces something.</p>
           <div className="review-empty-actions">

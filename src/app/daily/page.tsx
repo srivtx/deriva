@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react"
 import { TOPICS } from "@/data"
 import { currentStreak, dailyPickForDate, loadDailyHistory, markDailySolved, todayKey } from "@/persistence/daily"
 import { loadPracticeCompletion } from "@/persistence/practice-progress"
+import ProgressRing from "@/components/progress-ring"
 
 function lastNDays(n: number): string[] {
   const days: string[] = []
@@ -72,8 +73,8 @@ export default function DailyPage() {
         </div>
         <div className="daily-streak" aria-label="Daily streak">
           <span>DAY STREAK</span>
-          <strong>{hydrated ? streak : 0}</strong>
-          <small>{streak === 1 ? "day and counting" : streak > 0 ? "days and counting" : "start today"}</small>
+          <ProgressRing value={isDone ? 100 : 0} size={80} stroke={8} label={hydrated ? `${streak}` : "0"} sub={streak === 1 ? "day" : "days"} />
+          <small>{streak === 0 ? "start today" : "and counting"}</small>
         </div>
       </section>
 
@@ -96,7 +97,7 @@ export default function DailyPage() {
 
       <section className="daily-history" aria-label="Last fourteen days">
         <span className="super-kicker">LAST 14 DAYS</span>
-        <div className="daily-calendar">
+        <div className="daily-calendar stagger">
           {days.map(day => {
             const done = Boolean(history[day]) || day === dateKey && isDone
             return (

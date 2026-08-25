@@ -11,6 +11,7 @@ import { getNextActions, type NextAction } from "@/learning/next-actions"
 import { loadPreferences, type Preferences } from "@/persistence/preferences"
 import { dailyPickForDate, todayKey } from "@/persistence/daily"
 import { dueCards, seedQueueFromMastery } from "@/persistence/review-queue"
+import ProgressRing from "@/components/progress-ring"
 
 type HomeMomentum = { practiceDone: number; practiceTotal: number; pathDone: number }
 type MasteryMomentum = { recognized: number; transferred: number; review: number }
@@ -128,7 +129,7 @@ export default function HomePage() {
             <div><span className="discovery-kicker">Your day</span><h2 id="day-heading">One challenge, one review, one clock.</h2></div>
             <Link href="/releases" className="super-day-new">What&apos;s new in 1.4 →</Link>
           </div>
-          <div className="super-day-tiles">
+          <div className="super-day-tiles stagger">
             <Link href="/daily" className="super-day-tile tile-daily"><span>Daily Challenge</span><strong>{dailyPickForDate(todayKey()).problem.title}</strong><em>same pick, everyone, today</em></Link>
             <Link href="/review" className="super-day-tile tile-review"><span>Review Queue</span><strong>{hydrated ? (reviewDue > 0 ? `${reviewDue} patterns due` : "Deck clear") : "Checking…"}</strong><em>spaced repetition</em></Link>
             <Link href="/contest" className="super-day-tile tile-contest"><span>Contest Simulator</span><strong>3 problems · 90 min</strong><em>real penalty clock</em></Link>
@@ -151,7 +152,7 @@ export default function HomePage() {
         </section>
 
         {momentum && <section className="home-momentum compact-momentum" aria-labelledby="momentum-heading">
-          <div className="home-momentum-head"><div><span className="discovery-kicker">Your evidence</span><h2 id="momentum-heading">What you can do now.</h2></div><span className="home-momentum-total">{momentum.practiceDone} problems solved</span></div>
+          <div className="home-momentum-head"><div><span className="discovery-kicker">Your evidence</span><h2 id="momentum-heading">What you can do now.</h2></div><ProgressRing value={momentum.practiceTotal ? (momentum.practiceDone / momentum.practiceTotal) * 100 : 0} size={68} stroke={7} label={`${momentum.practiceDone}`} sub={`of ${momentum.practiceTotal}`} /></div>
           <div className="mastery-momentum" aria-label="Pattern mastery momentum">
             <div><span>Patterns recognized</span><b>{masteryMomentum?.recognized ?? 0}/{PATTERN_DIRECTORY.length}</b></div>
             <div><span>Transfer proof</span><b>{masteryMomentum?.transferred ?? 0} completed</b></div>

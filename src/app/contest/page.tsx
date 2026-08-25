@@ -122,7 +122,7 @@ export default function ContestPage() {
             <strong>{clock(remaining)}</strong>
           </div>
           <div className="contest-status">{solvedCount}/{contest.problemIds.length} solved</div>
-          <ol className="contest-problems">
+          <ol className="contest-problems stagger">
             {contest.problemIds.map(id => {
               const problem = PROBLEMS_ICPC.find(p => p.id === id)
               const solvedAt = contest.solvedAt[id]

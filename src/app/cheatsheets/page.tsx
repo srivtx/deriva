@@ -64,7 +64,7 @@ export default function CheatsheetsPage() {
           <small>{families.length} families</small>
         </div>
       </section>
-      <div className="cheatsheet-grid">
+      <div className="cheatsheet-grid stagger">
         {CHEATSHEETS.map(sheet => <SheetCard key={sheet.id} sheet={sheet} copiedId={copiedId} setCopied={setCopied} />)}
       </div>
     </main>

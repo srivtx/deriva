@@ -31,7 +31,7 @@ export default function ReleasesPage() {
         </div>
       </section>
 
-      <ol className="releases-timeline">
+      <ol className="releases-timeline stagger">
         {RELEASES.map((release, index) => (
           <li key={release.version} className={`release-entry${index === 0 ? " latest" : ""}${latestSeen && release.version === latestSeen ? " seen" : ""}`}>
             <div className="release-rail">
