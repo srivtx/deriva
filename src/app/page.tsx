@@ -14,6 +14,7 @@ import { dueCards, seedQueueFromMastery } from "@/persistence/review-queue"
 import ProgressRing from "@/components/progress-ring"
 import AppTile from "@/components/app-tile"
 import { loadTasks } from "@/persistence/toolkit"
+import { loadInstalled } from "@/persistence/app-store"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 
 type HomeMomentum = { practiceDone: number; practiceTotal: number; pathDone: number }
@@ -34,40 +35,47 @@ const G = {
 
 const APP_SECTIONS = [
   { label: "Today", apps: [
-    { href: "/daily", name: "Daily", glyph: "☀", gradient: G.green },
-    { href: "/review", name: "Review", glyph: "↻", gradient: G.violet },
-    { href: "/contest", name: "Contest", glyph: "⏱", gradient: G.ember },
-    { href: "/interview", name: "Interview", glyph: "◉", gradient: G.cobalt },
+    { id: "daily", href: "/daily", name: "Daily", glyph: "☀", gradient: G.green },
+    { id: "review", href: "/review", name: "Review", glyph: "↻", gradient: G.violet },
+    { id: "contest", href: "/contest", name: "Contest", glyph: "⏱", gradient: G.ember },
+    { id: "interview", href: "/interview", name: "Interview", glyph: "◉", gradient: G.cobalt },
   ] },
   { label: "Practice", apps: [
-    { href: "/practice", name: "Drill", glyph: "▶", gradient: G.cobalt },
-    { href: "/icpc", name: "ICPC", glyph: "⚑", gradient: G.green },
-    { href: "/atlas", name: "Atlas", glyph: "◎", gradient: G.sky },
-    { href: "/cheatsheets", name: "Cheatsheets", glyph: "≡", gradient: G.gold },
+    { id: "practice", href: "/practice", name: "Drill", glyph: "▶", gradient: G.cobalt },
+    { id: "icpc", href: "/icpc", name: "ICPC", glyph: "⚑", gradient: G.green },
+    { id: "atlas", href: "/atlas", name: "Atlas", glyph: "◎", gradient: G.sky },
+    { id: "cheatsheets", href: "/cheatsheets", name: "Cheatsheets", glyph: "≡", gradient: G.gold },
   ] },
   { label: "Build", apps: [
-    { href: "/playground", name: "Playground", glyph: "❯_", gradient: G.dark },
-    { href: "/complexity", name: "Big-O Lab", glyph: "∿", gradient: G.violet },
-    { href: "/notebook", name: "Notebook", glyph: "✎", gradient: G.gold },
+    { id: "playground", href: "/playground", name: "Playground", glyph: "❯_", gradient: G.dark },
+    { id: "complexity", href: "/complexity", name: "Big-O Lab", glyph: "∿", gradient: G.violet },
+    { id: "notebook", href: "/notebook", name: "Notebook", glyph: "✎", gradient: G.gold },
   ] },
   { label: "Life", apps: [
-    { href: "/toolkit", name: "Toolkit", glyph: "▦", gradient: G.teal },
-    { href: "/toolkit?tool=tasks", name: "Tasks", glyph: "☑", gradient: G.teal },
-    { href: "/toolkit?tool=focus", name: "Focus", glyph: "◔", gradient: G.ember },
-    { href: "/toolkit?tool=habits", name: "Habits", glyph: "▦", gradient: G.green },
-  ] },  { label: "Explore", apps: [
-    { href: "/ai-ml", name: "AI/ML", glyph: "✳", gradient: G.violet },
-    { href: "/design", name: "Design", glyph: "▣", gradient: G.cobalt },
-    { href: "/lld", name: "LLD", glyph: "◇", gradient: G.teal },
-    { href: "/expedition", name: "Expedition", glyph: "△", gradient: G.ember },
-    { href: "/games", name: "Games", glyph: "◆", gradient: G.pink },
+    { id: "toolkit", href: "/toolkit", name: "Toolkit", glyph: "▦", gradient: G.teal },
+    { id: "tasks", href: "/toolkit?tool=tasks", name: "Tasks", glyph: "☑", gradient: G.teal },
+    { id: "focus", href: "/toolkit?tool=focus", name: "Focus", glyph: "◔", gradient: G.ember },
+    { id: "habits", href: "/toolkit?tool=habits", name: "Habits", glyph: "▦", gradient: G.green },
+    { id: "vault", href: "/vault", name: "Password Vault", glyph: "⚿", gradient: G.slate },
+    { id: "weather", href: "/weather", name: "Weather", glyph: "⛅", gradient: G.sky },
+    { id: "images", href: "/images", name: "Image Tools", glyph: "◳", gradient: G.pink },
+    { id: "qr", href: "/qr", name: "QR Tools", glyph: "⊞", gradient: G.violet },
+    { id: "whiteboard", href: "/whiteboard", name: "Whiteboard", glyph: "✏", gradient: G.gold },
+  ] },
+  { label: "Explore", apps: [
+    { id: "ai-ml", href: "/ai-ml", name: "AI/ML", glyph: "✳", gradient: G.violet },
+    { id: "design", href: "/design", name: "Design", glyph: "▣", gradient: G.cobalt },
+    { id: "lld", href: "/lld", name: "LLD", glyph: "◇", gradient: G.teal },
+    { id: "expedition", href: "/expedition", name: "Expedition", glyph: "△", gradient: G.ember },
+    { id: "games", href: "/games", name: "Games", glyph: "◆", gradient: G.pink },
   ] },
   { label: "System", apps: [
-    { href: "/observatory", name: "Observatory", glyph: "◔", gradient: G.slate },
-    { href: "/dashboard", name: "Progress", glyph: "▤", gradient: G.slate },
-    { href: "/android", name: "Get app", glyph: "⤓", gradient: G.green },
-    { href: "/releases", name: "What's new", glyph: "✦", gradient: G.green },
-    { href: "/settings", name: "Settings", glyph: "⚙", gradient: G.slate },
+    { id: "observatory", href: "/observatory", name: "Observatory", glyph: "◔", gradient: G.slate },
+    { id: "dashboard", href: "/dashboard", name: "Progress", glyph: "▤", gradient: G.slate },
+    { id: "store", href: "/store", name: "App Store", glyph: "❖", gradient: G.cobalt },
+    { id: "android", href: "/android", name: "Get app", glyph: "⤓", gradient: G.green },
+    { id: "releases", href: "/releases", name: "What's new", glyph: "✦", gradient: G.green },
+    { id: "settings", href: "/settings", name: "Settings", glyph: "⚙", gradient: G.slate },
   ] },
 ] as const
 
@@ -102,6 +110,7 @@ export default function HomePage() {
   const [installDismissed, setInstallDismissed] = useState(true)
   const [groupFilter, setGroupFilter] = useState("All")
   const [appQuery, setAppQuery] = useState("")
+  const [installed, setInstalled] = useState<Set<string>>(new Set())
 
   const greeting = (() => {
     const hour = new Date().getHours()
@@ -119,6 +128,7 @@ export default function HomePage() {
     .map(section => ({
       ...section,
       apps: section.apps.filter(app =>
+        installed.has(app.id) &&
         (groupFilter === "All" || section.label === groupFilter) &&
         (!appQuery.trim() || app.name.toLowerCase().includes(appQuery.trim().toLowerCase()))),
     }))
@@ -143,6 +153,7 @@ export default function HomePage() {
     setReviewDue(dueCards().length)
     setOpenTasks(loadTasks().filter(task => !task.done).length)
     setDailyDone(Boolean(loadDailyHistory()[todayKey()]))
+    setInstalled(loadInstalled())
     try { setInstallDismissed(localStorage.getItem("deriva-install-dismissed-v1") === "1") } catch {}
     const onInstallReady = () => setInstallReady(true)
     window.addEventListener("deriva-pwa-install-available", onInstallReady)

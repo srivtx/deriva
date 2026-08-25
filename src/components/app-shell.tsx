@@ -49,6 +49,11 @@ const MORE_GROUPS: MoreGroup[] = [
       { label: "Life Toolkit", href: "/toolkit", desc: "tasks · focus · habits" },
       { label: "Tasks", href: "/toolkit?tool=tasks", desc: "today's list" },
       { label: "Focus Timer", href: "/toolkit?tool=focus", desc: "25/5 sessions" },
+      { label: "Password Vault", href: "/vault", desc: "encrypted secrets" },
+      { label: "Weather", href: "/weather", desc: "forecast near you" },
+      { label: "Image Tools", href: "/images", desc: "compress · convert" },
+      { label: "QR Tools", href: "/qr", desc: "generate & scan" },
+      { label: "Whiteboard", href: "/whiteboard", desc: "sketch ideas" },
     ],
   },
   {
@@ -65,6 +70,7 @@ const MORE_GROUPS: MoreGroup[] = [
     label: "Workspace",
     links: [
       { label: "Progress details", href: "/dashboard", desc: "history" },
+      { label: "App Store", href: "/store", desc: "install & manage apps" },
       { label: "Get Android app", href: "/android", desc: "install the APK" },
       { label: "What's new", href: "/releases", desc: "release notes" },
       { label: "Settings", href: "/settings", desc: "preferences" },
@@ -161,6 +167,18 @@ function Breadcrumbs() {
   } else if (pathname.startsWith("/ai-ml/patterns")) {
     parts.push({ label: "AI/ML", href: "/ai-ml" })
     parts.push({ label: "Patterns", href: pathname })
+  } else if (pathname === "/vault") {
+    parts.push({ label: "Password Vault", href: "/vault" })
+  } else if (pathname === "/weather") {
+    parts.push({ label: "Weather", href: "/weather" })
+  } else if (pathname === "/images") {
+    parts.push({ label: "Image Tools", href: "/images" })
+  } else if (pathname === "/qr") {
+    parts.push({ label: "QR Tools", href: "/qr" })
+  } else if (pathname === "/whiteboard") {
+    parts.push({ label: "Whiteboard", href: "/whiteboard" })
+  } else if (pathname === "/store") {
+    parts.push({ label: "App Store", href: "/store" })
   }
 
   if (parts.length === 0) return null
@@ -202,7 +220,7 @@ function ProgressBadge({ className = "" }: { className?: string }) {
   )
 }
 
-const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/lab", "/expedition", "/games", "/learn"]
+  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store"]
 
 export default function AppShell() {
   const pathname = usePathname()

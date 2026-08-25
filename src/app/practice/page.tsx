@@ -11,6 +11,7 @@ import { dailyPickForDate, markDailySolved, todayKey } from "@/persistence/daily
 import { getActiveContest, recordContestSolve } from "@/persistence/contest"
 import { getActiveInterview, recordInterviewSolved, type ActiveInterview } from "@/persistence/interview"
 import SolveBurst from "@/components/solve-burst"
+import PartyCelebrate from "@/components/party-celebrate"
 
 export default function PracticePage() {
   const [topicId, setTopicId] = useState("trees")
@@ -28,6 +29,7 @@ export default function PracticePage() {
   const [interviewNow, setInterviewNow] = useState(Date.now())
   const [contestIds, setContestIds] = useState<number[]>([])
   const [burst, setBurst] = useState(0)
+  const [party, setParty] = useState(0)
   const [theoryNote, setTheoryNote] = useState("")
   const [output, setOutput] = useState("")
   const [running, setRunning] = useState(false)
@@ -166,6 +168,7 @@ export default function PracticePage() {
           return { ...prev, [topicId]: [...cur] }
         })
         celebrateSolve()
+        setParty(value => value + 1)
       }
     } catch (e: any) {
       if (!controller.signal.aborted) setOutput("Error: " + e.message)
@@ -386,6 +389,7 @@ export default function PracticePage() {
         )}
 
         <SolveBurst trigger={burst} />
+        <PartyCelebrate trigger={party} />
 
         <div className="kbd">← → navigate &nbsp; ⌘+Enter run</div>
       </main>
