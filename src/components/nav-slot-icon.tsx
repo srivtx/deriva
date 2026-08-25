@@ -1,10 +1,11 @@
 "use client"
 
+import { memo } from "react"
 import AppIcon, { type AppIconName } from "./app-icon"
 import { resolveNavVariant } from "@/data/nav-icons"
 import type { IconPackId } from "@/data/icon-packs"
 
-export default function NavSlotIcon({
+function NavSlotIcon({
   itemId,
   variantId,
   autoPack,
@@ -56,3 +57,5 @@ export default function NavSlotIcon({
     </span>
   )
 }
+
+export default memo(NavSlotIcon)

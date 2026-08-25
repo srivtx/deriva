@@ -168,7 +168,8 @@
 .preview-instrument span { color: var(--accent); font: 700 9px var(--font-mono); letter-spacing: .07em; }
 .preview-instrument b { font: 700 22px var(--font-mono); }
 .preview-instrument small { color: var(--ink-soft); font: 10px var(--font-ui); }
-.custom-logo-image { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.custom-logo-image { display: block; border-radius: inherit; }
+.identity-logo-preview .custom-logo-image { width: 100%; height: 100%; object-fit: cover; }
 
 /* Learning Observatory */
 .observatory-page { max-width: 1180px; min-height: calc(100dvh - var(--app-header-height)); margin: 0 auto; padding: clamp(28px, 5vw, 64px) clamp(16px, 4vw, 48px) calc(112px + env(safe-area-inset-bottom)); }
@@ -778,6 +779,7 @@
 
 /* Icon-pack preview cards (settings) — sizing handled in the pack block above */
 .settings-hint { margin: -4px 0 12px; color: var(--ink-soft); font: 12px/1.5 var(--font-ui); }
+.settings-section { content-visibility: auto; contain-intrinsic-size: auto 320px; }
 .icon-pack-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 .icon-pack-card { display: grid; gap: 6px; justify-items: start; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); text-align: left; cursor: pointer; transition: border-color var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast); }
 .icon-pack-card:hover { transform: translateY(-2px); border-color: var(--accent); }

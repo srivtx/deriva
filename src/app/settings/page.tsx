@@ -257,6 +257,7 @@ export default function SettingsPage() {
                   onPointerDown: event => beginNavDrag(event as React.PointerEvent, id),
                   onPointerMove: onNavDragMove,
                   onPointerUp: endNavDrag,
+                  onPointerCancel: endNavDrag,
                   onLostPointerCapture: endNavDrag,
                 })}
               >

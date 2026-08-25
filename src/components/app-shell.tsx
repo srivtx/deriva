@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Suspense, type ReactNode } from "react"
 import { TOPICS, TOPIC_LIST } from "@/data"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import Logo from "./logo"
 import NotificationCenter from "./notification-center"
 import CommandCenter from "./command-center"
@@ -333,14 +333,14 @@ export default function AppShell() {
   const slotItems = navSlots.map(id => NAV_ITEM_MAP[id]).filter(Boolean)
   const iconPack = currentIconPack()
 
-  const tabs = slotItems.map(item => ({
+  const tabs = useMemo(() => slotItems.map(item => ({
     key: item.id,
     label: item.label,
     href: item.href,
     glyph: item.glyph,
     classicIcon: item.classicIcon,
     active: item.match(pathname),
-  }))
+  })), [slotItems, pathname])
 
   return (
     <div className={isAppMode ? "app-root app-mode-active" : "app-root"}>
