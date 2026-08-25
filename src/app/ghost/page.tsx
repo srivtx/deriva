@@ -19,6 +19,17 @@ interface ChatMessage {
 const SYSTEM_PROMPT =
   "You are Ghost, a Socratic tutor inside the Deriva learning app for data structures, algorithms and system design. Never hand over the full solution or complete code. Respond with one guiding question, the invariant to notice, or a small nudge — then let the user derive the rest. Under 120 words. Warm, sharp, encouraging."
 
+function everDownloaded(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem("deriva-ghost-ever") || "[]")) } catch { return new Set() }
+}
+function markEverDownloaded(id: string) {
+  try {
+    const set = everDownloaded()
+    set.add(id)
+    localStorage.setItem("deriva-ghost-ever", JSON.stringify([...set]))
+  } catch {}
+}
+
 const SUGGESTIONS = [
   "Why does binary search need a sorted array?",
   "Nudge me: detect a cycle in a linked list",
@@ -56,12 +67,19 @@ export default function GhostPage() {
   const [busy, setBusy] = useState(false)
   const [tps, setTps] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [everSet] = useState<Set<string>>(() => everDownloaded())
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const busyRef = useRef(false)
 
   const sizeOf = useCallback((url: string) => storage.find(s => s.url === url)?.sizeMb ?? 0, [storage])
   const isCached = useCallback((url: string) => storage.some(s => s.url === url), [storage])
   const totalMb = storage.reduce((sum, s) => sum + s.sizeMb, 0)
+
+  useEffect(() => {
+    const prev = document.title
+    document.title = "Ghost · Deriva"
+    return () => { document.title = prev }
+  }, [])
 
   useEffect(() => {
     try {
@@ -116,6 +134,7 @@ export default function GhostPage() {
       await refreshStorage()
       setSelectedModel(m.id)
       setModel(m)
+      markEverDownloaded(m.id)
       after()
     } catch (err) {
       setError(String((err as Error)?.message || err))
@@ -218,6 +237,7 @@ export default function GhostPage() {
 
   const clearChat = useCallback(() => {
     setMessages([])
+    setSheetOpen(false)
     try { localStorage.removeItem("deriva-ghost-chat") } catch {}
   }, [])
 
@@ -328,6 +348,7 @@ export default function GhostPage() {
           {busy && (
             <div className="ghost-thinking-chip"><GhostFace size={18} thinking /> thinking…{tps != null && tps > 0 ? ` ${tps.toFixed(1)} tok/s` : ""}</div>
           )}
+          <button type="button" className="ghost-gear" aria-label="Ghost settings" onClick={() => setSheetOpen(true)}>⚙</button>
           <div className="ghost-messages">
             {messages.length === 0 && (
               <div className="ghost-empty">
@@ -350,12 +371,6 @@ export default function GhostPage() {
 
           <footer className="ghost-composer">
             {error && <p className="ghost-error">{error}</p>}
-            <div className="ghost-microrow">
-              <span className="ghost-micro-brain">{model.name}{isCached(model.url) ? "" : " · not downloaded"}</span>
-              <button type="button" className="ghost-storage-link" onClick={() => setSheetOpen(true)}>
-                {totalMb > 0 ? `${totalMb} MB stored` : "storage"} →
-              </button>
-            </div>
             <form onSubmit={event => { event.preventDefault(); void send() }} className="ghost-inputrow">
               <input
                 className="ghost-input"
@@ -378,7 +393,7 @@ export default function GhostPage() {
         <div className="ghost-sheet-backdrop" onClick={() => !action && setSheetOpen(false)}>
           <div className="ghost-sheet" onClick={event => event.stopPropagation()}>
             <span className="ghost-sheet-handle" />
-            <p className="ghost-sheet-title">BRAIN STORAGE</p>
+            <p className="ghost-sheet-title">GHOST SETTINGS</p>
 
             {GHOST_MODELS.map(m => {
               const cached = isCached(m.url)
@@ -404,7 +419,7 @@ export default function GhostPage() {
                         <button type="button" className="ghost-minibtn danger" disabled={!!action} onClick={() => deleteByUrl(m.url)}>DELETE</button>
                       </>
                     ) : (
-                      <button type="button" className="ghost-minibtn" disabled={!!action} onClick={() => downloadModel(m, () => {})}>GET</button>
+                      <button type="button" className="ghost-minibtn" disabled={!!action} onClick={() => downloadModel(m, () => {})}>{everSet.has(m.id) ? "RESTORE" : "GET"}</button>
                     )}
                   </div>
                 </div>
@@ -428,7 +443,10 @@ export default function GhostPage() {
 
             <div className="ghost-brains-foot">
               <span>{totalMb > 0 ? `${totalMb} MB total` : "nothing stored"}</span>
-              <button type="button" className="ghost-minibtn danger" disabled={!!action || totalMb === 0} onClick={clearEverything}>CLEAR EVERYTHING</button>
+              <span className="ghost-sheet-foot-actions">
+                <button type="button" className="ghost-minibtn" disabled={!!action || messages.length === 0} onClick={clearChat}>CLEAR CHAT</button>
+                <button type="button" className="ghost-minibtn danger" disabled={!!action || totalMb === 0} onClick={clearEverything}>CLEAR EVERYTHING</button>
+              </span>
             </div>
             {error && <p className="ghost-error">{error}</p>}
           </div>
