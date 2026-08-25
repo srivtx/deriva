@@ -3007,3 +3007,11 @@ code, pre { font-family: var(--font-mono); }
 .ghost-msg-body p { margin: 0; }
 .ghost-sheet-foot-actions { display: inline-flex; gap: 8px; }
 @media (min-width: 700px) { .ghost-gear { top: 12px; right: 12px; } }
+
+/* ── Ghost v5: layout guards ──────────────────────────────── */
+.ghost-msg > .ghost-face { flex: 0 0 auto; align-self: flex-end; }
+.ghost-face svg, .ghost-face { contain: content; }
+.ghost-msg-body { flex: 1 1 auto; max-width: 100%; }
+.ghost-msg.from-user .ghost-msg-body { flex: 0 1 auto; }
+.ghost-ring { border-width: 1px !important; opacity: 0 !important; animation: ghost-ping-soft 2.4s ease-out infinite !important; }
+@keyframes ghost-ping-soft { 0% { transform: scale(0.8); opacity: 0.32; } 100% { transform: scale(1.25); opacity: 0; } }
