@@ -47,6 +47,7 @@ Deriva is also a personal toolkit — local-first apps that live on your device:
 | | App | What it does |
 |---|---|---|
 | ✺ | **Glyph Studio** | Draw dot-matrix light: 7/12/16 grids, animation frames, glow & material controls, export PNG / animated SVG / JSON — and save glyphs as your own icon pack |
+| ◻ | **Ghost** | Offline AI tutor — a small language model that lives entirely on your device. Hint-mode by philosophy: it nudges, you derive. Opt-in ~400 MB download, works in airplane mode forever |
 | ◔ | **Focus Dial** | Braun-style rotary timer that re-tints the entire shell while it runs |
 | ▤ | **Life Toolkit** | Tasks, habits, focus sessions |
 | ⛨ | **Vault** | Encrypted personal storage |

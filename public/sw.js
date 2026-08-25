@@ -1,5 +1,5 @@
 // Deriva service worker — cache-first for static assets, network-first for pages.
-const CACHE = "deriva-v18"
+const CACHE = "deriva-v21"
 const STATIC = ["/", "/practice", "/design", "/lld", "/dashboard", "/patterns", "/patterns/quiz", "/settings", "/expedition", "/games", "/icpc", "/daily", "/review", "/contest", "/interview", "/cheatsheets", "/playground", "/releases", "/android", "/atlas", "/complexity", "/notebook", "/toolkit", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store", "/expenses", "/calendar", "/translate", "/manifest.webmanifest", "/favicon.svg", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable.png"]
 
 self.addEventListener("install", (e) => {
@@ -17,8 +17,10 @@ self.addEventListener("fetch", (e) => {
   if (request.method !== "GET") return
   const url = new URL(request.url)
 
-  // Next.js build assets + icons: cache-first (immutable)
-  if (url.pathname.startsWith("/_next/static") || url.pathname.startsWith("/icons")) {
+  // Next.js build assets + icons + Ghost engine files: cache-first (immutable)
+  const isGhostEngine = url.pathname === "/ghost/ghost-worker.js" ||
+    (url.hostname === "cdn.jsdelivr.net" && url.pathname.startsWith("/npm/@wllama/wllama/"))
+  if (url.pathname.startsWith("/_next/static") || url.pathname.startsWith("/icons") || isGhostEngine) {
     e.respondWith(
       caches.match(request).then((hit) => hit || fetch(request).then((res) => {
         const copy = res.clone()
