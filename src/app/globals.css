@@ -3097,3 +3097,9 @@ code, pre { font-family: var(--font-mono); }
   /* CTA returns to the column, left-aligned with everything */
   .ghost-summon { width: 100%; }
 }
+
+/* ── Ghost v13: inline cache delete on brain cards ────────── */
+.ghost-model { position: relative; }
+.ghost-card-del { position: absolute; top: 9px; right: 9px; appearance: none; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; border: 1px solid color-mix(in srgb, #c0392b 40%, var(--line)); background: transparent; color: #c0392b; font-size: 11px; line-height: 1; cursor: pointer; transition: transform 0.12s ease, background 0.12s ease; }
+.ghost-card-del:hover { background: color-mix(in srgb, #c0392b 10%, transparent); transform: scale(1.06); }
+.ghost-card-del:active { transform: scale(0.94); }

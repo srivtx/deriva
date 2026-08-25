@@ -465,18 +465,32 @@ export default function GhostPage() {
               const cached = isCached(m.url)
               const selected = model.id === m.id
               return (
-                <button
+                <div
                   key={m.id}
-                  type="button"
                   role="radio"
                   aria-checked={selected}
+                  tabIndex={0}
                   className={`ghost-model${selected ? " active" : ""}`}
                   onClick={() => chooseModel(m)}
+                  onKeyDown={event => {
+                    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); chooseModel(m) }
+                  }}
                 >
+                  {cached && (
+                    <button
+                      type="button"
+                      className="ghost-card-del"
+                      title={`Delete ${m.name} cache`}
+                      disabled={!!action}
+                      onClick={event => { event.stopPropagation(); deleteByUrl(m.url) }}
+                    >
+                      ✕
+                    </button>
+                  )}
                   <span className="ghost-model-name">{m.name}</span>
                   <span className="ghost-model-meta">{m.sizeMb} MB · one-time download{cached ? ` · on device (${sizeOf(m.url)} MB)` : ""}</span>
                   <span className="ghost-model-blurb">{m.blurb}</span>
-                </button>
+                </div>
               )
             })}
           </div>
@@ -495,9 +509,6 @@ export default function GhostPage() {
             </button>
           )}
           {error && <p className="ghost-error">{error}</p>}
-          {isCached(model.url) && (
-            <button type="button" className="ghost-minibtn danger" onClick={() => deleteByUrl(model.url)}>DELETE {model.name.toUpperCase()}'S CACHE</button>
-          )}
         </div>
       )}
 
