@@ -62,7 +62,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 36
         versionCode 7
-        versionName "1.4.3"
+        versionName "1.5.1"
 
         // Launcher icon pack variants: classic (default res/), nothing (dot-matrix D),
         // opone (thin-line instrument D). Build with e.g.:

@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.5.1 — Ghost (2026-08-26)
+
+### New
+- **Ghost, the offline AI tutor** (`/ghost`): SmolLM2 Nano (101 MB, default) and Lite (258 MB) brains running on-device via llama.cpp/WASM — one opt-in download, offline forever, Socratic hints-only persona.
+- **Brain storage manager**: per-model install/switch/delete with verified frees, legacy-cache sweep, clear-everything bottom sheet.
+- **Conversation sessions**: auto-titled history, reopen, delete, new chat; stop button; single thinking indicator with live tok/s.
+- **Studio drawer section** in the home app library and App Center (Ghost + Glyph Studio tiles) with icons authored for all four icon-pack languages.
+
+### Fixed
+- Phone scroll correctness: message pane is the sole scroller; instant stick-to-bottom that never fights your finger; jump-to-latest pill.
+- Curated-logo head-node safety, stale-deploy self-healing and contrast engine carried from 1.5.0 remain intact.
+
 ## v1.6.0-ghost.0 — Ghost (pre-release, feature branch)
 
 The offline AI tutor as a first-class app: SmolLM2 Nano/Lite brains downloaded on explicit consent, stored in OPFS with verified deletes, Socratic-only persona, streaming chat with conversation history.
