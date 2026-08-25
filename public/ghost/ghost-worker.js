@@ -1,5 +1,5 @@
-// Ghost worker — runs wllama (llama.cpp→WASM) off the main thread.
-// Loaded lazily from /ghost/ghost-worker.js only when the user opts in.
+// Ghost worker — wllama runtime with strict, verifiable storage ownership.
+// All model bytes live under ONE CacheManager; delete verifies; OPFS sweep as fallback.
 import { Wllama, CacheManager } from "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.6.0/esm/index.min.js"
 
 const WASM_URL = "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.6.0/esm/wasm/wllama.wasm"
@@ -9,12 +9,60 @@ let activeController = null
 
 const post = msg => self.postMessage(msg)
 
+function baseName(url) {
+  try { return new URL(url).pathname.split("/").pop().toLowerCase() } catch { return "" }
+}
+
+async function releaseRuntime() {
+  if (activeController) { try { activeController.abort() } catch {} }
+  if (!wllama) return
+  const w = wllama
+  wllama = null
+  try {
+    await Promise.race([
+      w.exit(),
+      new Promise(resolve => setTimeout(resolve, 3000)),
+    ])
+  } catch {}
+}
+
+async function opfsSweep(base) {
+  // Fallback: remove any OPFS root entry whose name contains the gguf basename.
+  try {
+    const root = await navigator.storage.getDirectory()
+    const names = []
+    for await (const name of root.keys()) names.push(name)
+    const lower = base.toLowerCase()
+    for (const name of names) {
+      if (lower && name.toLowerCase().includes(lower.split(".")[0])) {
+        try { await root.removeEntry(name, { recurse: true }) } catch {}
+      }
+    }
+  } catch {}
+}
+
+async function verifyGone(cm, url, base) {
+  try {
+    const name = await cm.getNameFromURL(url)
+    const size = await cm.getSize(name)
+    if (size >= 0) return false
+  } catch {}
+  // also check raw OPFS listing
+  try {
+    const root = await navigator.storage.getDirectory()
+    const lowerBase = base.split(".")[0].toLowerCase()
+    for await (const name of root.keys()) {
+      if (name.toLowerCase().includes(lowerBase)) return false
+    }
+  } catch {}
+  return true
+}
+
 async function cachedSize(url) {
   try {
     const cm = new CacheManager()
     const name = await cm.getNameFromURL(url)
-    const size = await cm.getSize(name)
-    return size
+    return await cm.getSize(name)
   } catch {
     return -1
   }
@@ -47,20 +95,24 @@ self.onmessage = async event => {
         signal: activeController.signal,
       })
       activeController = null
-      post({ id, evt: "ok", data: { done: true } })
+      const size = await cachedSize(payload.url)
+      post({ id, evt: "ok", data: { done: true, size } })
       return
     }
 
     if (cmd === "load") {
       if (!wllama) {
+        const cm = new CacheManager()
+        const blob = await cm.open(payload.url)
+        if (!blob || blob.size <= 0) {
+          post({ id, evt: "error", message: "MODEL_NOT_CACHED", name: "GhostStorage", hint: "download the brain first" })
+          return
+        }
         wllama = new Wllama({ default: WASM_URL })
-        activeController = new AbortController()
-        await wllama.loadModelFromUrl(payload.url, {
+        await wllama.loadModel([blob], {
           n_ctx: payload.nCtx || 2048,
           jinja: true,
-          progressCallback: ({ loaded, total }) => post({ id, evt: "progress", loaded, total }),
         })
-        activeController = null
       }
       post({ id, evt: "ok", data: { loaded: true } })
       return
@@ -82,7 +134,6 @@ self.onmessage = async event => {
         post({ id, evt: "token", piece })
       }
 
-      // Attempt 1: streaming, async-iterator shape (per v3 guide)
       try {
         const stream = await wllama.createChatCompletion({
           messages: payload.messages,
@@ -96,11 +147,8 @@ self.onmessage = async event => {
             if (signal.aborted) break
             emitToken(chunk?.choices?.[0]?.delta?.content ?? "")
           }
-          post({
-            id,
-            evt: signal.aborted ? "stopped" : "done",
-            data: { text, tokens, tps: ((performance.now() - started) / 1000) > 0 ? tokens / ((performance.now() - started) / 1000) : 0 },
-          })
+          const seconds = (performance.now() - started) / 1000
+          post({ id, evt: signal.aborted ? "stopped" : "done", data: { text, tokens, tps: seconds > 0 ? tokens / seconds : 0 } })
           activeController = null
           return
         }
@@ -113,7 +161,6 @@ self.onmessage = async event => {
         lastError = err
       }
 
-      // Attempt 2: plain non-streaming call, minimal args
       try {
         const res = await wllama.createChatCompletion({
           messages: payload.messages,
@@ -145,27 +192,28 @@ self.onmessage = async event => {
       return
     }
 
-    if (cmd === "delete") {
+    if (cmd === "delete" || cmd === "eject") {
+      const url = payload.url
+      const base = baseName(url)
+      await releaseRuntime()
+      const cm = new CacheManager()
+      let hardFailed = false
       try {
-        if (wllama) { await wllama.exit() } 
-      } catch {}
-      wllama = null
+        await cm.delete(url)
+      } catch {
+        hardFailed = true
+      }
+      let gone = false
       try {
-        const cm = new CacheManager()
-        await cm.delete(payload.url)
+        gone = await verifyGone(cm, url, base)
       } catch {}
-      post({ id, evt: "ok", data: { deleted: true, url: payload.url } })
-      return
-    }
-
-    if (cmd === "eject") {
-      try { if (wllama) await wllama.exit() } catch {}
-      wllama = null
-      try {
-        const cm = new CacheManager()
-        await cm.delete(payload.url)
-      } catch {}
-      post({ id, evt: "ok", data: { ejected: true } })
+      if (!gone || hardFailed) {
+        await opfsSweep(base)
+        try {
+          gone = await verifyGone(cm, url, base)
+        } catch {}
+      }
+      post({ id, evt: "ok", data: { deleted: true, verified: gone } })
       return
     }
 

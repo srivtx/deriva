@@ -144,6 +144,16 @@ class GhostEngine {
     return out
   }
 
+  async scanStorage(): Promise<Array<{ url: string; sizeMb: number }>> {
+    const out: Array<{ url: string; sizeMb: number }> = []
+    const all = [...GHOST_MODELS.map(m => m.url), ...GHOST_LEGACY_URLS]
+    for (const url of all) {
+      const info = await this.request<{ cached: boolean; size: number }>("cached", { url })
+      if (info.cached && info.size > 0) out.push({ url, sizeMb: Math.round(info.size / (1024 * 1024)) })
+    }
+    return out
+  }
+
   download(model: GhostModel, onProgress: (fraction: number, mbLoaded: number, mbTotal: number) => void): Promise<void> {
     return this.request<void>(
       "download",
