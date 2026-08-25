@@ -450,6 +450,10 @@
 .release-footer { display: flex; justify-content: center; }
 .interview-chip { position: fixed; z-index: 60; right: 14px; bottom: calc(84px + env(safe-area-inset-bottom)); display: inline-flex; align-items: center; gap: 8px; padding: 9px 13px; border: 1px solid var(--viz-pruned); border-radius: 999px; background: var(--paper-raised); color: var(--viz-pruned); font: 700 11px var(--font-mono); text-decoration: none; box-shadow: var(--shadow-raised); }
 .interview-chip.contest-live-chip { border-color: var(--viz-cached); color: var(--viz-cached); }
+.floating-focus { position: fixed; z-index: 90; left: 14px; bottom: calc(84px + env(safe-area-inset-bottom)); display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--viz-settled) 55%, var(--line)); border-radius: 999px; background: color-mix(in srgb, var(--paper-raised) 88%, transparent); backdrop-filter: blur(10px); color: var(--viz-settled); font: 700 12px var(--font-mono); text-decoration: none; box-shadow: var(--shadow-raised); animation: rise-in .3s var(--ease-standard) both; }
+.floating-focus i { width: 8px; height: 8px; border-radius: 50%; background: var(--viz-settled); animation: splash-pulse 1.4s var(--ease-standard) infinite alternate; }
+.floating-focus span { color: var(--ink-soft); font: 600 10px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; }
+@media (min-width: 701px) { .floating-focus { left: 18px; bottom: 18px; } }
 .super-day { margin: 16px 0 32px; }
 .super-day-head { display: flex; align-items: end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
 .super-day-head h2 { margin: 4px 0 0; font: 700 clamp(22px, 4vw, 30px) var(--font-narrative); letter-spacing: -.02em; }
@@ -710,6 +714,7 @@
 @keyframes splash-pulse { from { transform: scale(.82) rotate(-8deg); opacity: .55; } to { transform: scale(1.06) rotate(6deg); opacity: 1; } }
 .mobile-more-sheet { touch-action: pan-y; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; }
+.super-page, .icpc-page, .practice-wrap { view-transition-name: app-tile; }
 ::view-transition-old(app-tile), ::view-transition-new(app-tile) { animation-duration: .3s; animation-timing-function: var(--ease-standard); }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }

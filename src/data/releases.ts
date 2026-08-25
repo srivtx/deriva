@@ -23,6 +23,8 @@ export const RELEASES: ReleaseEntry[] = [
       { title: "Life Toolkit", body: "Tasks, focus timer, habits, calculator, unit converter, regex tester, JSON formatter, password generator — everyday utilities, all local." },
       { title: "Complexity Lab + Notebook", body: "Time real executions at growing sizes and watch the Big-O curve appear. Every theory note you write lands in one searchable notebook." },
       { title: "Playground 2.0", body: "Line numbers, autosave, ⌘+Enter, copy and download — a real sandbox instead of a bare textarea." },
+      { title: "Floating focus timer", body: "Start a 25-minute session and a quiet chip follows you across every screen — the clock never resets." },
+      { title: "OS home screen", body: "Deriva opens onto a launcher: widgets, an app library with badges and filters, and apps that morph open." },
     ],
   },
   {

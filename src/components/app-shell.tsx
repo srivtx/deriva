@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from "react"
 import Logo from "./logo"
 import NotificationCenter from "./notification-center"
 import CommandCenter from "./command-center"
+import FloatingFocus from "./floating-focus"
 import { applyPreferences, defaultPreferences, loadPreferences, type Preferences } from "@/persistence/preferences"
 import { todayKey } from "@/persistence/daily"
 import { dueCards, seedQueueFromMastery } from "@/persistence/review-queue"
@@ -387,7 +388,8 @@ export default function AppShell() {
             </div>
          </section>
        </div>}
-       <CommandCenter open={commandOpen} onClose={() => setCommandOpen(false)} />
+        <CommandCenter open={commandOpen} onClose={() => setCommandOpen(false)} />
+        <FloatingFocus />
        <style>{`
          .app-shell-header { height: var(--app-header-height); border-bottom: 1px solid var(--line); background: var(--paper-raised); display: flex; align-items: center; padding: 0 16px; position: sticky; top: 0; z-index: 50; }
          .desktop-shell { display: flex; }

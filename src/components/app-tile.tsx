@@ -21,15 +21,35 @@ export default function AppTile({ app, badge, dot }: AppTileProps) {
   const router = useRouter()
 
   const open = (event: MouseEvent<HTMLAnchorElement>) => {
-    const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown }
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => Promise<void> | void) => { skipTransition: () => void }
+    }
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
     if (!doc.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
     event.preventDefault()
     const icon = event.currentTarget.querySelector<HTMLSpanElement>(".app-tile-icon")
     if (icon) (icon.style as CSSProperties & { viewTransitionName: string }).viewTransitionName = "app-tile"
-    doc.startViewTransition(async () => {
+    const targetUrl = new URL(app.href, window.location.origin)
+    try {
+      const transition = doc.startViewTransition(async () => {
+        router.push(app.href)
+        await new Promise<void>(resolve => {
+          const started = Date.now()
+          const check = () => {
+            const arrived = window.location.pathname + window.location.search === targetUrl.pathname + targetUrl.search
+          if (arrived || Date.now() - started > 2200) {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+          } else {
+              setTimeout(check, 60)
+            }
+          }
+          check()
+        })
+      })
+      setTimeout(() => { try { transition.skipTransition() } catch {} }, 4000)
+    } catch {
       router.push(app.href)
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-    })
+    }
   }
 
   return (

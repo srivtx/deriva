@@ -16,7 +16,7 @@ export default function AndroidPage() {
             <h1>Deriva for Android.</h1>
             <p>One quiet, green workspace for deriving algorithms wherever you think best. Install the signed app, then make the launcher feel like yours.</p>
             <div className="android-build-meta">
-              <div><span>BUILD</span><strong>1.4.1</strong></div>
+              <div><span>BUILD</span><strong>1.4.2</strong></div>
               <div><span>PACKAGE</span><strong>xyz.srivtx.deriva</strong></div>
               <div><span>FORMAT</span><strong>APK</strong></div>
             </div>
