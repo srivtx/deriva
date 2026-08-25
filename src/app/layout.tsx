@@ -38,11 +38,16 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="moss" data-accent="mint">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "try{var s=localStorage.getItem('deriva-preferences-v2')||localStorage.getItem('deriva-preferences-v1');var p=s?JSON.parse(s):{};var d=document.documentElement;if(p.theme)d.dataset.theme=p.theme;if(p.iconPack)d.dataset.icons=p.iconPack;if(p.textScale)d.dataset.textScale=p.textScale;}catch(e){}",
+          }}
+        />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png" />
         <link rel="apple-touch-icon" href="/icons/icon-180.png" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&family=Newsreader:ital,wght@0,400;0,700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&family=Newsreader:ital,wght@0,400;0,700&family=Doto:wght@600;800&family=Space+Grotesk:wght@400;500;700&display=swap"
           rel="stylesheet"
         />
       </head>

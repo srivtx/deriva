@@ -5,6 +5,7 @@ import Link from "next/link"
 import { applyPreferences, defaultPreferences, loadPreferences, savePreferences, type AccentPreference, type DensityPreference, type Preferences, type ShapePreference, type TexturePreference, type ThemePreference, type TypePreference } from "@/persistence/preferences"
 import { ICON_PACKS } from "@/data/icon-packs"
 import PackIcon from "@/components/pack-icon"
+import { NAV_ITEMS, NAV_ITEM_MAP, NAV_MAX_SLOTS, DEFAULT_NAV_SLOTS } from "@/data/nav-items"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 import Logo from "@/components/logo"
@@ -21,6 +22,10 @@ const themes: { value: ThemePreference; title: string; body: string; swatch: str
   { value: "sunset", title: "Sunset", body: "Warm studio light.", swatch: "#B55335" },
   { value: "nothing", title: "Nothing", body: "Dot-industrial black. Signal red.", swatch: "#E02020" },
   { value: "opone", title: "OP-1", body: "Teenage Engineering warm grey + orange.", swatch: "#E04A00" },
+  { value: "swiss", title: "Swiss", body: "International white, grid red.", swatch: "#D92B2B" },
+  { value: "nord", title: "Nord", body: "Frost-blue polar night.", swatch: "#88C0D0" },
+  { value: "solarized", title: "Solarized", body: "Classic terminal teal.", swatch: "#2AA198" },
+  { value: "braun", title: "Braun", body: "Rams functional grey, mustard dial.", swatch: "#C08A00" },
 ]
 
 const accents: { value: AccentPreference; title: string; color: string }[] = [
@@ -35,6 +40,8 @@ const typeVoices: { value: TypePreference; title: string; body: string }[] = [
   { value: "technical", title: "Technical", body: "One precise sans-serif voice" },
   { value: "editorial", title: "Editorial", body: "Newsreader ideas + Inter controls" },
   { value: "humanist", title: "Humanist", body: "Classic reading rhythm" },
+  { value: "dotmatrix", title: "Dot Matrix", body: "Nothing-style Doto headlines" },
+  { value: "instrument", title: "Instrument", body: "Space Grotesk, hardware panel feel" },
 ]
 
 const presets: { title: string; body: string; values: Partial<Preferences> }[] = [
@@ -82,6 +89,12 @@ export default function SettingsPage() {
     setNotificationPermission(getNotificationPermission())
   }, [])
   const update = (next: Preferences) => { setPreferences(next); savePreferences(next); applyPreferences(next) }
+  const toggleNavSlot = (id: string) => {
+    const on = preferences.navSlots.includes(id)
+    if (!on && preferences.navSlots.length >= NAV_MAX_SLOTS) return
+    const next = on ? preferences.navSlots.filter(slot => slot !== id) : [...preferences.navSlots, id]
+    update({ ...preferences, navSlots: next.length ? next : DEFAULT_NAV_SLOTS })
+  }
   const enableNotifications = async () => {
     const permission = await requestDesktopNotifications()
     setNotificationPermission(permission)
@@ -144,6 +157,33 @@ export default function SettingsPage() {
         <h2 id="appearance-heading">Appearance</h2>
         <div className="theme-options theme-options-expanded">
           {themes.map(theme => <button type="button" key={theme.value} className={`theme-option${preferences.theme === theme.value ? " selected" : ""}`} onClick={() => update({ ...preferences, theme: theme.value })}><i style={{ background: theme.swatch }} /><strong>{theme.title}</strong><span>{theme.body}</span></button>)}
+        </div>
+      </section>
+
+      <section className="settings-section" aria-labelledby="nav-heading">
+        <div className="settings-section-head"><h2 id="nav-heading">Navigation bar</h2><button type="button" className="settings-reset" onClick={() => update({ ...preferences, navSlots: ["home", "learn", "patterns", "observe"] })}>Reset bar</button></div>
+        <p className="settings-hint">Choose up to four slots — “More” always closes the row. Icons follow your icon pack.</p>
+        <div className="chip-row" role="group" aria-label="Navigation slots">
+          {NAV_ITEMS.map(item => {
+            const on = preferences.navSlots.includes(item.id)
+            return (
+              <button key={item.id} type="button" aria-pressed={on} className={`app-chip${on ? " active" : ""}`} onClick={() => toggleNavSlot(item.id)}>
+                {item.label}
+              </button>
+            )
+          })}
+        </div>
+        <div className="nav-slot-preview" aria-hidden="true">
+          {preferences.navSlots.map(id => {
+            const item = NAV_ITEM_MAP[id]
+            return (
+              <span key={id} className="nav-slot-cell">
+                <PackIcon id={item.id} fallback={item.glyph} />
+                {item.label}
+              </span>
+            )
+          })}
+          <span className="nav-slot-cell nav-slot-more">⋯ More</span>
         </div>
       </section>
 

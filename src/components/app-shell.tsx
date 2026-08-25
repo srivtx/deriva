@@ -9,6 +9,9 @@ import Logo from "./logo"
 import NotificationCenter from "./notification-center"
 import CommandCenter from "./command-center"
 import FloatingFocus from "./floating-focus"
+import PackIcon from "./pack-icon"
+import { NAV_ITEM_MAP } from "@/data/nav-items"
+import { currentIconPack } from "@/data/icon-packs"
 import { clearContentAnimations } from "@/lib/app-transition"
 import { applyPreferences, defaultPreferences, loadPreferences, type Preferences } from "@/persistence/preferences"
 import { todayKey } from "@/persistence/daily"
@@ -340,12 +343,18 @@ export default function AppShell() {
   }, [moreOpen])
   const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
   const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/complexity" || pathname === "/notebook" || pathname === "/toolkit" || pathname === "/playground" || pathname === "/releases"
-  const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
-    { label: "Home", href: "/", icon: "home", active: pathname === "/" },
-    { label: "Learn", href: "/learn/trees/sum-1-to-n", icon: "practice", active: pathname === "/practice" || pathname.startsWith("/topic/") || pathname.startsWith("/learn/") },
-    { label: "Patterns", href: "/patterns", icon: "progress", active: pathname.startsWith("/patterns") },
-     { label: "Observe", href: "/observatory", icon: "design", active: pathname === "/dashboard" || pathname === "/observatory" },
-  ]
+  const navSlots = preferences.navSlots.length ? preferences.navSlots : ["home", "learn", "patterns", "observe"]
+  const slotItems = navSlots.map(id => NAV_ITEM_MAP[id]).filter(Boolean)
+  const iconPack = currentIconPack()
+
+  const tabs = slotItems.map(item => ({
+    key: item.id,
+    label: item.label,
+    href: item.href,
+    glyph: item.glyph,
+    classicIcon: item.classicIcon,
+    active: item.match(pathname),
+  }))
 
   return (
     <div className={isAppMode ? "app-root app-mode-active" : "app-root"}>
@@ -404,15 +413,15 @@ export default function AppShell() {
         </div>
       </header>
       {!online && <div className="offline-banner" role="status">You are offline — everything still works, progress stays on this device.</div>}
-       <nav className="mobile-tabbar" aria-label="Primary navigation">
+       <nav className="mobile-tabbar" aria-label="Primary navigation" style={{ gridTemplateColumns: `repeat(${tabs.length + 1}, minmax(0, 1fr))` }}>
          {tabs.map(tab => (
-          <Link key={tab.href} href={tab.href} className={`mobile-tab${tab.active ? " active" : ""}`} aria-current={tab.active ? "page" : undefined}>
-            <AppIcon name={tab.icon} />
+          <Link key={tab.key} href={tab.href} className={`mobile-tab${tab.active ? " active" : ""}`} aria-current={tab.active ? "page" : undefined}>
+            {iconPack === "classic" && tab.classicIcon ? <AppIcon name={tab.classicIcon} /> : <PackIcon id={tab.key} fallback={tab.glyph} />}
              <span>{tab.label}</span>
            </Link>
          ))}
           <button data-more-root className={`mobile-tab${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>
-           <AppIcon name="more" />
+           <PackIcon id="more" fallback="⋯" />
            <span>More</span>
          </button>
        </nav>
@@ -492,6 +501,8 @@ export default function AppShell() {
             .app-mode-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-narrative); font-weight: 700; font-size: 18px; letter-spacing: -.02em; }
             .mobile-tabbar { position: fixed; z-index: 100; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: var(--mobile-tabbar-height); padding: 5px 6px env(safe-area-inset-bottom); background: color-mix(in srgb, var(--paper-raised) 96%, transparent); backdrop-filter: blur(18px); border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent); box-shadow: 0 -12px 30px rgb(26 29 33 / .1); }
            .mobile-tab { min-height: 56px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; border-radius: 15px; color: var(--ink-soft); text-decoration: none; font-family: var(--font-ui); font-size: 10px; font-weight: 650; transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast); }
+           .mobile-tab .doticon { width: 22px; }
+           .mobile-tab .teicon { width: 21px; height: 21px; }
            .mobile-tab:active { transform: scale(.96); }
            .mobile-tab.active { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent); }
            .mobile-tab.active::before { content: ""; width: 18px; height: 2px; position: absolute; top: 4px; border-radius: 999px; background: var(--accent); }
