@@ -344,6 +344,24 @@
 .super-field textarea { padding: 12px; min-height: 104px; line-height: 1.55; resize: vertical; font: 14px/1.55 var(--font-ui); }
 .super-field input:not([type="range"]):focus, .super-field textarea:focus, .super-field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .super-field input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+/* ── Shared utility-app chrome ── */
+.app-hero { position: relative; display: grid; gap: 6px; padding: clamp(20px, 4vw, 30px); border: 1px solid var(--line); border-radius: calc(var(--radius) + 8px); background: radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--accent) 15%, transparent), transparent 46%), linear-gradient(135deg, var(--accent-soft), var(--paper-raised)); box-shadow: var(--shadow-raised); margin-bottom: 18px; }
+.app-hero > .super-kicker { color: var(--accent); }
+.app-hero h1 { margin: 2px 0 0; font: 700 clamp(26px, 5vw, 40px)/1.02 var(--font-narrative); letter-spacing: -.03em; }
+.app-hero p { margin: 0; max-width: 600px; color: var(--ink-soft); font: 13px/1.55 var(--font-ui); }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── Custom dropdown (replaces native select) ── */
+.pick-list { position: relative; display: grid; gap: 8px; }
+.pick-label { color: var(--ink-soft); font: 700 11px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; }
+.pick-trigger { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink); font: 600 14px var(--font-ui); cursor: pointer; transition: border-color var(--dur-fast), box-shadow var(--dur-fast); }
+.pick-trigger i { color: var(--ink-soft); font-style: normal; font-size: 15px; }
+.pick-trigger:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pick-menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 80; max-height: 300px; overflow-y: auto; overscroll-behavior: contain; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-raised); box-shadow: 0 18px 42px rgb(26 29 33 / .22); animation: menu-in .16s var(--ease-standard); }
+.pick-option { width: 100%; min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--ink); text-align: left; font: 500 14px var(--font-ui); cursor: pointer; }
+.pick-option:hover { background: var(--accent-soft); }
+.pick-option.selected { background: var(--accent); color: var(--paper-raised); font-weight: 700; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }

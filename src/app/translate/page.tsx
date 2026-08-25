@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import PickList from "@/components/pick-list"
 
 const LANGS: Record<string, string> = {
   en: "English", es: "Spanish", fr: "French", de: "German", it: "Italian", pt: "Portuguese",
@@ -50,17 +51,16 @@ export default function TranslatePage() {
 
   return (
     <main className="super-page translate-page">
-      <span className="super-kicker">TRANSLATOR</span>
-      <h1 className="translate-title">Translate anything</h1>
+      <header className="app-hero">
+        <span className="super-kicker">TRANSLATOR</span>
+        <h1>Translate anything</h1>
+        <p>Quick translations between 18 languages. Recent pairs are kept on this device.</p>
+      </header>
 
       <div className="translate-langs">
-        <select value={from} onChange={e => setFrom(e.target.value)} aria-label="From language">
-          {Object.entries(LANGS).map(([c, n]) => <option key={c} value={c}>{n}</option>)}
-        </select>
+        <PickList label="From" value={from} onChange={setFrom} options={Object.entries(LANGS).map(([value, l]) => ({ value, label: l }))} />
         <button type="button" className="translate-swap" onClick={swap} aria-label="Swap languages">⇄</button>
-        <select value={to} onChange={e => setTo(e.target.value)} aria-label="To language">
-          {Object.entries(LANGS).map(([c, n]) => <option key={c} value={c}>{n}</option>)}
-        </select>
+        <PickList label="To" value={to} onChange={setTo} options={Object.entries(LANGS).map(([value, l]) => ({ value, label: l }))} />
       </div>
 
       <label className="super-field"><span>Source</span>
@@ -95,10 +95,8 @@ export default function TranslatePage() {
       )}
 
       <style>{`
-        .translate-title { margin: 6px 0 14px; font: 700 clamp(24px, 5vw, 36px)/1.02 var(--font-narrative); letter-spacing: -.03em; }
-        .translate-langs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin-bottom: 14px; }
-        .translate-langs select { min-height: 46px; padding: 0 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-raised); color: var(--ink); font: 14px var(--font-ui); }
-        .translate-swap { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--accent); font-size: 18px; cursor: pointer; }
+        .translate-langs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: end; margin-bottom: 14px; }
+        .translate-swap { height: 48px; width: 44px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--accent); font-size: 18px; cursor: pointer; }
         .translate-go { margin-top: 12px; }
         .translate-error { color: var(--viz-pruned); font: 600 13px var(--font-ui); }
         .translate-out { margin-top: 16px; padding: 16px; border: 1px solid var(--accent); border-radius: calc(var(--radius) + 6px); background: var(--paper-raised); }

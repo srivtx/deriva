@@ -41,8 +41,11 @@ export default function ExpensesPage() {
 
   return (
     <main className="super-page expense-page">
-      <span className="super-kicker">EXPENSE TRACKER</span>
-      <h1 className="expense-title">Where the money goes</h1>
+      <header className="app-hero">
+        <span className="super-kicker">EXPENSE TRACKER</span>
+        <h1>Where the money goes</h1>
+        <p>Log spending and income, see the month at a glance. Everything stays on this device.</p>
+      </header>
 
       <section className="expense-summary">
         <div className="expense-stat"><span>Spent this month</span><strong>{formatMoney(spent)}</strong></div>
@@ -58,11 +61,14 @@ export default function ExpensesPage() {
         <label className="super-field"><span>Amount</span>
           <input type="number" inputMode="decimal" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
         </label>
-        <label className="super-field"><span>Category</span>
-          <select value={category} onChange={e => setCategory(e.target.value)}>
-            {(type === "expense" ? EXPENSE_CATS : INCOME_CATS).map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </label>
+        <div className="super-field" style={{ gridColumn: "1 / -1" }}>
+          <span>Category</span>
+          <div className="chip-row">
+            {(type === "expense" ? EXPENSE_CATS : INCOME_CATS).map(cat => (
+              <button key={cat} type="button" className={`app-chip${category === cat ? " active" : ""}`} onClick={() => setCategory(cat)}>{cat}</button>
+            ))}
+          </div>
+        </div>
         <label className="super-field"><span>Note</span>
           <input value={note} onChange={e => setNote(e.target.value)} placeholder="optional" />
         </label>
@@ -100,7 +106,6 @@ export default function ExpensesPage() {
       )}
 
       <style>{`
-        .expense-title { margin: 6px 0 14px; font: 700 clamp(24px, 5vw, 36px)/1.02 var(--font-narrative); letter-spacing: -.03em; }
         .expense-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
         .expense-stat { padding: 14px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); background: var(--paper-raised); display: grid; gap: 4px; min-width: 0; }
         .expense-stat span { color: var(--ink-soft); font: 700 9px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }

@@ -31,6 +31,16 @@ export default function WeatherPage() {
 
   const conv = (c: number) => Math.round(fahrenheit ? (c * 9) / 5 + 32 : c)
 
+  const nameLocation = async (lat: number, lon: number): Promise<string> => {
+    try {
+      const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`)
+      const j = await r.json()
+      const city = j.city || j.locality || j.principalSubdivision
+      if (!city) return "Your location"
+      return `${city}${j.countryName ? `, ${j.countryName}` : ""}`
+    } catch { return "Your location" }
+  }
+
   const fetchWeather = async (c: Coords) => {
     setLoading(true); setError("")
     try {
@@ -56,7 +66,11 @@ export default function WeatherPage() {
     }
     if (typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        pos => fetchWeather({ lat: +pos.coords.latitude.toFixed(3), lon: +pos.coords.longitude.toFixed(3), name: "Your location" }),
+        pos => {
+          const lat = +pos.coords.latitude.toFixed(3)
+          const lon = +pos.coords.longitude.toFixed(3)
+          nameLocation(lat, lon).then(name => fetchWeather({ lat, lon, name }))
+        },
         () => fetchWeather(cached?.c ?? DEFAULT),
         { timeout: 6000 },
       )
@@ -77,23 +91,17 @@ export default function WeatherPage() {
     } catch { setError("Search failed.") } finally { setLocating(false) }
   }
 
-  const refresh = () => fetchWeather(coords)
-
   return (
     <main className="super-page weather-page">
-      <div className="weather-top">
-        <div>
-          <span className="super-kicker">WEATHER</span>
-          <h1 className="weather-loc">{coords.name}</h1>
-        </div>
-        <div className="weather-top-actions">
-          <button type="button" className="weather-mini" onClick={() => setFahrenheit(f => !f)}>{fahrenheit ? "°F" : "°C"}</button>
-          <button type="button" className="weather-mini" onClick={refresh} aria-label="Refresh">↻</button>
-        </div>
-      </div>
+      <header className="app-hero">
+        <span className="super-kicker">WEATHER</span>
+        <h1>{coords.name}</h1>
+        <p>Seven-day outlook. Your position is used only to fetch the forecast and is never stored or uploaded.</p>
+      </header>
 
       <form className="weather-search" onSubmit={search}>
         <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search a city…" aria-label="Search city" />
+        <button type="button" className="weather-mini" onClick={() => setFahrenheit(f => !f)} aria-label="Toggle units">{fahrenheit ? "°F" : "°C"}</button>
         <button type="submit" className="super-primary" disabled={locating}>{locating ? "…" : "Go"}</button>
       </form>
 
@@ -129,15 +137,11 @@ export default function WeatherPage() {
         </>
       )}
 
-      <p className="weather-foot">Forecast by Open-Meteo. Position is used only to fetch weather and is never stored or uploaded.</p>
+      <p className="weather-foot">Forecast data by Open-Meteo.</p>
 
       <style>{`
-        .weather-loc { margin: 4px 0 0; font: 700 clamp(24px, 5vw, 34px)/1 var(--font-narrative); }
-        .weather-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-        .weather-top-actions { display: flex; gap: 8px; }
-        .weather-mini { min-height: 38px; min-width: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-raised); color: var(--ink); font: 600 13px var(--font-ui); cursor: pointer; }
-        .weather-search { display: flex; gap: 8px; margin: 14px 0; }
-        .weather-search input { flex: 1; min-height: 42px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-raised); color: var(--ink); font: 600 14px var(--font-ui); }
+        .weather-search { display: flex; gap: 8px; margin: 0 0 14px; }
+        .weather-search input { flex: 1; min-width: 0; min-height: 42px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-raised); color: var(--ink); font: 600 14px var(--font-ui); }
         .weather-error { color: var(--viz-pruned); font: 600 13px var(--font-ui); }
         .weather-now { display: flex; align-items: center; gap: 16px; padding: 22px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 8px); background: radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 50%), var(--paper-raised); box-shadow: var(--shadow-raised); }
         .weather-now-icon { font-size: 56px; line-height: 1; }

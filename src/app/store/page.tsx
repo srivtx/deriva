@@ -38,9 +38,11 @@ export default function StorePage() {
 
   return (
     <main className="super-page store-page">
-      <span className="super-kicker">APP CENTER</span>
-      <h1 className="store-title">Install what you need. Remove what you don&apos;t.</h1>
-      <p className="store-lede">Every app runs locally in your browser — nothing is uploaded. Uninstalling just hides an app from your launcher; your data stays safe.</p>
+      <header className="app-hero">
+        <span className="super-kicker">APP CENTER</span>
+        <h1>Install what you need. Remove what you don&apos;t.</h1>
+        <p>Every app runs locally in your browser — nothing is uploaded. Uninstalling just hides an app from your launcher; your data stays safe.</p>
+      </header>
 
       <div className="store-tabs" role="group" aria-label="Filter apps">
         {(["all", "installed", "available", "soon"] as Tab[]).map(t => (
@@ -81,8 +83,6 @@ export default function StorePage() {
       <p className="store-foot">Uninstalled apps can be re-installed here anytime. Future releases will appear under “Coming soon”.</p>
 
       <style>{`
-        .store-title { margin: 8px 0 6px; font: 700 clamp(28px, 6vw, 42px)/1.02 var(--font-narrative); letter-spacing: -.03em; }
-        .store-lede { margin: 0 0 18px; max-width: 620px; color: var(--ink-soft); font: 14px/1.6 var(--font-ui); }
         .store-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
         .store-tab { min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper-raised); color: var(--ink-soft); font: 600 13px var(--font-ui); cursor: pointer; transition: border-color var(--dur-fast), color var(--dur-fast), background var(--dur-fast); }
         .store-tab.active { border-color: var(--accent); background: var(--accent); color: var(--paper-raised); }

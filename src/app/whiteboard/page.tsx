@@ -85,8 +85,11 @@ export default function WhiteboardPage() {
 
   return (
     <main className="super-page whiteboard-page">
-      <span className="super-kicker">WHITEBOARD</span>
-      <h1 className="wb-title">Sketch & share ideas</h1>
+      <header className="app-hero">
+        <span className="super-kicker">WHITEBOARD</span>
+        <h1>Sketch & share ideas</h1>
+        <p>Draw with finger or stylus, then export your sketch as a PNG.</p>
+      </header>
 
       <div className="wb-toolbar">
         <div className="wb-tools">
@@ -120,7 +123,6 @@ export default function WhiteboardPage() {
       </div>
 
       <style>{`
-        .wb-title { margin: 6px 0 14px; font: 700 clamp(24px, 5vw, 36px)/1.02 var(--font-narrative); letter-spacing: -.03em; }
         .wb-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
         .wb-tools, .wb-actions { display: flex; gap: 8px; }
         .wb-tool { min-height: 38px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-raised); color: var(--ink-soft); font: 600 13px var(--font-ui); cursor: pointer; }

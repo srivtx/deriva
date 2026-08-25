@@ -63,9 +63,11 @@ export default function CalendarPage() {
 
   return (
     <main className="super-page calendar-page">
-      <span className="super-kicker">CALENDAR</span>
-      <h1 className="calendar-title">Plan your days</h1>
-      {todayEvents > 0 && <p className="calendar-today-note">{todayEvents} event{todayEvents > 1 ? "s" : ""} today</p>}
+      <header className="app-hero">
+        <span className="super-kicker">CALENDAR</span>
+        <h1>Plan your days</h1>
+        <p>{todayEvents > 0 ? `${todayEvents} event${todayEvents > 1 ? "s" : ""} today.` : "Tap a date to add an event. Reminders fire while the app is open."}</p>
+      </header>
 
       <section className="calendar-grid-wrap">
         <div className="calendar-nav">
@@ -96,7 +98,9 @@ export default function CalendarPage() {
           <label className="super-field"><span>Title</span><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Event name" /></label>
           <label className="super-field"><span>Time</span><input type="time" value={time} onChange={e => setTime(e.target.value)} /></label>
           <label className="super-field"><span>Note</span><input value={note} onChange={e => setNote(e.target.value)} placeholder="optional" /></label>
-          <label className="calendar-remind"><input type="checkbox" checked={remind} onChange={e => setRemind(e.target.checked)} /> Remind me (while app is open)</label>
+          <button type="button" className={`cal-toggle${remind ? " on" : ""}`} onClick={() => setRemind(r => !r)} aria-pressed={remind}>
+            <i aria-hidden="true">🔔</i> Remind me
+          </button>
           <button type="submit" className="super-primary">Add event</button>
         </form>
         {dayEvents.length === 0 && <p className="calendar-empty">Nothing scheduled. Add something above.</p>}
@@ -111,8 +115,9 @@ export default function CalendarPage() {
       </section>
 
       <style>{`
-        .calendar-title { margin: 6px 0 4px; font: 700 clamp(24px, 5vw, 36px)/1.02 var(--font-narrative); letter-spacing: -.03em; }
-        .calendar-today-note { margin: 0 0 14px; color: var(--accent); font: 700 12px var(--font-ui); }
+        .cal-toggle { grid-column: 1 / -1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink-soft); font: 600 13px var(--font-ui); cursor: pointer; transition: border-color var(--dur-fast), background var(--dur-fast), color var(--dur-fast); }
+        .cal-toggle.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+        .cal-toggle i { font-style: normal; font-size: 14px; }
         .calendar-grid-wrap { padding: 14px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); background: var(--paper-raised); }
         .calendar-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
         .calendar-nav strong { font: 700 15px var(--font-ui); }
@@ -128,7 +133,6 @@ export default function CalendarPage() {
         .calendar-day { margin-top: 16px; }
         .calendar-day h2 { margin: 0 0 12px; font: 700 18px var(--font-narrative); }
         .calendar-add { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; padding: 16px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); background: var(--paper-raised); margin-bottom: 12px; }
-        .calendar-remind { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; color: var(--ink-soft); font: 600 12px var(--font-ui); accent-color: var(--accent); }
         .calendar-add .super-primary { grid-column: 1 / -1; }
         .calendar-empty { color: var(--ink-soft); font: 13px var(--font-ui); }
         .calendar-events { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }

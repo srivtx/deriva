@@ -98,8 +98,11 @@ export default function QrPage() {
 
   return (
     <main className="super-page qr-page">
-      <span className="super-kicker">QR TOOLS</span>
-      <h1 className="qr-title">Generate & scan QR codes</h1>
+      <header className="app-hero">
+        <span className="super-kicker">QR TOOLS</span>
+        <h1>Generate & scan QR codes</h1>
+        <p>Make a code for any link or text, or point your camera at one to read it.</p>
+      </header>
 
       <div className="qr-tabs" role="group">
         <button type="button" className={`qr-tab${tab === "generate" ? " active" : ""}`} onClick={() => { stopScan(); setTab("generate") }}>Generate</button>
@@ -115,11 +118,13 @@ export default function QrPage() {
             <label className="super-field"><span>Size · {size}px</span>
               <input type="range" min={128} max={512} step={32} value={size} onChange={e => setSize(+e.target.value)} />
             </label>
-            <label className="super-field"><span>Correction</span>
-              <select value={level} onChange={e => setLevel(e.target.value as any)}>
-                <option value="L">L</option><option value="M">M</option><option value="Q">Q</option><option value="H">H</option>
-              </select>
-            </label>
+            <div className="super-field"><span>Correction</span>
+              <div className="segmented" role="group" aria-label="Error correction level">
+                {(["L", "M", "Q", "H"] as const).map(option => (
+                  <button key={option} type="button" className={level === option ? "selected" : ""} onClick={() => setLevel(option)}>{option}</button>
+                ))}
+              </div>
+            </div>
           </div>
           {genError && <p className="qr-error">{genError}</p>}
           {dataUrl && (
@@ -156,7 +161,6 @@ export default function QrPage() {
       )}
 
       <style>{`
-        .qr-title { margin: 6px 0 14px; font: 700 clamp(24px, 5vw, 36px)/1.02 var(--font-narrative); letter-spacing: -.03em; }
         .qr-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
         .qr-tab { min-height: 40px; padding: 0 18px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper-raised); color: var(--ink-soft); font: 600 13px var(--font-ui); cursor: pointer; }
         .qr-tab.active { border-color: var(--accent); background: var(--accent); color: var(--paper-raised); }

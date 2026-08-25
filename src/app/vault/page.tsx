@@ -81,9 +81,11 @@ export default function VaultPage() {
     const creating = phase === "create"
     return (
       <main className="super-page vault-page">
-        <span className="super-kicker">PASSWORD VAULT</span>
-        <h1 className="vault-title">{creating ? "Create your vault" : "Unlock your vault"}</h1>
-        <p className="vault-sub">{creating ? "Pick a master password. It never leaves this device — we can't recover it if you forget." : "Encrypted locally with AES-GCM. Your secrets stay on your device."}</p>
+        <header className="app-hero">
+          <span className="super-kicker">PASSWORD VAULT</span>
+          <h1>{creating ? "Create your vault" : "Unlock your vault"}</h1>
+          <p>{creating ? "Pick a master password. It never leaves this device — we can't recover it if you forget." : "Encrypted locally with AES-GCM. Your secrets stay on your device."}</p>
+        </header>
         <form className="vault-form" onSubmit={creating ? submitCreate : submitUnlock}>
           <label className="super-field"><span>Master password</span>
             <input ref={pwdRef} type="password" autoFocus value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" /></label>
@@ -100,10 +102,10 @@ export default function VaultPage() {
   return (
     <main className="super-page vault-page">
       <div className="vault-head">
-        <div>
+        <header className="app-hero" style={{ flex: "1 1 320px", marginBottom: 0 }}>
           <span className="super-kicker">PASSWORD VAULT</span>
-          <h1 className="vault-title">Your secrets</h1>
-        </div>
+          <h1>Your secrets</h1>
+        </header>
         <div className="vault-head-actions">
           <button type="button" className="super-ghost" onClick={wipe}>Delete vault</button>
           <button type="button" className="super-ghost" onClick={() => { setPw(""); setPassword(""); setPhase(hasVault() ? "unlock" : "create") }}>Lock</button>
@@ -157,12 +159,10 @@ export default function VaultPage() {
       )}
 
       <style>{`
-        .vault-title { margin: 6px 0 4px; font: 700 clamp(26px, 6vw, 38px)/1.02 var(--font-narrative); letter-spacing: -.03em; }
-        .vault-sub { margin: 0 0 18px; max-width: 540px; color: var(--ink-soft); font: 14px/1.6 var(--font-ui); }
         .vault-form { display: grid; gap: 14px; max-width: 420px; }
         .vault-error { color: var(--viz-pruned); font: 600 13px var(--font-ui); margin: 0; }
         .vault-note { margin-top: 14px; color: var(--ink-soft); font: 12px/1.5 var(--font-ui); }
-        .vault-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+        .vault-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
         .vault-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .vault-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--ink); color: var(--paper-raised); padding: 10px 16px; border-radius: 999px; font: 600 13px var(--font-ui); z-index: 60; box-shadow: var(--shadow-raised); }
         .vault-entry-form { display: grid; gap: 12px; max-width: 520px; padding: 18px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); background: var(--paper-raised); margin-bottom: 16px; }

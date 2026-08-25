@@ -89,9 +89,11 @@ export default function ImagesPage() {
 
   return (
     <main className="super-page images-page">
-      <span className="super-kicker">IMAGE TOOLS</span>
-      <h1 className="images-title">Compress · resize · convert · crop</h1>
-      <p className="images-sub">Everything runs in your browser. Your photo never leaves the device.</p>
+      <header className="app-hero">
+        <span className="super-kicker">IMAGE TOOLS</span>
+        <h1>Compress · resize · convert · crop</h1>
+        <p>Everything runs in your browser. Your photo never leaves the device.</p>
+      </header>
 
       <label className="images-upload">
         <input type="file" accept="image/*" onChange={onFile} />
@@ -101,13 +103,13 @@ export default function ImagesPage() {
       {src && (
         <>
           <div className="images-controls">
-            <label className="super-field"><span>Format</span>
-              <select value={format} onChange={e => setFormat(e.target.value as Format)}>
-                <option value="image/webp">WebP</option>
-                <option value="image/jpeg">JPEG</option>
-                <option value="image/png">PNG (lossless)</option>
-              </select>
-            </label>
+            <div className="super-field"><span>Format</span>
+              <div className="segmented" role="group" aria-label="Output format">
+                {([["image/webp", "WebP"], ["image/jpeg", "JPEG"], ["image/png", "PNG"]] as const).map(([value, label]) => (
+                  <button key={value} type="button" className={format === value ? "selected" : ""} onClick={() => setFormat(value)}>{label}</button>
+                ))}
+              </div>
+            </div>
             {format !== "image/png" && (
               <label className="super-field"><span>Quality · {Math.round(quality * 100)}%</span>
                 <input type="range" min={0.1} max={1} step={0.05} value={quality} onChange={e => setQuality(+e.target.value)} />
@@ -153,8 +155,6 @@ export default function ImagesPage() {
       )}
 
       <style>{`
-        .images-title { margin: 6px 0 4px; font: 700 clamp(24px, 5vw, 36px)/1.02 var(--font-narrative); letter-spacing: -.03em; }
-        .images-sub { margin: 0 0 16px; color: var(--ink-soft); font: 14px/1.6 var(--font-ui); }
         .images-upload { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 12px; background: var(--paper-raised); cursor: pointer; color: var(--ink-soft); font: 600 13px var(--font-ui); }
         .images-upload input { display: none; }
         .images-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; margin: 16px 0; }
