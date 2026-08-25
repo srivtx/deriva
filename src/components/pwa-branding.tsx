@@ -68,7 +68,37 @@ function restoreDefaultIcons() {
   }
 }
 
-function applyPwaBranding(preferences: Preferences) {
+// Chrome's installability check requires real PNG icons — SVG data URLs are
+// rejected, which destabilizes installed WebAPKs. Rasterize any SVG mark once.
+let rasterCache: { src: string; png: string } | null = null
+
+function rasterizeToPng(src: string): Promise<string | null> {
+  return new Promise(resolve => {
+    if (!src.startsWith("data:image/svg+xml")) return resolve(src.startsWith("data:image/png") ? src : null)
+    if (rasterCache?.src === src) return resolve(rasterCache.png)
+    const image = new Image()
+    image.onload = () => {
+      try {
+        const canvas = document.createElement("canvas")
+        canvas.width = 512
+        canvas.height = 512
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return resolve(null)
+        ctx.drawImage(image, 0, 0, 512, 512)
+        const png = canvas.toDataURL("image/png")
+        rasterCache = { src, png }
+        resolve(png)
+      } catch {
+        resolve(null)
+      }
+    }
+    image.onerror = () => resolve(null)
+    image.src = src
+  })
+}
+
+async function applyPwaBranding(preferences: Preferences) {
+  try {
   if (dynamicManifestUrl) URL.revokeObjectURL(dynamicManifestUrl)
   dynamicManifestUrl = null
   removeDynamicLinks()
@@ -86,7 +116,13 @@ function applyPwaBranding(preferences: Preferences) {
    const styles = getComputedStyle(document.documentElement)
    const color = styles.getPropertyValue("--paper").trim() || "#F2F4EC"
    const accent = styles.getPropertyValue("--accent").trim() || "#2F8F5B"
-  const iconType = /^data:(image\/[^;]+)/.exec(curatedIcon)?.[1] || "image/png"
+  const installable = await rasterizeToPng(curatedIcon)
+  if (!installable) {
+    restoreDefaultManifest()
+    restoreDefaultIcons()
+    return
+  }
+  const pngType = "image/png"
   const manifest = {
     name: `${preferences.brandName} — ${preferences.tagline}`,
     short_name: preferences.brandName,
@@ -98,8 +134,8 @@ function applyPwaBranding(preferences: Preferences) {
     background_color: color,
      theme_color: accent,
     icons: [
-      { src: curatedIcon, sizes: "192x192", type: iconType, purpose: "any" },
-      { src: curatedIcon, sizes: "512x512", type: iconType, purpose: "any maskable" },
+      { src: installable, sizes: "512x512", type: pngType, purpose: "any" },
+      { src: installable, sizes: "512x512", type: pngType, purpose: "maskable" },
     ],
   }
   const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" })
@@ -110,8 +146,13 @@ function applyPwaBranding(preferences: Preferences) {
   manifestLink.href = manifestUrl
   manifestLink.dataset.derivaDynamicManifest = "true"
   document.head.appendChild(manifestLink)
-  updateIconLink("icon", curatedIcon)
-  updateIconLink("apple-touch-icon", curatedIcon)
+  updateIconLink("icon", installable)
+  updateIconLink("apple-touch-icon", installable)
+  } catch (error) {
+    console.warn("[deriva] branding application failed", error)
+    restoreDefaultManifest()
+    restoreDefaultIcons()
+  }
 }
 
 export default function PwaBranding() {

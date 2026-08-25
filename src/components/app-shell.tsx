@@ -15,6 +15,8 @@ import { NAV_ITEM_MAP } from "@/data/nav-items"
 import { currentIconPack } from "@/data/icon-packs"
 import { clearContentAnimations } from "@/lib/app-transition"
 import { installRecoveryGuards } from "@/lib/recovery"
+import { installDiagnostics } from "@/lib/diagnostics"
+import ShellErrorBoundary from "./shell-error-boundary"
 import { applyPreferences, defaultPreferences, loadPreferences, type Preferences } from "@/persistence/preferences"
 import { todayKey } from "@/persistence/daily"
 import { dueCards, seedQueueFromMastery } from "@/persistence/review-queue"
@@ -242,6 +244,7 @@ export default function AppShell() {
   }, [pathname])
   useEffect(() => {
     installRecoveryGuards()
+    installDiagnostics()
   }, [])
   useEffect(() => {
     const next = loadPreferences()
@@ -357,6 +360,7 @@ export default function AppShell() {
   })), [slotItems, pathname])
 
   return (
+    <ShellErrorBoundary>
     <div className={isAppMode ? "app-root app-mode-active" : "app-root"}>
       <header className="app-mode-header" aria-hidden={!isAppMode}>
         <button
@@ -509,5 +513,6 @@ export default function AppShell() {
          }
        `}</style>
     </div>
+    </ShellErrorBoundary>
   )
 }

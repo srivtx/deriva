@@ -41,15 +41,11 @@ export function installRecoveryGuards() {
     }
   })
 
-  // When the service worker takes over mid-session (new deploy), reload once so
-  // the DOM matches freshly activated caches instead of mixing generations.
-  let refreshing = false
+  // When the service worker takes over mid-session, do NOT force a reload —
+  // controllerchange fires on every legitimate deploy/update, and surprise
+  // reloads mid-interaction read as "the whole site is glitchy". Chunk-failure
+  // recovery above handles the genuinely stale case.
   navigator.serviceWorker?.addEventListener("controllerchange", () => {
-    if (refreshing) return
-    refreshing = true
-    if (!sessionStorage.getItem(RECOVERY_FLAG)) {
-      sessionStorage.setItem(RECOVERY_FLAG, String(Date.now()))
-      window.location.reload()
-    }
+    try { sessionStorage.removeItem(RECOVERY_FLAG) } catch {}
   })
 }
