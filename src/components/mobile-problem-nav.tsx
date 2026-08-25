@@ -1,9 +1,32 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 
 interface Stage { id: number; name: string }
 interface NavProblem { id: number; stage: number; title: string }
+
+function MobileSheet({
+  onClose, children,
+}: {
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => { document.body.style.overflow = prev }
+  }, [])
+  if (!mounted) return null
+  return createPortal(
+    <div className="mobile-sheet-backdrop" role="presentation" onClick={onClose}>
+      {children}
+    </div>,
+    document.body,
+  )
+}
 
 export function MobileTopicPicker({
   topics, currentId, onSelect,
@@ -23,7 +46,7 @@ export function MobileTopicPicker({
         <span className="mobile-picker-chevron" aria-hidden="true">⌄</span>
       </button>
       {open && (
-        <div className="mobile-sheet-backdrop" role="presentation" onClick={() => setOpen(false)}>
+        <MobileSheet onClose={() => setOpen(false)}>
           <section className="mobile-sheet" role="dialog" aria-modal="true" aria-label="Choose a topic" onClick={event => event.stopPropagation()}>
             <div className="mobile-sheet-handle" />
             <div className="mobile-sheet-heading"><div><span className="mobile-sheet-kicker">Curriculum</span><h2>Choose a topic</h2></div><button className="mobile-sheet-close" onClick={() => setOpen(false)} aria-label="Close topic picker">×</button></div>
@@ -35,7 +58,7 @@ export function MobileTopicPicker({
               ))}
             </div>
           </section>
-        </div>
+        </MobileSheet>
       )}
     </div>
   )
@@ -61,7 +84,7 @@ export default function MobileProblemNav({
         <span className="mobile-picker-chevron" aria-hidden="true">⌄</span>
       </button>
       {open && (
-        <div className="mobile-sheet-backdrop" role="presentation" onClick={() => setOpen(false)}>
+        <MobileSheet onClose={() => setOpen(false)}>
           <section className="mobile-sheet" role="dialog" aria-modal="true" aria-label="Choose a problem" onClick={event => event.stopPropagation()}>
             <div className="mobile-sheet-handle" />
             <div className="mobile-sheet-heading"><div><span className="mobile-sheet-kicker">Practice queue</span><h2>Choose a problem</h2></div><button className="mobile-sheet-close" onClick={() => setOpen(false)} aria-label="Close problem picker">×</button></div>
@@ -78,7 +101,7 @@ export default function MobileProblemNav({
               ))}
             </div>
           </section>
-        </div>
+        </MobileSheet>
       )}
     </div>
   )
