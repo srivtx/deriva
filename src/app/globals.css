@@ -506,7 +506,7 @@
 .progress-ring-text strong { font: 700 20px var(--font-mono); }
 .progress-ring-text small { color: var(--ink-soft); font: 700 8px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
 .empty-mark { display: flex; justify-content: center; }
-.home-momentum-head { align-items: center; }
+.home-momentum-head { align-items: center; flex-wrap: wrap; }
 
 /* ── Algorithm Atlas ── */
 .atlas-head { display: flex; align-items: start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
@@ -576,6 +576,8 @@
   .atlas-grid { grid-template-columns: 1fr; }
   .atlas-stage { min-height: 220px; }
   .atlas-bars { height: 150px; }
+  .observatory-stage-map { grid-template-columns: repeat(9, 1fr); width: 100%; }
+  .observatory-stage-map span { width: auto; height: auto; aspect-ratio: 1; font-size: 9px; }
 }
 @media (max-width: 700px) {
   .contest-hero, .review-hero, .daily-hero { grid-template-columns: 1fr; }
@@ -614,8 +616,8 @@
 }
 
 /* ── Base ── */
-html { font-family: "Inter", system-ui, sans-serif; }
-body { background: var(--paper); background-image: radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 28rem), radial-gradient(circle at 8% 32%, color-mix(in srgb, var(--viz-pointer) 4%, transparent), transparent 24rem), var(--paper-grid); background-attachment: fixed; background-size: auto, auto, 28px 28px; color: var(--ink); margin: 0; }
+html { font-family: "Inter", system-ui, sans-serif; overflow-x: clip; }
+body { overflow-x: clip; background: var(--paper); background-image: radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 28rem), radial-gradient(circle at 8% 32%, color-mix(in srgb, var(--viz-pointer) 4%, transparent), transparent 24rem), var(--paper-grid); background-attachment: fixed; background-size: auto, auto, 28px 28px; color: var(--ink); margin: 0; }
 .logo-wordmark { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); }
 .logo-wordmark > span { font: 700 19px/1 var(--font-narrative); letter-spacing: -.04em; font-style: italic; }
 .app-shell-header { box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 8%, transparent), 0 8px 24px color-mix(in srgb, var(--ink) 4%, transparent); }

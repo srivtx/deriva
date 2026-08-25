@@ -209,6 +209,24 @@ export default function AppShell() {
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
+  useEffect(() => { setMoreOpen(false) }, [pathname])
+  useEffect(() => {
+    if (!moreOpen) return
+    const onPointer = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target?.closest("[data-more-root]")) return
+      setMoreOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreOpen(false)
+    }
+    document.addEventListener("pointerdown", onPointer)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("pointerdown", onPointer)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [moreOpen])
   const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : "Deriva"
   const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/playground" || pathname === "/releases"
   const tabs: { label: string; href: string; icon: AppIconName; active: boolean }[] = [
@@ -234,22 +252,24 @@ export default function AppShell() {
             <Link href="/patterns" className={`nav-link${pathname.startsWith("/patterns") ? " active" : ""}`}>Patterns</Link>
            <Link href="/observatory" className={`nav-link${pathname === "/dashboard" || pathname === "/observatory" ? " active" : ""}`}>Observe</Link>
             <button type="button" className="command-trigger" onClick={() => setCommandOpen(true)} aria-label="Open Command Center"><span>Search</span><kbd>⌘K</kbd></button>
-            <button className={`nav-more${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>More <span aria-hidden="true">⌄</span>{attention && <i className="more-dot" aria-hidden="true" />}</button>
+            <div data-more-root>
+              <button className={`nav-more${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>More <span aria-hidden="true">⌄</span>{attention && <i className="more-dot" aria-hidden="true" />}</button>
+              {moreOpen && <div className="desktop-more-menu" role="menu">
+                {MORE_GROUPS.map(group => (
+                  <div key={group.label} className="more-group" role="group" aria-label={group.label}>
+                    <span className="more-group-label">{group.label}</span>
+                    {group.links.map(link => (
+                      <Link key={link.href} href={link.href} role="menuitem" onClick={() => setMoreOpen(false)}>
+                        <strong>{link.label}</strong>
+                        <small>{link.desc}</small>
+                      </Link>
+                    ))}
+                  </div>
+                ))}
+              </div>}
+            </div>
             <NotificationCenter />
             <ProgressBadge />
-            {moreOpen && <div className="desktop-more-menu" role="menu">
-              {MORE_GROUPS.map(group => (
-                <div key={group.label} className="more-group" role="group" aria-label={group.label}>
-                  <span className="more-group-label">{group.label}</span>
-                  {group.links.map(link => (
-                    <Link key={link.href} href={link.href} role="menuitem" onClick={() => setMoreOpen(false)}>
-                      <strong>{link.label}</strong>
-                      <small>{link.desc}</small>
-                    </Link>
-                  ))}
-                </div>
-              ))}
-            </div>}
           </div>
         </div>
         <div className="mobile-shell">
@@ -265,7 +285,7 @@ export default function AppShell() {
              <span>{tab.label}</span>
            </Link>
          ))}
-         <button className={`mobile-tab${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>
+          <button data-more-root className={`mobile-tab${moreActive ? " active" : ""}`} onClick={() => setMoreOpen(value => !value)} aria-expanded={moreOpen}>
            <AppIcon name="more" />
            <span>More</span>
          </button>
@@ -280,7 +300,10 @@ export default function AppShell() {
                   <span className="mobile-more-group-label">{group.label}</span>
                   <div className="mobile-more-group-links">
                     {group.links.map(link => (
-                      <Link key={link.href} href={link.href} onClick={() => setMoreOpen(false)}>{link.label} <span>{link.desc}</span></Link>
+                      <Link key={link.href} href={link.href} onClick={() => setMoreOpen(false)}>
+                        <span className="mobile-more-link-label">{link.label}</span>
+                        <span className="mobile-more-link-desc">{link.desc}</span>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -298,7 +321,8 @@ export default function AppShell() {
          .nav-link.active, .nav-more.active { color: var(--accent); }
           .nav-more { display: inline-flex; align-items: center; gap: 4px; padding: 5px 0; position: relative; }
           .more-dot { position: absolute; top: 2px; right: -8px; width: 7px; height: 7px; border-radius: 50%; background: var(--viz-pruned); box-shadow: 0 0 0 3px color-mix(in srgb, var(--viz-pruned) 18%, transparent); }
-          .desktop-more-menu { position: absolute; top: 34px; right: 62px; z-index: 120; display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 4px 20px; width: max-content; max-width: calc(100vw - 32px); max-height: min(70vh, 560px); overflow-y: auto; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper-raised); box-shadow: var(--shadow-raised); animation: rise-in .22s var(--ease-standard) both; }
+          .desktop-more-menu { position: absolute; top: calc(100% + 10px); right: 0; z-index: 120; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 4px 20px; width: max-content; max-width: min(640px, calc(100vw - 32px)); max-height: min(70vh, 560px); overflow-y: auto; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper-raised); box-shadow: var(--shadow-raised); animation: menu-in .18s var(--ease-standard) both; }
+          @keyframes menu-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
           .more-group { display: grid; gap: 2px; align-content: start; }
           .more-group-label { padding: 2px 10px 8px; color: var(--accent); font: 700 9px var(--font-ui); letter-spacing: .13em; text-transform: uppercase; }
           .desktop-more-menu a { display: grid; gap: 1px; padding: 8px 10px; border-radius: 10px; text-decoration: none; transition: background var(--dur-fast); }
@@ -310,12 +334,15 @@ export default function AppShell() {
          .mobile-more-sheet { width: 100%; padding: 10px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: var(--paper-raised); box-shadow: 0 -12px 34px rgb(26 29 33 / .16); }
          .mobile-more-heading { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 12px; }
          .mobile-more-heading button { width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); font-size: 22px; }
-          .mobile-more-links { display: flex; flex-direction: column; gap: 14px; max-height: min(62vh, 480px); overflow-y: auto; padding-right: 2px; }
+          .mobile-more-links { display: flex; flex-direction: column; gap: 14px; max-height: min(62vh, 480px); overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
           .mobile-more-group { display: grid; gap: 6px; }
           .mobile-more-group-label { padding: 0 2px; color: var(--accent); font: 700 9px var(--font-ui); letter-spacing: .13em; text-transform: uppercase; }
-          .mobile-more-group-links { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-          .mobile-more-links a { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); font: 600 12px var(--font-ui); text-decoration: none; }
-          .mobile-more-links a span { overflow: hidden; color: var(--ink-soft); font: 10px var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+          .mobile-more-group-links { display: grid; grid-template-columns: 1fr; gap: 6px; }
+          .mobile-more-links a { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; min-height: 46px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); font: 600 13px var(--font-ui); text-decoration: none; transition: border-color var(--dur-fast); }
+          .mobile-more-links a:hover { border-color: var(--accent); }
+          .mobile-more-links a:active { background: var(--accent-soft); }
+          .mobile-more-link-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .mobile-more-link-desc { flex: 0 0 auto; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); font: 10px var(--font-mono); }
          @media (max-width: 700px) {
            .app-shell-header { position: fixed; inset: 0 0 auto; height: var(--mobile-header-height); padding: env(safe-area-inset-top) var(--sp-3) 0; background: color-mix(in srgb, var(--paper-raised) 94%, transparent); backdrop-filter: blur(18px); box-shadow: 0 8px 22px rgb(26 29 33 / .05); }
            .desktop-shell { display: none !important; }
