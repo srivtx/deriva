@@ -219,11 +219,14 @@ class GhostEngine {
 
   lastThreads = 0
 
-  async diagnostics(): Promise<{ isolated: boolean; threads: number }> {
-    return {
-      isolated: typeof crossOriginIsolated !== "undefined" ? crossOriginIsolated : false,
-      threads: this.lastThreads,
+  async diagnostics(): Promise<{ isolated: boolean; threads: number; resident: boolean }> {
+    const isolated = typeof crossOriginIsolated !== "undefined" ? crossOriginIsolated : false
+    if (this.instance && this.lastThreads > 0) {
+      return { isolated, threads: this.lastThreads, resident: true }
     }
+    // No live runtime: report what WILL engage on next wake.
+    const expected = Math.floor((navigator.hardwareConcurrency || 1) / 2)
+    return { isolated, threads: Math.max(expected, 1), resident: false }
   }
 
   async probe(): Promise<{ webgpu: boolean; storageQuotaMb: number | null; cachedMb: number | null }> {
