@@ -230,17 +230,17 @@ export default function SettingsPage() {
       const image = new Image()
       image.onload = () => {
         const canvas = document.createElement("canvas")
-        canvas.width = 512
-        canvas.height = 512
+        canvas.width = 256
+        canvas.height = 256
         const context = canvas.getContext("2d")
         if (!context) return
         context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#1A1D21"
-        context.fillRect(0, 0, 512, 512)
-        const scale = Math.min(376 / image.width, 376 / image.height)
+        context.fillRect(0, 0, 256, 256)
+        const scale = Math.min(208 / image.width, 208 / image.height)
         const width = image.width * scale
         const height = image.height * scale
-        context.drawImage(image, (512 - width) / 2, (512 - height) / 2, width, height)
-        update({ ...preferences, logoStyle: "custom", logoDataUrl: canvas.toDataURL("image/png") })
+        context.drawImage(image, (256 - width) / 2, (256 - height) / 2, width, height)
+        update({ ...preferences, logoStyle: "custom", logoDataUrl: canvas.toDataURL("image/jpeg", 0.85) })
       }
       image.src = reader.result
     }

@@ -101,21 +101,23 @@ function normalize(value: unknown): Preferences {
     tagline: shortText(raw.tagline, defaultPreferences.tagline, 80),
     logoMark: shortText(raw.logoMark, defaultPreferences.logoMark, 2),
     logoStyle: raw.logoStyle === "nothing" || raw.logoStyle === "opone" || raw.logoStyle === "custom" ? raw.logoStyle : "classic",
-    logoDataUrl: typeof raw.logoDataUrl === "string" && raw.logoDataUrl.startsWith("data:image/") && raw.logoDataUrl.length < 350_000 ? raw.logoDataUrl : undefined,
+    logoDataUrl: typeof raw.logoDataUrl === "string" && raw.logoDataUrl.startsWith("data:image/") && raw.logoDataUrl.length < 120_000 ? raw.logoDataUrl : undefined,
   }
 }
+
+let prefsCache: { raw: string; parsed: Preferences } | null = null
 
 export function loadPreferences(): Preferences {
   if (typeof window === "undefined") return defaultPreferences
   try {
-    const current = localStorage.getItem(key)
-    const legacy = localStorage.getItem(legacyKey)
-    const parse = (value: string | null) => {
-      if (!value) return undefined
-      try { return JSON.parse(value) } catch { return undefined }
-    }
-    const stored = parse(current) ?? parse(legacy) ?? {}
-    return isLegacyBaseline(stored) ? defaultPreferences : normalize(stored)
+    const current = localStorage.getItem(key) ?? localStorage.getItem(legacyKey)
+    if (!current) return defaultPreferences
+    if (prefsCache && prefsCache.raw === current) return prefsCache.parsed
+    let stored: unknown
+    try { stored = JSON.parse(current) } catch { stored = {} }
+    const parsed = isLegacyBaseline(stored as Record<string, unknown>) ? defaultPreferences : normalize(stored)
+    prefsCache = { raw: current, parsed }
+    return parsed
   } catch { return defaultPreferences }
 }
 

@@ -14,6 +14,7 @@ import NavSlotIcon from "./nav-slot-icon"
 import { NAV_ITEM_MAP } from "@/data/nav-items"
 import { currentIconPack } from "@/data/icon-packs"
 import { clearContentAnimations } from "@/lib/app-transition"
+import { installRecoveryGuards } from "@/lib/recovery"
 import { applyPreferences, defaultPreferences, loadPreferences, type Preferences } from "@/persistence/preferences"
 import { todayKey } from "@/persistence/daily"
 import { dueCards, seedQueueFromMastery } from "@/persistence/review-queue"
@@ -233,6 +234,9 @@ export default function AppShell() {
     setMoreOpen(false)
     setCommandOpen(false)
   }, [pathname])
+  useEffect(() => {
+    installRecoveryGuards()
+  }, [])
   useEffect(() => {
     const next = loadPreferences()
     setPreferences(next)
