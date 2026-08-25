@@ -61,6 +61,9 @@ const APP_SECTIONS = [
     { id: "images", href: "/images", name: "Image Tools", glyph: "◳", gradient: G.pink },
     { id: "qr", href: "/qr", name: "QR Tools", glyph: "⊞", gradient: G.violet },
     { id: "whiteboard", href: "/whiteboard", name: "Whiteboard", glyph: "✏", gradient: G.gold },
+    { id: "expenses", href: "/expenses", name: "Expense Tracker", glyph: "₿", gradient: G.teal },
+    { id: "calendar", href: "/calendar", name: "Calendar", glyph: "▦", gradient: G.ember },
+    { id: "translate", href: "/translate", name: "Translator", glyph: "⇄", gradient: G.violet },
   ] },
   { label: "Explore", apps: [
     { id: "ai-ml", href: "/ai-ml", name: "AI/ML", glyph: "✳", gradient: G.violet },
@@ -72,7 +75,7 @@ const APP_SECTIONS = [
   { label: "System", apps: [
     { id: "observatory", href: "/observatory", name: "Observatory", glyph: "◔", gradient: G.slate },
     { id: "dashboard", href: "/dashboard", name: "Progress", glyph: "▤", gradient: G.slate },
-    { id: "store", href: "/store", name: "App Store", glyph: "❖", gradient: G.cobalt },
+    { id: "store", href: "/store", name: "App Center", glyph: "❖", gradient: G.cobalt },
     { id: "android", href: "/android", name: "Get app", glyph: "⤓", gradient: G.green },
     { id: "releases", href: "/releases", name: "What's new", glyph: "✦", gradient: G.green },
     { id: "settings", href: "/settings", name: "Settings", glyph: "⚙", gradient: G.slate },

@@ -340,6 +340,13 @@
 .super-ghost:hover { border-color: var(--accent); color: var(--accent); }
 .super-field { display: grid; gap: 8px; color: var(--ink-soft); font: 700 11px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; }
 .super-field select { min-height: 48px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink); font: 15px var(--font-ui); }
+.super-field input:not([type="range"]), .super-field textarea { width: 100%; box-sizing: border-box; min-height: 48px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink); font: 15px var(--font-ui); transition: border-color var(--dur-fast), box-shadow var(--dur-fast); }
+.super-field textarea { padding: 12px; min-height: 104px; line-height: 1.55; resize: vertical; font: 14px/1.55 var(--font-ui); }
+.super-field input:not([type="range"]):focus, .super-field textarea:focus, .super-field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.super-field input[type="range"] { width: 100%; accent-color: var(--accent); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
 .contest-hero, .review-hero, .daily-hero { display: grid; grid-template-columns: minmax(0, 1.3fr) auto; gap: 20px; align-items: center; padding: clamp(20px, 4vw, 32px); border: 1px solid var(--accent); border-radius: calc(var(--radius) + 8px); background: radial-gradient(circle at 90% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 44%), linear-gradient(135deg, var(--accent-soft), var(--paper-raised)); box-shadow: var(--shadow-raised); }
 .contest-hero h1, .review-hero h1, .daily-hero h1 { margin: 10px 0 8px; font: 700 clamp(30px, 5vw, 48px)/.98 var(--font-narrative); letter-spacing: -.04em; }
 .contest-hero p, .review-hero p, .daily-hero p { max-width: 520px; margin: 0; color: var(--ink-soft); font: 14px/1.55 var(--font-ui); }

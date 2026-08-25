@@ -52,6 +52,9 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "images", name: "Image Tools", glyph: "◳", gradient: G.pink, desc: "Compress · resize · convert", category: "Life", href: "/images", status: "installed" },
   { id: "qr", name: "QR Tools", glyph: "⊞", gradient: G.violet, desc: "Generate & scan codes", category: "Life", href: "/qr", status: "installed" },
   { id: "whiteboard", name: "Whiteboard", glyph: "✏", gradient: G.gold, desc: "Sketch & share ideas", category: "Life", href: "/whiteboard", status: "installed" },
+  { id: "expenses", name: "Expense Tracker", glyph: "₿", gradient: G.teal, desc: "Budget & spending", category: "Life", href: "/expenses", status: "installed" },
+  { id: "calendar", name: "Calendar", glyph: "▦", gradient: G.ember, desc: "Events & reminders", category: "Life", href: "/calendar", status: "installed" },
+  { id: "translate", name: "Translator", glyph: "⇄", gradient: G.violet, desc: "Text translation", category: "Life", href: "/translate", status: "installed" },
   // Explore
   { id: "ai-ml", name: "AI/ML", glyph: "✳", gradient: G.violet, desc: "Labs + 180 questions", category: "Explore", href: "/ai-ml", status: "installed" },
   { id: "design", name: "Design", glyph: "▣", gradient: G.cobalt, desc: "System design problems", category: "Explore", href: "/design", status: "installed" },
@@ -64,7 +67,7 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "android", name: "Get app", glyph: "⤓", gradient: G.green, desc: "Install the APK", category: "System", href: "/android", status: "installed" },
   { id: "releases", name: "What's new", glyph: "✦", gradient: G.green, desc: "Release notes", category: "System", href: "/releases", status: "installed" },
   { id: "settings", name: "Settings", glyph: "⚙", gradient: G.slate, desc: "Preferences", category: "System", href: "/settings", status: "installed" },
-  { id: "store", name: "App Store", glyph: "❖", gradient: G.cobalt, desc: "Install & manage apps", category: "System", href: "/store", status: "installed" },
+  { id: "store", name: "App Center", glyph: "❖", gradient: G.cobalt, desc: "Install & manage apps", category: "System", href: "/store", status: "installed" },
   // Coming soon
   { id: "soon-expense", name: "Expense Tracker", glyph: "₿", gradient: G.teal, desc: "Budgets & spending charts", category: "Life", status: "soon" },
   { id: "soon-calendar", name: "Calendar", glyph: "▦", gradient: G.ember, desc: "Events with reminders", category: "Life", status: "soon" },

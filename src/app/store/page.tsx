@@ -38,7 +38,7 @@ export default function StorePage() {
 
   return (
     <main className="super-page store-page">
-      <span className="super-kicker">APP STORE</span>
+      <span className="super-kicker">APP CENTER</span>
       <h1 className="store-title">Install what you need. Remove what you don&apos;t.</h1>
       <p className="store-lede">Every app runs locally in your browser — nothing is uploaded. Uninstalling just hides an app from your launcher; your data stays safe.</p>
 

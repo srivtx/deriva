@@ -54,6 +54,9 @@ const MORE_GROUPS: MoreGroup[] = [
       { label: "Image Tools", href: "/images", desc: "compress · convert" },
       { label: "QR Tools", href: "/qr", desc: "generate & scan" },
       { label: "Whiteboard", href: "/whiteboard", desc: "sketch ideas" },
+      { label: "Expense Tracker", href: "/expenses", desc: "budget & spending" },
+      { label: "Calendar", href: "/calendar", desc: "events & reminders" },
+      { label: "Translator", href: "/translate", desc: "text translation" },
     ],
   },
   {
@@ -70,7 +73,7 @@ const MORE_GROUPS: MoreGroup[] = [
     label: "Workspace",
     links: [
       { label: "Progress details", href: "/dashboard", desc: "history" },
-      { label: "App Store", href: "/store", desc: "install & manage apps" },
+      { label: "App Center", href: "/store", desc: "install & manage apps" },
       { label: "Get Android app", href: "/android", desc: "install the APK" },
       { label: "What's new", href: "/releases", desc: "release notes" },
       { label: "Settings", href: "/settings", desc: "preferences" },
@@ -178,7 +181,7 @@ function Breadcrumbs() {
   } else if (pathname === "/whiteboard") {
     parts.push({ label: "Whiteboard", href: "/whiteboard" })
   } else if (pathname === "/store") {
-    parts.push({ label: "App Store", href: "/store" })
+    parts.push({ label: "App Center", href: "/store" })
   }
 
   if (parts.length === 0) return null
@@ -220,7 +223,7 @@ function ProgressBadge({ className = "" }: { className?: string }) {
   )
 }
 
-  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store"]
+  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store", "/expenses", "/calendar", "/translate"]
 
 export default function AppShell() {
   const pathname = usePathname()

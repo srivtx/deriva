@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { AppTileDef } from "./app-tile-def"
@@ -13,7 +14,7 @@ type AppTileProps = {
   dot?: boolean
 }
 
-export default function AppTile({ app, badge, dot }: AppTileProps) {
+function AppTile({ app, badge, dot }: AppTileProps) {
   const router = useRouter()
 
   const open = (event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -44,3 +45,5 @@ export default function AppTile({ app, badge, dot }: AppTileProps) {
     </Link>
   )
 }
+
+export default memo(AppTile)

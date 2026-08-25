@@ -1,6 +1,6 @@
 // Deriva service worker — cache-first for static assets, network-first for pages.
-const CACHE = "deriva-v7"
-const STATIC = ["/", "/practice", "/design", "/lld", "/dashboard", "/patterns", "/patterns/quiz", "/settings", "/expedition", "/games", "/icpc", "/daily", "/review", "/contest", "/interview", "/cheatsheets", "/playground", "/releases", "/android", "/atlas", "/complexity", "/notebook", "/toolkit", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store", "/manifest.webmanifest", "/favicon.svg", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable.png"]
+const CACHE = "deriva-v8"
+const STATIC = ["/", "/practice", "/design", "/lld", "/dashboard", "/patterns", "/patterns/quiz", "/settings", "/expedition", "/games", "/icpc", "/daily", "/review", "/contest", "/interview", "/cheatsheets", "/playground", "/releases", "/android", "/atlas", "/complexity", "/notebook", "/toolkit", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store", "/expenses", "/calendar", "/translate", "/manifest.webmanifest", "/favicon.svg", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable.png"]
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(STATIC)).then(() => self.skipWaiting()))

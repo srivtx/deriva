@@ -18,15 +18,14 @@ export default function ImagesPage() {
   const [outSize, setOutSize] = useState(0)
   const [outDims, setOutDims] = useState({ w: 0, h: 0 })
   const imgRef = useRef<HTMLImageElement>(null)
-  const wrapRef = useRef<HTMLDivElement>(null)
   const drag = useRef<{ mode: "new" | "move"; ox: number; oy: number; start: Crop } | null>(null)
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
     setFile(f); setOutUrl("")
-    const url = URL.createObjectURL(f)
-    setSrc(url)
+    if (src) URL.revokeObjectURL(src)
+    setSrc(URL.createObjectURL(f))
   }
 
   const measure = () => {
@@ -38,9 +37,7 @@ export default function ImagesPage() {
 
   const toNatural = (clientX: number, clientY: number) => {
     const r = imgRef.current!.getBoundingClientRect()
-    const sx = nat.w / r.width
-    const sy = nat.h / r.height
-    return { x: (clientX - r.left) * sx, y: (clientY - r.top) * sy }
+    return { x: ((clientX - r.left) / r.width) * nat.w, y: ((clientY - r.top) / r.height) * nat.h }
   }
 
   const pointerDown = (e: React.PointerEvent) => {
@@ -62,9 +59,7 @@ export default function ImagesPage() {
       const x = Math.min(d.ox, p.x), y = Math.min(d.oy, p.y)
       setCrop({ x: Math.max(0, x), y: Math.max(0, y), w: Math.min(nat.w - x, Math.abs(p.x - d.ox)), h: Math.min(nat.h - y, Math.abs(p.y - d.oy)) })
     } else {
-      const nx = Math.max(0, Math.min(p.x - d.ox, nat.w - d.start.w))
-      const ny = Math.max(0, Math.min(p.y - d.oy, nat.h - d.start.h))
-      setCrop({ x: nx, y: ny, w: d.start.w, h: d.start.h })
+      setCrop({ x: Math.max(0, Math.min(p.x - d.ox, nat.w - d.start.w)), y: Math.max(0, Math.min(p.y - d.oy, nat.h - d.start.h)), w: d.start.w, h: d.start.h })
     }
   }
 
@@ -85,8 +80,7 @@ export default function ImagesPage() {
     canvas.toBlob(blob => {
       if (!blob) return
       if (outUrl) URL.revokeObjectURL(outUrl)
-      const url = URL.createObjectURL(blob)
-      setOutUrl(url); setOutSize(blob.size); setOutDims({ w: dw, h: dh })
+      setOutUrl(URL.createObjectURL(blob)); setOutSize(blob.size); setOutDims({ w: dw, h: dh })
     }, format, quality)
   }
 
@@ -119,7 +113,7 @@ export default function ImagesPage() {
                 <input type="range" min={0.1} max={1} step={0.05} value={quality} onChange={e => setQuality(+e.target.value)} />
               </label>
             )}
-            <label className="super-field"><span>Max dimension · {maxDim === 0 ? "original" : `${maxDim}px`}</span>
+            <label className="super-field"><span>Max side · {maxDim === 0 ? "original" : `${maxDim}px`}</span>
               <input type="range" min={0} max={2000} step={100} value={maxDim} onChange={e => setMaxDim(+e.target.value)} />
             </label>
             <div className="images-control-actions">
@@ -129,7 +123,7 @@ export default function ImagesPage() {
           </div>
 
           <div className="images-stage">
-            <div className="images-canvas-wrap" ref={wrapRef}>
+            <div className="images-canvas-wrap">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img ref={imgRef} src={src} alt="preview" onLoad={measure} draggable={false} />
               {crop && nat.w > 0 && (
@@ -137,10 +131,12 @@ export default function ImagesPage() {
                   className="images-crop"
                   style={{ left: `${(crop.x / nat.w) * 100}%`, top: `${(crop.y / nat.h) * 100}%`, width: `${(crop.w / nat.w) * 100}%`, height: `${(crop.h / nat.h) * 100}%` }}
                   onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp}
-                />
+                >
+                  <span className="images-crop-size">{Math.round(crop.w)}×{Math.round(crop.h)}</span>
+                </div>
               )}
             </div>
-            <p className="images-hint">Drag on the image to select a crop region.</p>
+            <p className="images-hint">Drag on the image to select a crop region. Move the box to reposition.</p>
           </div>
 
           {outUrl && (
@@ -161,12 +157,13 @@ export default function ImagesPage() {
         .images-sub { margin: 0 0 16px; color: var(--ink-soft); font: 14px/1.6 var(--font-ui); }
         .images-upload { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 12px; background: var(--paper-raised); cursor: pointer; color: var(--ink-soft); font: 600 13px var(--font-ui); }
         .images-upload input { display: none; }
-        .images-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: end; margin: 16px 0; }
+        .images-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; margin: 16px 0; }
         .images-control-actions { display: flex; gap: 8px; align-items: end; }
         .images-stage { margin-top: 8px; }
-        .images-canvas-wrap { position: relative; display: inline-block; max-width: 100%; line-height: 0; border-radius: 12px; overflow: hidden; touch-action: none; }
-        .images-canvas-wrap img { max-width: 100%; height: auto; display: block; user-select: none; }
-        .images-crop { position: absolute; border: 2px solid var(--accent); background: rgba(47,143,91,0.15); cursor: move; box-sizing: border-box; }
+        .images-canvas-wrap { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; line-height: 0; border-radius: 12px; overflow: hidden; touch-action: none; background: #fff; }
+        .images-canvas-wrap img { display: block; max-width: 100%; max-height: 60vh; width: auto; height: auto; margin: 0 auto; user-select: none; -webkit-user-drag: none; }
+        .images-crop { position: absolute; border: 2px solid var(--accent); background: rgba(47,143,91,0.12); cursor: move; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: flex-end; }
+        .images-crop-size { font: 700 10px var(--font-mono); color: #fff; background: var(--accent); padding: 2px 6px; border-radius: 6px; margin: 4px; }
         .images-hint { color: var(--ink-soft); font: 12px var(--font-ui); margin: 8px 0 0; }
         .images-result { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding: 16px; border: 1px solid var(--accent); border-radius: calc(var(--radius) + 6px); background: var(--paper-raised); }
         .images-result-stats { display: flex; gap: 20px; flex-wrap: wrap; }
