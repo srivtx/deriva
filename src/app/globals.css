@@ -3064,44 +3064,36 @@ code, pre { font-family: var(--font-mono); }
   .ghost-jump { bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 
-/* ── Ghost v11: desktop brain-card refinement ─────────────── */
+/* ── Ghost v12: desktop module rail (left-aligned, as designed) ── */
 @media (min-width: 700px) {
-  .ghost-intro > .ghost-section-label,
-  .ghost-intro > .ghost-summon {
-    max-width: 520px;
-    width: 100%;
-    margin-inline: auto;
-    text-align: center;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  .ghost-picker {
-    max-width: 520px;
-    margin-inline: auto;
-    gap: 12px;
-  }
+  .ghost-intro > .ghost-section-label { margin-bottom: 10px; }
+  .ghost-picker { gap: 14px; }
   .ghost-model {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-height: 128px;
+    padding: 16px 18px 15px;
+    background: var(--paper);
+    border-color: var(--line);
+    position: relative;
+    overflow: hidden;
+  }
+  /* accent spine — the instrument way to say "selected" */
+  .ghost-model::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
     background: transparent;
-    border-color: color-mix(in srgb, var(--line) 85%, transparent);
-    border-radius: 14px;
-    padding: 17px 18px 16px;
-    gap: 7px;
+    transition: background 0.16s ease;
   }
-  .ghost-model:hover {
-    background: var(--paper-raised);
-    transform: none;
-    border-color: color-mix(in srgb, var(--ink-soft) 45%, var(--line));
-  }
-  .ghost-model.active {
-    background: var(--paper-raised);
-    border-color: var(--accent);
-    box-shadow: inset 0 0 0 1px var(--accent);
-  }
-  .ghost-model-name { font-size: 14px; letter-spacing: 0.02em; }
-  .ghost-model-meta { font-size: 10px; letter-spacing: 0.07em; }
-  .ghost-model-blurb { font-size: 10.5px; opacity: 0.8; }
-  .ghost-spec-mini { max-width: 520px; margin-inline: auto; }
-  .ghost-intro > .ghost-storage-link,
-  .ghost-intro > .ghost-minibtn.danger { align-self: center; }
+  .ghost-model:hover { background: var(--paper-raised); transform: translateY(-1px); }
+  .ghost-model.active { background: var(--paper-raised); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: none; }
+  .ghost-model.active::before { background: var(--accent); }
+  .ghost-model-name { font-size: 14px; letter-spacing: 0.015em; }
+  .ghost-model-meta { font-size: 10px; letter-spacing: 0.06em; }
+  .ghost-model-blurb { font-size: 10.5px; line-height: 1.5; opacity: 0.78; max-width: 30ch; }
+  /* CTA returns to the column, left-aligned with everything */
+  .ghost-summon { width: 100%; }
 }
