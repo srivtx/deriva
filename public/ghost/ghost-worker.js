@@ -103,7 +103,23 @@ self.onmessage = async event => {
     if (cmd === "load") {
       if (!wllama) {
         const cm = new CacheManager()
-        const blob = await cm.open(payload.url)
+        let blob = await cm.open(payload.url)
+        // Integrity gate: a truncated/corrupted file (interrupted downloads,
+        // partial sweeps) loads "fine" but produces garbage tokens and memory
+        // crashes. Verify GGUF magic + declared size before trusting it.
+        if (blob && blob.size > 4) {
+          const magic = await blob.slice(0, 4).text()
+          const name = await cm.getNameFromURL(payload.url)
+          const meta = await cm.getMetadata(name).catch(() => null)
+          const expected = meta?.originalSize ?? 0
+          if (magic !== "GGUF" || (expected > 0 && Math.abs(blob.size - expected) > 1024)) {
+            await releaseRuntime()
+            try { await new CacheManager().delete(payload.url) } catch {}
+            await opfsSweep(baseName(payload.url))
+            post({ id, evt: "error", message: "MODEL_CORRUPT", name: "GhostStorage", hint: "file damaged — refetching a clean copy" })
+            return
+          }
+        }
         if (!blob || blob.size <= 0) {
           post({ id, evt: "error", message: "MODEL_NOT_CACHED", name: "GhostStorage", hint: "download the brain first" })
           return
