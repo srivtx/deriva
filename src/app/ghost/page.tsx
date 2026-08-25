@@ -54,6 +54,28 @@ function GhostFace({ size = 96, thinking = false }: { size?: number; thinking?: 
 }
 
 type StorageEntry = { url: string; sizeMb: number }
+interface GhostSession { id: string; title: string; updatedAt: number; messages: ChatMessage[] }
+
+const CHATS_KEY = "deriva-ghost-chats"
+const ACTIVE_KEY = "deriva-ghost-active"
+
+function loadSessions(): GhostSession[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CHATS_KEY) || "[]")
+    return Array.isArray(raw) ? raw.slice(0, 20) : []
+  } catch { return [] }
+}
+function saveSessions(list: GhostSession[]) {
+  try { localStorage.setItem(CHATS_KEY, JSON.stringify(list.slice(0, 20))) } catch {}
+}
+function relTime(ts: number): string {
+  const m = Math.round((Date.now() - ts) / 60000)
+  if (m < 1) return "now"
+  if (m < 60) return `${m}m`
+  const h = Math.round(m / 60)
+  if (h < 24) return `${h}h`
+  return `${Math.round(h / 24)}d`
+}
 
 export default function GhostPage() {
   const [phase, setPhase] = useState<"probe" | "intro" | "downloading" | "loading" | "ready">("probe")
@@ -63,6 +85,9 @@ export default function GhostPage() {
   const [action, setAction] = useState<string | null>(null)
   const [getProgress, setGetProgress] = useState<{ url: string; fraction: number; loadedMb: number; totalMb: number }>({ url: "", fraction: 0, loadedMb: 0, totalMb: 0 })
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [sessions, setSessions] = useState<GhostSession[]>([])
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [input, setInput] = useState("")
   const [busy, setBusy] = useState(false)
   const [tps, setTps] = useState<number | null>(null)
@@ -84,8 +109,15 @@ export default function GhostPage() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("deriva-ghost-chat")
-      if (raw) setMessages(JSON.parse(raw))
+      const list = loadSessions()
+      setSessions(list)
+      const active = localStorage.getItem(ACTIVE_KEY)
+      if (active) {
+        const found = list.find(s => s.id === active)
+        if (found) { setActiveId(found.id); setMessages(found.messages) ; return }
+      }
+      const legacy = localStorage.getItem("deriva-ghost-chat")
+      if (legacy) setMessages(JSON.parse(legacy))
     } catch {}
   }, [])
 
@@ -109,9 +141,23 @@ export default function GhostPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }, [messages])
 
-  const persist = useCallback((next: ChatMessage[]) => {
+  const persistSession = useCallback((next: ChatMessage[], firstUserText?: string) => {
+    setSessions(prev => {
+      let list = [...prev]
+      if (activeId) {
+        list = list.map(s => s.id === activeId ? { ...s, messages: next.slice(-60), updatedAt: Date.now() } : s)
+      } else if (next.length > 0) {
+        const id = `${Date.now()}`
+        const title = (firstUserText || next[0]?.content || "conversation").slice(0, 44)
+        list = [{ id, title, updatedAt: Date.now(), messages: next.slice(-60) }, ...list]
+        setActiveId(id)
+        try { localStorage.setItem(ACTIVE_KEY, id) } catch {}
+      }
+      saveSessions(list)
+      return list
+    })
     try { localStorage.setItem("deriva-ghost-chat", JSON.stringify(next.slice(-40))) } catch {}
-  }, [])
+  }, [activeId])
 
   const refreshStorage = useCallback(async () => {
     setStorage(await ghostEngine.scanStorage().catch(() => []))
@@ -202,7 +248,7 @@ export default function GhostPage() {
 
     const history = [...messages, { role: "user" as const, content: text }]
     setMessages(history)
-    persist(history)
+    persistSession(history, text)
 
     let streamedText = ""
     try {
@@ -231,7 +277,7 @@ export default function GhostPage() {
         } else {
           next.push({ role: "assistant", content: result.text || streamedText || "(silence)" })
         }
-        persist(next)
+        persistSession(next)
         return next
       })
     } catch (err) {
@@ -240,7 +286,7 @@ export default function GhostPage() {
       if (!streamedText) {
         setMessages(prev => {
           const next = prev.filter((m, i) => !(i === prev.length - 1 && m.role === "assistant"))
-          persist(next)
+          persistSession(next)
           return next
         })
       }
@@ -248,7 +294,7 @@ export default function GhostPage() {
       busyRef.current = false
       setBusy(false)
     }
-  }, [input, messages, persist, model])
+  }, [input, messages, persistSession, model])
 
   const stop = useCallback(async () => {
     await ghostEngine.stop().catch(() => {})
@@ -256,9 +302,42 @@ export default function GhostPage() {
 
   const clearChat = useCallback(() => {
     setMessages([])
+    setActiveId(null)
     setSheetOpen(false)
+    try { localStorage.removeItem(ACTIVE_KEY) } catch {}
     try { localStorage.removeItem("deriva-ghost-chat") } catch {}
   }, [])
+
+  const upsertCurrentBeforeSwitch = useCallback((list: GhostSession[]): GhostSession[] => {
+    if (!activeId || messages.length === 0) return list
+    return list.map(s => s.id === activeId ? { ...s, messages: messages.slice(-60), updatedAt: Date.now() } : s)
+  }, [activeId, messages])
+
+  const newChat = useCallback(() => {
+    setSessions(prev => { const l = upsertCurrentBeforeSwitch(prev); saveSessions(l); return l })
+    setMessages([])
+    setActiveId(null)
+    setHistoryOpen(false)
+    try { localStorage.removeItem(ACTIVE_KEY) } catch {}
+  }, [upsertCurrentBeforeSwitch])
+
+  const openSession = useCallback((id: string) => {
+    setSessions(prev => {
+      const l = upsertCurrentBeforeSwitch(prev); saveSessions(l)
+      const found = l.find(s => s.id === id)
+      if (found) { setMessages(found.messages); setActiveId(found.id); try { localStorage.setItem(ACTIVE_KEY, id) } catch {} }
+      setHistoryOpen(false)
+      return l
+    })
+  }, [upsertCurrentBeforeSwitch])
+
+  const deleteSession = useCallback((id: string) => {
+    setSessions(prev => {
+      const l = prev.filter(s => s.id !== id); saveSessions(l)
+      if (id === activeId) { setMessages([]); setActiveId(null); try { localStorage.removeItem(ACTIVE_KEY) } catch {} }
+      return l
+    })
+  }, [activeId])
 
   const deleteByUrl = useCallback(async (url: string) => {
     if (action) return
@@ -368,8 +447,18 @@ export default function GhostPage() {
           {busy && (
             <div className="ghost-thinking-chip"><GhostFace size={18} thinking /> thinking…{tps != null && tps > 0 ? ` ${tps.toFixed(1)} tok/s` : ""}</div>
           )}
-          <button type="button" className="ghost-gear" aria-label="Ghost settings" onClick={() => setSheetOpen(true)}>⚙</button>
+          <div className="ghost-chatbar">
+              <span className="ghost-chatbar-title">{sessions.find(s => s.id === activeId)?.title ?? "new conversation"}</span>
+              <span className="ghost-chatbar-actions">
+                <button type="button" className="ghost-minibtn" onClick={() => setHistoryOpen(true)}>HISTORY</button>
+                <button type="button" className="ghost-minibtn accent" onClick={newChat}>＋ NEW</button>
+                <button type="button" className="ghost-gear-inline" aria-label="Ghost settings" onClick={() => setSheetOpen(true)}>⚙</button>
+              </span>
+            </div>
           <div className="ghost-messages">
+            {busy && (
+              <div className="ghost-thinking-chip"><GhostFace size={18} thinking /> thinking…{tps != null && tps > 0 ? ` ${tps.toFixed(1)} tok/s` : ""}</div>
+            )}
             {messages.length === 0 && (
               <div className="ghost-empty">
                 <p>Ping the void.</p>
@@ -469,6 +558,29 @@ export default function GhostPage() {
               </span>
             </div>
             {error && <p className="ghost-error">{error}</p>}
+          </div>
+        </div>
+      )}
+
+      {historyOpen && (
+        <div className="ghost-sheet-backdrop" onClick={() => setHistoryOpen(false)}>
+          <div className="ghost-sheet" onClick={event => event.stopPropagation()}>
+            <span className="ghost-sheet-handle" />
+            <p className="ghost-sheet-title">CONVERSATIONS</p>
+            {sessions.length === 0 && <p className="ghost-note">No past conversations yet.</p>}
+            {sessions.map(s => (
+              <div key={s.id} className={`ghost-brain-row${s.id === activeId ? " active" : ""}`}>
+                <button type="button" className="ghost-hist-open" onClick={() => openSession(s.id)}>
+                  <span className="ghost-brain-name">{s.title}</span>
+                  <span className="ghost-brain-meta">{relTime(s.updatedAt)} · {s.messages.length} messages</span>
+                </button>
+                <button type="button" className="ghost-minibtn danger" onClick={() => deleteSession(s.id)}>✕</button>
+              </div>
+            ))}
+            <div className="ghost-brains-foot">
+              <span>{sessions.length} saved</span>
+              <button type="button" className="ghost-minibtn accent" disabled={!!action} onClick={newChat}>＋ START NEW</button>
+            </div>
           </div>
         </div>
       )}
