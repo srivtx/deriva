@@ -127,6 +127,18 @@ export function savePreferences(preferences: Preferences) {
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("deriva-preferences-change", { detail: next }))
 }
 
+// WCAG-ish relative luminance → pick dark or light text for any accent.
+function readableOnColor(hex: string): string {
+  const value = hex.replace("#", "")
+  if (!/^[0-9a-fA-F]{6}$/.test(value)) return "#FFFFFF"
+  const channel = (i: number) => {
+    const raw = parseInt(value.slice(i, i + 2), 16) / 255
+    return raw <= 0.03928 ? raw / 12.92 : ((raw + 0.055) / 1.055) ** 2.4
+  }
+  const luminance = 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4)
+  return luminance > 0.25 ? "#111114" : "#FFFFFF"
+}
+
 export function applyPreferences(preferences: Preferences) {
   const root = document.documentElement
   root.dataset.theme = preferences.theme
@@ -142,4 +154,6 @@ export function applyPreferences(preferences: Preferences) {
   if (preferences.accent === "custom") root.style.setProperty("--accent", hex(preferences.customAccent, defaultPreferences.customAccent))
   else root.style.removeProperty("--accent")
   root.style.setProperty("--accent-soft", "color-mix(in srgb, var(--accent) 13%, var(--paper-raised))")
+  const resolvedAccent = getComputedStyle(root).getPropertyValue("--accent").trim()
+  if (resolvedAccent) root.style.setProperty("--on-accent", readableOnColor(resolvedAccent))
 }

@@ -67,8 +67,6 @@
 :root[data-theme="ocean"] { color-scheme: light; --paper: #EFF5FA; --paper-raised: #FBFDFF; --ink: #13202B; --ink-soft: #57708A; --line: #D2E2EE; --accent: #1E6FA8; --success-soft: #E3F1EA; --success-line: #A9CFBE; }
 :root[data-theme="carbon"] { color-scheme: dark; --paper: #15171A; --paper-raised: #1E2125; --ink: #EAEAE7; --ink-soft: #9AA2AB; --line: #2B2F35; --accent: #7DA5E8; --success-soft: #1A2B23; --success-line: #2F8F5B; }
 :root { --on-accent: #FFFFFF; }
-:root[data-theme="nord"] { --on-accent: #2E3440; }
-:root[data-theme="solarized"] { --on-accent: #002B36; }
 :root[data-theme="nothing"] { color-scheme: dark; --paper: #0A0A0B; --paper-raised: #141416; --ink: #F4F3EF; --ink-soft: #8E8E93; --line: #27272A; --accent: #E02020; --success-soft: #14201A; --success-line: #3AA06B; }
 :root[data-theme="opone"] { color-scheme: light; --paper: #E9E7DE; --paper-raised: #F6F4EB; --ink: #191813; --ink-soft: #6D6A5D; --line: #D2CFC0; --accent: #E04A00; --success-soft: #E9EFE0; --success-line: #A9BF8E; }
 :root[data-theme="swiss"] { color-scheme: light; --paper: #F1F0ED; --paper-raised: #FFFFFF; --ink: #111114; --ink-soft: #55555C; --line: #DEDDD8; --accent: #D92B2B; --success-soft: #E7EEE7; --success-line: #AFC7AF; }
@@ -866,7 +864,7 @@ textarea.settings-field-input { width: 100%; padding: 10px 12px; border: 1px sol
 textarea.settings-field-input:focus { outline: none; border-color: var(--accent); }
 
 /* ── NEW badge + settings organisation ── */
-.new-badge { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font: 800 8.5px var(--font-ui); letter-spacing: .1em; vertical-align: middle; }
+.new-badge.new-badge { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font: 800 8.5px var(--font-ui); letter-spacing: .1em; vertical-align: middle; }
 .settings-toc { display: flex; gap: 7px; flex-wrap: wrap; padding: 0 0 4px; }
 .settings-toc .app-chip { text-decoration: none; }
 .settings-search { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
