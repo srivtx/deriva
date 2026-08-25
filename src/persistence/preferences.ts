@@ -1,5 +1,6 @@
 import { sanitizeNavSlots } from "@/data/nav-items"
 import { sanitizeNavIcons } from "@/data/nav-icons"
+import { sanitizePersonalDots, setPersonalDots } from "@/data/icon-packs"
 
 export type ThemePreference = "system" | "paper" | "ink" | "moss" | "ocean" | "carbon" | "violet" | "sunset" | "nothing" | "opone" | "swiss" | "nord" | "solarized" | "braun"
 export type AccentPreference = "cobalt" | "ember" | "violet" | "mint" | "gold" | "custom"
@@ -7,7 +8,7 @@ export type TypePreference = "editorial" | "technical" | "humanist" | "dotmatrix
 export type DensityPreference = "calm" | "focused" | "compact"
 export type ShapePreference = "soft" | "precise"
 export type TexturePreference = "plain" | "grid"
-export type IconPackPreference = "classic" | "nothing" | "teenage"
+export type IconPackPreference = "classic" | "nothing" | "teenage" | "personal"
 
 export type Preferences = {
   theme: ThemePreference
@@ -20,6 +21,7 @@ export type Preferences = {
   iconPack: IconPackPreference
   navSlots: string[]
   navIcons: Record<string, string>
+  personalDots: Record<string, string>
   reducedMotion: boolean
   textScale: "standard" | "large" | "xlarge"
   keyboardHints: boolean
@@ -43,6 +45,7 @@ export const defaultPreferences: Preferences = {
   iconPack: "classic",
   navSlots: ["home", "learn", "patterns", "observe"],
   navIcons: {},
+  personalDots: {},
   reducedMotion: false,
   textScale: "standard",
   keyboardHints: true,
@@ -58,7 +61,7 @@ const TYPE_VALUES = new Set<TypePreference>(["editorial", "technical", "humanist
 const DENSITY_VALUES = new Set<DensityPreference>(["calm", "focused", "compact"])
 const SHAPE_VALUES = new Set<ShapePreference>(["soft", "precise"])
 const TEXTURE_VALUES = new Set<TexturePreference>(["plain", "grid"])
-const ICON_VALUES = new Set<IconPackPreference>(["classic", "nothing", "teenage"])
+const ICON_VALUES = new Set<IconPackPreference>(["classic", "nothing", "teenage", "personal"])
 
 function hex(value: unknown, fallback: string) {
   return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback
@@ -90,6 +93,7 @@ function normalize(value: unknown): Preferences {
     iconPack: ICON_VALUES.has(raw.iconPack as IconPackPreference) ? raw.iconPack as IconPackPreference : defaultPreferences.iconPack,
     navSlots: sanitizeNavSlots(raw.navSlots),
     navIcons: sanitizeNavIcons(raw.navIcons),
+    personalDots: sanitizePersonalDots(raw.personalDots),
     reducedMotion: raw.reducedMotion === true,
     textScale: raw.textScale === "large" || raw.textScale === "xlarge" ? raw.textScale : "standard",
     keyboardHints: raw.keyboardHints !== false,
@@ -132,6 +136,7 @@ export function applyPreferences(preferences: Preferences) {
   root.dataset.icons = preferences.iconPack
   root.dataset.textScale = preferences.textScale
   root.dataset.motion = preferences.reducedMotion ? "reduce" : "full"
+  setPersonalDots(preferences.personalDots)
   if (preferences.accent === "custom") root.style.setProperty("--accent", hex(preferences.customAccent, defaultPreferences.customAccent))
   else root.style.removeProperty("--accent")
   root.style.setProperty("--accent-soft", "color-mix(in srgb, var(--accent) 13%, var(--paper-raised))")

@@ -267,3 +267,17 @@ One SVG source feeds header logo, favicon, apple-touch-icon, and the dynamic PWA
 manifest (blob URL) — what you pick is what installs. Custom uploads override.
 Android TWA ships matching launcher icons via product flavors
 (classic/nothing/opone) in `android/deriva-twa/app/build.gradle`.
+
+## Lucent lab (feature branch systems)
+
+- **Personal icon pack** (`iconPack: "personal"`): user-drawn 7×7 dot bitmaps
+  (`personalDots`, rows joined by "/") edited in Settings → Glyph Studio; seeded
+  from the Nothing pack and rendered wherever dot glyphs render.
+- **Focus Dial** (`/focus`): Braun-style rotary timer. While running it sets
+  `data-focus="on"` on `<html>`, which warms `--accent` shell-wide; session state
+  survives remounts via localStorage.
+- **Appearance share codes** (`deriva-theme:v1:…` base64url of non-default
+  appearance keys): encoded to QR in Settings → Share appearance; paste-to-adopt
+  merges through the normal normalize pipeline, so codes can never corrupt prefs.
+- **Streak atmospheres**: presets may declare `unlockStreak`; locked cards show
+  progress and cannot apply until the daily streak reaches the threshold.

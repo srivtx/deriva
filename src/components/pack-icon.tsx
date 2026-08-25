@@ -1,6 +1,6 @@
 "use client"
 
-import { currentIconPack, NOTHING_DOTS, TEENAGE_PATHS, type IconPackId } from "@/data/icon-packs"
+import { currentIconPack, getPersonalDots, NOTHING_DOTS, TEENAGE_PATHS, type IconPackId } from "@/data/icon-packs"
 
 export default function PackIcon({
   id, fallback, pack, className,
@@ -12,8 +12,8 @@ export default function PackIcon({
 }) {
   const active = pack ?? currentIconPack()
 
-  if (active === "nothing") {
-    const map = NOTHING_DOTS[id]
+  if (active === "personal" || active === "nothing") {
+    const map = active === "personal" ? getPersonalDots(id) ?? NOTHING_DOTS[id] : NOTHING_DOTS[id]
     if (map) {
       return (
         <i className={`doticon${className ? ` ${className}` : ""}`} aria-hidden="true">

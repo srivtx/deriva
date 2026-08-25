@@ -3,7 +3,7 @@
 import { memo } from "react"
 import AppIcon, { type AppIconName } from "./app-icon"
 import { resolveNavVariant } from "@/data/nav-icons"
-import type { IconPackId } from "@/data/icon-packs"
+import { getPersonalDots, type IconPackId } from "@/data/icon-packs"
 
 function NavSlotIcon({
   itemId,
@@ -17,6 +17,19 @@ function NavSlotIcon({
   size?: number
 }) {
   const variant = resolveNavVariant(itemId, variantId, autoPack)
+
+  if (autoPack === "personal" && (!variantId || variantId === "dots")) {
+    const dots = getPersonalDots(itemId)
+    if (dots) {
+      return (
+        <i className="doticon navslot-icon" style={{ width: size }} aria-hidden="true">
+          {dots.flatMap((row, y) =>
+            row.split("").map((cell, x) => <b key={`${y}-${x}`} className={cell === "#" ? "on" : ""} />),
+          )}
+        </i>
+      )
+    }
+  }
 
   if (variant.lang === "classic" && variant.classicIcon) {
     return <AppIcon name={variant.classicIcon as AppIconName} size={size} />

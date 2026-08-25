@@ -54,7 +54,7 @@ export function resolveNavVariant(itemId: string, preference: string | undefined
     const chosen = byId(preference)
     if (chosen) return chosen
   }
-  if (autoPack === "nothing") return byId("dots") ?? list[0]
+  if (autoPack === "nothing" || autoPack === "personal") return byId("dots") ?? list[0]
   if (autoPack === "teenage") return byId("line") ?? list[0]
   const classic = byId("classic")
   return classic ?? byId("mark") ?? list[0]

@@ -5,12 +5,13 @@
 //  - teenage: Teenage Engineering instrument pictograms — thin-line SVG paths
 //    drawn on a 24×24 grid, stroke-only, like OP-1 / Pocket Operator panels.
 
-export type IconPackId = "classic" | "nothing" | "teenage"
+export type IconPackId = "classic" | "nothing" | "teenage" | "personal"
 
 export const ICON_PACKS: { id: IconPackId; name: string; desc: string; themeHint?: string }[] = [
   { id: "classic", name: "Classic", desc: "Deriva's native symbols. Colorful, friendly." },
   { id: "nothing", name: "Nothing", desc: "Dot-matrix glyphs on black glass. Signal red.", themeHint: "Pairs with the Nothing theme" },
   { id: "teenage", name: "OP-1", desc: "Thin-line instrument pictograms. Warm grey + orange.", themeHint: "Pairs with the OP-1 theme" },
+  { id: "personal", name: "Personal", desc: "Your own dot glyphs, drawn in the Glyph Studio.", themeHint: "Draw them in Settings → Glyph Studio" },
 ]
 
 // ── Nothing: 7×7 dot-matrix bitmaps ────────────────────────────────
@@ -98,5 +99,30 @@ export const TEENAGE_PATHS: Record<string, string> = {
 export function currentIconPack(): IconPackId {
   if (typeof document === "undefined") return "classic"
   const value = document.documentElement.dataset.icons
-  return value === "nothing" || value === "teenage" ? value : "classic"
+  return value === "nothing" || value === "teenage" || value === "personal" ? value : "classic"
+}
+
+// ── Personal pack: user-drawn bitmaps (Glyph Studio) ────────────────
+const PERSONAL_DOTS: Record<string, string[]> = {}
+
+export function sanitizePersonalDots(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object") return {}
+  const out: Record<string, string> = {}
+  for (const [id, packed] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof packed !== "string") continue
+    const rows = packed.split("/").filter(row => /^[.#]*$/.test(row) && row.length > 0)
+    if (rows.length === 7 && rows.every(row => row.length === 7)) out[id] = rows.join("/")
+  }
+  return out
+}
+
+export function setPersonalDots(packed: Record<string, string>) {
+  for (const key of Object.keys(PERSONAL_DOTS)) delete PERSONAL_DOTS[key]
+  for (const [id, packedRows] of Object.entries(packed)) {
+    PERSONAL_DOTS[id] = packedRows.split("/")
+  }
+}
+
+export function getPersonalDots(id: string): string[] | undefined {
+  return PERSONAL_DOTS[id]
 }

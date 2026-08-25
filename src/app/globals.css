@@ -828,6 +828,47 @@
 .nav-style-tile .glyphicon { font-size: 16px; }
 .nav-style-tile small { font: 700 7.5px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; }
 
+/* ── Focus Dial ── */
+:root[data-focus="on"] { --accent: #E04A00; --accent-soft: color-mix(in srgb, #E04A00 13%, var(--paper-raised)); }
+.focus-page { min-height: 100dvh; display: grid; place-items: center; padding: 32px 16px; }
+.focus-shell { width: min(440px, 100%); display: grid; gap: 8px; justify-items: center; text-align: center; }
+.focus-dial-wrap { position: relative; width: min(320px, 82vw); margin-top: 12px; }
+.focus-dial { width: 100%; touch-action: none; cursor: grab; }
+.focus-dial.locked { cursor: default; }
+.focus-dial-face { fill: var(--paper-raised); stroke: var(--line); }
+.focus-dial-tick { stroke: var(--ink-soft); stroke-width: 2; opacity: .5; }
+.focus-dial-track { fill: none; stroke: var(--line); stroke-width: 6; }
+.focus-dial-progress { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset .5s linear; }
+.focus-dial-hand { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+.focus-dial-knob { fill: var(--paper-raised); stroke: var(--accent); stroke-width: 3; }
+.focus-readout { position: absolute; inset: 0; display: grid; place-items: center; font: 700 44px var(--font-mono); letter-spacing: -.02em; color: var(--ink); pointer-events: none; font-variant-numeric: tabular-nums; }
+.focus-actions { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+
+/* ── Glyph Studio ── */
+.glyph-studio { display: grid; gap: 12px; max-width: 420px; }
+.glyph-grid { display: grid; grid-template-columns: repeat(7, 26px); gap: 5px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); justify-content: center; }
+.glyph-cell { aspect-ratio: 1; border-radius: 50%; background: color-mix(in srgb, currentColor 10%, transparent); cursor: pointer; transition: background var(--dur-fast), transform var(--dur-fast); }
+.glyph-cell.on { background: var(--accent); box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent); }
+.glyph-cell:hover { transform: scale(1.12); }
+
+/* ── Seasonal / locked presets ── */
+.style-preset.locked { opacity: .55; cursor: not-allowed; }
+.style-preset.locked:hover { transform: none; border-color: var(--line); box-shadow: none; }
+.preset-lock { position: relative; z-index: 1; justify-self: start; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-soft); font: 700 9px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
+
+/* ── Share appearance ── */
+textarea.settings-field-input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-raised); color: var(--ink); font: 12px/1.5 var(--font-mono); resize: vertical; }
+textarea.settings-field-input:focus { outline: none; border-color: var(--accent); }
+
+/* ── Lucent motion pass (Nothing OS 5.0 frosted feel) ── */
+@media (prefers-reduced-motion: no-preference) {
+  .mobile-tab.active::before { animation: pill-in .22s var(--ease-standard) both; }
+  @keyframes pill-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+  .mobile-more-sheet { animation: sheet-spring .26s cubic-bezier(.2, .9, .25, 1.05) both; }
+  @keyframes sheet-spring { from { transform: translateY(9%); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
+  .style-preset, .logo-style-card, .icon-pack-card { will-change: transform; }
+}
+
 /* ── Native app feel ── */
 .offline-banner { padding: 7px 16px; background: color-mix(in srgb, var(--viz-cached) 18%, var(--paper-raised)); border-bottom: 1px solid color-mix(in srgb, var(--viz-cached) 45%, var(--line)); color: var(--ink); font: 600 12px var(--font-ui); text-align: center; }
 .install-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; padding: 13px 15px; border: 1px solid var(--accent); border-radius: 16px; background: linear-gradient(120deg, var(--accent-soft), var(--paper-raised)); }

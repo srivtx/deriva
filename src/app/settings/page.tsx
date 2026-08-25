@@ -8,6 +8,11 @@ import NavSlotIcon from "@/components/nav-slot-icon"
 import { NAV_ITEMS, NAV_ITEM_MAP, NAV_MAX_SLOTS, DEFAULT_NAV_SLOTS } from "@/data/nav-items"
 import { NAV_VARIANTS } from "@/data/nav-icons"
 import { LOGO_STYLES } from "@/data/logo-marks"
+import { encodeAppearance, decodeAppearance } from "@/data/share-code"
+import QRCode from "qrcode"
+import { currentStreak, loadDailyHistory } from "@/persistence/daily"
+import { NOTHING_DOTS } from "@/data/icon-packs"
+import PackIcon from "@/components/pack-icon"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 import Logo from "@/components/logo"
@@ -72,7 +77,7 @@ const VOICE_FONT: Record<string, string> = {
   instrument: '"Space Grotesk", var(--font-ui)',
 }
 
-const presets: { title: string; body: string; values: Partial<Preferences> }[] = [
+const presets: { title: string; body: string; values: Partial<Preferences>; unlockStreak?: number }[] = [
   { title: "Moss Technical", body: "Green, precise, instrument-like", values: { theme: "moss", accent: "mint", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "Nothing Dark", body: "Black, signal red, dot-industrial", values: { theme: "nothing", iconPack: "nothing", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "OP-1 Studio", body: "Warm grey, instrument orange, numbered", values: { theme: "opone", iconPack: "teenage", type: "technical", density: "calm", shape: "soft", texture: "plain" } },
@@ -81,6 +86,9 @@ const presets: { title: string; body: string; values: Partial<Preferences> }[] =
   { title: "Night Lab", body: "Violet, precise, focused", values: { theme: "violet", accent: "violet", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "Sunset Studio", body: "Warm, compact, vivid", values: { theme: "sunset", accent: "ember", type: "editorial", density: "compact", shape: "soft", texture: "plain" } },
   { title: "Braun Werk", body: "Rams grey, mustard dial, functional", values: { theme: "braun", accent: "gold", type: "instrument", density: "focused", shape: "precise", texture: "plain" } },
+  { title: "Ember Equinox", body: "Warm dusk, earned at day 3", unlockStreak: 3, values: { theme: "sunset", accent: "ember", type: "instrument", density: "calm", shape: "soft", texture: "grid" } },
+  { title: "Deep Frost", body: "Nord night, earned at day 7", unlockStreak: 7, values: { theme: "nord", accent: "cobalt", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
+  { title: "Lucent Ghost", body: "Frosted carbon, earned at day 14", unlockStreak: 14, values: { theme: "carbon", accent: "violet", type: "humanist", density: "calm", shape: "soft", texture: "plain" } },
 ]
 
 const densityOptions: { value: DensityPreference; title: string; body: string }[] = [
@@ -112,6 +120,50 @@ export default function SettingsPage() {
   const logoInput = useRef<HTMLInputElement>(null)
   const dragNav = useRef<{ id: string; pointerId: number } | null>(null)
   const [navDragging, setNavDragging] = useState<string | null>(null)
+  const [streak, setStreak] = useState(0)
+  const [glyphTarget, setGlyphTarget] = useState("home")
+  const [glyphRows, setGlyphRows] = useState<string[]>(NOTHING_DOTS.home)
+  const [shareDataUrl, setShareDataUrl] = useState("")
+  const [importCode, setImportCode] = useState("")
+  const [importMessage, setImportMessage] = useState("")
+
+  const toggleGlyphCell = (row: number, col: number) => {
+    setGlyphRows(rows => rows.map((r, y) => (y === row ? r.substring(0, col) + (r[col] === "#" ? "." : "#") + r.substring(col + 1) : r)))
+  }
+  const savePersonalGlyph = () => {
+    update({ ...preferences, personalDots: { ...preferences.personalDots, [glyphTarget]: glyphRows.join("/") } })
+  }
+  const clearPersonalGlyph = () => {
+    const next = { ...preferences.personalDots }
+    delete next[glyphTarget]
+    update({ ...preferences, personalDots: next })
+    setGlyphRows(NOTHING_DOTS[glyphTarget] ?? NOTHING_DOTS.home)
+  }
+  const pickGlyphTarget = (id: string) => {
+    setGlyphTarget(id)
+    const saved = preferences.personalDots[id]
+    setGlyphRows(saved ? saved.split("/") : NOTHING_DOTS[id] ?? NOTHING_DOTS.home)
+  }
+  const makeShareQr = async () => {
+    const code = encodeAppearance(preferences)
+    try {
+      const url = await QRCode.toDataURL(code, { width: 320, margin: 2, errorCorrectionLevel: "M", color: { dark: "#111114", light: "#FFFFFF" } })
+      setShareDataUrl(url)
+      setImportMessage("")
+    } catch {
+      setImportMessage("Could not build the QR — copy the code below instead.")
+    }
+    setImportCode(code)
+  }
+  const applyImportedCode = () => {
+    const decoded = decodeAppearance(importCode)
+    if (!decoded) {
+      setImportMessage("That code doesn't look like a Deriva appearance.")
+      return
+    }
+    setImportMessage("Applied.")
+    update({ ...preferences, ...decoded })
+  }
 
   const beginNavDrag = (event: ReactPointerEvent, id: string) => {
     dragNav.current = { id, pointerId: event.pointerId }
@@ -132,6 +184,7 @@ export default function SettingsPage() {
   useEffect(() => {
     setPreferences(loadPreferences())
     setNotificationPermission(getNotificationPermission())
+    setStreak(currentStreak(loadDailyHistory()))
   }, [])
   const update = (next: Preferences) => { setPreferences(next); savePreferences(next); applyPreferences(next) }
   const toggleNavSlot = (id: string) => {
@@ -321,6 +374,34 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      <section className="settings-section" aria-labelledby="glyph-heading">
+        <div className="settings-section-head"><h2 id="glyph-heading">Glyph Studio</h2><button type="button" className="settings-reset" onClick={() => update({ ...preferences, personalDots: {} })}>Clear all</button></div>
+        <p className="settings-hint">Draw your own 7×7 dot glyphs for the navigation bar, then switch the icon pack to Personal. Nothing&rsquo;s glyphs are the starting canvas.</p>
+        <div className="glyph-studio">
+          <div className="chip-row" role="group" aria-label="Glyph target">
+            {[...preferences.navSlots, "more"].map(id => (
+              <button key={id} type="button" className={`app-chip${glyphTarget === id ? " active" : ""}`} onClick={() => pickGlyphTarget(id)}>{NAV_ITEM_MAP[id]?.label ?? "More"}</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+            <div className="glyph-grid" role="grid" aria-label={`Glyph editor for ${glyphTarget}`}>
+              {glyphRows.map((row, y) =>
+                row.split("").map((cell, x) => (
+                  <button key={`${y}-${x}`} type="button" role="gridcell" aria-label={`dot ${y + 1},${x + 1}`} aria-pressed={cell === "#"} className={`glyph-cell${cell === "#" ? " on" : ""}`} onClick={() => toggleGlyphCell(y, x)} />
+                )),
+              )}
+            </div>
+            <span className="app-tile-icon" data-icons="personal" style={{ width: 64, height: 64, borderRadius: 18 }} aria-hidden="true">
+              <PackIcon id={glyphTarget} fallback="◆" pack="personal" />
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" className="super-primary" onClick={savePersonalGlyph}>Save glyph</button>
+            <button type="button" className="btn-ghost" onClick={clearPersonalGlyph}>Reset glyph</button>
+          </div>
+        </div>
+      </section>
+
       <section className="settings-section" aria-labelledby="presets-heading">
         <h2 id="presets-heading">Curated atmospheres</h2>
         <div className="style-presets">
@@ -328,8 +409,9 @@ export default function SettingsPage() {
             const theme = THEME_PREVIEW[preset.values.theme ?? "paper"] ?? THEME_PREVIEW.paper
             const accent = preset.values.accent === "custom" ? "#E04A00" : PRESET_ACCENTS[preset.values.accent ?? "mint"] ?? PRESET_ACCENTS.mint
             const radius = preset.values.shape === "precise" ? 5 : 11
+            const locked = preset.unlockStreak != null && streak < preset.unlockStreak
             return (
-              <button type="button" key={preset.title} className="style-preset" onClick={() => applyPreset(preset.values)}>
+              <button type="button" key={preset.title} className={`style-preset${locked ? " locked" : ""}`} onClick={() => { if (!locked) applyPreset(preset.values) }} aria-disabled={locked || undefined}>
                 <span className="preset-mini" style={{ background: theme.bg, borderColor: theme.line, borderRadius: radius + 4 }} aria-hidden="true">
                   <span className="preset-mini-bar" style={{ background: theme.panel, borderBottomColor: theme.line, borderRadius: radius }} />
                   <span className="preset-mini-title" style={{ color: theme.ink, fontFamily: VOICE_FONT[preset.values.type ?? "technical"] }}>Derive</span>
@@ -337,13 +419,30 @@ export default function SettingsPage() {
                   <span className="preset-mini-line short" style={{ background: theme.soft, opacity: .4 }} />
                   <span className="preset-mini-cta" style={{ background: accent, borderRadius: Math.max(3, radius - 3) }} />
                   {preset.values.texture === "grid" && <span className="preset-mini-grid" style={{ borderColor: theme.line }} />}
-                  {(preset.values.iconPack === "nothing") && <span className="preset-mini-dots" aria-hidden="true">{Array.from({ length: 9 }, (_, i) => <b key={i} />)}</span>}
+                  {preset.values.iconPack === "nothing" && <span className="preset-mini-dots" aria-hidden="true">{Array.from({ length: 9 }, (_, i) => <b key={i} />)}</span>}
                 </span>
                 <strong>{preset.title}</strong>
                 <small>{preset.body}</small>
+                {locked && <span className="preset-lock">Day {preset.unlockStreak} streak · you: {streak}</span>}
               </button>
             )
           })}
+        </div>
+      </section>
+
+      <section className="settings-section" aria-labelledby="share-heading">
+        <h2 id="share-heading">Share appearance</h2>
+        <p className="settings-hint">Pack your whole look into one QR or code. Scan it or paste it on another device to adopt the exact same atmosphere.</p>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          {shareDataUrl && <img src={shareDataUrl} alt="Appearance QR code" width={160} height={160} style={{ borderRadius: 14, border: "1px solid var(--line)" }} />}
+          <div style={{ display: "grid", gap: 8, minWidth: 220, flex: 1 }}>
+            <button type="button" className="super-primary" onClick={makeShareQr}>{shareDataUrl ? "Rebuild QR" : "Build my appearance QR"}</button>
+            <textarea className="settings-field-input" rows={2} value={importCode} onChange={event => setImportCode(event.target.value)} placeholder="Paste a deriva-theme code here…" spellCheck={false} />
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <button type="button" className="btn-ghost" onClick={applyImportedCode}>Apply pasted code</button>
+              {importMessage && <small style={{ color: "var(--ink-soft)", font: "600 11px var(--font-ui)" }}>{importMessage}</small>}
+            </div>
+          </div>
         </div>
       </section>
 
