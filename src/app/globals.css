@@ -3063,3 +3063,45 @@ code, pre { font-family: var(--font-mono); }
   .ghost-intro { overflow-y: auto; }
   .ghost-jump { bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
+
+/* ── Ghost v11: desktop brain-card refinement ─────────────── */
+@media (min-width: 700px) {
+  .ghost-intro > .ghost-section-label,
+  .ghost-intro > .ghost-summon {
+    max-width: 520px;
+    width: 100%;
+    margin-inline: auto;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .ghost-picker {
+    max-width: 520px;
+    margin-inline: auto;
+    gap: 12px;
+  }
+  .ghost-model {
+    background: transparent;
+    border-color: color-mix(in srgb, var(--line) 85%, transparent);
+    border-radius: 14px;
+    padding: 17px 18px 16px;
+    gap: 7px;
+  }
+  .ghost-model:hover {
+    background: var(--paper-raised);
+    transform: none;
+    border-color: color-mix(in srgb, var(--ink-soft) 45%, var(--line));
+  }
+  .ghost-model.active {
+    background: var(--paper-raised);
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .ghost-model-name { font-size: 14px; letter-spacing: 0.02em; }
+  .ghost-model-meta { font-size: 10px; letter-spacing: 0.07em; }
+  .ghost-model-blurb { font-size: 10.5px; opacity: 0.8; }
+  .ghost-spec-mini { max-width: 520px; margin-inline: auto; }
+  .ghost-intro > .ghost-storage-link,
+  .ghost-intro > .ghost-minibtn.danger { align-self: center; }
+}
