@@ -145,6 +145,19 @@ self.onmessage = async event => {
       return
     }
 
+    if (cmd === "delete") {
+      try {
+        if (wllama) { await wllama.exit() } 
+      } catch {}
+      wllama = null
+      try {
+        const cm = new CacheManager()
+        await cm.delete(payload.url)
+      } catch {}
+      post({ id, evt: "ok", data: { deleted: true, url: payload.url } })
+      return
+    }
+
     if (cmd === "eject") {
       try { if (wllama) await wllama.exit() } catch {}
       wllama = null

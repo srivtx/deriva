@@ -48,6 +48,10 @@ export default function GhostPage() {
   const [phase, setPhase] = useState<"probe" | "intro" | "downloading" | "loading" | "ready">("probe")
   const [caps, setCaps] = useState<GhostCapabilities | null>(null)
   const [cachedId, setCachedId] = useState<string | null>(null)
+  const [cachedUrls, setCachedUrls] = useState<string[]>([])
+  const [showBrains, setShowBrains] = useState(false)
+  const [brainAction, setBrainAction] = useState<string | null>(null)
+  const [getProgress, setGetProgress] = useState({ url: "", fraction: 0 })
   const [model, setModel] = useState<GhostModel>(() => getSelectedModel())
   const [progress, setProgress] = useState({ fraction: 0, loaded: 0, total: 0 })
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -72,9 +76,11 @@ export default function GhostPage() {
       try {
         const info = await ghostEngine.probe()
         const cached = await ghostEngine.cachedModelId()
+        const urls = await ghostEngine.cachedUrls()
         if (!alive) return
         setCaps(info)
         setCachedId(cached)
+        setCachedUrls(urls)
         setPhase(cached && ghostWasReady() ? "ready" : "intro")
       } catch {
         if (alive) setPhase("intro")
@@ -195,6 +201,64 @@ export default function GhostPage() {
     setPhase("intro")
   }, [])
 
+  const getBrain = useCallback(async (m: GhostModel) => {
+    if (brainAction) return
+    setBrainAction(`get:${m.id}`)
+    setError(null)
+    try {
+      await ghostEngine.download(m, (_f, loaded, total) =>
+        setGetProgress({ url: m.url, fraction: total > 0 ? loaded / total : 0 }),
+      )
+      setCachedUrls(prev => [...new Set([...prev, m.url])])
+      setCachedId(m.id)
+      await ghostEngine.load(m)
+      setModel(m)
+      setSelectedModel(m.id)
+    } catch (err) {
+      setError(String((err as Error)?.message || err))
+    } finally {
+      setBrainAction(null)
+      setGetProgress({ url: "", fraction: 0 })
+    }
+  }, [brainAction])
+
+  const useBrain = useCallback(async (m: GhostModel) => {
+    if (brainAction || m.id === model.id) return
+    setBrainAction(`use:${m.id}`)
+    setError(null)
+    try {
+      await ghostEngine.swapModel(m)
+      await ghostEngine.load(m)
+      setModel(m)
+    } catch (err) {
+      setError(String((err as Error)?.message || err))
+    } finally {
+      setBrainAction(null)
+    }
+  }, [brainAction, model.id])
+
+  const delBrain = useCallback(async (m: GhostModel) => {
+    if (m.id === model.id || brainAction) return
+    setBrainAction(`del:${m.id}`)
+    await ghostEngine.delete(m.url)
+    setCachedUrls(prev => prev.filter(u => u !== m.url))
+    if (cachedId === m.id) setCachedId(null)
+    setBrainAction(null)
+  }, [brainAction, model.id, cachedId])
+
+  const clearAllBrains = useCallback(async () => {
+    if (brainAction) return
+    setBrainAction("clear")
+    await ghostEngine.clearAll()
+    setCachedUrls([])
+    setCachedId(null)
+    setCaps(null)
+    setTps(null)
+    setShowBrains(false)
+    setPhase("intro")
+    setBrainAction(null)
+  }, [brainAction])
+
   const mbTotal = progress.total > 0 ? Math.round(progress.total) : null
 
   return (
@@ -274,8 +338,53 @@ export default function GhostPage() {
             <span className={`ghost-led${busy ? " on" : ""}`} />
             <span className="ghost-status-text">{busy ? "thinking" : "present"}</span>
             <span className="ghost-gauge">{tps != null ? `${tps.toFixed(1)} tok/s · ${model.name}` : `${model.name} · resident`}</span>
-            <button type="button" className="ghost-minibtn" onClick={eject}>EJECT</button>
+            <button type="button" className="ghost-minibtn" onClick={() => setShowBrains(v => !v)}>BRAIN</button>
           </header>
+
+          {showBrains && (
+            <div className="ghost-brains">
+              <p className="ghost-brains-title">BRAINS · pick what Ghost thinks with</p>
+              {GHOST_MODELS.map(m => {
+                const isCached = cachedUrls.includes(m.url)
+                const isActive = m.id === model.id
+                const working = brainAction?.includes(m.id) ?? false
+                return (
+                  <div key={m.id} className={`ghost-brain-row${isActive ? " active" : ""}`}>
+                    <div className="ghost-brain-info">
+                      <span className="ghost-brain-name">{m.name}</span>
+                      <span className="ghost-brain-meta">{m.label}{isActive ? " · RESIDENT" : isCached ? " · CACHED" : ""}</span>
+                    </div>
+                    <div className="ghost-brain-actions">
+                      {isActive ? (
+                        <span className="ghost-brain-state">in use</span>
+                      ) : working && brainAction === `use:${m.id}` ? (
+                        <span className="ghost-brain-state">switching…</span>
+                      ) : isCached ? (
+                        <button type="button" className="ghost-minibtn" disabled={!!brainAction} onClick={() => useBrain(m)}>USE</button>
+                      ) : working && brainAction === `get:${m.id}` ? (
+                        <span className="ghost-brain-progress">
+                          <span className="ghost-brain-bar"><span style={{ width: `${Math.max(3, getProgress.fraction * 100)}%` }} /></span>
+                          {Math.round(getProgress.fraction * 100)}%
+                        </span>
+                      ) : brainAction === `get:${m.id}` ? (
+                        <span className="ghost-brain-state">fetching…</span>
+                      ) : (
+                        <button type="button" className="ghost-minibtn" disabled={!!brainAction} onClick={() => getBrain(m)}>GET {m.sizeMb} MB</button>
+                      )}
+                      {!isActive && isCached && (
+                        <button type="button" className="ghost-minibtn danger" title="Delete this model" disabled={!!brainAction || brainAction === "clear"} onClick={() => delBrain(m)}>✕</button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              <div className="ghost-brains-foot">
+                <span>{cachedUrls.length > 0 ? `${cachedUrls.length} brain${cachedUrls.length > 1 ? "s" : ""} on device` : "nothing stored"}</span>
+                <button type="button" className="ghost-minibtn danger" disabled={!!brainAction} onClick={clearAllBrains}>CLEAR ALL STORAGE</button>
+              </div>
+              {error && <p className="ghost-error">{error}</p>}
+            </div>
+          )}
 
           <div className="ghost-messages">
             {messages.length === 0 && (

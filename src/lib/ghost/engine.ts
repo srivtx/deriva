@@ -15,11 +15,11 @@ export interface GhostModel {
 export const GHOST_MODELS: GhostModel[] = [
   {
     id: "smollm2-135m",
-    label: "NANO · 100 MB",
+    label: "NANO · 101 MB",
     name: "SmolLM2 135M",
     url: "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf",
     sizeMb: 101,
-    blurb: "downloads in seconds · runs anywhere",
+    blurb: "default · fast on any phone",
   },
   {
     id: "smollm2-360m",
@@ -27,19 +27,16 @@ export const GHOST_MODELS: GhostModel[] = [
     name: "SmolLM2 360M",
     url: "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf",
     sizeMb: 258,
-    blurb: "light Q&A · very fast on phones",
-  },
-  {
-    id: "qwen25-05b",
-    label: "STANDARD · 469 MB",
-    name: "Qwen 2.5 0.5B",
-    url: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
-    sizeMb: 469,
-    blurb: "the tutor as designed · best balance",
+    blurb: "deeper reasoning · still quick",
   },
 ]
 
-export const DEFAULT_MODEL_ID = "qwen25-05b"
+// Models that may linger from earlier builds — swept by Clear all.
+export const GHOST_LEGACY_URLS = [
+  "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+]
+
+export const DEFAULT_MODEL_ID = "smollm2-135m"
 
 export function getSelectedModel(): GhostModel {
   try {
@@ -137,6 +134,16 @@ class GhostEngine {
     return null
   }
 
+  async cachedUrls(): Promise<string[]> {
+    const out: string[] = []
+    const all = [...GHOST_MODELS.map(m => m.url), ...GHOST_LEGACY_URLS]
+    for (const url of all) {
+      const info = await this.request<{ cached: boolean; size: number }>("cached", { url })
+      if (info.cached) out.push(url)
+    }
+    return out
+  }
+
   download(model: GhostModel, onProgress: (fraction: number, mbLoaded: number, mbTotal: number) => void): Promise<void> {
     return this.request<void>(
       "download",
@@ -189,6 +196,21 @@ class GhostEngine {
       this.worker = null
       setSelectedModel(next.id)
     })
+  }
+
+  delete(url: string): Promise<void> {
+    if (!this.worker) return Promise.resolve()
+    return this.request<void>("delete", { url }).catch(() => {})
+  }
+
+  async clearAll(): Promise<void> {
+    const urls = [...GHOST_MODELS.map(m => m.url), ...GHOST_LEGACY_URLS]
+    for (const url of urls) {
+      await this.request<void>("delete", { url }).catch(() => {})
+    }
+    this.worker?.terminate()
+    this.worker = null
+    try { localStorage.removeItem("deriva-ghost-ready") } catch {}
   }
 }
 

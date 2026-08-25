@@ -2948,3 +2948,20 @@ code, pre { font-family: var(--font-mono); }
 .ghost-model:not(.active) .ghost-model-meta { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
 .ghost-model-blurb { font-size: 10px; line-height: 1.45; color: var(--ink-soft); }
 @media (max-width: 520px) { .ghost-picker { grid-template-columns: 1fr; } }
+
+/* Ghost brains manager */
+.ghost-brains { border: 1px solid var(--line); border-top: 0; background: var(--paper-raised); border-radius: 0 0 12px 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.ghost-brains-title { margin: 0 0 2px; font: 700 9px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.22em; color: var(--ink-soft); }
+.ghost-brain-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.ghost-brain-row.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.ghost-brain-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ghost-brain-name { font: 800 12.5px/1.2 var(--font-ui); color: var(--ink); }
+.ghost-brain-meta { font: 600 9px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.1em; color: var(--ink-soft); }
+.ghost-brain-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+.ghost-brain-state { font: 600 10px/1 var(--font-mono, ui-monospace, Menlo, monospace); color: var(--ink-soft); letter-spacing: 0.08em; }
+.ghost-minibtn.danger { color: #c0392b; border-color: color-mix(in srgb, #c0392b 35%, var(--line)); }
+.ghost-minibtn:disabled { opacity: 0.4; cursor: default; }
+.ghost-brain-progress { display: flex; align-items: center; gap: 7px; font: 700 10px/1 var(--font-mono, ui-monospace, Menlo, monospace); color: var(--ink-soft); }
+.ghost-brain-bar { width: 72px; height: 5px; border-radius: 999px; background: var(--line); overflow: hidden; display: inline-block; }
+.ghost-brain-bar > span { display: block; height: 100%; background: var(--accent); transition: width 0.25s ease; }
+.ghost-brains-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 4px; font: 600 10px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.08em; color: var(--ink-soft); }
