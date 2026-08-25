@@ -522,7 +522,7 @@ export default function GhostPage() {
             </button>
           )}
           {error && <p className="ghost-error">{error}</p>}
-          {cachedUrls.includes(model.url) && (
+          {isCached(model.url) && (
             <button type="button" className="ghost-minibtn danger" onClick={deleteSelectedCache}>DELETE {model.name.toUpperCase()}'S CACHE</button>
           )}
         </div>
