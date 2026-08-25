@@ -166,7 +166,8 @@ export default function VaultPage() {
         .vault-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .vault-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--ink); color: var(--paper-raised); padding: 10px 16px; border-radius: 999px; font: 600 13px var(--font-ui); z-index: 60; box-shadow: var(--shadow-raised); }
         .vault-entry-form { display: grid; gap: 12px; max-width: 520px; padding: 18px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); background: var(--paper-raised); margin-bottom: 16px; }
-        .vault-pw-row { display: flex; gap: 8px; align-items: center; }
+        .vault-pw-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .vault-pw-row input { flex: 1 1 160px; }
         .vault-pw-row input { flex: 1; }
         .vault-mini { min-height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: var(--ink-soft); font: 600 12px var(--font-ui); cursor: pointer; }
         .vault-mini.danger { color: var(--viz-pruned); }

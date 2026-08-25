@@ -737,7 +737,7 @@
 .ed-wrap:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
 
 /* ── App mode (full-screen app takeover on phones) ── */
-body.app-mode-active .super-page, body.app-mode-active .icpc-page, body.app-mode-active .settings-page, body.app-mode-active .dashboard-page, body.app-mode-active .android-page, body.app-mode-active .os-home { min-height: auto; padding-bottom: 28px; }
+body.app-mode-active .super-page, body.app-mode-active .icpc-page, body.app-mode-active .settings-page, body.app-mode-active .dashboard-page, body.app-mode-active .android-page, body.app-mode-active .os-home { min-height: auto; padding-bottom: 28px; overflow-x: clip; }
 body.app-mode-active .practice-wrap .main { padding-bottom: 28px; }
 
 /* ── Android store listing ── */

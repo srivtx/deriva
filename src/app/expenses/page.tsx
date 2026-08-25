@@ -102,9 +102,9 @@ export default function ExpensesPage() {
       <style>{`
         .expense-title { margin: 6px 0 14px; font: 700 clamp(24px, 5vw, 36px)/1.02 var(--font-narrative); letter-spacing: -.03em; }
         .expense-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-        .expense-stat { padding: 14px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); background: var(--paper-raised); display: grid; gap: 4px; }
+        .expense-stat { padding: 14px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); background: var(--paper-raised); display: grid; gap: 4px; min-width: 0; }
         .expense-stat span { color: var(--ink-soft); font: 700 9px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
-        .expense-stat strong { font: 700 20px var(--font-mono); }
+        .expense-stat strong { font: 700 clamp(15px, 4.6vw, 20px)/1 var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .expense-stat .pos { color: var(--viz-settled); }
         .expense-stat .neg { color: var(--viz-pruned); }
         .expense-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; padding: 16px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); background: var(--paper-raised); }
@@ -113,11 +113,11 @@ export default function ExpensesPage() {
         .expense-type button.active { border-color: var(--accent); background: var(--accent); color: var(--paper-raised); }
         .expense-form .super-primary { grid-column: 1 / -1; }
         .expense-breakdown { margin-top: 16px; display: grid; gap: 8px; }
-        .expense-bar { display: grid; grid-template-columns: 90px 1fr 84px; align-items: center; gap: 10px; }
-        .expense-bar-label { font: 600 12px var(--font-ui); }
+        .expense-bar { display: grid; grid-template-columns: 84px 1fr 78px; align-items: center; gap: 10px; }
+        .expense-bar-label { font: 600 12px var(--font-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .expense-bar-track { height: 10px; border-radius: 6px; background: var(--line); overflow: hidden; }
         .expense-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, var(--viz-settled))); border-radius: 6px; }
-        .expense-bar-val { font: 600 12px var(--font-mono); text-align: right; }
+        .expense-bar-val { font: 600 11px var(--font-mono); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .expense-list { margin-top: 16px; }
         .expense-list ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
         .expense-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); }
@@ -127,7 +127,7 @@ export default function ExpensesPage() {
         .expense-list-right .pos { color: var(--viz-settled); font: 700 14px var(--font-mono); }
         .expense-list-right .neg { color: var(--ink); font: 700 14px var(--font-mono); }
         .expense-del { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--viz-pruned); font: 700 16px/1 var(--font-ui); cursor: pointer; }
-        @media (max-width: 480px) { .expense-form { grid-template-columns: 1fr; } .expense-bar { grid-template-columns: 76px 1fr 72px; } }
+        @media (max-width: 480px) { .expense-form { grid-template-columns: 1fr; } .expense-bar { grid-template-columns: 64px 1fr 64px; } }
       `}</style>
     </main>
   )
