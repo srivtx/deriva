@@ -281,3 +281,11 @@ Android TWA ships matching launcher icons via product flavors
   merges through the normal normalize pipeline, so codes can never corrupt prefs.
 - **Streak atmospheres**: presets may declare `unlockStreak`; locked cards show
   progress and cannot apply until the daily streak reaches the threshold.
+- **Glyph Studio** (`/glyph`): standalone dot-matrix editor (7/12/16 grids).
+  Tools: draw/erase drag-painting, undo, fill/invert/clear, flip H/V, rotate,
+  shift. Material controls: dot color, surface color (incl. transparent), glow,
+  dot scale, square↔round blend. Exports: PNG (selectable resolution), SVG,
+  JSON (`{v:1,size,dots}`), SVG-to-clipboard, JSON import; 7×7 glyphs save
+  directly into the Personal icon pack.
+- **NEW badges**: recently added themes/voices/packs/presets declare `isNew`;
+  all atmospheres are unlocked by default now (streak locks removed).

@@ -10,15 +10,13 @@ import { NAV_VARIANTS } from "@/data/nav-icons"
 import { LOGO_STYLES } from "@/data/logo-marks"
 import { encodeAppearance, decodeAppearance } from "@/data/share-code"
 import QRCode from "qrcode"
-import { currentStreak, loadDailyHistory } from "@/persistence/daily"
-import { NOTHING_DOTS } from "@/data/icon-packs"
 import PackIcon from "@/components/pack-icon"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 import Logo from "@/components/logo"
 import { downloadWorkspace, importWorkspace, eraseWorkspace } from "@/persistence/data-transfer"
 
-const themes: { value: ThemePreference; title: string; body: string; swatch: string }[] = [
+const themes: { value: ThemePreference; title: string; body: string; swatch: string; isNew?: boolean }[] = [
   { value: "moss", title: "Moss", body: "Grounded, green, and clear.", swatch: "#2F8F5B" },
   { value: "system", title: "System", body: "Follow your device.", swatch: "linear-gradient(135deg, #FAF9F6 50%, #14161A 50%)" },
   { value: "paper", title: "Paper", body: "Warm, quiet, editorial.", swatch: "#FAF9F6" },
@@ -29,10 +27,10 @@ const themes: { value: ThemePreference; title: string; body: string; swatch: str
   { value: "sunset", title: "Sunset", body: "Warm studio light.", swatch: "#B55335" },
   { value: "nothing", title: "Nothing", body: "Dot-industrial black. Signal red.", swatch: "#E02020" },
   { value: "opone", title: "OP-1", body: "Teenage Engineering warm grey + orange.", swatch: "#E04A00" },
-  { value: "swiss", title: "Swiss", body: "International white, grid red.", swatch: "#D92B2B" },
-  { value: "nord", title: "Nord", body: "Frost-blue polar night.", swatch: "#88C0D0" },
-  { value: "solarized", title: "Solarized", body: "Classic terminal teal.", swatch: "#2AA198" },
-  { value: "braun", title: "Braun", body: "Rams functional grey, mustard dial.", swatch: "#C08A00" },
+  { value: "swiss", isNew: true, title: "Swiss", body: "International white, grid red.", swatch: "#D92B2B" },
+  { value: "nord", isNew: true, title: "Nord", body: "Frost-blue polar night.", swatch: "#88C0D0" },
+  { value: "solarized", isNew: true, title: "Solarized", body: "Classic terminal teal.", swatch: "#2AA198" },
+  { value: "braun", isNew: true, title: "Braun", body: "Rams functional grey, mustard dial.", swatch: "#C08A00" },
 ]
 
 const accents: { value: AccentPreference; title: string; color: string }[] = [
@@ -43,12 +41,12 @@ const accents: { value: AccentPreference; title: string; color: string }[] = [
   { value: "gold", title: "Gold", color: "#A26C19" },
 ]
 
-const typeVoices: { value: TypePreference; title: string; body: string }[] = [
+const typeVoices: { value: TypePreference; title: string; body: string; isNew?: boolean }[] = [
   { value: "technical", title: "Technical", body: "One precise sans-serif voice" },
   { value: "editorial", title: "Editorial", body: "Newsreader ideas + Inter controls" },
   { value: "humanist", title: "Humanist", body: "Classic reading rhythm" },
-  { value: "dotmatrix", title: "Dot Matrix", body: "Nothing-style Doto headlines" },
-  { value: "instrument", title: "Instrument", body: "Space Grotesk, hardware panel feel" },
+  { value: "dotmatrix", isNew: true, title: "Dot Matrix", body: "Nothing-style Doto headlines" },
+  { value: "instrument", isNew: true, title: "Instrument", body: "Space Grotesk, hardware panel feel" },
 ]
 
 const THEME_PREVIEW: Record<string, { bg: string; panel: string; ink: string; soft: string; line: string }> = {
@@ -77,7 +75,7 @@ const VOICE_FONT: Record<string, string> = {
   instrument: '"Space Grotesk", var(--font-ui)',
 }
 
-const presets: { title: string; body: string; values: Partial<Preferences>; unlockStreak?: number }[] = [
+const presets: { title: string; body: string; values: Partial<Preferences>; isNew?: boolean }[] = [
   { title: "Moss Technical", body: "Green, precise, instrument-like", values: { theme: "moss", accent: "mint", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "Nothing Dark", body: "Black, signal red, dot-industrial", values: { theme: "nothing", iconPack: "nothing", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "OP-1 Studio", body: "Warm grey, instrument orange, numbered", values: { theme: "opone", iconPack: "teenage", type: "technical", density: "calm", shape: "soft", texture: "plain" } },
@@ -85,10 +83,10 @@ const presets: { title: string; body: string; values: Partial<Preferences>; unlo
   { title: "Field Notes", body: "Moss, mint, textured", values: { theme: "moss", accent: "mint", type: "humanist", density: "calm", shape: "soft", texture: "grid" } },
   { title: "Night Lab", body: "Violet, precise, focused", values: { theme: "violet", accent: "violet", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
   { title: "Sunset Studio", body: "Warm, compact, vivid", values: { theme: "sunset", accent: "ember", type: "editorial", density: "compact", shape: "soft", texture: "plain" } },
-  { title: "Braun Werk", body: "Rams grey, mustard dial, functional", values: { theme: "braun", accent: "gold", type: "instrument", density: "focused", shape: "precise", texture: "plain" } },
-  { title: "Ember Equinox", body: "Warm dusk, earned at day 3", unlockStreak: 3, values: { theme: "sunset", accent: "ember", type: "instrument", density: "calm", shape: "soft", texture: "grid" } },
-  { title: "Deep Frost", body: "Nord night, earned at day 7", unlockStreak: 7, values: { theme: "nord", accent: "cobalt", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
-  { title: "Lucent Ghost", body: "Frosted carbon, earned at day 14", unlockStreak: 14, values: { theme: "carbon", accent: "violet", type: "humanist", density: "calm", shape: "soft", texture: "plain" } },
+  { title: "Braun Werk", isNew: true, body: "Rams grey, mustard dial, functional", values: { theme: "braun", accent: "gold", type: "instrument", density: "focused", shape: "precise", texture: "plain" } },
+  { title: "Ember Equinox", isNew: true, body: "Warm dusk, earned at day 3", values: { theme: "sunset", accent: "ember", type: "instrument", density: "calm", shape: "soft", texture: "grid" } },
+  { title: "Deep Frost", isNew: true, body: "Nord night, earned at day 7", values: { theme: "nord", accent: "cobalt", type: "technical", density: "focused", shape: "precise", texture: "grid" } },
+  { title: "Lucent Ghost", isNew: true, body: "Frosted carbon, earned at day 14", values: { theme: "carbon", accent: "violet", type: "humanist", density: "calm", shape: "soft", texture: "plain" } },
 ]
 
 const densityOptions: { value: DensityPreference; title: string; body: string }[] = [
@@ -120,30 +118,10 @@ export default function SettingsPage() {
   const logoInput = useRef<HTMLInputElement>(null)
   const dragNav = useRef<{ id: string; pointerId: number } | null>(null)
   const [navDragging, setNavDragging] = useState<string | null>(null)
-  const [streak, setStreak] = useState(0)
-  const [glyphTarget, setGlyphTarget] = useState("home")
-  const [glyphRows, setGlyphRows] = useState<string[]>(NOTHING_DOTS.home)
   const [shareDataUrl, setShareDataUrl] = useState("")
   const [importCode, setImportCode] = useState("")
   const [importMessage, setImportMessage] = useState("")
 
-  const toggleGlyphCell = (row: number, col: number) => {
-    setGlyphRows(rows => rows.map((r, y) => (y === row ? r.substring(0, col) + (r[col] === "#" ? "." : "#") + r.substring(col + 1) : r)))
-  }
-  const savePersonalGlyph = () => {
-    update({ ...preferences, personalDots: { ...preferences.personalDots, [glyphTarget]: glyphRows.join("/") } })
-  }
-  const clearPersonalGlyph = () => {
-    const next = { ...preferences.personalDots }
-    delete next[glyphTarget]
-    update({ ...preferences, personalDots: next })
-    setGlyphRows(NOTHING_DOTS[glyphTarget] ?? NOTHING_DOTS.home)
-  }
-  const pickGlyphTarget = (id: string) => {
-    setGlyphTarget(id)
-    const saved = preferences.personalDots[id]
-    setGlyphRows(saved ? saved.split("/") : NOTHING_DOTS[id] ?? NOTHING_DOTS.home)
-  }
   const makeShareQr = async () => {
     const code = encodeAppearance(preferences)
     try {
@@ -184,7 +162,6 @@ export default function SettingsPage() {
   useEffect(() => {
     setPreferences(loadPreferences())
     setNotificationPermission(getNotificationPermission())
-    setStreak(currentStreak(loadDailyHistory()))
   }, [])
   const update = (next: Preferences) => { setPreferences(next); savePreferences(next); applyPreferences(next) }
   const toggleNavSlot = (id: string) => {
@@ -275,10 +252,16 @@ export default function SettingsPage() {
     <main className="settings-page">
       <section className="settings-intro"><div className="settings-intro-line"><span>{preferences.brandName.toUpperCase()} / SETTINGS</span><button type="button" className="settings-reset" onClick={resetAll}>Reset all</button></div><h1>Make the workspace yours.</h1><p>{preferences.tagline} Preferences stay on this device and never change the learning path.</p></section>
 
+      <nav className="settings-toc" aria-label="Settings sections">
+        {[["appearance-heading","Look"],["type-heading","Voice"],["icons-heading","Icons"],["glyph-heading","Glyphs"],["nav-heading","Nav bar"],["identity-heading","Identity"],["presets-heading","Moods"],["share-heading","Share"],["system-heading","System"]].map(([id,label]) => (
+          <a key={id} href={`#${id}`} className="app-chip">{label}</a>
+        ))}
+      </nav>
+
       <section className="settings-section" aria-labelledby="appearance-heading">
         <h2 id="appearance-heading">Appearance</h2>
         <div className="theme-options theme-options-expanded">
-          {themes.map(theme => <button type="button" key={theme.value} className={`theme-option${preferences.theme === theme.value ? " selected" : ""}`} onClick={() => update({ ...preferences, theme: theme.value })}><i style={{ background: theme.swatch }} /><strong>{theme.title}</strong><span>{theme.body}</span></button>)}
+          {themes.map(theme => <button type="button" key={theme.value} className={`theme-option${preferences.theme === theme.value ? " selected" : ""}`} onClick={() => update({ ...preferences, theme: theme.value })}><i style={{ background: theme.swatch }} /><strong>{theme.title}{theme.isNew && <span className="new-badge">NEW</span>}</strong><span>{theme.body}</span></button>)}
         </div>
       </section>
 
@@ -354,7 +337,7 @@ export default function SettingsPage() {
         <div className="icon-pack-grid">
           {ICON_PACKS.map(pack => (
             <button key={pack.id} type="button" className={`icon-pack-card${preferences.iconPack === pack.id ? " selected" : ""}`} onClick={() => update({ ...preferences, iconPack: pack.id })}>
-              <strong>{pack.name}</strong>
+              <strong>{pack.name}{pack.id === "personal" && <span className="new-badge">NEW</span>}</strong>
               <span>{pack.desc}</span>
               <div className="pack-preview-bar" aria-hidden="true">
                 {PREVIEW_SLOTS.map((slot, index) => (
@@ -376,30 +359,12 @@ export default function SettingsPage() {
 
       <section className="settings-section" aria-labelledby="glyph-heading">
         <div className="settings-section-head"><h2 id="glyph-heading">Glyph Studio</h2><button type="button" className="settings-reset" onClick={() => update({ ...preferences, personalDots: {} })}>Clear all</button></div>
-        <p className="settings-hint">Draw your own 7×7 dot glyphs for the navigation bar, then switch the icon pack to Personal. Nothing&rsquo;s glyphs are the starting canvas.</p>
-        <div className="glyph-studio">
-          <div className="chip-row" role="group" aria-label="Glyph target">
-            {[...preferences.navSlots, "more"].map(id => (
-              <button key={id} type="button" className={`app-chip${glyphTarget === id ? " active" : ""}`} onClick={() => pickGlyphTarget(id)}>{NAV_ITEM_MAP[id]?.label ?? "More"}</button>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-            <div className="glyph-grid" role="grid" aria-label={`Glyph editor for ${glyphTarget}`}>
-              {glyphRows.map((row, y) =>
-                row.split("").map((cell, x) => (
-                  <button key={`${y}-${x}`} type="button" role="gridcell" aria-label={`dot ${y + 1},${x + 1}`} aria-pressed={cell === "#"} className={`glyph-cell${cell === "#" ? " on" : ""}`} onClick={() => toggleGlyphCell(y, x)} />
-                )),
-              )}
-            </div>
-            <span className="app-tile-icon" data-icons="personal" style={{ width: 64, height: 64, borderRadius: 18 }} aria-hidden="true">
-              <PackIcon id={glyphTarget} fallback="◆" pack="personal" />
-            </span>
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button type="button" className="super-primary" onClick={savePersonalGlyph}>Save glyph</button>
-            <button type="button" className="btn-ghost" onClick={clearPersonalGlyph}>Reset glyph</button>
-          </div>
-        </div>
+        <p className="settings-hint">A full dot-matrix editor lives in its own app — draw at 7×7, 12×12 or 16×16, tune color, glow and shape, then export PNG / SVG / JSON or save straight into your Personal icon pack.</p>
+        <a className="glyph-launcher" href="/glyph">
+          <span className="app-tile-icon" style={{ width: 56, height: 56, borderRadius: 16 }} aria-hidden="true"><PackIcon id="home" fallback="◆" pack="personal" /></span>
+          <span><strong>Open Glyph Studio</strong><small>draw · light · export · save to pack</small></span>
+          <i aria-hidden="true">→</i>
+        </a>
       </section>
 
       <section className="settings-section" aria-labelledby="presets-heading">
@@ -409,9 +374,8 @@ export default function SettingsPage() {
             const theme = THEME_PREVIEW[preset.values.theme ?? "paper"] ?? THEME_PREVIEW.paper
             const accent = preset.values.accent === "custom" ? "#E04A00" : PRESET_ACCENTS[preset.values.accent ?? "mint"] ?? PRESET_ACCENTS.mint
             const radius = preset.values.shape === "precise" ? 5 : 11
-            const locked = preset.unlockStreak != null && streak < preset.unlockStreak
             return (
-              <button type="button" key={preset.title} className={`style-preset${locked ? " locked" : ""}`} onClick={() => { if (!locked) applyPreset(preset.values) }} aria-disabled={locked || undefined}>
+              <button type="button" key={preset.title} className="style-preset" onClick={() => applyPreset(preset.values)}>
                 <span className="preset-mini" style={{ background: theme.bg, borderColor: theme.line, borderRadius: radius + 4 }} aria-hidden="true">
                   <span className="preset-mini-bar" style={{ background: theme.panel, borderBottomColor: theme.line, borderRadius: radius }} />
                   <span className="preset-mini-title" style={{ color: theme.ink, fontFamily: VOICE_FONT[preset.values.type ?? "technical"] }}>Derive</span>
@@ -421,9 +385,8 @@ export default function SettingsPage() {
                   {preset.values.texture === "grid" && <span className="preset-mini-grid" style={{ borderColor: theme.line }} />}
                   {preset.values.iconPack === "nothing" && <span className="preset-mini-dots" aria-hidden="true">{Array.from({ length: 9 }, (_, i) => <b key={i} />)}</span>}
                 </span>
-                <strong>{preset.title}</strong>
+                <strong>{preset.title}{preset.isNew && <span className="new-badge">NEW</span>}</strong>
                 <small>{preset.body}</small>
-                {locked && <span className="preset-lock">Day {preset.unlockStreak} streak · you: {streak}</span>}
               </button>
             )
           })}
@@ -480,7 +443,7 @@ export default function SettingsPage() {
 
       <section className="settings-section" aria-labelledby="type-heading">
         <h2 id="type-heading">Reading voice</h2>
-        <div className="type-options">{typeVoices.map(voice => <button type="button" key={voice.value} className={`type-option${preferences.type === voice.value ? " selected" : ""}`} onClick={() => update({ ...preferences, type: voice.value })}><strong>{voice.title}</strong><span>{voice.body}</span></button>)}</div>
+        <div className="type-options">{typeVoices.map(voice => <button type="button" key={voice.value} className={`type-option${preferences.type === voice.value ? " selected" : ""}`} onClick={() => update({ ...preferences, type: voice.value })}><strong>{voice.title}{voice.isNew && <span className="new-badge">NEW</span>}</strong><span>{voice.body}</span></button>)}</div>
       </section>
 
       <section className="settings-section" aria-labelledby="surface-heading">

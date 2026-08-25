@@ -860,6 +860,46 @@
 textarea.settings-field-input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-raised); color: var(--ink); font: 12px/1.5 var(--font-mono); resize: vertical; }
 textarea.settings-field-input:focus { outline: none; border-color: var(--accent); }
 
+/* ── NEW badge + settings organisation ── */
+.new-badge { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: var(--accent); color: var(--paper-raised); font: 800 8.5px var(--font-ui); letter-spacing: .1em; vertical-align: middle; }
+.settings-toc { display: flex; gap: 7px; flex-wrap: wrap; padding: 0 0 4px; }
+.settings-toc .app-chip { text-decoration: none; }
+.glyph-launcher { display: flex; align-items: center; gap: 14px; max-width: 460px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink); text-decoration: none; transition: border-color var(--dur-fast), transform var(--dur-fast), box-shadow var(--dur-fast); }
+.glyph-launcher:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow-raised); }
+.glyph-launcher strong { display: block; font: 700 14px var(--font-ui); }
+.glyph-launcher small { color: var(--ink-soft); font: 11.5px var(--font-ui); }
+.glyph-launcher i { margin-left: auto; color: var(--accent); font-style: normal; font-size: 20px; }
+
+/* ── Glyph Studio app ── */
+.glyph-app { min-height: 100dvh; max-width: 1060px; margin: 0 auto; padding: 26px 18px calc(40px + env(safe-area-inset-bottom)); }
+.glyph-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.glyph-head h1 { font: 700 clamp(24px, 5vw, 32px)/1.1 var(--font-narrative); letter-spacing: -.02em; }
+.glyph-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; align-items: start; }
+@media (max-width: 900px) { .glyph-layout { grid-template-columns: 1fr; } }
+.glyph-canvas-col { display: grid; gap: 14px; }
+.glyph-toolbar { display: grid; gap: 8px; }
+.glyph-canvas { display: inline-grid; gap: 3px; padding: clamp(10px, 3vw, 20px); border-radius: 20px; width: fit-content; touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent), var(--shadow-raised); }
+.glyph-canvas-row { display: flex; gap: 3px; }
+.glyph-pixel { width: clamp(18px, calc(46vw / 16), 34px); aspect-ratio: 1; border: 0; padding: 0; cursor: crosshair; transition: transform .06s linear; }
+.glyph-pixel:not(.on):hover { background: color-mix(in srgb, currentColor 14%, transparent) !important; }
+.glyph-previews span:first-child { color: var(--ink-soft); font: 700 9.5px var(--font-ui); letter-spacing: .12em; text-transform: uppercase; }
+.glyph-preview-strip { display: flex; gap: 10px; margin-top: 8px; align-items: flex-end; }
+.glyph-preview-tile { position: relative; overflow: hidden; display: block; border-radius: 8px; }
+.glyph-preview-tile.dark { background: #0A0A0B; box-shadow: inset 0 0 0 1px #27272A; }
+.glyph-preview-tile.light { background: #F4F3EF; box-shadow: inset 0 0 0 1px #CFCFC8; }
+.glyph-panel { display: grid; gap: 12px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); position: sticky; top: 16px; }
+.glyph-panel h2 { font: 700 10.5px var(--font-ui); letter-spacing: .13em; text-transform: uppercase; color: var(--accent); }
+.glyph-field { display: grid; gap: 6px; }
+.glyph-field > span { color: var(--ink-soft); font: 600 11px var(--font-ui); }
+.glyph-field input[type="range"] { accent-color: var(--accent); width: 100%; }
+.glyph-field select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font: 600 12px var(--font-ui); }
+.swatch-row { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.swatch { width: 26px; height: 26px; border-radius: 9px; cursor: pointer; box-shadow: inset 0 0 0 1px rgb(128 128 128 / .35); transition: transform var(--dur-fast), box-shadow var(--dur-fast); }
+.swatch:hover { transform: scale(1.1); }
+.swatch.selected { box-shadow: 0 0 0 3px var(--accent-soft), inset 0 0 0 1px rgb(128 128 128 / .35); }
+.glyph-export-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.glyph-message { color: var(--ink-soft); font: 600 11px/1.5 var(--font-ui); }
+
 /* ── Lucent motion pass (Nothing OS 5.0 frosted feel) ── */
 @media (prefers-reduced-motion: no-preference) {
   .mobile-tab.active::before { animation: pill-in .22s var(--ease-standard) both; }
