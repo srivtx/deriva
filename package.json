@@ -17,6 +17,7 @@
   "packageManager": "pnpm@10.26.2",
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "@huggingface/transformers": "^4.2.0",
     "@xyflow/react": "^12.11.2",
     "d3-hierarchy": "^3.1.2",
     "gsap": "^3.15.0",

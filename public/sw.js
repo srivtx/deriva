@@ -1,5 +1,5 @@
 // Deriva service worker — cache-first for static assets, network-first for pages.
-const CACHE = "deriva-v36"
+const CACHE = "deriva-v37"
 const STATIC = ["/", "/practice", "/design", "/lld", "/dashboard", "/patterns", "/patterns/quiz", "/settings", "/expedition", "/games", "/icpc", "/daily", "/review", "/contest", "/interview", "/cheatsheets", "/playground", "/releases", "/android", "/atlas", "/complexity", "/notebook", "/toolkit", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store", "/expenses", "/calendar", "/translate", "/manifest.webmanifest", "/favicon.svg", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable.png"]
 
 self.addEventListener("install", (e) => {
@@ -18,7 +18,8 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(request.url)
 
   // Next.js build assets + icons + Ghost engine files: cache-first (immutable)
-  const isGhostEngine = url.pathname.startsWith("/ghost/vendor/wllama/")
+  const isGhostEngine = url.pathname.startsWith("/ghost/vendor/wllama/") ||
+    url.pathname.startsWith("/ghost/vendor/onnx/")
   if (url.pathname.startsWith("/_next/static") || url.pathname.startsWith("/icons") || isGhostEngine) {
     e.respondWith(
       caches.match(request).then((hit) => hit || fetch(request).then((res) => {

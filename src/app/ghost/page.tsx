@@ -82,7 +82,7 @@ export default function GhostPage() {
   const [model, setModel] = useState<GhostModel>(() => getSelectedModel())
   const [storage, setStorage] = useState<StorageEntry[]>([])
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [diag, setDiag] = useState({ isolated: false, threads: 0, resident: false })
+  const [diag, setDiag] = useState({ isolated: false, threads: 0, resident: false, backend: "cpu" as "webgpu" | "cpu" })
   const [action, setAction] = useState<string | null>(null)
   const [getProgress, setGetProgress] = useState<{ url: string; fraction: number; loadedMb: number; totalMb: number }>({ url: "", fraction: 0, loadedMb: 0, totalMb: 0 })
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -668,7 +668,8 @@ export default function GhostPage() {
             <div className="ghost-brains-foot">
               <span>{totalMb > 0 ? `${totalMb} MB total` : "nothing stored"}</span>
               <p className="ghost-brain-meta ghost-engine-diag" style={{ padding: "10px 16px 0", opacity: 0.7 }}>
-                ENGINE · {diag.isolated ? "isolated ✓" : "no isolation ✗"} ·{" "}
+                ENGINE · {diag.backend === "webgpu" ? "GPU · WEBGPU" : "CPU · WASM"} ·{" "}
+                {diag.isolated ? "isolated ✓" : "no isolation"} ·{" "}
                 {diag.resident
                   ? `live: ${diag.threads > 1 ? `${diag.threads} threads` : "single thread"}`
                   : `idle · ${diag.threads} threads on wake`}

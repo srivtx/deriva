@@ -130,6 +130,46 @@ function store(): GhostStore {
   return storeSingleton
 }
 
+/* ---------- WebGPU backend (Transformers.js v4 + ONNX Runtime WebGPU) ---- */
+
+const GPU_MODEL_REPOS: Record<string, string> = {
+  "smollm2-135m": "onnx-community/SmolLM2-135M-Instruct-ONNX",
+  "smollm2-360m": "onnx-community/SmolLM2-360M-Instruct-ONNX",
+}
+
+interface TfLike {
+  env: { backends: { onnx: { wasm: { wasmPaths: string } } }; allowLocalModels: boolean }
+  pipeline(task: string, repo: string, opts?: Record<string, unknown>): Promise<unknown>
+  TextStreamer: new (tok: unknown, cfg: Record<string, unknown>) => unknown
+}
+
+let tfPromise: Promise<TfLike> | null = null
+function tf(): Promise<TfLike> {
+  if (!tfPromise) {
+    tfPromise = import("@huggingface/transformers").then((T: unknown) => {
+      const mod = T as TfLike
+      mod.env.backends.onnx.wasm.wasmPaths = "/ghost/vendor/onnx/"
+      mod.env.allowLocalModels = false
+      return mod
+    })
+  }
+  return tfPromise
+}
+
+let gpuProbe: Promise<boolean> | null = null
+function gpuAvailable(): Promise<boolean> {
+  if (!gpuProbe) {
+    gpuProbe = (async () => {
+      try {
+        if (!("gpu" in navigator)) return false
+        const adapter = await (navigator as Navigator & { gpu: { requestAdapter(): Promise<unknown> } }).gpu.requestAdapter()
+        return !!adapter
+      } catch { return false }
+    })()
+  }
+  return gpuProbe
+}
+
 const WLLAMA_BASE = "/ghost/vendor/wllama"
 const WLLAMA_PATHS = {
   "single-thread/wllama.wasm": `${WLLAMA_BASE}/single-thread/wllama.wasm`,
@@ -176,6 +216,8 @@ async function opfsSweep(fragment: string): Promise<void> {
 class GhostEngine {
   private instance: WllamaInstance | null = null
   private loadedUrl: string | null = null
+  private pipes = new Map<string, unknown>()
+  private stopDetached = false
   private stopTokenIds: number[] | null = null
   private stopIdsUrl: string | null = null
   private activeAbort: AbortController | null = null
@@ -215,18 +257,45 @@ class GhostEngine {
     this.loadedUrl = null
   }
 
+  private async ensurePipeline(
+    modelId: string,
+    onProgress?: (fraction: number, mbLoaded: number, mbTotal: number) => void,
+  ): Promise<unknown> {
+    if (this.pipes.has(modelId)) return this.pipes.get(modelId)
+    const repo = GPU_MODEL_REPOS[modelId]
+    if (!repo) throw new Error("MODEL_NOT_CACHED · download the brain first")
+    const T = await tf()
+    const pipe = await T.pipeline("text-generation", repo, {
+      device: "webgpu",
+      dtype: "q4f16",
+      progress_callback: (info: { status?: string; loaded?: number; total?: number }) => {
+        if (info?.status === "progress" && onProgress) {
+          const loaded = Number(info.loaded ?? 0)
+          const total = Number(info.total ?? 0)
+          onProgress(total > 0 ? Math.min(1, loaded / total) : 0, loaded / 1048576, total / 1048576)
+        }
+      },
+    })
+    this.pipes.set(modelId, pipe)
+    return pipe
+  }
+
+  async backend(): Promise<"webgpu" | "cpu"> {
+    return (await gpuAvailable()) ? "webgpu" : "cpu"
+  }
+
   /* ---------- storage queries ---------- */
 
   lastThreads = 0
 
-  async diagnostics(): Promise<{ isolated: boolean; threads: number; resident: boolean }> {
+  async diagnostics(): Promise<{ isolated: boolean; threads: number; resident: boolean; backend: "webgpu" | "cpu" }> {
     const isolated = typeof crossOriginIsolated !== "undefined" ? crossOriginIsolated : false
+    const backend = (await gpuAvailable()) ? "webgpu" as const : "cpu" as const
     if (this.instance && this.lastThreads > 0) {
-      return { isolated, threads: this.lastThreads, resident: true }
+      return { isolated, threads: this.lastThreads, resident: true, backend }
     }
-    // No live runtime: report what WILL engage on next wake.
     const expected = Math.floor((navigator.hardwareConcurrency || 1) / 2)
-    return { isolated, threads: Math.max(expected, 1), resident: false }
+    return { isolated, threads: Math.max(expected, 1), resident: false, backend }
   }
 
   async probe(): Promise<{ webgpu: boolean; storageQuotaMb: number | null; cachedMb: number | null }> {
@@ -275,6 +344,12 @@ class GhostEngine {
     model: GhostModel,
     onProgress: (fraction: number, mbLoaded: number, mbTotal: number) => void,
   ): Promise<void> {
+    if (await gpuAvailable()) {
+      await this.ensurePipeline(model.id, onProgress)
+      setSelectedModel(model.id)
+      try { localStorage.setItem("deriva-ghost-ready", "1") } catch {}
+      return
+    }
     const res = await fetch(model.url)
     if (!res.ok || !res.body) throw new Error(`Download failed (HTTP ${res.status})`)
     const total = Number(res.headers.get("content-length")) || model.sizeMb * 1048576
@@ -299,6 +374,10 @@ class GhostEngine {
 
   async load(model: GhostModel, onProgress?: (label: string) => void): Promise<void> {
     onProgress?.(`waking ${model.name}`)
+    if (await gpuAvailable()) {
+      await this.ensurePipeline(model.id)
+      return
+    }
     await this.ensureLoaded(model.url)
   }
 
@@ -308,9 +387,56 @@ class GhostEngine {
     maxTokens: number,
     onToken?: (piece: string) => void,
   ): Promise<{ text: string; tps: number }> {
+    const started = performance.now()
+    const clean = (s: unknown) => String(s ?? "").replace(/<\|[a-z_]+\|>/g, "")
+
+    if (await gpuAvailable()) {
+      const pipe = (await this.ensurePipeline(model.id)) as {
+        (messages: unknown, opts?: Record<string, unknown>): Promise<Array<{ generated_text: Array<{ role: string; content: string }> }>>
+        tokenizer: unknown
+      }
+      this.stopDetached = false
+      let tokens = 0
+      let currentText = ""
+      const T = await tf()
+      const streamer = new T.TextStreamer(pipe.tokenizer, {
+        skip_prompt: true,
+        skip_special_tokens: true,
+        callback_function: (piece: string) => {
+          tokens += 1
+          currentText += piece
+          if (!this.stopDetached && piece && !clean(piece).includes("[")) onToken?.(clean(piece))
+        },
+      })
+      const run = (async () => {
+        await pipe(
+          messages.map(m => ({ role: m.role, content: m.content })),
+          {
+            max_new_tokens: Math.min(maxTokens || 220, 220),
+            do_sample: true,
+            temperature: 0.35,
+            top_p: 0.9,
+            repetition_penalty: 1.1,
+            streamer,
+          },
+        )
+        return clean(currentText).trim()
+      })()
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Ghost timed out — try again.")), 120000)
+      })
+      try {
+        const text = await Promise.race([run, timeout])
+        const seconds = (performance.now() - started) / 1000
+        return { text, tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
+      } finally {
+        if (timer) clearTimeout(timer)
+      }
+    }
+
     await this.ensureLoaded(model.url)
     const wllama = this.instance!
-    const clean = (s: unknown) => String(s ?? "").replace(/<\|[a-z_]+\|>/g, "")
 
     // stopTokens are TOKEN IDs in v2 — resolve once per loaded model.
     if (!this.stopTokenIds || this.stopIdsUrl !== model.url) {
@@ -327,7 +453,6 @@ class GhostEngine {
 
     const abort = new AbortController()
     this.activeAbort = abort
-    const started = performance.now()
 
     const run = (async () => {
       const msgs = messages ?? []
@@ -389,6 +514,7 @@ class GhostEngine {
   // Stop: aborts generation via signal — v2 unwinds cleanly and rolls back
   // the KV cache, so the runtime stays warm for the next question.
   stop(): void {
+    this.stopDetached = true
     const abort = this.activeAbort
     if (!abort) return
     try { abort.abort() } catch {}
@@ -406,6 +532,15 @@ class GhostEngine {
 
   // Cold delete: release every OPFS handle first, then remove + verify.
   async delete(url: string): Promise<{ verified: boolean }> {
+    if (await gpuAvailable()) {
+      // transformers.js keeps all repos in shared browser caches — surgical
+      // per-model removal isn't exposed, so a GPU-brain delete clears them.
+      for (const name of ["models-cache", "transformers-cache"]) {
+        try { await caches.delete(name) } catch {}
+      }
+      this.pipes.clear()
+      return { verified: true }
+    }
     await this.releaseRuntime()
     try {
       const c = store()
