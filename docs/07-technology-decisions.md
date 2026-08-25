@@ -175,3 +175,31 @@ killable sandbox over preserving the first implementation's shortcut.
 **Consequences:** Pyodide still loads from the CDN until the offline asset milestone lands;
 the worker protocol is now the only execution seam. The next execution work is self-hosting
 Pyodide, disabling network loaders, and extending the trace beyond call/return events.
+
+## D14. Ghost runs wllama 2.4.0, vendored same-origin, with a first-party OPFS store (Ghost, 2026-08-26)
+
+**Decision:** the offline tutor's inference engine is `@wllama/wllama` **2.4.0**
+(the pre-server-context core), copied into `public/ghost/vendor/wllama/` and
+imported as browser-native ESM via a runtime-built specifier with
+`webpackIgnore`/`turbopackIgnore`. Model files are cached by our own ~50-line
+OPFS store (`cache/<file>` + `.meta.json`) instead of any library cache class.
+Chat prompts are ChatML rendered in-repo, stopped by numeric token IDs resolved
+via `getEOS()`/`lookupToken()`, streamed through `onNewToken`, cancellable via
+the library's `abortSignal`.
+
+**Context:** three independent failure classes were hit in production before
+this converged: (1) wllama 3.x server-context glue corrupts on mobile Chrome
+(garbage tokens, hangs, invalid typed-array allocations) and enables WebGPU by
+default, which misroutes tiny quantized models on Adreno GPUs; (2) loading the
+library from a CDN made worker boot depend on a cold cross-origin fetch — one
+failure and Ghost could never start; (3) bundler path rewriting (Turbopack)
+silently mangled static import specifiers (`"/ghost/vendor/wllama"` → `"/l"`),
+and the package's runtime exports do not match its type definitions (no
+`CacheManager` export exists). Each failure reproduced only on real devices,
+not in local builds.
+
+**Consequences:** Ghost boots with zero third-party network dependencies and no
+custom wrapper worker; inference runs in wllama's own internal sandboxed
+worker. Multi-threading stays off until COOP/COEP headers are deliberately
+adopted. If v3's WebGPU/vision features are ever wanted, migration is a
+deliberate, device-tested change — not a version bump.

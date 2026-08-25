@@ -57,12 +57,15 @@ export function setSelectedModel(id: string) {
 
 interface WllamaInstance {
   loadModel(blobs: Blob[], config?: Record<string, unknown>): Promise<void>
+  getEOS(): number
+  lookupToken(piece: string): Promise<number>
   createCompletion(
     prompt: string,
     options: {
       nPredict?: number
       sampling?: { temp?: number; top_p?: number }
-      stopTokens?: string[]
+      stopTokens?: number[]
+      abortSignal?: AbortSignal
       onNewToken?: (token: number, piece: Uint8Array, currentText: string) => void
     },
   ): Promise<string>
@@ -171,6 +174,9 @@ async function opfsSweep(fragment: string): Promise<void> {
 class GhostEngine {
   private instance: WllamaInstance | null = null
   private loadedUrl: string | null = null
+  private stopTokenIds: number[] | null = null
+  private stopIdsUrl: string | null = null
+  private activeAbort: AbortController | null = null
 
   /* ---------- runtime ---------- */
 
@@ -288,55 +294,88 @@ class GhostEngine {
     onToken?: (piece: string) => void,
   ): Promise<{ text: string; tps: number }> {
     await this.ensureLoaded(model.url)
+    const wllama = this.instance!
+    const clean = (s: unknown) => String(s ?? "").replace(/<\|[a-z_]+\|>/g, "")
+
+    // stopTokens are TOKEN IDs in v2 — resolve once per loaded model.
+    if (!this.stopTokenIds || this.stopIdsUrl !== model.url) {
+      const ids = new Set<number>()
+      const eos = wllama.getEOS()
+      if (eos >= 0) ids.add(eos)
+      try {
+        const imStart = await wllama.lookupToken("<|im_start|>")
+        if (imStart >= 0) ids.add(imStart)
+      } catch {}
+      this.stopTokenIds = [...ids]
+      this.stopIdsUrl = model.url
+    }
+
+    const abort = new AbortController()
+    this.activeAbort = abort
     const started = performance.now()
+
     const run = (async () => {
       const msgs = messages ?? []
       const promptStr =
         msgs.map(m => `<|im_start|>${m.role}\n${m.content}<|im_end|>`).join("\n") +
         "\n<|im_start|>assistant\n"
-      const clean = (s: unknown) => String(s ?? "").replace(/<\|[a-z_]+\|>/g, "")
       let tokens = 0
-      const text = await this.instance!.createCompletion(promptStr, {
-        nPredict: Math.min(maxTokens || 280, 280),
-        sampling: { temp: 0.35, top_p: 0.9 },
-        stopTokens: CHATML_STOP,
-        onNewToken: (_token, piece) => {
-          tokens += 1
-          const decoded = clean(new TextDecoder().decode(piece))
-          if (decoded) onToken?.(decoded)
-        },
-      })
-      const finalText = clean(typeof text === "string" ? text : "")
-      const seconds = (performance.now() - started) / 1000
-      return {
-        text: finalText,
-        tokens: Math.max(tokens, 1),
-        tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0,
+      let currentText = ""
+      const decoder = new TextDecoder("utf-8")
+      try {
+        const text = await wllama.createCompletion(promptStr, {
+          nPredict: Math.min(maxTokens || 280, 280),
+          sampling: { temp: 0.35, top_p: 0.9 },
+          stopTokens: this.stopTokenIds!,
+          abortSignal: abort.signal,
+          onNewToken: (_token, piece) => {
+            tokens += 1
+            currentText += decoder.decode(piece, { stream: true })
+            const pieceStr = clean(decoder.decode(piece, { stream: false }))
+            if (pieceStr) onToken?.(pieceStr)
+          },
+        })
+        const finalText = clean(typeof text === "string" && text ? text : currentText)
+        const seconds = (performance.now() - started) / 1000
+        return { text: finalText, tokens: Math.max(tokens, 1), tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
+      } catch (err) {
+        const name = (err as Error)?.name || ""
+        const msg = String((err as Error)?.message || err)
+        if (abort.signal.aborted || /abort/i.test(name) || /abort/i.test(msg)) {
+          // User pressed stop — hand back whatever was generated so far.
+          const seconds = (performance.now() - started) / 1000
+          return { text: clean(currentText), tokens: Math.max(tokens, 1), tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
+        }
+        throw err
+      } finally {
+        if (this.activeAbort === abort) this.activeAbort = null
       }
     })()
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(
+
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
         () => reject(new Error("Ghost timed out — the phone reclaimed the brain. Try again.")),
         120000,
-      ),
-    )
+      )
+    })
     try {
       return await Promise.race([run, timeout])
     } catch (err) {
-      // Any failure leaves suspect state — recycle before the next ping.
+      // Real failures leave suspect state — recycle before the next ping.
       await this.releaseRuntime()
       throw err
+    } finally {
+      if (timer) clearTimeout(timer)
     }
   }
 
-  // Hard stop: tearing the runtime down releases inference immediately;
-  // the next send re-wakes from cache (model file untouched).
+  // Stop: aborts generation via signal — v2 unwinds cleanly and rolls back
+  // the KV cache, so the runtime stays warm for the next question.
   stop(): void {
-    const inst = this.instance
-    this.instance = null
-    this.loadedUrl = null
-    if (!inst) return
-    try { void inst.exit() } catch {}
+    const abort = this.activeAbort
+    if (!abort) return
+    try { abort.abort() } catch {}
   }
 
   async eject(): Promise<void> {
