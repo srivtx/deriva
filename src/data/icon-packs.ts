@@ -56,6 +56,12 @@ export const NOTHING_DOTS: Record<string, string[]> = {
   ghost: [".#####.", "#######", "#..#..#", "#######", "#######", "#.#.#.#", ".#.#.#."],
 }
 
+// ── Classic: solid silhouettes (filled, even-odd eye holes) ──
+export const CLASSIC_PATHS: Record<string, string> = {
+  ghost:
+    "M12 3.25a6.75 6.75 0 0 1 6.75 6.75v9.6l-2.28-1.8-2.23 1.8-2.24-1.8-2.24 1.8-2.23-1.8L5.25 19.6V10A6.75 6.75 0 0 1 12 3.25Zm-2.7 5.85a1.05 1.05 0 1 0 0 2.1 1.05 1.05 0 0 0 0-2.1Zm5.4 0a1.05 1.05 0 1 0 0 2.1 1.05 1.05 0 0 0 0-2.1Z",
+}
+
 // ── Teenage Engineering: thin-line pictograms (24×24 stroke paths) ──
 export const TEENAGE_PATHS: Record<string, string> = {
   daily: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1",
