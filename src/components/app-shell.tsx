@@ -65,6 +65,7 @@ const MORE_GROUPS: MoreGroup[] = [
     label: "Workspace",
     links: [
       { label: "Progress details", href: "/dashboard", desc: "history" },
+      { label: "Get Android app", href: "/android", desc: "install the APK" },
       { label: "What's new", href: "/releases", desc: "release notes" },
       { label: "Settings", href: "/settings", desc: "preferences" },
     ],

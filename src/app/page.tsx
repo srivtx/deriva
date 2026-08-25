@@ -65,6 +65,7 @@ const APP_SECTIONS = [
   { label: "System", apps: [
     { href: "/observatory", name: "Observatory", glyph: "◔", gradient: G.slate },
     { href: "/dashboard", name: "Progress", glyph: "▤", gradient: G.slate },
+    { href: "/android", name: "Get app", glyph: "⤓", gradient: G.green },
     { href: "/releases", name: "What's new", glyph: "✦", gradient: G.green },
     { href: "/settings", name: "Settings", glyph: "⚙", gradient: G.slate },
   ] },

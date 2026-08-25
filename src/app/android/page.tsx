@@ -1,65 +1,105 @@
-import type { Metadata } from "next"
-import PwaInstallAction from "@/components/pwa-install-action"
+import Link from "next/link"
+import { readFileSync, statSync } from "fs"
+import path from "path"
+import { RELEASES } from "@/data/releases"
 
-export const metadata: Metadata = {
-  title: "Deriva for Android",
-  description: "Install the signed Deriva Android app.",
+function loadBuildInfo() {
+  try {
+    const manifest = JSON.parse(readFileSync(path.join(process.cwd(), "android/deriva-twa/twa-manifest.json"), "utf8")) as { appVersionName?: string; appVersionCode?: number }
+    const apk = statSync(path.join(process.cwd(), "public/downloads/deriva-android.apk"))
+    return {
+      version: manifest.appVersionName ?? "1.4",
+      code: manifest.appVersionCode ?? 4,
+      sizeMb: (apk.size / (1024 * 1024)).toFixed(1),
+    }
+  } catch {
+    return { version: "1.4", code: 4, sizeMb: "1.2" }
+  }
 }
 
+const FEATURES = [
+  { glyph: "▦", title: "Native icon settings", body: "Seven launcher icons — preview and apply inside the app." },
+  { glyph: "☀", title: "Daily + shortcuts", body: "Long-press the icon for Daily, Practice, and ICPC." },
+  { glyph: "↻", title: "Full curriculum", body: "Everything on the site, full screen, with back gestures." },
+  { glyph: "◔", title: "Offline ready", body: "Cached shell and local progress — no account, ever." },
+]
+
 export default function AndroidPage() {
+  const build = loadBuildInfo()
+  const latest = RELEASES[0]
   return (
-    <main className="android-page">
-      <section className="android-hero">
-        <div className="android-hero-grid">
-          <div className="android-hero-copy">
-            <span className="android-kicker">ANDROID / SIGNED BUILD</span>
-            <h1>Deriva for Android.</h1>
-            <p>One quiet, green workspace for deriving algorithms wherever you think best. Install the signed app, then make the launcher feel like yours.</p>
-            <div className="android-build-meta">
-              <div><span>BUILD</span><strong>1.4.2</strong></div>
-              <div><span>PACKAGE</span><strong>xyz.srivtx.deriva</strong></div>
-              <div><span>FORMAT</span><strong>APK</strong></div>
-            </div>
-            <a className="android-download" href="/downloads/deriva-android.apk" download>
-              Download Android app <span aria-hidden="true">-&gt;</span>
-            </a>
-            <p className="android-note">Android may ask you to allow installs from this browser before opening the downloaded APK.</p>
-            <p className="android-note">After installation, open Settings inside the app and choose <strong>Change app icon in Android app</strong> to select a bundled launcher icon.</p>
-            <PwaInstallAction />
-          </div>
-          <div className="android-hero-visual" aria-label="Deriva moss Android app mark">
-            <div className="android-visual-orbit" />
-            <div className="android-visual-stamp">
-              <img className="android-icon" src="/icons/icon-moss.svg" alt="Moss Deriva app icon" width={176} height={176} />
-              <AndroidMascot />
-            </div>
-            <span className="android-visual-caption">DERIVA / MOSS BUILD / 1.2</span>
+    <main className="super-page">
+      <section className="android-store-hero">
+        <div className="android-store-icon" aria-hidden="true">d</div>
+        <div className="android-store-id">
+          <span className="android-kicker">SRIVTX · TOOLS &amp; LEARNING</span>
+          <h1>Deriva</h1>
+          <p>Derive the algorithm. Don&apos;t memorize it.</p>
+          <div className="android-store-meta">
+            <span>v{build.version}</span>
+            <i aria-hidden="true" />
+            <span>{build.sizeMb} MB</span>
+            <i aria-hidden="true" />
+            <span>APK · Android 5+</span>
           </div>
         </div>
       </section>
 
-      <section className="android-install-guide" aria-labelledby="android-install-heading">
+      <section className="android-store-actions">
+        <a className="android-store-cta" href="/downloads/deriva-android.apk" download>
+          Download APK <span aria-hidden="true">↓</span>
+        </a>
+        <p className="android-note">Android may ask you to allow installs from this browser before opening the downloaded file. The app verifies its connection to deriva.srivtx.xyz on first open.</p>
+      </section>
+
+      <section className="android-store-card" aria-label="Verified connection">
+        <div className="android-verified">
+          <span className="android-verified-mark" aria-hidden="true">✓</span>
+          <div>
+            <strong>Verified app</strong>
+            <p>Digital Asset Links confirms this APK is authorized for deriva.srivtx.xyz — no fake-app risk.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="android-store-card" aria-label="What's new">
+        <span className="android-kicker">WHAT&apos;S NEW IN {latest.version}</span>
+        <ul className="android-whatsnew">
+          {latest.highlights.slice(0, 4).map(highlight => (
+            <li key={highlight.title}><strong>{highlight.title}</strong><span>{highlight.body}</span></li>
+          ))}
+        </ul>
+        <Link className="android-store-link" href="/releases">Full release notes →</Link>
+      </section>
+
+      <section className="android-store-card" aria-label="Features">
+        <span className="android-kicker">INSIDE THE APP</span>
+        <div className="android-features">
+          {FEATURES.map(feature => (
+            <div key={feature.title} className="android-feature">
+              <span className="android-feature-glyph" aria-hidden="true">{feature.glyph}</span>
+              <strong>{feature.title}</strong>
+              <span className="android-feature-body">{feature.body}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="android-store-card" aria-label="Install steps">
         <span className="android-kicker">INSTALL / THREE MOVES</span>
-        <h2 id="android-install-heading">From download to first derivation.</h2>
-        <ol>
+        <ol className="android-install-guide">
           <li><strong>Download the APK.</strong><span>Use the button above in Chrome on your Android device.</span></li>
           <li><strong>Open the file.</strong><span>Confirm the install prompt. If asked, allow this browser to install unknown apps.</span></li>
-          <li><strong>Open Deriva.</strong><span>The app will verify its relationship with deriva.srivtx.xyz and launch the live curriculum.</span></li>
+          <li><strong>Open Deriva.</strong><span>The app launches full screen with your progress already on the device.</span></li>
         </ol>
+        <p className="android-note">Updating later: download the new APK on this page and install — it replaces the old version, keeping all your data.</p>
+      </section>
+
+      <section className="android-store-card">
+        <span className="android-kicker">NO APK? NO PROBLEM</span>
+        <p className="android-note">You can also install the browser app — same experience, installed by Chrome without downloads.</p>
+        <Link className="android-store-link" href="/settings">Install browser PWA from Settings →</Link>
       </section>
     </main>
-  )
-}
-
-function AndroidMascot() {
-  return (
-    <svg className="android-mascot" viewBox="0 0 160 160" role="img" aria-label="Android mascot">
-      <path d="M58 32 48 17M102 32l10-15" fill="none" stroke="var(--android-mascot)" strokeWidth="6" strokeLinecap="round" />
-      <rect x="34" y="28" width="92" height="62" rx="31" fill="var(--android-mascot)" />
-      <circle cx="62" cy="59" r="5" fill="var(--paper-raised)" />
-      <circle cx="98" cy="59" r="5" fill="var(--paper-raised)" />
-      <rect x="34" y="82" width="92" height="53" rx="14" fill="var(--android-mascot)" />
-      <path d="M24 91v34M136 91v34M58 132v16M102 132v16" fill="none" stroke="var(--android-mascot)" strokeWidth="10" strokeLinecap="round" />
-    </svg>
   )
 }

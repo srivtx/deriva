@@ -724,6 +724,40 @@
 /* ── App mode (full-screen app takeover on phones) ── */
 .app-mode-active .super-page, .app-mode-active .icpc-page, .app-mode-active .settings-page, .app-mode-active .dashboard-page, .app-mode-active .android-page, .app-mode-active .os-home { min-height: 100%; padding-bottom: 28px; }
 .app-mode-active .practice-wrap .main { padding-bottom: 28px; }
+
+/* ── Android store listing ── */
+.android-store-hero { display: flex; align-items: center; gap: 20px; padding: clamp(18px, 4vw, 28px); border: 1px solid var(--line); border-radius: calc(var(--radius) + 8px); background: linear-gradient(135deg, var(--accent-soft), var(--paper-raised)); box-shadow: var(--shadow-raised); }
+.android-store-icon { display: grid; width: 92px; height: 92px; flex: 0 0 auto; place-items: center; border-radius: 24px; background: linear-gradient(135deg, #2F8F5B, #1E6B45); color: #F2F4EC; font: italic 700 46px/1 var(--font-narrative); box-shadow: inset 0 1px 0 rgb(255 255 255 / .3), var(--shadow-raised); }
+.android-store-id h1 { margin: 6px 0 4px; font: 700 clamp(28px, 5vw, 40px)/1 var(--font-narrative); letter-spacing: -.03em; }
+.android-store-id p { margin: 0; color: var(--ink-soft); font: 14px/1.5 var(--font-narrative); }
+.android-store-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; color: var(--ink-soft); font: 700 11px var(--font-mono); }
+.android-store-meta i { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-soft); }
+.android-store-actions { display: grid; gap: 10px; }
+.android-store-cta { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; border-radius: calc(var(--radius) + 2px); background: var(--accent); color: var(--paper-raised); font: 700 16px var(--font-ui); text-decoration: none; box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 32%, transparent); transition: transform var(--dur-fast), box-shadow var(--dur-fast); }
+.android-store-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 28px color-mix(in srgb, var(--accent) 38%, transparent); }
+.android-store-cta:active { transform: scale(.98); }
+.android-store-card { display: grid; gap: 12px; padding: clamp(16px, 3vw, 24px); border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); background: var(--paper-raised); box-shadow: var(--shadow-raised); }
+.android-verified { display: flex; align-items: flex-start; gap: 12px; }
+.android-verified-mark { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--viz-settled); color: var(--paper-raised); font: 800 16px var(--font-ui); }
+.android-verified strong { display: block; font: 700 14px var(--font-ui); }
+.android-verified p { margin: 3px 0 0; color: var(--ink-soft); font: 12px/1.5 var(--font-ui); }
+.android-whatsnew { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.android-whatsnew li { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.android-whatsnew strong { font: 700 13px var(--font-ui); }
+.android-whatsnew span { color: var(--ink-soft); font: 12px/1.5 var(--font-ui); }
+.android-store-link { color: var(--accent); font: 700 12px var(--font-ui); text-decoration: none; }
+.android-store-link:hover { text-decoration: underline; }
+.android-features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.android-feature { display: grid; gap: 4px; align-content: start; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.android-feature-glyph { color: var(--accent); font: 700 18px/1 var(--font-ui); }
+.android-feature strong { font: 700 12px var(--font-ui); }
+.android-feature-body { color: var(--ink-soft); font: 11px/1.45 var(--font-ui); }
+.android-store-card .android-install-guide { margin-top: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+@media (max-width: 700px) {
+  .android-store-hero { align-items: flex-start; }
+  .android-store-icon { width: 72px; height: 72px; border-radius: 20px; font-size: 36px; }
+  .android-features { grid-template-columns: 1fr; }
+}
 .out { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; font: 13px/1.7 var(--font-mono); color: var(--ink); overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
 .json-output { white-space: pre; }
 @media (max-width: 480px) {

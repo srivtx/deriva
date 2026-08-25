@@ -20,8 +20,8 @@
     "path": "/Users/zen/.config/deriva-android/deriva-release.jks",
     "alias": "deriva"
   },
-  "appVersionName": "1.4.2",
-  "appVersionCode": 6,
+  "appVersionName": "1.4.3",
+  "appVersionCode": 7,
   "shortcuts": [
     { "name": "Daily Challenge", "short_name": "Daily", "url": "/daily", "icon": "ic_daily" },
     { "name": "Drill Practice", "short_name": "Practice", "url": "/practice", "icon": "ic_practice" },
@@ -47,5 +47,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "1.4.2"
+  "appVersion": "1.4.3"
 }
