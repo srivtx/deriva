@@ -82,6 +82,7 @@ export default function GhostPage() {
   const [model, setModel] = useState<GhostModel>(() => getSelectedModel())
   const [storage, setStorage] = useState<StorageEntry[]>([])
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [diag, setDiag] = useState({ isolated: false, threads: 0 })
   const [action, setAction] = useState<string | null>(null)
   const [getProgress, setGetProgress] = useState<{ url: string; fraction: number; loadedMb: number; totalMb: number }>({ url: "", fraction: 0, loadedMb: 0, totalMb: 0 })
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -529,7 +530,7 @@ export default function GhostPage() {
           </button>
 
           {totalMb > 0 && (
-            <button type="button" className="ghost-storage-link" onClick={() => setSheetOpen(true)}>
+            <button type="button" className="ghost-storage-link" onClick={() => { setSheetOpen(true); ghostEngine.diagnostics().then(setDiag).catch(() => {}) }}>
               MANAGE STORED BRAINS ({totalMb} MB) →
             </button>
           )}
@@ -564,7 +565,7 @@ export default function GhostPage() {
               <span className="ghost-chatbar-actions">
                 <button type="button" className="ghost-minibtn" disabled={busy} onClick={() => setHistoryOpen(true)}>HISTORY</button>
                 <button type="button" className="ghost-minibtn accent" disabled={busy} onClick={newChat}>＋ NEW</button>
-                <button type="button" className="ghost-gear-inline" aria-label="Ghost settings" onClick={() => setSheetOpen(true)}>⚙</button>
+                <button type="button" className="ghost-gear-inline" aria-label="Ghost settings" onClick={() => { setSheetOpen(true); ghostEngine.diagnostics().then(setDiag).catch(() => {}) }}>⚙</button>
               </span>
             </div>
           <div className="ghost-messages" ref={scrollRef} onScroll={onMessagesScroll}>
@@ -666,6 +667,11 @@ export default function GhostPage() {
 
             <div className="ghost-brains-foot">
               <span>{totalMb > 0 ? `${totalMb} MB total` : "nothing stored"}</span>
+              <p className="ghost-brain-meta ghost-engine-diag" style={{ padding: "10px 16px 0", opacity: 0.7 }}>
+                ENGINE · {diag.isolated ? "isolated ✓" : "no cross-origin isolation"} ·{" "}
+                {diag.threads > 1 ? `${diag.threads} threads` : "single thread"} ·{" "}
+                {caps?.webgpu && !diag.isolated ? "webgpu idle" : ""}
+              </p>
               <span className="ghost-sheet-foot-actions">
                 <button type="button" className="ghost-minibtn" disabled={!!action || busy || messages.length === 0} onClick={clearChat}>CLEAR CHAT</button>
                 <button type="button" className="ghost-minibtn danger" disabled={!!action || totalMb === 0} onClick={clearEverything}>CLEAR EVERYTHING</button>

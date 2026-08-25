@@ -59,6 +59,7 @@ interface WllamaInstance {
   loadModel(blobs: Blob[], config?: Record<string, unknown>): Promise<void>
   getEOS(): number
   lookupToken(piece: string): Promise<number>
+  getNumThreads(): number
   createCompletion(
     prompt: string,
     options: {
@@ -204,6 +205,7 @@ class GhostEngine {
     this.instance = new m.Wllama(WLLAMA_PATHS)
     this.loadedUrl = url
     await this.instance.loadModel([blob], { n_ctx: 2048 })
+    try { this.lastThreads = this.instance.getNumThreads() } catch { this.lastThreads = 0 }
   }
 
   private async releaseRuntime(): Promise<void> {
@@ -214,6 +216,15 @@ class GhostEngine {
   }
 
   /* ---------- storage queries ---------- */
+
+  lastThreads = 0
+
+  async diagnostics(): Promise<{ isolated: boolean; threads: number }> {
+    return {
+      isolated: typeof crossOriginIsolated !== "undefined" ? crossOriginIsolated : false,
+      threads: this.lastThreads,
+    }
+  }
 
   async probe(): Promise<{ webgpu: boolean; storageQuotaMb: number | null; cachedMb: number | null }> {
     let storageQuotaMb: number | null = null
