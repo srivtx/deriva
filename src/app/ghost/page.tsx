@@ -97,6 +97,8 @@ export default function GhostPage() {
   const busyRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [follow, setFollow] = useState(true)
+  const stick = useRef(true)          // source of truth, no re-render churn
+  const suppressing = useRef(false)   // ignore scroll events we caused
 
   const sizeOf = useCallback((url: string) => storage.find(s => s.url === url)?.sizeMb ?? 0, [storage])
   const isCached = useCallback((url: string) => storage.some(s => s.url === url), [storage])
@@ -138,16 +140,33 @@ export default function GhostPage() {
     return () => { alive = false }
   }, [])
 
+  // Pin instantly whenever content grows and we're stuck to bottom.
+  // Instant (no smooth): animated chases cancel out under token streams.
   useEffect(() => {
-    if (!follow) return
     const el = scrollRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [messages, follow])
+    if (!el || !stick.current) return
+    suppressing.current = true
+    el.scrollTop = el.scrollHeight
+    requestAnimationFrame(() => { suppressing.current = false })
+  }, [messages])
 
   const onMessagesScroll = useCallback(() => {
+    if (suppressing.current) return
     const el = scrollRef.current
     if (!el) return
-    setFollow(el.scrollHeight - el.scrollTop - el.clientHeight < 90)
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    stick.current = atBottom
+    setFollow(prev => prev !== atBottom ? atBottom : prev)
+  }, [])
+
+  const jumpToLatest = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    stick.current = true
+    suppressing.current = true
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
+    requestAnimationFrame(() => { suppressing.current = false })
+    setFollow(true)
   }, [])
 
   const persistSession = useCallback((next: ChatMessage[], firstUserText?: string) => {
@@ -252,6 +271,7 @@ export default function GhostPage() {
     if (!text || busyRef.current) return
     busyRef.current = true
     setBusy(true)
+    stick.current = true
     setFollow(true)
     setInput("")
     setError(null)
@@ -327,6 +347,7 @@ export default function GhostPage() {
     setSessions(prev => { const l = upsertCurrentBeforeSwitch(prev); saveSessions(l); return l })
     setMessages([])
     setActiveId(null)
+    stick.current = true
     setFollow(true)
     setHistoryOpen(false)
     try { localStorage.removeItem(ACTIVE_KEY) } catch {}
@@ -337,6 +358,7 @@ export default function GhostPage() {
       const l = upsertCurrentBeforeSwitch(prev); saveSessions(l)
       const found = l.find(s => s.id === id)
       if (found) { setMessages(found.messages); setActiveId(found.id); try { localStorage.setItem(ACTIVE_KEY, id) } catch {} }
+      stick.current = true
       setFollow(true)
       setHistoryOpen(false)
       return l
@@ -489,7 +511,7 @@ export default function GhostPage() {
           </div>
 
           {!follow && (
-            <button type="button" className="ghost-jump" onClick={() => setFollow(true)}>↓ latest</button>
+            <button type="button" className="ghost-jump" onClick={jumpToLatest}>↓ latest</button>
           )}
           <footer className="ghost-composer">
             {error && <p className="ghost-error">{error}</p>}
