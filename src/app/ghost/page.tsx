@@ -259,6 +259,12 @@ export default function GhostPage() {
     setBrainAction(null)
   }, [brainAction])
 
+  const deleteSelectedCache = useCallback(async () => {
+    await ghostEngine.delete(model.url)
+    setCachedUrls(prev => prev.filter(u => u !== model.url))
+    if (cachedId === model.id) setCachedId(null)
+  }, [model.url, cachedId])
+
   const mbTotal = progress.total > 0 ? Math.round(progress.total) : null
 
   return (
@@ -320,6 +326,9 @@ export default function GhostPage() {
             {cachedId === model.id ? "WAKE GHOST" : "SUMMON GHOST"}
           </button>
           {error && <p className="ghost-error">{error}</p>}
+          {cachedUrls.includes(model.url) && (
+            <button type="button" className="ghost-minibtn danger" onClick={deleteSelectedCache}>DELETE {model.name.toUpperCase()}'S CACHE</button>
+          )}
         </div>
       )}
 
