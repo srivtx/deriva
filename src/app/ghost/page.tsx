@@ -92,7 +92,6 @@ export default function GhostPage() {
   const [busy, setBusy] = useState(false)
   const [tps, setTps] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [everSet] = useState<Set<string>>(() => everDownloaded())
   const [pendingGet, setPendingGet] = useState<GhostModel | null>(null)
   const busyRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -103,6 +102,14 @@ export default function GhostPage() {
   const sizeOf = useCallback((url: string) => storage.find(s => s.url === url)?.sizeMb ?? 0, [storage])
   const isCached = useCallback((url: string) => storage.some(s => s.url === url), [storage])
   const totalMb = storage.reduce((sum, s) => sum + s.sizeMb, 0)
+
+  useEffect(() => () => { if (busyRef.current) void ghostEngine.stop() }, [])
+
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === "hidden" && busyRef.current) void ghostEngine.stop() }
+    document.addEventListener("visibilitychange", onHide)
+    return () => document.removeEventListener("visibilitychange", onHide)
+  }, [])
 
   useEffect(() => {
     const prev = document.title
@@ -349,6 +356,7 @@ export default function GhostPage() {
   }, [activeId, messages])
 
   const newChat = useCallback(() => {
+    if (busyRef.current) return
     setSessions(prev => { const l = upsertCurrentBeforeSwitch(prev); saveSessions(l); return l })
     setMessages([])
     setActiveId(null)
@@ -359,6 +367,7 @@ export default function GhostPage() {
   }, [upsertCurrentBeforeSwitch])
 
   const openSession = useCallback((id: string) => {
+    if (busyRef.current) return
     setSessions(prev => {
       const l = upsertCurrentBeforeSwitch(prev); saveSessions(l)
       const found = l.find(s => s.id === id)
@@ -371,6 +380,7 @@ export default function GhostPage() {
   }, [upsertCurrentBeforeSwitch])
 
   const deleteSession = useCallback((id: string) => {
+    if (busyRef.current) return
     setSessions(prev => {
       const l = prev.filter(s => s.id !== id); saveSessions(l)
       if (id === activeId) { setMessages([]); setActiveId(null); try { localStorage.removeItem(ACTIVE_KEY) } catch {} }
@@ -485,8 +495,8 @@ export default function GhostPage() {
           <div className="ghost-chatbar">
               <span className="ghost-chatbar-title">{sessions.find(s => s.id === activeId)?.title ?? "new conversation"}</span>
               <span className="ghost-chatbar-actions">
-                <button type="button" className="ghost-minibtn" onClick={() => setHistoryOpen(true)}>HISTORY</button>
-                <button type="button" className="ghost-minibtn accent" onClick={newChat}>＋ NEW</button>
+                <button type="button" className="ghost-minibtn" disabled={busy} onClick={() => setHistoryOpen(true)}>HISTORY</button>
+                <button type="button" className="ghost-minibtn accent" disabled={busy} onClick={newChat}>＋ NEW</button>
                 <button type="button" className="ghost-gear-inline" aria-label="Ghost settings" onClick={() => setSheetOpen(true)}>⚙</button>
               </span>
             </div>
@@ -565,7 +575,7 @@ export default function GhostPage() {
                         <button type="button" className="ghost-minibtn danger" disabled={!!action} onClick={() => deleteByUrl(m.url)}>DELETE</button>
                       </>
                     ) : (
-                      <button type="button" className="ghost-minibtn" disabled={!!action} onClick={() => startGet(m)}>{everSet.has(m.id) ? "RESTORE" : "GET"}</button>
+                      <button type="button" className="ghost-minibtn" disabled={!!action} onClick={() => startGet(m)}>{everDownloaded().has(m.id) ? "RESTORE" : "GET"}</button>
                     )}
                   </div>
                 </div>
@@ -590,7 +600,7 @@ export default function GhostPage() {
             <div className="ghost-brains-foot">
               <span>{totalMb > 0 ? `${totalMb} MB total` : "nothing stored"}</span>
               <span className="ghost-sheet-foot-actions">
-                <button type="button" className="ghost-minibtn" disabled={!!action || messages.length === 0} onClick={clearChat}>CLEAR CHAT</button>
+                <button type="button" className="ghost-minibtn" disabled={!!action || busy || messages.length === 0} onClick={clearChat}>CLEAR CHAT</button>
                 <button type="button" className="ghost-minibtn danger" disabled={!!action || totalMb === 0} onClick={clearEverything}>CLEAR EVERYTHING</button>
               </span>
             </div>
@@ -607,16 +617,16 @@ export default function GhostPage() {
             {sessions.length === 0 && <p className="ghost-note">No past conversations yet.</p>}
             {sessions.map(s => (
               <div key={s.id} className={`ghost-brain-row${s.id === activeId ? " active" : ""}`}>
-                <button type="button" className="ghost-hist-open" onClick={() => openSession(s.id)}>
+                <button type="button" className="ghost-hist-open" disabled={busy} onClick={() => { if (!busy) openSession(s.id) }}>
                   <span className="ghost-brain-name">{s.title}</span>
                   <span className="ghost-brain-meta">{relTime(s.updatedAt)} · {s.messages.length} messages</span>
                 </button>
-                <button type="button" className="ghost-minibtn danger" onClick={() => deleteSession(s.id)}>✕</button>
+                <button type="button" className="ghost-minibtn danger" disabled={busy} onClick={() => { if (!busy) deleteSession(s.id) }}>✕</button>
               </div>
             ))}
             <div className="ghost-brains-foot">
               <span>{sessions.length} saved</span>
-              <button type="button" className="ghost-minibtn accent" disabled={!!action} onClick={newChat}>＋ START NEW</button>
+              <button type="button" className="ghost-minibtn accent" disabled={!!action || busy} onClick={newChat}>＋ START NEW</button>
             </div>
           </div>
         </div>
