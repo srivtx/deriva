@@ -1,1 +1,14 @@
-<shortcuts xmlns:android='http://schemas.android.com/apk/res/android' />
+<shortcuts xmlns:android='http://schemas.android.com/apk/res/android'>
+    <shortcut android:shortcutId='shortcut0' android:enabled='true' android:icon='@drawable/ic_daily' android:shortcutShortLabel='@string/shortcut_short_name_0' android:shortcutLongLabel='@string/shortcut_name_0'>
+        <intent android:action='android.intent.action.MAIN' android:targetPackage='xyz.srivtx.deriva' android:targetClass='xyz.srivtx.deriva.LauncherActivity' android:data='/daily' />
+        <categories android:name='android.intent.category.LAUNCHER' />
+    </shortcut>
+    <shortcut android:shortcutId='shortcut1' android:enabled='true' android:icon='@drawable/ic_practice' android:shortcutShortLabel='@string/shortcut_short_name_1' android:shortcutLongLabel='@string/shortcut_name_1'>
+        <intent android:action='android.intent.action.MAIN' android:targetPackage='xyz.srivtx.deriva' android:targetClass='xyz.srivtx.deriva.LauncherActivity' android:data='/practice' />
+        <categories android:name='android.intent.category.LAUNCHER' />
+    </shortcut>
+    <shortcut android:shortcutId='shortcut2' android:enabled='true' android:icon='@drawable/ic_icpc' android:shortcutShortLabel='@string/shortcut_short_name_2' android:shortcutLongLabel='@string/shortcut_name_2'>
+        <intent android:action='android.intent.action.MAIN' android:targetPackage='xyz.srivtx.deriva' android:targetClass='xyz.srivtx.deriva.LauncherActivity' android:data='/icpc' />
+        <categories android:name='android.intent.category.LAUNCHER' />
+    </shortcut>
+</shortcuts>

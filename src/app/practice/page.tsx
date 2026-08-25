@@ -1,11 +1,15 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import Link from "next/link"
 import { TOPICS, TOPIC_LIST } from "@/data"
 import MobileProblemNav, { MobileTopicPicker } from "@/components/mobile-problem-nav"
 import { loadPracticePositions, savePracticePosition, loadBookmarks, saveBookmarks, type PracticePositions } from "@/persistence/practice-progress"
 import { loadTheoryNote, saveTheoryNote } from "@/persistence/theory-notes"
 import { runScript } from "@/execution/pyodide-client"
+import { dailyPickForDate, markDailySolved, todayKey } from "@/persistence/daily"
+import { getActiveContest, recordContestSolve } from "@/persistence/contest"
+import { getActiveInterview, recordInterviewSolved, type ActiveInterview } from "@/persistence/interview"
 
 export default function PracticePage() {
   const [topicId, setTopicId] = useState("trees")
@@ -18,6 +22,10 @@ export default function PracticePage() {
   const [revealed, setRevealed] = useState<Record<string, Record<number, boolean>>>({})
   const [bookmarks, setBookmarks] = useState<Record<string, number[]>>({})
   const [difficultyFilter, setDifficultyFilter] = useState<"all" | "Easy" | "Medium" | "Hard">("all")
+  const [interviewMode, setInterviewMode] = useState(false)
+  const [interviewSession, setInterviewSession] = useState<ActiveInterview | null>(null)
+  const [interviewNow, setInterviewNow] = useState(Date.now())
+  const [contestIds, setContestIds] = useState<number[]>([])
   const [theoryNote, setTheoryNote] = useState("")
   const [output, setOutput] = useState("")
   const [running, setRunning] = useState(false)
@@ -73,6 +81,13 @@ export default function PracticePage() {
   useEffect(() => () => executionRef.current?.abort(), [])
 
   useEffect(() => {
+    if (!interviewMode) return
+    setInterviewSession(getActiveInterview())
+    const timer = setInterval(() => setInterviewNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [interviewMode])
+
+  useEffect(() => {
     try {
       // Read ?topic= param from URL
       const params = new URLSearchParams(window.location.search)
@@ -100,6 +115,8 @@ export default function PracticePage() {
       const h = localStorage.getItem("deriva-hints-v2");
       if (h) setHintLevel(JSON.parse(h));
       setBookmarks(loadBookmarks());
+      setInterviewMode(params.get("interview") === "1")
+      setContestIds(getActiveContest()?.problemIds ?? [])
       setHydrated(true)
     } catch {} finally {
       setHydrated(true)
@@ -120,6 +137,17 @@ export default function PracticePage() {
     setTheoryNote(loadTheoryNote(`practice:${topicId}:${currentId}`))
   }, [currentId, hydrated, topicId])
 
+  const celebrateSolve = () => {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate([18, 40, 18])
+    const daily = dailyPickForDate(todayKey())
+    if (daily.problem.id === currentId) markDailySolved(todayKey(), topicId, currentId)
+    recordContestSolve(currentId)
+    recordInterviewSolved(currentId)
+    setContestIds(getActiveContest()?.problemIds ?? [])
+    setInterviewSession(getActiveInterview())
+  }
+  const interviewRemaining = interviewSession ? interviewSession.durationMs - (interviewNow - interviewSession.startedAt) : 0
+
   const runCode = async () => {
     setRunning(true); setOutput("Running in a protected worker…")
     const controller = new AbortController()
@@ -134,6 +162,7 @@ export default function PracticePage() {
           const cur = new Set(prev[topicId] || []); cur.add(currentId)
           return { ...prev, [topicId]: [...cur] }
         })
+        celebrateSolve()
       }
     } catch (e: any) {
       if (!controller.signal.aborted) setOutput("Error: " + e.message)
@@ -279,9 +308,9 @@ export default function PracticePage() {
 
         <div className="acts" aria-label="Code actions">
           <button onClick={runCode} disabled={running} className="btn btn-p primary-run">{running ? "Running..." : "▶ Run Code"}</button>
-          <button onClick={() => { const h = { ...tHints, [currentId]: Math.min(currentHint+1, 3) }; setHintLevel({ ...hintLevel, [topicId]: h }) }} disabled={currentHint>=3} className="btn">Hint ({currentHint}/3)</button>
-          <button onClick={() => { const r = { ...tRevealed, [currentId]: !currentRevealed }; setRevealed({ ...revealed, [topicId]: r }) }} className={`btn${currentRevealed?" btn-s":""}`}>{currentRevealed?"Hide":"Show"} Solution</button>
-          <button onClick={randomUnsolved} className="btn" title="Jump to a random problem you haven't solved in this topic">Random</button>
+          {!interviewMode && <button onClick={() => { const h = { ...tHints, [currentId]: Math.min(currentHint+1, 3) }; setHintLevel({ ...hintLevel, [topicId]: h }) }} disabled={currentHint>=3} className="btn">Hint ({currentHint}/3)</button>}
+          {!interviewMode && <button onClick={() => { const r = { ...tRevealed, [currentId]: !currentRevealed }; setRevealed({ ...revealed, [topicId]: r }) }} className={`btn${currentRevealed?" btn-s":""}`}>{currentRevealed?"Hide":"Show"} Solution</button>}
+          {!interviewMode && <button onClick={randomUnsolved} className="btn" title="Jump to a random problem you haven't solved in this topic">Random</button>}
           <button onClick={() => { setSavedCode({ ...savedCode, [topicId]: { ...tCode, [currentId]: problem.starterCode } }); setOutput("") }} className="btn">Reset</button>
         </div>
 
@@ -337,6 +366,19 @@ export default function PracticePage() {
             <h3 className="card-h3" style={{ marginTop: 16 }}>Walkthrough</h3>
             <div className="wlk">{problem.walkthrough}</div>
           </div>
+        )}
+
+        {interviewMode && interviewSession && interviewSession.problemId === currentId && (
+          <Link href="/interview" className="interview-chip" aria-label="Return to interview room">
+            <span>INTERVIEW</span>
+            <strong>{interviewRemaining > 0 ? `${String(Math.floor(interviewRemaining / 60000)).padStart(2, "0")}:${String(Math.floor((interviewRemaining % 60000) / 1000)).padStart(2, "0")}` : "time"}</strong>
+          </Link>
+        )}
+        {contestIds.includes(currentId) && (
+          <Link href="/contest" className="interview-chip contest-live-chip" aria-label="Return to contest">
+            <span>CONTEST</span>
+            <strong>live</strong>
+          </Link>
         )}
 
         <div className="kbd">← → navigate &nbsp; ⌘+Enter run</div>

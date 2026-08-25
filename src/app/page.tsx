@@ -9,6 +9,8 @@ import { loadPracticeCompletion } from "@/persistence/practice-progress"
 import { loadPatternMastery } from "@/persistence/pattern-mastery"
 import { getNextActions, type NextAction } from "@/learning/next-actions"
 import { loadPreferences, type Preferences } from "@/persistence/preferences"
+import { dailyPickForDate, todayKey } from "@/persistence/daily"
+import { dueCards, seedQueueFromMastery } from "@/persistence/review-queue"
 
 type HomeMomentum = { practiceDone: number; practiceTotal: number; pathDone: number }
 type MasteryMomentum = { recognized: number; transferred: number; review: number }
@@ -37,6 +39,7 @@ export default function HomePage() {
   const [masteryMomentum, setMasteryMomentum] = useState<MasteryMomentum>()
   const [practiceAction, setPracticeAction] = useState<NextAction>()
   const [preferences, setPreferences] = useState<Preferences>()
+  const [reviewDue, setReviewDue] = useState(0)
 
   useEffect(() => {
     setGuidedProgress(loadLessonProgress("trees/00-recursion-reflex/sum-1-to-n"))
@@ -53,6 +56,8 @@ export default function HomePage() {
       review: PATTERN_DIRECTORY.filter(pattern => mastery.missed.includes(pattern.id)).length,
     })
     setMomentum({ practiceDone, practiceTotal, pathDone })
+    seedQueueFromMastery()
+    setReviewDue(dueCards().length)
     setHydrated(true)
   }, [])
 
@@ -116,6 +121,18 @@ export default function HomePage() {
             <span style={{ width: `${guidedDone ? 100 : Math.max(5, ((guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0)) / 9) * 100)}%` }} />
           </div>
           <span className="today-session-progress">{guidedDone ? "9 of 9 stages complete. Transfer is next." : `${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}</span>
+        </section>
+
+        <section className="super-day" aria-labelledby="day-heading">
+          <div className="super-day-head">
+            <div><span className="discovery-kicker">Your day</span><h2 id="day-heading">One challenge, one review, one clock.</h2></div>
+            <Link href="/releases" className="super-day-new">What&apos;s new in 1.4 →</Link>
+          </div>
+          <div className="super-day-tiles">
+            <Link href="/daily" className="super-day-tile tile-daily"><span>Daily Challenge</span><strong>{dailyPickForDate(todayKey()).problem.title}</strong><em>same pick, everyone, today</em></Link>
+            <Link href="/review" className="super-day-tile tile-review"><span>Review Queue</span><strong>{hydrated ? (reviewDue > 0 ? `${reviewDue} patterns due` : "Deck clear") : "Checking…"}</strong><em>spaced repetition</em></Link>
+            <Link href="/contest" className="super-day-tile tile-contest"><span>Contest Simulator</span><strong>3 problems · 90 min</strong><em>real penalty clock</em></Link>
+          </div>
         </section>
 
         <section className="android-app-callout" aria-labelledby="android-app-heading">

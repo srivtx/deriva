@@ -20,9 +20,13 @@
     "path": "/Users/zen/.config/deriva-android/deriva-release.jks",
     "alias": "deriva"
   },
-  "appVersionName": "1.2",
-  "appVersionCode": 3,
-  "shortcuts": [],
+  "appVersionName": "1.4",
+  "appVersionCode": 4,
+  "shortcuts": [
+    { "name": "Daily Challenge", "short_name": "Daily", "url": "/daily", "icon": "ic_daily" },
+    { "name": "Drill Practice", "short_name": "Practice", "url": "/practice", "icon": "ic_practice" },
+    { "name": "ICPC Ladder", "short_name": "ICPC", "url": "/icpc", "icon": "ic_icpc" }
+  ],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://deriva.srivtx.xyz/manifest.webmanifest",
   "fallbackType": "customtabs",
@@ -43,5 +47,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "1.2"
+  "appVersion": "1.4"
 }
