@@ -1,226 +1,259 @@
-// Ghost worker — wllama runtime with strict, verifiable storage ownership.
-// All model bytes live under ONE CacheManager; delete verifies; OPFS sweep as fallback.
-import { Wllama, CacheManager } from "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.6.0/esm/index.min.js"
+/* GHOST WORKER — wllama 2.4.0 (proven CPU core, callback streaming).
+   v3's server-context glue corrupted on mobile Chrome (garbage tokens,
+   hangs, invalid allocations). This core is the battle-tested path.
+   Protocol is unchanged: probe/status/cached/download/load/chat/stop/
+   eject/delete/clear — engine.ts and page.tsx need no edits. */
 
-const WASM_URL = "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.6.0/esm/wasm/wllama.wasm"
+import { Wllama, CacheManager } from "https://cdn.jsdelivr.net/npm/@wllama/wllama@2.4.0/esm/index.js";
 
-let wllama = null
-let activeController = null
+const CDN = "https://cdn.jsdelivr.net/npm/@wllama/wllama@2.4.0/esm";
+const CONFIG_PATHS = {
+  "single-thread/wllama.wasm": `${CDN}/single-thread/wllama.wasm`,
+  "multi-thread/wllama.wasm": `${CDN}/multi-thread/wllama.wasm`,
+};
+const CHATML_STOP = ["<|im_end|>", "<|im_start|>"];
 
-const post = msg => self.postMessage(msg)
+let wllama = null;
+let loadedUrl = null;
 
-function baseName(url) {
-  try { return new URL(url).pathname.split("/").pop().toLowerCase() } catch { return "" }
+const post = (msg) => self.postMessage(msg);
+
+function emitToken(id, piece) {
+  post({ id, evt: "token", data: { text: piece } });
 }
 
 async function releaseRuntime() {
-  if (activeController) { try { activeController.abort() } catch {} }
-  if (!wllama) return
-  const w = wllama
-  wllama = null
-  try {
-    await Promise.race([
-      w.exit(),
-      new Promise(resolve => setTimeout(resolve, 3000)),
-    ])
-  } catch {}
+  if (!wllama) return;
+  try { await wllama.exit(); } catch {}
+  wllama = null;
+  loadedUrl = null;
+}
+
+function baseName(url) {
+  try { return new URL(url).pathname.split("/").pop() || url; }
+  catch { return url; }
+}
+
+async function verifyGone(cm, url) {
+  const blob = await cm.open(url).catch(() => null);
+  if (blob && blob.size > 0) return false;
+  const root = await navigator.storage.getDirectory();
+  for (const dirName of ["cache", "wllama", "ghost-models"]) {
+    try {
+      const dir = await root.getDirectoryHandle(dirName);
+      const target = baseName(url);
+      for await (const name of dir.keys()) {
+        if (name.includes(target) || target.includes(name)) {
+          try { await dir.removeEntry(name); } catch {}
+          return false;
+        }
+      }
+    } catch {}
+  }
+  return true;
 }
 
 async function opfsSweep(base) {
-  // Fallback: remove any OPFS root entry whose name contains the gguf basename.
   try {
-    const root = await navigator.storage.getDirectory()
-    const names = []
-    for await (const name of root.keys()) names.push(name)
-    const lower = base.toLowerCase()
-    for (const name of names) {
-      if (lower && name.toLowerCase().includes(lower.split(".")[0])) {
-        try { await root.removeEntry(name, { recurse: true }) } catch {}
-      }
-    }
-  } catch {}
-}
-
-async function verifyGone(cm, url, base) {
-  try {
-    const name = await cm.getNameFromURL(url)
-    const size = await cm.getSize(name)
-    if (size >= 0) return false
-  } catch {}
-  // also check raw OPFS listing
-  try {
-    const root = await navigator.storage.getDirectory()
-    const lowerBase = base.split(".")[0].toLowerCase()
-    for await (const name of root.keys()) {
-      if (name.toLowerCase().includes(lowerBase)) return false
-    }
-  } catch {}
-  return true
-}
-
-async function cachedSize(url) {
-  try {
-    const cm = new CacheManager()
-    const name = await cm.getNameFromURL(url)
-    return await cm.getSize(name)
-  } catch {
-    return -1
-  }
-}
-
-self.onmessage = async event => {
-  const { id, cmd, payload } = event.data || {}
-  try {
-    if (cmd === "probe") {
-      post({ id, evt: "ok", data: { webgpu: typeof navigator !== "undefined" && !!navigator.gpu } })
-      return
-    }
-
-    if (cmd === "status") {
-      post({ id, evt: "ok", data: { loaded: !!wllama } })
-      return
-    }
-
-    if (cmd === "cached") {
-      const size = await cachedSize(payload.url)
-      post({ id, evt: "ok", data: { cached: size >= 0, size } })
-      return
-    }
-
-    if (cmd === "download") {
-      const cm = new CacheManager()
-      activeController = new AbortController()
-      await cm.download(payload.url, {
-        progressCallback: ({ loaded, total }) => post({ id, evt: "progress", loaded, total }),
-        signal: activeController.signal,
-      })
-      activeController = null
-      const size = await cachedSize(payload.url)
-      post({ id, evt: "ok", data: { done: true, size } })
-      return
-    }
-
-    if (cmd === "load") {
-      if (!wllama) {
-        const cm = new CacheManager()
-        let blob = await cm.open(payload.url)
-        // Integrity gate: a truncated/corrupted file (interrupted downloads,
-        // partial sweeps) loads "fine" but produces garbage tokens and memory
-        // crashes. Verify GGUF magic + declared size before trusting it.
-        if (blob && blob.size > 4) {
-          const magic = await blob.slice(0, 4).text()
-          const name = await cm.getNameFromURL(payload.url)
-          const meta = await cm.getMetadata(name).catch(() => null)
-          const expected = meta?.originalSize ?? 0
-          if (magic !== "GGUF" || (expected > 0 && Math.abs(blob.size - expected) > 1024)) {
-            await releaseRuntime()
-            try { await new CacheManager().delete(payload.url) } catch {}
-            await opfsSweep(baseName(payload.url))
-            post({ id, evt: "error", message: "MODEL_CORRUPT", name: "GhostStorage", hint: "file damaged — refetching a clean copy" })
-            return
+    const root = await navigator.storage.getDirectory();
+    for (const dirName of ["cache", "wllama", "ghost-models"]) {
+      try {
+        const dir = await root.getDirectoryHandle(dirName);
+        for await (const name of dir.keys()) {
+          if (name.includes(base)) {
+            try { await dir.removeEntry(name); } catch {}
           }
         }
-        if (!blob || blob.size <= 0) {
-          post({ id, evt: "error", message: "MODEL_NOT_CACHED", name: "GhostStorage", hint: "download the brain first" })
-          return
-        }
-        wllama = new Wllama({ default: WASM_URL })
-        await wllama.loadModel([blob], {
-          n_ctx: payload.nCtx || 2048,
-          jinja: true,
-        })
-      }
-      post({ id, evt: "ok", data: { loaded: true } })
-      return
-    }
-
-    if (cmd === "chat") {
-      if (!wllama) throw new Error("model not loaded")
-      activeController = new AbortController()
-      const signal = activeController.signal
-      const started = performance.now()
-      let tokens = 0
-      let text = ""
-      let lastError = null
-
-      const emitToken = piece => {
-        if (!piece) return
-        tokens += 1
-        text += piece
-        post({ id, evt: "token", piece })
-      }
-
-      // Render ChatML ourselves; single NON-streaming completion.
-      // Streaming through the v3 glue proved unstable in mobile Chrome
-      // (junk tokens, hangs, corrupted allocations) — one request, one
-      // response object is the reliable surface.
-      const CHATML_STOP = ["<|im_end|>", "<|im_start|>"]
-      const prompt = payload.messages
-              const msgs = Array.isArray(payload.messages) ? payload.messages : []
-      const promptStr = msgs
-        .map(m => `<|im_start|>${m.role}\n${m.content}<|im_end|>`)
-        .join("\n") + "\n<|im_start|>assistant\n"
-      const clean = s => String(s ?? "").replace(/<\|[a-z_]+\|>/g, "")
-      try {
-        const res = await wllama.createCompletion({
-          prompt: promptStr,
-          max_tokens: Math.min(payload.maxTokens || 280, 280),
-          temperature: payload.temperature ?? 0.35,
-          top_p: 0.9,
-          stop: CHATML_STOP,
-        })
-        const text = clean(res?.choices?.[0]?.text ?? res?.choices?.[0]?.message?.content ?? "")
-        const tokens = Math.max(1, Math.round(text.length / 4))
-        const seconds = (performance.now() - started) / 1000
-        post({ id, evt: "done", data: { text, tokens, tps: seconds > 0 ? tokens / seconds : 0 } })
-      } catch (err) {
-        // Corrupted runtime state after any failure — recycle before retry.
-        await releaseRuntime()
-        throw err
-      }
-      return
-    }
-
-    if (cmd === "stop") {
-      if (activeController) activeController.abort()
-      post({ id, evt: "ok", data: { stopped: true } })
-      return
-    }
-
-    if (cmd === "delete" || cmd === "eject") {
-      const url = payload.url
-      const base = baseName(url)
-      await releaseRuntime()
-      const cm = new CacheManager()
-      let hardFailed = false
-      try {
-        await cm.delete(url)
-      } catch {
-        hardFailed = true
-      }
-      let gone = false
-      try {
-        gone = await verifyGone(cm, url, base)
       } catch {}
-      if (!gone || hardFailed) {
-        await opfsSweep(base)
-        try {
-          gone = await verifyGone(cm, url, base)
-        } catch {}
-      }
-      post({ id, evt: "ok", data: { deleted: true, verified: gone } })
-      return
+    }
+  } catch {}
+}
+
+async function ensureLoaded(payload) {
+  if (wllama && loadedUrl === payload.url) return;
+  await releaseRuntime();
+  const cm = new CacheManager();
+  let blob = await cm.open(payload.url);
+  // Integrity gate: truncated/corrupt files load "fine" then produce
+  // garbage tokens and memory crashes. Verify before trusting.
+  if (blob && blob.size > 4) {
+    const magic = await blob.slice(0, 4).text();
+    const name = await cm.getNameFromURL(payload.url);
+    const meta = await cm.getMetadata(name).catch(() => null);
+    const expected = meta?.originalSize ?? meta?.size ?? 0;
+    if (magic !== "GGUF" || (expected > 0 && Math.abs(blob.size - expected) > 1024)) {
+      await cm.delete(payload.url).catch(() => {});
+      await opfsSweep(baseName(payload.url));
+      throw Object.assign(new Error("MODEL_CORRUPT"), { name: "GhostStorage" });
+    }
+  }
+  if (!blob || blob.size <= 0) {
+    throw Object.assign(new Error("MODEL_NOT_CACHED"), { name: "GhostStorage" });
+  }
+  wllama = new Wllama(CONFIG_PATHS);
+  await wllama.loadModel([blob], { n_ctx: 2048 });
+  loadedUrl = payload.url;
+}
+
+self.onmessage = async (e) => {
+  const { id, cmd, payload } = e.data || {};
+  try {
+    /* ---------- probe ---------- */
+    if (cmd === "probe") {
+      const ready = localStorage.getItem("deriva-ghost-ready") === "1";
+      post({ id, evt: "done", data: { ready } });
+      return;
     }
 
-    post({ id, evt: "error", message: `unknown cmd ${cmd}` })
+    /* ---------- status ---------- */
+    if (cmd === "status") {
+      post({
+        id, evt: "done",
+        data: { loaded: !!wllama, url: loadedUrl },
+      });
+      return;
+    }
+
+    /* ---------- cached size ---------- */
+    if (cmd === "cached") {
+      const cm = new CacheManager();
+      const blob = await cm.open(payload.url).catch(() => null);
+      post({ id, evt: "done", data: { cached: !!(blob && blob.size > 0), bytes: blob ? blob.size : 0 } });
+      return;
+    }
+
+    /* ---------- scan all cached urls ---------- */
+    if (cmd === "scanStorage") {
+      const cm = new CacheManager();
+      const urls = payload.urls || [];
+      const out = [];
+      for (const url of urls) {
+        const blob = await cm.open(url).catch(() => null);
+        if (blob && blob.size > 0) out.push({ url, bytes: blob.size });
+      }
+      post({ id, evt: "done", data: { entries: out } });
+      return;
+    }
+
+    /* ---------- download with progress ---------- */
+    if (cmd === "download") {
+      const cm = new CacheManager();
+      const signal = payload.signal;
+      const res = await fetch(payload.url, { signal });
+      if (!res.ok || !res.body) throw new Error(`download failed: HTTP ${res.status}`);
+      const total = Number(res.headers.get("content-length")) || payload.totalBytes || 0;
+      const reader = res.body.getReader();
+      const chunks = [];
+      let received = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.byteLength;
+        post({ id, evt: "progress", data: {
+          fraction: total > 0 ? Math.min(1, received / total) : 0,
+          loadedMb: Math.round(received / 1048576),
+          totalMb: Math.round(total / 1048576),
+        }});
+      }
+      const name = await cm.getNameFromURL(payload.url);
+      await cm.write(
+        name,
+        new Blob(chunks).stream(),
+        { originalSize: received, createdAt: Date.now(), url: payload.url },
+      );
+      post({ id, evt: "done", data: { bytes: received } });
+      return;
+    }
+
+    /* ---------- load into runtime ---------- */
+    if (cmd === "load") {
+      await ensureLoaded(payload);
+      post({ id, evt: "done", data: {} });
+      return;
+    }
+
+    /* ---------- chat: self-rendered ChatML, single-shot, callback stream ---- */
+    if (cmd === "chat") {
+      if (!wllama) {
+        await ensureLoaded({ url: payload.url ?? payload.modelUrl });
+      }
+      const msgs = Array.isArray(payload.messages) ? payload.messages : [];
+      const promptStr = msgs
+        .map((m) => `<|im_start|>${m.role}\n${m.content}<|im_end|>`)
+        .join("\n") + "\n<|im_start|>assistant\n";
+      const clean = (s) => String(s ?? "").replace(/<\|[a-z_]+\|>/g, "");
+      const started = performance.now();
+      let tokens = 0;
+      const text = await wllama.createCompletion(promptStr, {
+        nPredict: Math.min(payload.maxTokens || 280, 280),
+        sampling: { temp: payload.temperature ?? 0.35, top_p: 0.9 },
+        stopTokens: CHATML_STOP,
+        onNewToken: (_token, piece) => {
+          tokens += 1;
+          emitToken(id, clean(new TextDecoder().decode(piece)));
+        },
+      });
+      const seconds = (performance.now() - started) / 1000;
+      const finalText = clean(typeof text === "string" ? text : text?.choices?.[0]?.text ?? "");
+      post({ id, evt: "done", data: {
+        text: finalText,
+        tokens: Math.max(tokens, 1),
+        tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0,
+      }});
+      return;
+    }
+
+    /* ---------- stop: hard terminate (only reliable kill switch) ---------- */
+    if (cmd === "stop") {
+      post({ id, evt: "done", data: {} });
+      setTimeout(() => self.close(), 30);
+      return;
+    }
+
+    /* ---------- eject from RAM (keep file) ---------- */
+    if (cmd === "eject") {
+      await releaseRuntime();
+      post({ id, evt: "done", data: {} });
+      return;
+    }
+
+    /* ---------- delete brain ---------- */
+    if (cmd === "delete") {
+      await releaseRuntime(); // live wasm holds OPFS handles; cold first
+      const cm = new CacheManager();
+      await cm.delete(payload.url).catch(() => {});
+      const gone = await verifyGone(new CacheManager(), payload.url);
+      if (!gone) await opfsSweep(baseName(payload.url));
+      const verified = await verifyGone(new CacheManager(), payload.url);
+      post({ id, evt: "done", data: { verified } });
+      return;
+    }
+
+    /* ---------- clear everything ghost-related in storage ---------- */
+    if (cmd === "clearAll") {
+      await releaseRuntime();
+      await opfsSweep(".gguf");
+      const cm = new CacheManager();
+      for (const url of payload.urls || []) await cm.delete(url).catch(() => {});
+      post({ id, evt: "done", data: {} });
+      return;
+    }
+
+    post({ id, evt: "error", message: `unknown command ${cmd}` });
   } catch (err) {
-    activeController = null
+    const message = String(err?.message || err);
     post({
-      id,
-      evt: "error",
-      message: String(err?.message || err),
-      name: err?.name || "",
-      hint: typeof err?.stack === "string" ? err.stack.split("\n")[1]?.trim().slice(0, 160) : "",
-    })
+      id, evt: "error",
+      message,
+      name: err?.name || "Error",
+      hint: message.includes("MODEL_CORRUPT")
+        ? "brain file damaged — refetching a clean copy"
+        : message.includes("MODEL_NOT_CACHED")
+          ? "download the brain first"
+          : "",
+    });
+    // Any inference failure leaves suspect state — recycle the runtime.
+    if (cmd === "chat" || cmd === "load") await releaseRuntime();
   }
-}
+};

@@ -179,7 +179,7 @@ class GhostEngine {
     maxTokens: number,
     _onToken?: (piece: string) => void,
   ): Promise<{ text: string; tps: number }> {
-    const req = this.request<{ text: string; tps: number }>("chat", { messages, maxTokens })
+    const req = this.request<{ text: string; tps: number }>("chat", { url: model.url, messages, maxTokens })
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Ghost timed out — the phone reclaimed the brain. Try again.")), 120000),
     )
