@@ -2858,3 +2858,248 @@ code, pre { font-family: var(--font-mono); }
   .build-everything-line-numbers span { display: block; }
   .build-everything-editor-body .project-editor { min-height: 300px; border: 0; border-radius: 0; box-shadow: none; }
 }
+
+/* ── Ghost — offline AI tutor ─────────────────────────────── */
+.ghost-app { max-width: 660px; margin: 0 auto; padding: clamp(16px, 4vw, 40px); min-height: 70vh; }
+.ghost-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 55vh; }
+
+.ghost-face { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.ghost-face svg { width: 100%; height: 100%; overflow: visible; }
+.ghost-body { fill: var(--ink); }
+.ghost-eye { fill: var(--paper-raised); animation: ghost-blink 4.2s infinite; transform-origin: center; }
+@keyframes ghost-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
+.ghost-ring { position: absolute; inset: -12%; border: 1.5px solid var(--accent); border-radius: 50%; opacity: 0; animation: ghost-ping 1.8s ease-out infinite; pointer-events: none; }
+.ghost-ring-2 { animation-delay: 0.9s; }
+@keyframes ghost-ping { 0% { transform: scale(0.72); opacity: 0.75; } 100% { transform: scale(1.28); opacity: 0; } }
+
+.ghost-intro { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding-top: clamp(10px, 5vw, 48px); }
+.ghost-tagline { margin: 0; color: var(--ink-soft); font-size: 15px; }
+.ghost-tagline.mono { font-family: var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.08em; }
+.ghost-note { margin: 0; max-width: 420px; color: var(--ink-soft); font-size: 12.5px; line-height: 1.55; }
+
+.ghost-spec { width: min(430px, 100%); border: 1px solid var(--line); background: var(--paper-raised); border-radius: var(--radius, 12px); overflow: hidden; margin-top: 6px; }
+.ghost-spec-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 9px 14px; font-size: 12.5px; border-bottom: 1px solid var(--line); }
+.ghost-spec-row:last-child { border-bottom: 0; }
+.ghost-spec-row span { font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 10px; letter-spacing: 0.18em; color: var(--ink-soft); }
+.ghost-spec-row strong { font-weight: 700; color: var(--ink); text-align: right; }
+
+.ghost-summon, .ghost-send { appearance: none; border: 0; cursor: pointer; background: var(--accent); color: var(--on-accent); font: 800 13px/1 var(--font-ui); letter-spacing: 0.22em; text-indent: 0.22em; padding: 15px 26px; border-radius: 999px; transition: transform 0.12s ease, filter 0.12s ease; }
+.ghost-summon:hover, .ghost-send:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
+.ghost-summon:active, .ghost-send:active:not(:disabled) { transform: translateY(0); }
+.ghost-send { padding: 12px 18px; border-radius: 10px; }
+.ghost-send:disabled { opacity: 0.45; cursor: default; filter: none; transform: none; }
+.ghost-send.stop { background: var(--ink); color: var(--paper-raised); }
+
+.ghost-progress { width: min(430px, 100%); height: 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper-raised); overflow: hidden; }
+.ghost-progress-fill { height: 100%; background: repeating-linear-gradient(-45deg, var(--accent) 0 8px, color-mix(in srgb, var(--accent) 72%, transparent) 8px 16px); transition: width 0.25s ease; }
+
+.ghost-error { margin: 4px 0 0; color: #c0392b; font-size: 12.5px; max-width: 420px; }
+
+.ghost-chat { display: flex; flex-direction: column; gap: 0; min-height: 68vh; }
+@keyframes ghost-led-pulse { 50% { opacity: 0.35; } }
+
+.ghost-minibtn { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--ink-soft); font: 700 9.5px/1 var(--font-ui); letter-spacing: 0.16em; padding: 6px 9px; border-radius: 7px; cursor: pointer; flex: none; }
+.ghost-minibtn:hover { color: var(--ink); border-color: var(--ink-soft); }
+
+.ghost-messages { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 20px 2px 8px; overflow-y: auto; }
+.ghost-empty { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; padding: 12px 0 6px; }
+.ghost-empty p { margin: 0 0 4px; font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 13px; color: var(--ink-soft); letter-spacing: 0.06em; }
+.ghost-chip { appearance: none; border: 1px solid var(--line); background: var(--paper-raised); color: var(--ink); font: 500 12.5px/1.4 var(--font-ui); padding: 9px 13px; border-radius: 999px; cursor: pointer; text-align: left; transition: border-color 0.12s ease, transform 0.12s ease; }
+.ghost-chip:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+.ghost-msg { max-width: 88%; display: flex; flex-direction: column; gap: 5px; }
+.ghost-msg p { margin: 0; font-size: 14px; line-height: 1.62; white-space: pre-wrap; word-break: break-word; }
+.ghost-msg.from-user { align-self: flex-end; align-items: flex-end; background: var(--accent-soft); border-radius: 14px 14px 4px 14px; padding: 10px 13px; }
+.ghost-msg.from-user p { color: var(--ink); }
+.ghost-msg.from-ghost p { color: var(--ink); }
+.ghost-msg-tag { font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 8.5px; letter-spacing: 0.24em; color: var(--ink-soft); }
+.ghost-msg.from-user .ghost-msg-tag { order: 2; }
+.ghost-cursor { display: inline-block; width: 8px; height: 14px; background: var(--accent); margin-left: 3px; vertical-align: -2px; animation: ghost-cursor-blink 0.9s steps(1) infinite; }
+@keyframes ghost-cursor-blink { 50% { opacity: 0; } }
+
+.ghost-composer { position: sticky; bottom: 0; background: linear-gradient(to top, var(--paper) 78%, transparent); padding: 10px 0 4px; display: flex; flex-direction: column; gap: 9px; }
+.ghost-inputrow { display: flex; gap: 8px; }
+.ghost-input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--paper-raised); color: var(--ink); border-radius: 12px; padding: 13px 15px; font: 500 14px/1.4 var(--font-ui); outline: none; transition: border-color 0.12s ease; }
+.ghost-input:focus { border-color: var(--accent); }
+.ghost-input::placeholder { color: var(--ink-soft); }
+
+@media (max-width: 520px) {
+  .ghost-msg { max-width: 94%; }
+  .ghost-gauge { display: none; }
+}
+
+/* Ghost model picker */
+.ghost-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: min(430px, 100%); margin-top: 4px; }
+.ghost-model { appearance: none; border: 1px solid var(--line); background: var(--paper-raised); color: var(--ink); border-radius: 12px; padding: 11px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; text-align: left; transition: border-color .12s ease, transform .12s ease; }
+.ghost-model:hover { transform: translateY(-1px); }
+.ghost-model.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.ghost-model-name { font: 800 12px/1.2 var(--font-ui); }
+.ghost-model-meta { font: 700 9px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: .12em; color: var(--on-accent); background: var(--accent); border-radius: 5px; padding: 3px 5px; width: fit-content; }
+.ghost-model:not(.active) .ghost-model-meta { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
+.ghost-model-blurb { font-size: 10px; line-height: 1.45; color: var(--ink-soft); }
+@media (max-width: 520px) { .ghost-picker { grid-template-columns: 1fr; } }
+
+/* Ghost brains manager */
+.ghost-brains { border: 1px solid var(--line); border-top: 0; background: var(--paper-raised); border-radius: 0 0 12px 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.ghost-brains-title { margin: 0 0 2px; font: 700 9px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.22em; color: var(--ink-soft); }
+.ghost-brain-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.ghost-brain-row.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.ghost-brain-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ghost-brain-name { font: 800 12.5px/1.2 var(--font-ui); color: var(--ink); }
+.ghost-brain-meta { font: 600 9px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.1em; color: var(--ink-soft); }
+.ghost-brain-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+.ghost-brain-state { font: 600 10px/1 var(--font-mono, ui-monospace, Menlo, monospace); color: var(--ink-soft); letter-spacing: 0.08em; }
+.ghost-minibtn.danger { color: #c0392b; border-color: color-mix(in srgb, #c0392b 35%, var(--line)); }
+.ghost-minibtn:disabled { opacity: 0.4; cursor: default; }
+.ghost-brain-progress { display: flex; align-items: center; gap: 7px; font: 700 10px/1 var(--font-mono, ui-monospace, Menlo, monospace); color: var(--ink-soft); }
+.ghost-brain-bar { width: 72px; height: 5px; border-radius: 999px; background: var(--line); overflow: hidden; display: inline-block; }
+.ghost-brain-bar > span { display: block; height: 100%; background: var(--accent); transition: width 0.25s ease; }
+.ghost-brains-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 4px; font: 600 10px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.08em; color: var(--ink-soft); }
+
+/* ── Ghost: app-grade layout pass ─────────────────────────── */
+.ghost-app { min-height: 100dvh; display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom); }
+.ghost-kicker { font: 700 10px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.3em; color: var(--accent); }
+.ghost-hero-title { margin: 2px 0 0; font-size: clamp(24px, 6vw, 34px); line-height: 1.15; letter-spacing: -0.01em; color: var(--ink); font-weight: 800; max-width: 22ch; text-align: left; }
+.ghost-hero-sub { margin: 8px 0 4px; color: var(--ink-soft); font-size: 14px; line-height: 1.6; max-width: 46ch; text-align: left; }
+.ghost-intro { align-items: stretch; text-align: left; gap: 12px; }
+.ghost-intro .ghost-face { align-self: center; margin: 4px 0 2px; }
+.ghost-intro .ghost-spec, .ghost-intro .ghost-picker { width: 100%; }
+.ghost-intro .ghost-note, .ghost-intro .ghost-summon, .ghost-intro .ghost-error { align-self: center; }
+.ghost-chat { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.ghost-messages { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 18px 2px 10px; scroll-padding-bottom: 12px; }
+.ghost-msg { flex-direction: row !important; align-items: flex-end; gap: 8px; max-width: 92% !important; }
+.ghost-msg.from-user { flex-direction: row-reverse !important; }
+.ghost-msg-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ghost-msg.from-ghost .ghost-msg-body { background: var(--paper-raised); border-radius: 16px; padding: 11px 14px; }
+.ghost-msg.from-user .ghost-msg-body { background: var(--accent-soft); border-radius: 16px; padding: 11px 14px; align-items: flex-end; }
+.ghost-composer { position: sticky; bottom: 0; padding: 10px 0 calc(8px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--paper) 72%, transparent); gap: 10px; }
+.ghost-inputrow { background: var(--paper-raised); border: 1px solid var(--line); border-radius: 16px; padding: 6px 6px 6px 4px; align-items: center; }
+.ghost-inputrow:focus-within { border-color: var(--accent); }
+.ghost-input { border: 0 !important; background: transparent !important; padding: 11px 12px !important; border-radius: 12px !important; }
+.ghost-send { border-radius: 13px !important; padding: 12px 16px !important; letter-spacing: 0.14em; }
+@media (min-width: 700px) {
+  .ghost-app { max-width: 720px; min-height: unset; height: calc(100dvh - 120px); margin: 24px auto; border: 1px solid var(--line); border-radius: 20px; padding: 0 22px calc(14px + env(safe-area-inset-bottom)); overflow: hidden; }
+  .ghost-intro { overflow-y: auto; padding: clamp(18px, 3vw, 28px) 4px; }
+}
+
+/* ── Ghost v3: sheet, microrow, polish ────────────────────── */
+.ghost-section-label { margin: 10px 0 0; font: 700 9.5px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.26em; color: var(--ink-soft); }
+.ghost-model { padding: 13px 14px; gap: 4px; border-radius: 14px; }
+.ghost-model-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ghost-model-badge { font: 800 8px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.14em; color: var(--on-accent); background: var(--accent); border-radius: 5px; padding: 3px 6px; }
+.ghost-summon { width: 100%; margin-top: 2px; }
+.ghost-storage-link { appearance: none; border: 0; background: transparent; color: var(--ink-soft); font: 600 11px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.04em; cursor: pointer; padding: 4px 0; text-align: left; }
+.ghost-storage-link:hover { color: var(--accent); }
+
+.ghost-sheet-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,0.42); backdrop-filter: blur(2px); display: flex; align-items: flex-end; justify-content: center; animation: ghost-fade 0.18s ease; }
+@keyframes ghost-fade { from { opacity: 0; } }
+.ghost-sheet { width: min(560px, 100%); max-height: 82dvh; overflow-y: auto; overscroll-behavior: contain; background: var(--paper); border: 1px solid var(--line); border-bottom: 0; border-radius: 22px 22px 0 0; padding: 10px 18px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; animation: ghost-rise 0.22s cubic-bezier(0.2, 0.9, 0.25, 1); }
+@keyframes ghost-rise { from { transform: translateY(40px); opacity: 0.4; } }
+.ghost-sheet-handle { width: 40px; height: 4px; border-radius: 999px; background: var(--line); align-self: center; margin: 2px 0 4px; }
+.ghost-sheet-title { margin: 0; font: 700 10px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.28em; color: var(--ink-soft); }
+.ghost-sheet .ghost-brain-row.legacy { opacity: 0.85; border-style: dashed; }
+
+/* ── Ghost v4: quiet chrome ───────────────────────────────── */
+.ghost-chat { position: relative; }
+.ghost-gear { position: absolute; top: 10px; right: 0; z-index: 6; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); background: color-mix(in srgb, var(--paper-raised) 88%, transparent); color: var(--ink-soft); font-size: 15px; cursor: pointer; transition: color .12s ease, border-color .12s ease, transform .12s ease; }
+.ghost-gear:hover { color: var(--accent); border-color: var(--accent); transform: rotate(22deg); }
+.ghost-msg-body p { margin: 0; }
+.ghost-sheet-foot-actions { display: inline-flex; gap: 8px; }
+@media (min-width: 700px) { .ghost-gear { top: 12px; right: 12px; } }
+
+/* ── Ghost v5: layout guards ──────────────────────────────── */
+.ghost-msg > .ghost-face { flex: 0 0 auto; align-self: flex-end; }
+.ghost-face svg, .ghost-face { contain: content; }
+.ghost-msg-body { flex: 1 1 auto; max-width: 100%; }
+.ghost-msg.from-user .ghost-msg-body { flex: 0 1 auto; }
+.ghost-ring { border-width: 1px !important; opacity: 0 !important; animation: ghost-ping-soft 2.4s ease-out infinite !important; }
+@keyframes ghost-ping-soft { 0% { transform: scale(0.8); opacity: 0.32; } 100% { transform: scale(1.25); opacity: 0; } }
+
+/* ── Ghost v6: conversations + smoothness ─────────────────── */
+.ghost-chatbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0 10px; }
+.ghost-chatbar-title { font: 600 11px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46%; letter-spacing: 0.04em; }
+.ghost-chatbar-actions { display: inline-flex; gap: 7px; align-items: center; }
+.ghost-gear-inline { appearance: none; width: 30px; height: 26px; display: grid; place-items: center; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--ink-soft); font-size: 14px; cursor: pointer; transition: color 0.14s ease, border-color 0.14s ease, transform 0.2s ease; }
+.ghost-gear-inline:hover { color: var(--accent); border-color: var(--line); transform: rotate(18deg); }
+.ghost-minibtn.accent { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.ghost-minibtn.accent:hover { filter: brightness(1.06); }
+.ghost-thinking-chip { align-self: center !important; position: static; display: inline-flex; align-items: center; gap: 7px; background: var(--paper-raised); border: 1px solid var(--line); color: var(--ink-soft); font: 600 11px/1 var(--font-ui); border-radius: 999px; padding: 7px 12px; animation: ghost-rise-in 0.18s ease both; }
+@keyframes ghost-rise-in { from { opacity: 0; transform: translateY(5px); } }
+.ghost-msg { animation: ghost-msg-in 0.17s ease both; }
+@keyframes ghost-msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .ghost-msg, .ghost-thinking-chip, .ghost-sheet, .ghost-sheet-backdrop { animation: none !important; }
+}
+.ghost-messages { scroll-behavior: smooth; padding-top: 14px; }
+.ghost-input { font-size: 16px; } /* kills iOS focus zoom */
+.ghost-composer .ghost-error { margin: 0 4px 2px; }
+.ghost-empty { justify-content: center; min-height: 32vh; }
+
+/* history rows */
+.ghost-hist-open { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; background: transparent; border: 0; text-align: left; cursor: pointer; padding: 0; font-family: var(--font-ui); }
+.ghost-hist-open:hover .ghost-brain-name { color: var(--accent); }
+
+/* composer polish */
+.ghost-inputrow { box-shadow: 0 3px 16px rgba(0,0,0,0.07); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.ghost-send, .ghost-minibtn { transition: transform 0.13s ease, filter 0.13s ease, opacity 0.13s ease, color 0.13s ease, border-color 0.13s ease; }
+.ghost-send:active:not(:disabled), .ghost-minibtn:active:not(:disabled) { transform: scale(0.96); }
+
+/* ── Ghost v7: avatar lock, jump pill, touch fix ──────────── */
+.ghost-msg .ghost-face { width: 22px !important; height: 22px !important; min-width: 22px; flex: 0 0 auto; align-self: flex-end; }
+.ghost-face svg { display: block; }
+.ghost-messages { overscroll-behavior: contain; touch-action: pan-y; scroll-behavior: auto; overflow-anchor: none; }
+.ghost-jump { position: absolute; bottom: 86px; left: 50%; transform: translateX(-50%); z-index: 5; appearance: none; border: 1px solid var(--line); background: var(--paper-raised); color: var(--ink); font: 700 11px/1 var(--font-ui); padding: 9px 14px; border-radius: 999px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.12); animation: ghost-rise-in 0.16s ease both; }
+.ghost-jump:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Ghost v8: streaming scroll done right ────────────────── */
+.ghost-messages { scroll-behavior: auto !important; }
+.ghost-jump { margin-bottom: 2px; }
+
+/* ── Ghost v9: small-screen correctness ───────────────────── */
+/* On phones, .app-content is the bounded viewport — Ghost must fill it
+   exactly so .ghost-messages becomes the one true scroller. */
+@media (max-width: 700px) {
+  .ghost-app { height: 100%; min-height: 0; padding-bottom: 10px; }
+  .ghost-intro { overflow-y: auto; }
+  .ghost-jump { bottom: calc(84px + env(safe-area-inset-bottom)); }
+}
+
+/* ── Ghost v12: desktop module rail (left-aligned, as designed) ── */
+@media (min-width: 700px) {
+  .ghost-intro > .ghost-section-label { margin-bottom: 10px; }
+  .ghost-picker { gap: 14px; }
+  .ghost-model {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-height: 128px;
+    padding: 16px 18px 15px;
+    background: var(--paper);
+    border-color: var(--line);
+    position: relative;
+    overflow: hidden;
+  }
+  /* accent spine — the instrument way to say "selected" */
+  .ghost-model::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: transparent;
+    transition: background 0.16s ease;
+  }
+  .ghost-model:hover { background: var(--paper-raised); transform: translateY(-1px); }
+  .ghost-model.active { background: var(--paper-raised); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: none; }
+  .ghost-model.active::before { background: var(--accent); }
+  .ghost-model-name { font-size: 14px; letter-spacing: 0.015em; }
+  .ghost-model-meta { font-size: 10px; letter-spacing: 0.06em; }
+  .ghost-model-blurb { font-size: 10.5px; line-height: 1.5; opacity: 0.78; max-width: 30ch; }
+  /* CTA returns to the column, left-aligned with everything */
+  .ghost-summon { width: 100%; }
+}
+
+/* ── Ghost v13: inline cache delete on brain cards ────────── */
+.ghost-model { position: relative; }
+.ghost-card-del { position: absolute; top: 9px; right: 9px; appearance: none; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; border: 1px solid color-mix(in srgb, #c0392b 40%, var(--line)); background: transparent; color: #c0392b; font-size: 11px; line-height: 1; cursor: pointer; transition: transform 0.12s ease, background 0.12s ease; }
+.ghost-card-del:hover { background: color-mix(in srgb, #c0392b 10%, transparent); transform: scale(1.06); }
+.ghost-card-del:active { transform: scale(0.94); }

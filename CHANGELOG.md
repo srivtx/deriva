@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.6.0-ghost.0 — Ghost (pre-release, feature branch)
+
+The offline AI tutor as a first-class app: SmolLM2 Nano/Lite brains downloaded on explicit consent, stored in OPFS with verified deletes, Socratic-only persona, streaming chat with conversation history.
+
+- Ghost app (`/ghost`): brain picker, bottom-sheet settings, per-model GET/RESTORE/USE/DELETE, leftover sweep, clear-everything
+- Streaming inference via wllama 3.6 (llama.cpp → WASM SIMD) in a dedicated module worker; zero main-bundle cost until summoned
+- Conversation sessions: auto-titled history, reopen, delete, new-chat; entrance motion, iOS-safe input sizing
+- Scroll engine: instant stick-to-bottom during token streams, scroll-event suppression, jump-to-latest pill
+- Home drawer + App Center Studio section; four icon-pack languages for Ghost/Glyph tiles
+
 ## v1.5.0 — Lucent Lab (2026-08-25)
 
 ### New

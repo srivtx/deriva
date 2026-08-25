@@ -25,6 +25,7 @@ const G = {
   pink: "linear-gradient(135deg, #DB2777, #A31D58)",
   dark: "linear-gradient(135deg, #1E2922, #0F1512)",
   sky: "linear-gradient(135deg, #0891B2, #056680)",
+  ghost: "linear-gradient(135deg, #4B4B5E, #14141C)",
 }
 
 export const APP_CATALOG: AppMeta[] = [
@@ -68,6 +69,9 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "releases", name: "What's new", glyph: "✦", gradient: G.green, desc: "Release notes", category: "System", href: "/releases", status: "installed" },
   { id: "settings", name: "Settings", glyph: "⚙", gradient: G.slate, desc: "Preferences", category: "System", href: "/settings", status: "installed" },
   { id: "store", name: "App Center", glyph: "❖", gradient: G.cobalt, desc: "Install & manage apps", category: "System", href: "/store", status: "installed" },
+  // Studio
+  { id: "glyph", name: "Glyph Studio", glyph: "✺", gradient: G.pink, desc: "Draw dot glyphs, export art", category: "Studio", href: "/glyph", status: "installed" },
+  { id: "ghost", name: "Ghost", glyph: "◍", gradient: G.ghost, desc: "Offline AI tutor — lives on your phone", category: "Studio", href: "/ghost", status: "installed" },
   // Coming soon
   { id: "soon-expense", name: "Expense Tracker", glyph: "₿", gradient: G.teal, desc: "Budgets & spending charts", category: "Life", status: "soon" },
   { id: "soon-calendar", name: "Calendar", glyph: "▦", gradient: G.ember, desc: "Events with reminders", category: "Life", status: "soon" },

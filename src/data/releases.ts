@@ -8,6 +8,20 @@ export type ReleaseEntry = {
 
 export const RELEASES: ReleaseEntry[] = [
   {
+    version: "1.5",
+    date: "2026-08-26",
+    title: "Ghost, the offline tutor",
+    tagline: "A real language model living inside your phone — no cloud, no account, and it nudges with questions instead of handing you answers.",
+    highlights: [
+      { title: "Ghost", body: "Summon an offline AI tutor from the Studio drawer or App Center. One opt-in download (SmolLM2 Nano 101 MB or Lite 258 MB), then it works in airplane mode forever." },
+      { title: "Two brains, your pick", body: "Nano for speed on any phone, Lite for deeper reasoning. Swap anytime from GHOST SETTINGS — install, switch, delete, all with verified storage numbers." },
+      { title: "Hints only, always", body: "Ghost answers with one guiding question or the invariant to notice. The derivation stays yours — that is the whole point." },
+      { title: "Real conversations", body: "Auto-titled history, reopen any past chat, new-chat without losing anything, and a stop button that actually stops." },
+      { title: "Glyph Studio in the drawer", body: "The dot-matrix studio joined the home app library too, with its own icons in every icon-pack language." },
+      { title: "Honest engineering", body: "Deletes verify bytes are gone (and sweep old leftovers), downloads show live MB progress, and every failure tells you why instead of staying silent." },
+    ],
+  },
+  {
     version: "1.4",
     date: "2026-08-25",
     title: "The Super App drop",

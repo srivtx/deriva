@@ -1,6 +1,6 @@
 "use client"
 
-import { currentIconPack, getPersonalDots, NOTHING_DOTS, TEENAGE_PATHS, type IconPackId } from "@/data/icon-packs"
+import { currentIconPack, getPersonalDots, NOTHING_DOTS, TEENAGE_PATHS, CLASSIC_PATHS, type IconPackId } from "@/data/icon-packs"
 
 export default function PackIcon({
   id, fallback, pack, className,
@@ -34,6 +34,15 @@ export default function PackIcon({
         </svg>
       )
     }
+  }
+
+  const classicPath = CLASSIC_PATHS[id]
+  if (active === "classic" && classicPath) {
+    return (
+      <svg className={`teicon${className ? ` ${className}` : ""}`} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" aria-hidden="true">
+        <path d={classicPath} />
+      </svg>
+    )
   }
 
   return <span aria-hidden="true">{fallback}</span>

@@ -51,6 +51,10 @@ const APP_SECTIONS = [
     { id: "complexity", href: "/complexity", name: "Big-O Lab", glyph: "∿", gradient: G.violet },
     { id: "notebook", href: "/notebook", name: "Notebook", glyph: "✎", gradient: G.gold },
   ] },
+  { label: "Studio", apps: [
+    { id: "glyph", href: "/glyph", name: "Glyph Studio", glyph: "✺", gradient: G.pink },
+    { id: "ghost", href: "/ghost", name: "Ghost", glyph: "◍", gradient: "linear-gradient(135deg, #4B4B5E, #14141C)" },
+  ] },
   { label: "Life", apps: [
     { id: "toolkit", href: "/toolkit", name: "Toolkit", glyph: "▦", gradient: G.teal },
     { id: "tasks", href: "/toolkit?tool=tasks", name: "Tasks", glyph: "☑", gradient: G.teal },
