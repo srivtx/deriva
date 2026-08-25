@@ -1,4 +1,5 @@
 import { sanitizeNavSlots } from "@/data/nav-items"
+import { sanitizeNavIcons } from "@/data/nav-icons"
 
 export type ThemePreference = "system" | "paper" | "ink" | "moss" | "ocean" | "carbon" | "violet" | "sunset" | "nothing" | "opone" | "swiss" | "nord" | "solarized" | "braun"
 export type AccentPreference = "cobalt" | "ember" | "violet" | "mint" | "gold" | "custom"
@@ -18,6 +19,7 @@ export type Preferences = {
   texture: TexturePreference
   iconPack: IconPackPreference
   navSlots: string[]
+  navIcons: Record<string, string>
   reducedMotion: boolean
   textScale: "standard" | "large" | "xlarge"
   keyboardHints: boolean
@@ -39,6 +41,7 @@ export const defaultPreferences: Preferences = {
   texture: "plain",
   iconPack: "classic",
   navSlots: ["home", "learn", "patterns", "observe"],
+  navIcons: {},
   reducedMotion: false,
   textScale: "standard",
   keyboardHints: true,
@@ -84,6 +87,7 @@ function normalize(value: unknown): Preferences {
     texture: TEXTURE_VALUES.has(raw.texture as TexturePreference) ? raw.texture as TexturePreference : defaultPreferences.texture,
     iconPack: ICON_VALUES.has(raw.iconPack as IconPackPreference) ? raw.iconPack as IconPackPreference : defaultPreferences.iconPack,
     navSlots: sanitizeNavSlots(raw.navSlots),
+    navIcons: sanitizeNavIcons(raw.navIcons),
     reducedMotion: raw.reducedMotion === true,
     textScale: raw.textScale === "large" || raw.textScale === "xlarge" ? raw.textScale : "standard",
     keyboardHints: raw.keyboardHints !== false,

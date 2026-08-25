@@ -5,7 +5,9 @@ import Link from "next/link"
 import { applyPreferences, defaultPreferences, loadPreferences, savePreferences, type AccentPreference, type DensityPreference, type Preferences, type ShapePreference, type TexturePreference, type ThemePreference, type TypePreference } from "@/persistence/preferences"
 import { ICON_PACKS } from "@/data/icon-packs"
 import PackIcon from "@/components/pack-icon"
+import NavSlotIcon from "@/components/nav-slot-icon"
 import { NAV_ITEMS, NAV_ITEM_MAP, NAV_MAX_SLOTS, DEFAULT_NAV_SLOTS } from "@/data/nav-items"
+import { NAV_VARIANTS } from "@/data/nav-icons"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 import Logo from "@/components/logo"
@@ -95,6 +97,11 @@ export default function SettingsPage() {
     const next = on ? preferences.navSlots.filter(slot => slot !== id) : [...preferences.navSlots, id]
     update({ ...preferences, navSlots: next.length ? next : DEFAULT_NAV_SLOTS })
   }
+  const dropKey = (record: Record<string, string> | undefined, key: string): Record<string, string> => {
+    const next = { ...(record ?? {}) }
+    delete next[key]
+    return next
+  }
   const enableNotifications = async () => {
     const permission = await requestDesktopNotifications()
     setNotificationPermission(permission)
@@ -178,12 +185,38 @@ export default function SettingsPage() {
             const item = NAV_ITEM_MAP[id]
             return (
               <span key={id} className="nav-slot-cell">
-                <PackIcon id={item.id} fallback={item.glyph} />
+                <NavSlotIcon itemId={id} variantId={preferences.navIcons?.[id]} autoPack={preferences.iconPack} size={20} />
                 {item.label}
               </span>
             )
           })}
-          <span className="nav-slot-cell nav-slot-more">⋯ More</span>
+          <span className="nav-slot-cell nav-slot-more">
+            <NavSlotIcon itemId="more" variantId={preferences.navIcons?.more} autoPack={preferences.iconPack} size={20} />
+            More
+          </span>
+        </div>
+        <div className="nav-style-list">
+          {[...preferences.navSlots, "more"].map(id => {
+            const label = id === "more" ? "More" : NAV_ITEM_MAP[id]?.label ?? id
+            const current = preferences.navIcons?.[id]
+            return (
+              <div key={id} className="nav-style-row">
+                <span className="nav-style-label">{label}</span>
+                <div className="nav-style-options" role="group" aria-label={`${label} icon style`}>
+                  <button type="button" className={`nav-style-tile${!current ? " selected" : ""}`} onClick={() => update({ ...preferences, navIcons: dropKey(preferences.navIcons, id) })}>
+                    <NavSlotIcon itemId={id} autoPack={preferences.iconPack} size={20} />
+                    <small>Auto</small>
+                  </button>
+                  {(NAV_VARIANTS[id] ?? []).map(variant => (
+                    <button key={variant.id} type="button" className={`nav-style-tile${current === variant.id ? " selected" : ""}`} onClick={() => update({ ...preferences, navIcons: { ...preferences.navIcons, [id]: variant.id } })}>
+                      <NavSlotIcon itemId={id} variantId={variant.id} autoPack={preferences.iconPack} size={20} />
+                      <small>{variant.name}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </section>
 
