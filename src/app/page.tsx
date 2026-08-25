@@ -96,6 +96,29 @@ export default function HomePage() {
   const [preferences, setPreferences] = useState<Preferences>()
   const [reviewDue, setReviewDue] = useState(0)
   const [openTasks, setOpenTasks] = useState(0)
+  const [groupFilter, setGroupFilter] = useState("All")
+  const [appQuery, setAppQuery] = useState("")
+
+  const greeting = (() => {
+    const hour = new Date().getHours()
+    if (hour < 5) return "Still up"
+    if (hour < 12) return "Good morning"
+    if (hour < 17) return "Good afternoon"
+    return "Good evening"
+  })()
+
+  const dateLabel = new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })
+
+  const openCommand = () => window.dispatchEvent(new CustomEvent("deriva-open-command"))
+
+  const filteredSections = APP_SECTIONS
+    .map(section => ({
+      ...section,
+      apps: section.apps.filter(app =>
+        (groupFilter === "All" || section.label === groupFilter) &&
+        (!appQuery.trim() || app.name.toLowerCase().includes(appQuery.trim().toLowerCase()))),
+    }))
+    .filter(section => section.apps.length > 0)
 
   useEffect(() => {
     setGuidedProgress(loadLessonProgress("trees/00-recursion-reflex/sum-1-to-n"))
@@ -128,95 +151,63 @@ export default function HomePage() {
   const practiceHref = practiceAction?.href || "/practice?topic=trees&problem=1"
 
   return (
-    <div className="home-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--paper)", color: "var(--ink)", fontFamily: "var(--font-ui)" }}>
-      <header className="landing-header" style={{ padding: "clamp(24px, 5vw, 48px) clamp(20px, 5vw, 48px) clamp(20px, 4vw, 32px)", borderBottom: "1px solid var(--line)", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
-        <div className="home-eyebrow" aria-label="Daily practice session">
-          <span className="home-eyebrow-index">01</span>
-           <span>{preferences?.brandName ?? "Deriva"} / Daily practice</span>
-          <span>10 minute session</span>
+    <div className="home-page os-home">
+      <header className="os-header">
+        <div className="os-status">
+          <div>
+            <span className="os-date">{dateLabel}</span>
+            <h1 className="os-greeting">{greeting}.</h1>
+          </div>
+          <button type="button" className="os-search" onClick={openCommand} aria-label="Search apps and problems">
+            <span aria-hidden="true">⌕</span>
+            <span className="os-search-text">Search</span>
+            <kbd>⌘K</kbd>
+          </button>
         </div>
-        <h1 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontFamily: "var(--font-narrative)", fontWeight: 700, lineHeight: 1.15, margin: 0 }}>
-          Make one algorithm<br/>
-          <span style={{ color: "var(--accent)" }}>feel inevitable.</span>
-        </h1>
-        <p style={{ marginTop: 16, color: "var(--ink-soft)", maxWidth: 600, fontSize: 17, lineHeight: 1.6, fontFamily: "var(--font-narrative)" }}>
-           {preferences?.tagline ?? "Derive the algorithm."} Start with one small reasoning win before taking on a hard problem. Build the idea first, then choose whether to practice or recall the move.
-        </p>
-        <div className="landing-actions" style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
-           <Link href={guidedHref} className="landing-primary-action" style={{ padding: "12px 28px", background: "var(--accent)", color: "#fff", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
-             Begin today&rsquo;s session →
-           </Link>
-           <Link href={practiceHref} className="landing-drill-action" style={{ padding: "12px 28px", borderRadius: "var(--radius)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
-             I already know the idea →
-           </Link>
+        <div className="os-widgets stagger">
+          <Link href={guidedHref} className="os-widget os-widget-featured">
+            <span className="os-widget-kicker">Continue · Stage {Math.max(guidedIndex + 1, 1)}/9</span>
+            <strong>The Recursion Reflex</strong>
+            <em>{guidedDone ? "Earned — revisit or transfer next" : guidedProgress ? "Your next small move is ready" : "Derive before you code"}</em>
+            <span className="os-widget-cta">{guidedDone ? "Revisit →" : "Continue →"}</span>
+          </Link>
+          <Link href="/daily" className="os-widget">
+            <span className="os-widget-kicker">Daily</span>
+            <strong>{dailyPickForDate(todayKey()).problem.title}</strong>
+            <em>today&apos;s challenge</em>
+          </Link>
+          <Link href="/review" className="os-widget">
+            <span className="os-widget-kicker">Review</span>
+            <strong>{hydrated ? (reviewDue > 0 ? `${reviewDue} due` : "Clear") : "…"}</strong>
+            <em>spaced repetition</em>
+          </Link>
+          <Link href="/toolkit?tool=tasks" className="os-widget">
+            <span className="os-widget-kicker">Tasks</span>
+            <strong>{hydrated ? `${openTasks} open` : "…"}</strong>
+            <em>life toolkit</em>
+          </Link>
         </div>
       </header>
 
-      <main className="landing-main" style={{ flex: 1, padding: "clamp(24px, 5vw, 40px) clamp(20px, 5vw, 48px) 60px", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
-        <section className="today-session" aria-labelledby="today-heading">
-          <div className="today-session-head">
-            <div>
-              <span className="discovery-kicker">Today&rsquo;s session</span>
-              <h2 id="today-heading">The Recursion Reflex</h2>
+      <main className="os-main">
+        <section className="app-library" aria-label="App library">
+          <div className="app-library-toolbar">
+            <div className="app-library-chips" role="group" aria-label="Filter apps">
+              {["All", ...APP_SECTIONS.map(section => section.label)].map(label => (
+                <button key={label} type="button" className={`app-chip${groupFilter === label ? " active" : ""}`} onClick={() => setGroupFilter(label)}>{label}</button>
+              ))}
             </div>
-            <span className="today-session-time">10 minutes</span>
+            <input className="app-library-search" value={appQuery} onChange={event => setAppQuery(event.target.value)} placeholder="Find an app…" aria-label="Search apps" />
           </div>
-          <p className="today-session-copy">
-            {guidedDone
-              ? "The pattern is earned. Revisit it once, then prove you can spot the same leap in a tree."
-              : guidedProgress
-                ? `You are at Stage ${guidedIndex + 1} of 9. ${guidedStage === "understand" ? "Make one prediction to get moving." : "Your next small move is ready."}`
-                : "Predict an output, touch a live example, and derive the recursive contract before writing code."}
-          </p>
-          <div className="today-session-proof"><span>First win</span><b>Make one correct prediction</b><span>Then</span><b>Turn it into a reusable pattern</b></div>
-          <div className="today-session-actions">
-            <Link href={guidedHref} className="today-session-primary">{guidedProgress ? "Continue the derivation" : "Start the derivation"} →</Link>
-            <Link href={practiceHref} className="today-session-secondary">Practice code <span>5 min</span></Link>
-            <Link href="/patterns/quiz" className="today-session-secondary">Recall a pattern <span>2 min</span></Link>
-          </div>
-          <div className="continue-derivation-rail" role="progressbar" aria-valuemin={0} aria-valuemax={9} aria-valuenow={Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} aria-label={`${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}>
-            <span style={{ width: `${guidedDone ? 100 : Math.max(5, ((guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0)) / 9) * 100)}%` }} />
-          </div>
-          <span className="today-session-progress">{guidedDone ? "9 of 9 stages complete. Transfer is next." : `${Math.max(guidedIndex + (guidedProgress?.stages[guidedStage as keyof LessonProgress["stages"]]?.completed ? 1 : 0), 0)} of 9 stages complete`}</span>
-        </section>
-
-        <section className="super-day" aria-labelledby="day-heading">
-          <div className="super-day-head">
-            <div><span className="discovery-kicker">Your day</span><h2 id="day-heading">One challenge, one review, one clock.</h2></div>
-            <Link href="/releases" className="super-day-new">What&apos;s new in 1.4 →</Link>
-          </div>
-          <div className="super-day-tiles stagger">
-            <Link href="/daily" className="super-day-tile tile-daily"><span>Daily Challenge</span><strong>{dailyPickForDate(todayKey()).problem.title}</strong><em>same pick, everyone, today</em></Link>
-            <Link href="/review" className="super-day-tile tile-review"><span>Review Queue</span><strong>{hydrated ? (reviewDue > 0 ? `${reviewDue} patterns due` : "Deck clear") : "Checking…"}</strong><em>spaced repetition</em></Link>
-            <Link href="/contest" className="super-day-tile tile-contest"><span>Contest Simulator</span><strong>3 problems · 90 min</strong><em>real penalty clock</em></Link>
-          </div>
-        </section>
-
-        <section className="app-library" aria-label="All apps">
-          <div className="super-day-head"><div><span className="discovery-kicker">App library</span><h2>Everything inside {preferences?.brandName ?? "Deriva"}.</h2></div></div>
-          {APP_SECTIONS.map(section => (
+          {filteredSections.length === 0 && <p className="tool-empty">No app matches “{appQuery}”.</p>}
+          {filteredSections.map(section => (
             <div key={section.label} className="app-library-group">
               <span className="app-library-label">{section.label}</span>
-              <div className="app-library-grid">
+              <div className="app-library-grid stagger">
                 {section.apps.map(app => <AppTile key={app.href + app.name} app={app} />)}
               </div>
             </div>
           ))}
-        </section>
-
-        <section className="android-app-callout" aria-labelledby="android-app-heading">
-          <div className="android-app-callout-copy">
-            <span className="android-app-callout-kicker">Android app</span>
-            <h2 id="android-app-heading">Need the Android app?</h2>
-            <p>Open the green install page to download the signed Deriva app and follow the three install steps.</p>
-          </div>
-          <Link href="/android" className="android-app-callout-link">Open install page <span aria-hidden="true">-&gt;</span></Link>
-        </section>
-
-        <section className="stuck-callout" aria-labelledby="stuck-heading">
-          <div><span className="discovery-kicker">No shame route</span><h2 id="stuck-heading">Stuck is part of the lesson.</h2></div>
-          <p>Use a smaller example, ask for the next question, or switch to code practice. You can always return to the derivation without losing your work.</p>
-          <div><Link href={guidedHref}>Try the next question →</Link><Link href={practiceHref}>See the code run →</Link></div>
         </section>
 
         {momentum && <section className="home-momentum compact-momentum" aria-labelledby="momentum-heading">
@@ -235,7 +226,6 @@ export default function HomePage() {
             <Link href="/patterns" className="explore-link"><b>Pattern Journal</b><span>Recognize the thinking moves</span></Link>
             <Link href="/expedition" className="explore-link"><b>Expedition</b><span>Retrieve, break, and transfer an idea</span></Link>
             <Link href="/games" className="explore-link"><b>Game Mode</b><span>Practice invariants through play</span></Link>
-            <Link href="/icpc" className="explore-link"><b>ICPC Ladder</b><span>75 contest problems, in order</span></Link>
             <Link href="/design" className="explore-link"><b>System Design</b><span>45 architecture problems</span></Link>
             <Link href="/lld" className="explore-link"><b>Low-Level Design</b><span>35 object design problems</span></Link>
           </div>
@@ -250,6 +240,8 @@ export default function HomePage() {
             })}
           </div>
         </details>
+
+        <p className="os-footnote">Stuck is part of the lesson — <Link href="/learn/trees/sum-1-to-n">return to the derivation</Link> or <Link href={practiceHref}>hit code practice</Link> anytime. <Link href="/android">Get the Android app →</Link></p>
       </main>
 
       <footer style={{ padding: "24px 48px", borderTop: "1px solid var(--line)", color: "var(--ink-soft)", fontSize: 12 }}>

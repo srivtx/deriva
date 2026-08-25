@@ -232,6 +232,11 @@ export default function AppShell() {
   }, [])
   useEffect(() => { setMoreOpen(false) }, [pathname])
   useEffect(() => {
+    const open = () => setCommandOpen(true)
+    window.addEventListener("deriva-open-command", open)
+    return () => window.removeEventListener("deriva-open-command", open)
+  }, [])
+  useEffect(() => {
     if (!moreOpen) return
     const onPointer = (event: PointerEvent) => {
       const target = event.target as HTMLElement | null
