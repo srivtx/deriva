@@ -230,6 +230,10 @@ export default function AppShell() {
   const sheetRef = useRef<HTMLElement>(null)
   const dragStart = useRef<number | null>(null)
   useEffect(() => {
+    setMoreOpen(false)
+    setCommandOpen(false)
+  }, [pathname])
+  useEffect(() => {
     const next = loadPreferences()
     setPreferences(next)
     applyPreferences(next)

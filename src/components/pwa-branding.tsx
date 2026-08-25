@@ -118,6 +118,19 @@ export default function PwaBranding() {
   useEffect(() => {
     const next = loadPreferences()
     applyPwaBranding(next)
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+    let pendingPreferences: Preferences | null = null
+    const onPreferencesChange = (event: Event) => {
+      const detail = (event as CustomEvent<Preferences>).detail
+      if (!detail) return
+      pendingPreferences = detail
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null
+        if (pendingPreferences) applyPwaBranding(pendingPreferences)
+        pendingPreferences = null
+      }, 300)
+    }
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
       deferredInstall = event as AndroidInstallEvent
@@ -127,10 +140,6 @@ export default function PwaBranding() {
       deferredInstall = null
       window.dispatchEvent(new Event("deriva-pwa-install-complete"))
     }
-    const onPreferencesChange = (event: Event) => {
-      const detail = (event as CustomEvent<Preferences>).detail
-      if (detail) applyPwaBranding(detail)
-    }
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt)
     window.addEventListener("appinstalled", onAppInstalled)
     window.addEventListener("deriva-preferences-change", onPreferencesChange)
@@ -138,6 +147,7 @@ export default function PwaBranding() {
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt)
       window.removeEventListener("appinstalled", onAppInstalled)
       window.removeEventListener("deriva-preferences-change", onPreferencesChange)
+      if (debounceTimer) clearTimeout(debounceTimer)
       document.head.querySelector(MANIFEST_SELECTOR)?.remove()
       if (dynamicManifestUrl) URL.revokeObjectURL(dynamicManifestUrl)
       dynamicManifestUrl = null

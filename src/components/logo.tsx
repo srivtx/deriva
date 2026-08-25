@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { logoStyleDataUrl, type LogoStyleId } from "@/data/logo-marks"
 
 type LogoProps = {
@@ -25,9 +26,12 @@ function Mark({ size, label, imageUrl, style }: { size: number; label: string; i
   )
 }
 
-export default function Logo({ size = 28, variant = "mark", label = "Deriva", imageUrl, style }: LogoProps) {
+function Logo({ size = 28, variant = "mark", label = "Deriva", imageUrl, style }: LogoProps) {
   if (variant === "wordmark") {
     return <span className="logo-wordmark"><Mark size={size} label={label} imageUrl={imageUrl} style={style} /><span>{label}</span></span>
   }
   return <Mark size={size} label={label} imageUrl={imageUrl} style={style} />
 }
+
+
+export default memo(Logo)

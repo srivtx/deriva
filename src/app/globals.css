@@ -168,7 +168,7 @@
 .preview-instrument span { color: var(--accent); font: 700 9px var(--font-mono); letter-spacing: .07em; }
 .preview-instrument b { font: 700 22px var(--font-mono); }
 .preview-instrument small { color: var(--ink-soft); font: 10px var(--font-ui); }
-.custom-logo-image { display: block; border-radius: inherit; }
+.custom-logo-image { display: block; }
 .identity-logo-preview .custom-logo-image { width: 100%; height: 100%; object-fit: cover; }
 
 /* Learning Observatory */
@@ -788,6 +788,13 @@
 .icon-pack-card > span { color: var(--ink-soft); font: 12px/1.45 var(--font-ui); }
 .icon-pack-card small { color: var(--accent); font: 700 10px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
 .icon-pack-preview { display: flex; gap: 8px; margin-top: 4px; }
+.pack-preview-bar { display: flex; gap: 5px; margin-top: 8px; width: 100%; padding: 5px 6px; border-radius: 18px; background: var(--paper); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 80%, transparent); }
+.pack-preview-tab { position: relative; min-height: 52px; flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; border-radius: 15px; color: var(--ink-soft); font: 650 10px var(--font-ui); }
+.pack-preview-tab.active { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent); }
+.pack-preview-tab.active::before { content: ""; position: absolute; top: 4px; left: 50%; margin-left: -9px; width: 18px; height: 2px; border-radius: 999px; background: var(--accent); }
+.pack-preview-tab .teicon { width: 21px; height: 21px; }
+.pack-preview-tab .doticon { width: 22px; }
+.pack-preview-tab .glyphicon { font-size: 17px; }
 .glyphicon { display: inline-flex; align-items: center; justify-content: center; line-height: 1; font-family: var(--font-ui); }
 .navslot-icon { flex: none; }
 .logo-style-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; max-width: 560px; }

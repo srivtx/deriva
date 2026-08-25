@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import Link from "next/link"
 import { applyPreferences, defaultPreferences, loadPreferences, savePreferences, type AccentPreference, type DensityPreference, type Preferences, type ShapePreference, type TexturePreference, type ThemePreference, type TypePreference } from "@/persistence/preferences"
 import { ICON_PACKS } from "@/data/icon-packs"
-import PackIcon from "@/components/pack-icon"
 import NavSlotIcon from "@/components/nav-slot-icon"
 import { NAV_ITEMS, NAV_ITEM_MAP, NAV_MAX_SLOTS, DEFAULT_NAV_SLOTS } from "@/data/nav-items"
 import { NAV_VARIANTS } from "@/data/nav-icons"
@@ -100,12 +99,10 @@ const textureOptions: { value: TexturePreference; title: string; body: string }[
   { value: "grid", title: "Grid", body: "Subtle study graph" },
 ]
 
-const iconSamples = [
-  { id: "daily", glyph: "☀", gradient: "linear-gradient(135deg, #2F8F5B, #1E6B45)" },
-  { id: "practice", glyph: "▶", gradient: "linear-gradient(135deg, #2E5AAC, #1D3D7A)" },
-  { id: "vault", glyph: "⚿", gradient: "linear-gradient(135deg, #5C6470, #434A55)" },
-  { id: "weather", glyph: "⛅", gradient: "linear-gradient(135deg, #0891B2, #056680)" },
-  { id: "store", glyph: "❖", gradient: "linear-gradient(135deg, #DB2777, #A31D58)" },
+const PREVIEW_SLOTS = [
+  { id: "home", label: "Home" },
+  { id: "learn", label: "Learn" },
+  { id: "patterns", label: "Patterns" },
 ]
 
 export default function SettingsPage() {
@@ -306,12 +303,17 @@ export default function SettingsPage() {
             <button key={pack.id} type="button" className={`icon-pack-card${preferences.iconPack === pack.id ? " selected" : ""}`} onClick={() => update({ ...preferences, iconPack: pack.id })}>
               <strong>{pack.name}</strong>
               <span>{pack.desc}</span>
-              <div className="icon-pack-preview" data-icons={pack.id} aria-hidden="true">
-                {iconSamples.map(sample => (
-                  <span key={sample.id} className="app-tile-icon" style={{ background: sample.gradient }}>
-                    <PackIcon id={sample.id} fallback={sample.glyph} pack={pack.id} />
+              <div className="pack-preview-bar" aria-hidden="true">
+                {PREVIEW_SLOTS.map((slot, index) => (
+                  <span key={slot.id} className={`pack-preview-tab${index === 0 ? " active" : ""}`}>
+                    <NavSlotIcon itemId={slot.id} autoPack={pack.id} size={22} />
+                    <span>{slot.label}</span>
                   </span>
                 ))}
+                <span className="pack-preview-tab">
+                  <NavSlotIcon itemId="more" autoPack={pack.id} size={22} />
+                  <span>More</span>
+                </span>
               </div>
               {pack.themeHint && <small>{pack.themeHint}</small>}
             </button>

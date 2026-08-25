@@ -49,7 +49,14 @@ const MARK_BUILDERS: Record<LogoStyleId, () => string> = {
   opone: oponeMarkSvg,
 }
 
+const DATA_URL_CACHE = new Map<LogoStyleId, string>()
+
 export function logoStyleDataUrl(style: LogoStyleId): string | null {
   if (style === "classic") return null
-  return `data:image/svg+xml;utf8,${encodeURIComponent(MARK_BUILDERS[style]())}`
+  let cached = DATA_URL_CACHE.get(style)
+  if (!cached) {
+    cached = `data:image/svg+xml;utf8,${encodeURIComponent(MARK_BUILDERS[style]())}`
+    DATA_URL_CACHE.set(style, cached)
+  }
+  return cached
 }
