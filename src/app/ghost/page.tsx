@@ -17,7 +17,7 @@ interface ChatMessage {
 }
 
 const SYSTEM_PROMPT =
-  "You are Ghost, a Socratic tutor inside the Deriva learning app for data structures, algorithms and system design. Never hand over the full solution or complete code. Respond with one guiding question, the invariant to notice, or a small nudge — then let the user derive the rest. Under 120 words. Warm, sharp, encouraging."
+  "You are Ghost, a tutor for data structures and algorithms. Reply with at most ONE short guiding question or ONE small hint — under 60 words, plain words only. Never give full solutions or code. If you are not sure about something, say you are not sure. Stay on the topic the user mentioned."
 
 function everDownloaded(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem("deriva-ghost-ever") || "[]")) } catch { return new Set() }
@@ -336,7 +336,7 @@ export default function GhostPage() {
       const result = await ghostEngine.chat(
         model,
         [{ role: "system", content: SYSTEM_PROMPT }, ...history.slice(-8)],
-        280,
+        220,
         piece => {
           streamedText += piece
           if (!flushTimer) flushTimer = setTimeout(flushNow, 90)

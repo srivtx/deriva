@@ -63,7 +63,8 @@ interface WllamaInstance {
     prompt: string,
     options: {
       nPredict?: number
-      sampling?: { temp?: number; top_p?: number }
+      useCache?: boolean
+      sampling?: { temp?: number; top_p?: number; penalty_repeat?: number }
       stopTokens?: number[]
       abortSignal?: AbortSignal
       onNewToken?: (token: number, piece: Uint8Array, currentText: string) => void
@@ -324,8 +325,9 @@ class GhostEngine {
       const decoder = new TextDecoder("utf-8")
       try {
         const text = await wllama.createCompletion(promptStr, {
-          nPredict: Math.min(maxTokens || 280, 280),
-          sampling: { temp: 0.35, top_p: 0.9 },
+          nPredict: Math.min(maxTokens || 220, 220),
+          sampling: { temp: 0.35, top_p: 0.9, penalty_repeat: 1.1 },
+          useCache: true,
           stopTokens: this.stopTokenIds!,
           abortSignal: abort.signal,
           onNewToken: (_token, piece) => {
