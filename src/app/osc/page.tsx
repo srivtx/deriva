@@ -10,6 +10,7 @@ import {
   type Wave,
   emptyPattern,
 } from "@/lib/osc/engine"
+import { encodeShare, decodeShare } from "@/lib/osc/share"
 
 const SAVE_KEY = "deriva-osc-state"
 type Face = "dot" | "moss" | "ember" | "ultra"
@@ -50,12 +51,23 @@ export default function OscPage() {
   const [swing, setSwingState] = useState(initial.current?.swing ?? 0)
   const [gateLen, setGateState] = useState(initial.current?.gate ?? 0.85)
   const [song, setSongState] = useState(initial.current?.song ?? false)
+  const [mode, setModeState] = useState<"seq" | "live">("seq")
+  const [visual, setVisual] = useState(false)
+  const [rendering, setRendering] = useState(false)
+  const visRef = useRef<HTMLCanvasElement>(null)
+  const smoothRef = useRef<Float32Array>(new Float32Array(16))
+  const hiColorRef = useRef("#2F8F5B")
+  useEffect(() => {
+    const el = document.querySelector(".osc-app")
+    const v = el ? getComputedStyle(el).getPropertyValue("--osc-hi").trim() : ""
+    hiColorRef.current = v || "#2F8F5B"
+  }, [face])
 
   // Hydrate engine from saved state once.
   useEffect(() => {
     const s = initial.current
     if (!s) return
-    oscEngine.patterns = s.patterns.map(p => p.map(r => Array.isArray(r) ? [...r] : []))
+    oscEngine.patterns = s.patterns.map(p => p.map(r => Array.isArray(r) ? r.map(c => typeof c === "number" ? c : c ? 1 : 0) : []))
     oscEngine.active = s.active ?? 0
     oscEngine.setBpm(s.bpm)
     oscEngine.setWave(s.wave)
@@ -67,9 +79,10 @@ export default function OscPage() {
     rerender()
   }, [rerender])
 
-  // Autosave (debounced).
+  // Autosave: interval-based (never per-frame), plus flush on hide/unmount.
+  const saveRef = useRef<() => void>(() => {})
   useEffect(() => {
-    const id = setTimeout(() => {
+    saveRef.current = () => {
       try {
         localStorage.setItem(SAVE_KEY, JSON.stringify({
           patterns: oscEngine.patterns,
@@ -84,9 +97,12 @@ export default function OscPage() {
           song: oscEngine.songMode,
         }))
       } catch {}
-    }, 400)
-    return () => clearTimeout(id)
-  })
+    }
+    const id = setInterval(saveRef.current, 900)
+    const onHide = () => { if (document.visibilityState === "hidden") saveRef.current() }
+    document.addEventListener("visibilitychange", onHide)
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onHide); saveRef.current() }
+  }, [face])
 
   // Playhead follows the audio clock.
   useEffect(() => {
@@ -111,19 +127,125 @@ export default function OscPage() {
     document.title = "OSC-1 · Deriva"
   }, [])
 
+  // Dot-matrix spectrum: 16 columns x 6 dots, log-mapped bands, smoothed.
+  useEffect(() => {
+    if (!visual) return
+    let raf = 0
+    const draw = () => {
+      const cv = visRef.current
+      if (cv) {
+        const ctx2d = cv.getContext("2d")
+        if (ctx2d) {
+          const dpr = Math.min(2, window.devicePixelRatio || 1)
+          const w = cv.clientWidth || 320, h = cv.clientHeight || 96
+          if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr) }
+          ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0)
+          ctx2d.clearRect(0, 0, w, h)
+          const levels = oscEngine.levels(16)
+          const sm = smoothRef.current
+          const hi = hiColorRef.current
+          const rows = 6
+          const colW = w / 16
+          const dotW = Math.min(colW - 3, 14)
+          const rowH = h / rows
+          const dotH = Math.min(dotW, rowH - 2)
+          for (let c = 0; c < 16; c++) {
+            sm[c] = sm[c] * 0.72 + levels[c] * 0.28
+            const lit = Math.round(sm[c] * rows)
+            for (let rIdx = 0; rIdx < rows; rIdx++) {
+              const on = rIdx < lit
+              ctx2d.globalAlpha = on ? 0.35 + 0.65 * (rIdx / rows) : 0.12
+              ctx2d.fillStyle = on ? hi : "#9a9aa4"
+              const x = c * colW + (colW - dotW) / 2
+              const y = h - (rIdx + 1) * rowH + (rowH - dotH) / 2
+              ctx2d.beginPath()
+              ctx2d.roundRect(x, y, dotW, dotH, 2)
+              ctx2d.fill()
+            }
+          }
+          ctx2d.globalAlpha = 1
+        }
+      }
+      raf = requestAnimationFrame(draw)
+    }
+    raf = requestAnimationFrame(draw)
+    return () => cancelAnimationFrame(raf)
+  }, [visual])
+
   const togglePlay = useCallback(async () => {
     await oscEngine.toggle()
     setPlaying(oscEngine.playing)
     navigator.vibrate?.(8)
   }, [])
 
+  const exportWav = useCallback(async () => {
+    setRendering(true)
+    try {
+      const blob = await oscEngine.renderWav(oscEngine.songMode ? 4 : 2)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `deriva-osc-${oscEngine.bpm}bpm.wav`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 4000)
+    } finally {
+      setRendering(false)
+    }
+  }, [])
+
+  // Three states: off -> normal -> accented (louder) -> off.
   const toggleCell = useCallback((row: number, step: number) => {
     const col = oscEngine.patterns[oscEngine.active]
-    col[row][step] = !col[row][step]
+    const cur = col[row][step] ?? 0
+    col[row][step] = cur === 0 ? 1 : cur === 1 ? 2 : 0
     if (col[row][step]) {
       oscEngine.preview(row)
       navigator.vibrate?.(4)
     }
+    rerender()
+  }, [rerender])
+
+  // Hold a pattern LED for ~550ms: copy the active pattern into the next slot.
+  const holdRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const ledHoldStart = useCallback((slot: number) => {
+    holdRef.current = setTimeout(() => {
+      holdRef.current = null
+      const next = (slot + 1) % 4
+      oscEngine.patterns[next] = oscEngine.patterns[slot].map(r => [...r])
+      navigator.vibrate?.([10, 40, 10])
+      rerender()
+    }, 550)
+  }, [rerender])
+  const ledHoldCancel = useCallback(() => {
+    if (holdRef.current) { clearTimeout(holdRef.current); holdRef.current = null }
+  }, [])
+
+  const [shareNote, setShareNote] = useState("")
+  const doShare = useCallback(() => {
+    const code = encodeShare({
+      bpm: oscEngine.bpm, wave: oscEngine.wave, cutoff: oscEngine.cutoff,
+      delayMix: oscEngine.delayMix, swing: oscEngine.swing, gate: oscEngine.gate,
+      song: oscEngine.songMode, active: oscEngine.active, patterns: oscEngine.patterns,
+    })
+    navigator.clipboard?.writeText(code).then(
+      () => setShareNote("SHARE CODE COPIED — PASTE IT TO A FRIEND"),
+      () => setShareNote(code),
+    )
+    rerender()
+  }, [rerender])
+  const doImport = useCallback(() => {
+    const code = window.prompt("Paste an OSC-1 share code:")
+    if (!code) return
+    const s = decodeShare(code)
+    if (!s) { setShareNote("INVALID SHARE CODE"); return }
+    oscEngine.patterns = s.patterns
+    oscEngine.active = s.active
+    oscEngine.setBpm(s.bpm); oscEngine.setWave(s.wave); oscEngine.setCutoff(s.cutoff)
+    oscEngine.setDelayMix(s.delayMix); oscEngine.setSwing(s.swing); oscEngine.setGate(s.gate)
+    oscEngine.setSongMode(s.song)
+    setBpmState(s.bpm); setWaveState(s.wave); setCutoffState(s.cutoff)
+    setDelayState(s.delayMix); setSwingState(s.swing); setGateState(s.gate); setSongState(s.song)
+    setShareNote("IMPORTED")
     rerender()
   }, [rerender])
 
@@ -141,7 +263,7 @@ export default function OscPage() {
   const grid = oscEngine.patterns[oscEngine.active]
 
   return (
-    <div className="app-content">
+    <div className="osc-scroll">
       <div className="osc-app" data-face={face}>
         <header className="osc-head">
           <span className="osc-brand">OSC&#8209;1</span>
@@ -163,8 +285,11 @@ export default function OscPage() {
               <button
                 key={i}
                 type="button"
+                title="Tap to select · hold to copy this pattern into the next slot"
                 className={`osc-led${(playing && oscEngine.songMode ? oscEngine.displaySlot() : oscEngine.active) === i ? " on" : ""}`}
-                onClick={() => selectPattern(i)}
+                onPointerDown={() => ledHoldStart(i)}
+                onPointerUp={() => { ledHoldCancel(); selectPattern(i) }}
+                onPointerLeave={ledHoldCancel}
               >
                 {"ABCD"[i]}
               </button>
@@ -177,8 +302,24 @@ export default function OscPage() {
           </div>
         </div>
 
+        {/* mode */}
+        <div className="osc-mode">
+          <button type="button" className={`osc-mode-seg${mode === "seq" ? " on" : ""}`} onClick={() => { setModeState("seq"); navigator.vibrate?.(4) }}>SEQUENCER</button>
+          <button type="button" className={`osc-mode-seg${mode === "live" ? " on" : ""}`} onClick={() => { setModeState("live"); navigator.vibrate?.(4) }}>LIVE PADS</button>
+        </div>
+
+        {mode === "live" && (
+          <div className="osc-pads">
+            {NOTE_NAMES.map((n, row) => (
+              <button key={row} type="button" className="osc-pad"
+                onPointerDown={() => { oscEngine.preview(row); navigator.vibrate?.(6) }}
+              >{n}</button>
+            ))}
+          </div>
+        )}
+
         {/* grid */}
-        <div className="osc-grid-wrap">
+        <div className="osc-grid-wrap" hidden={mode === "live"}>
           <div className="osc-grid" role="grid" aria-label="Sequencer grid">
             {Array.from({ length: PITCHES }).map((_, row) => (
               <div key={row} className="osc-row">
@@ -189,7 +330,8 @@ export default function OscPage() {
                     type="button"
                     aria-label={`${NOTE_NAMES[row]} step ${step + 1}`}
                     data-step={step}
-                    data-on={grid[row]?.[step] ? "1" : "0"}
+                    data-on={(grid[row]?.[step] ?? 0) > 0 ? "1" : "0"}
+                    data-accent={grid[row]?.[step] === 2 ? "1" : "0"}
                     data-head={playhead === step ? "1" : "0"}
                     data-bar={step % 4 === 0 ? "1" : "0"}
                     className="osc-cell"
@@ -200,6 +342,13 @@ export default function OscPage() {
             ))}
           </div>
         </div>
+
+        {visual && (
+          <div className="osc-vis-box">
+            <canvas ref={visRef} className="osc-vis" />
+            <span className="osc-vis-label">SPECTRUM</span>
+          </div>
+        )}
 
         {/* controls */}
         <div className="osc-controls">
@@ -230,9 +379,14 @@ export default function OscPage() {
             />
           </label>
           <div className="osc-rowbtns">
-            <button type="button" className={`osc-minibtn${song ? " live" : ""}`} onClick={() => { oscEngine.setSongMode(!oscEngine.songMode); setSongState(oscEngine.songMode); navigator.vibrate?.(4); rerender() }}>SONG {song ? "ON" : "OFF"}</button>
+            <button type="button" className={`osc-minibtn${visual ? " live" : ""}`} onClick={() => setVisual(v => !v)}>VISUAL</button>
+            <button type="button" className="osc-minibtn" disabled={rendering} onClick={exportWav}>{rendering ? "RENDERING…" : "EXPORT WAV"}</button>
+                        <button type="button" className={`osc-minibtn${song ? " live" : ""}`} onClick={() => { oscEngine.setSongMode(!oscEngine.songMode); setSongState(oscEngine.songMode); navigator.vibrate?.(4); rerender() }}>SONG {song ? "ON" : "OFF"}</button>
             <button type="button" className="osc-minibtn" onClick={clearPattern}>CLEAR PATTERN</button>
+            <button type="button" className="osc-minibtn" onClick={doShare}>SHARE</button>
+            <button type="button" className="osc-minibtn" onClick={doImport}>IMPORT</button>
           </div>
+          {shareNote && <p className="qr-error">{shareNote}</p>}
           <div className="osc-knob"><span>SWING</span>
             <input type="range" min={0} max={0.5} step={0.02} value={swing} title="Delays every second (off-beat) step — place notes on odd steps to hear it"
               onChange={e => { const v = Number(e.target.value); oscEngine.setSwing(v); setSwingState(v) }} />
