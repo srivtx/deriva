@@ -50,6 +50,11 @@ export default function OscPage() {
   const [swing, setSwingState] = useState(initial.current?.swing ?? 0)
   const [gateLen, setGateState] = useState(initial.current?.gate ?? 0.85)
   const [song, setSongState] = useState(initial.current?.song ?? false)
+  const [mode, setModeState] = useState<"seq" | "live">("seq")
+  const [visual, setVisual] = useState(false)
+  const [rendering, setRendering] = useState(false)
+  const visRef = useRef<HTMLCanvasElement>(null)
+  const smoothRef = useRef<Float32Array>(new Float32Array(16))
 
   // Hydrate engine from saved state once.
   useEffect(() => {
@@ -111,10 +116,71 @@ export default function OscPage() {
     document.title = "OSC-1 · Deriva"
   }, [])
 
+  // Dot-matrix spectrum: 16 columns x 6 dots, log-mapped bands, smoothed.
+  useEffect(() => {
+    if (!visual) return
+    let raf = 0
+    const draw = () => {
+      const cv = visRef.current
+      if (cv) {
+        const ctx2d = cv.getContext("2d")
+        if (ctx2d) {
+          const dpr = Math.min(2, window.devicePixelRatio || 1)
+          const w = cv.clientWidth || 320, h = cv.clientHeight || 96
+          if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr) }
+          ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0)
+          ctx2d.clearRect(0, 0, w, h)
+          const levels = oscEngine.levels(16)
+          const sm = smoothRef.current
+          const appEl = cv.closest(".osc-app")
+          const hi = (appEl ? getComputedStyle(appEl).getPropertyValue("--osc-hi") : "").trim() || "#2F8F5B"
+          const rows = 6
+          const colW = w / 16
+          const dotW = Math.min(colW - 3, 14)
+          const rowH = h / rows
+          const dotH = Math.min(dotW, rowH - 2)
+          for (let c = 0; c < 16; c++) {
+            sm[c] = sm[c] * 0.72 + levels[c] * 0.28
+            const lit = Math.round(sm[c] * rows)
+            for (let rIdx = 0; rIdx < rows; rIdx++) {
+              const on = rIdx < lit
+              ctx2d.globalAlpha = on ? 0.35 + 0.65 * (rIdx / rows) : 0.12
+              ctx2d.fillStyle = on ? hi : "#9a9aa4"
+              const x = c * colW + (colW - dotW) / 2
+              const y = h - (rIdx + 1) * rowH + (rowH - dotH) / 2
+              ctx2d.beginPath()
+              ctx2d.roundRect(x, y, dotW, dotH, 2)
+              ctx2d.fill()
+            }
+          }
+          ctx2d.globalAlpha = 1
+        }
+      }
+      raf = requestAnimationFrame(draw)
+    }
+    raf = requestAnimationFrame(draw)
+    return () => cancelAnimationFrame(raf)
+  }, [visual])
+
   const togglePlay = useCallback(async () => {
     await oscEngine.toggle()
     setPlaying(oscEngine.playing)
     navigator.vibrate?.(8)
+  }, [])
+
+  const exportWav = useCallback(async () => {
+    setRendering(true)
+    try {
+      const blob = await oscEngine.renderWav(oscEngine.songMode ? 4 : 2)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `deriva-osc-${oscEngine.bpm}bpm.wav`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 4000)
+    } finally {
+      setRendering(false)
+    }
   }, [])
 
   const toggleCell = useCallback((row: number, step: number) => {
@@ -177,8 +243,24 @@ export default function OscPage() {
           </div>
         </div>
 
+        {/* mode */}
+        <div className="osc-mode">
+          <button type="button" className={`osc-mode-seg${mode === "seq" ? " on" : ""}`} onClick={() => { setModeState("seq"); navigator.vibrate?.(4) }}>SEQUENCER</button>
+          <button type="button" className={`osc-mode-seg${mode === "live" ? " on" : ""}`} onClick={() => { setModeState("live"); navigator.vibrate?.(4) }}>LIVE PADS</button>
+        </div>
+
+        {mode === "live" && (
+          <div className="osc-pads">
+            {NOTE_NAMES.map((n, row) => (
+              <button key={row} type="button" className="osc-pad"
+                onPointerDown={() => { oscEngine.preview(row); navigator.vibrate?.(6) }}
+              >{n}</button>
+            ))}
+          </div>
+        )}
+
         {/* grid */}
-        <div className="osc-grid-wrap">
+        <div className="osc-grid-wrap" hidden={mode === "live"}>
           <div className="osc-grid" role="grid" aria-label="Sequencer grid">
             {Array.from({ length: PITCHES }).map((_, row) => (
               <div key={row} className="osc-row">
@@ -200,6 +282,13 @@ export default function OscPage() {
             ))}
           </div>
         </div>
+
+        {visual && (
+          <div className="osc-vis-box">
+            <canvas ref={visRef} className="osc-vis" />
+            <span className="osc-vis-label">SPECTRUM</span>
+          </div>
+        )}
 
         {/* controls */}
         <div className="osc-controls">
@@ -230,7 +319,9 @@ export default function OscPage() {
             />
           </label>
           <div className="osc-rowbtns">
-            <button type="button" className={`osc-minibtn${song ? " live" : ""}`} onClick={() => { oscEngine.setSongMode(!oscEngine.songMode); setSongState(oscEngine.songMode); navigator.vibrate?.(4); rerender() }}>SONG {song ? "ON" : "OFF"}</button>
+            <button type="button" className={`osc-minibtn${visual ? " live" : ""}`} onClick={() => setVisual(v => !v)}>VISUAL</button>
+            <button type="button" className="osc-minibtn" disabled={rendering} onClick={exportWav}>{rendering ? "RENDERING…" : "EXPORT WAV"}</button>
+                        <button type="button" className={`osc-minibtn${song ? " live" : ""}`} onClick={() => { oscEngine.setSongMode(!oscEngine.songMode); setSongState(oscEngine.songMode); navigator.vibrate?.(4); rerender() }}>SONG {song ? "ON" : "OFF"}</button>
             <button type="button" className="osc-minibtn" onClick={clearPattern}>CLEAR PATTERN</button>
           </div>
           <div className="osc-knob"><span>SWING</span>
