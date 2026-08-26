@@ -60,6 +60,7 @@ export default function CommandCenter({ open, onClose }: { open: boolean; onClos
       { id: "patterns", title: "Open Pattern Journal", meta: "Recall · transfer", keywords: "patterns recognition review", href: "/patterns" },
       { id: "glyph", title: "Open Glyph Studio", meta: "Studio · draw dot glyphs", keywords: "glyph studio dot matrix draw frames animation export png svg personal pack", href: "/glyph" },
       { id: "ghost", title: "Summon Ghost", meta: "Studio · offline AI tutor", keywords: "ghost ai tutor offline local llm chat hints socratic qwen wllama", href: "/ghost" },
+      { id: "osc", title: "Play OSC-1", meta: "Studio · pocket synthesizer", keywords: "osc synth synthesizer music sequencer beats audio sound wave", href: "/osc" },
       { id: "settings", title: "Open workspace settings", meta: "Customize · PWA identity", keywords: "settings theme logo pwa", href: "/settings" },
       ...styleCommands,
       ...TOPIC_LIST.flatMap(topic => topic.problems.map(problem => ({
