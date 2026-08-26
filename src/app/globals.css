@@ -2091,7 +2091,7 @@ code, pre { font-family: var(--font-mono); }
 /* Mobile polish: the phone is a focused workbench, not a squeezed desktop. */
 @media (max-width: 700px) {
   html, body { height: 100%; overflow: hidden; }
-  .app-content { height: calc(100dvh - var(--mobile-tabbar-height)); min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; padding-top: var(--mobile-header-height); padding-bottom: 24px; }
+  .app-content { height: calc(100vh - var(--mobile-tabbar-height)); height: calc(100dvh - var(--mobile-tabbar-height)); min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; padding-top: var(--mobile-header-height); padding-bottom: 24px; }
   .home-page { min-height: 100% !important; }
   .home-page .landing-header { width: 100% !important; max-width: none !important; padding: 20px 16px 18px !important; border-bottom: 1px solid var(--line) !important; border-radius: 0 !important; background: var(--paper) !important; }
   .home-page .home-eyebrow { margin-bottom: 16px; gap: 7px; }
@@ -3135,8 +3135,10 @@ code, pre { font-family: var(--font-mono); }
 .osc-readout { font: 800 22px "Doto", var(--font-mono); min-width: 64px; text-align: center; letter-spacing: .04em; }
 .osc-nudge { width: 28px; height: 28px; border: 1.5px solid var(--line); background: var(--paper-raised); font: 700 14px var(--font-mono); cursor: pointer; border-radius: 6px; }
 
-.osc-grid-wrap { border: 2px solid var(--ink); border-radius: var(--radius); padding: 8px; background: var(--paper-raised); overflow-x: auto; scrollbar-width: none; }
-.osc-grid-wrap::-webkit-scrollbar { display: none; }
+/* No overflow here on purpose: a scroll container would swallow vertical
+   touch-scrolls on the matrix (iOS Safari sinks the gesture). The grid now
+   fits horizontally via min(420px,100%) + label drop, so no scroll is needed. */
+.osc-grid-wrap { border: 2px solid var(--ink); border-radius: var(--radius); padding: 8px; background: var(--paper-raised); }
 .osc-grid { display: flex; flex-direction: column; gap: 4px; min-width: min(420px, 100%); }
 .osc-cell { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
 .osc-row { display: grid; grid-template-columns: 34px repeat(16, 1fr); gap: 4px; align-items: center; }
