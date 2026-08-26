@@ -352,15 +352,37 @@ export default function GhostPage() {
     }
     try {
       await ghostEngine.load(model)
-      const result = await ghostEngine.chat(
-        model,
-        [{ role: "system", content: systemFor(history) }, ...history.slice(-8)],
-        220,
-        piece => {
-          streamedText += piece
-          if (!flushTimer) flushTimer = setTimeout(flushNow, 90)
-        },
-      )
+      const askGhost = (extra?: string) =>
+        ghostEngine.chat(
+          model,
+          [
+            { role: "system", content: systemFor(history) + (extra ? " " + extra : "") },
+            ...history.slice(-8),
+          ],
+          220,
+          piece => {
+            streamedText += piece
+            if (!flushTimer) flushTimer = setTimeout(flushNow, 90)
+          },
+        )
+      const result = await askGhost()
+
+      // Echo guard: tiny models sometimes regurgitate their previous reply
+      // verbatim. Detect substantial duplication and retry once with a nudge.
+      const words = (s: string) =>
+        s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 2)
+      const prevAssistant = [...history].reverse().find(m => m.role === "assistant")
+      if (prevAssistant && result.text.trim()) {
+        const a = new Set(words(prevAssistant.content))
+        const b = words(result.text)
+        const overlap = b.length ? b.filter(w => a.has(w)).length / Math.max(b.length, 1) : 0
+        if (overlap > 0.7 || result.text.trim() === prevAssistant.content.trim()) {
+          streamedText = ""
+          flushNow()
+          const retry = await askGhost("Reply with new information the previous reply missed.")
+          Object.assign(result, retry)
+        }
+      }
       if (flushTimer) { clearTimeout(flushTimer); flushNow() }
       setTps(result.tps)
       setMessages(prev => {

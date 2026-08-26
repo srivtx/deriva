@@ -543,8 +543,7 @@ class GhostEngine {
       try {
         const text = await wllama.createCompletion(promptStr, {
           nPredict: Math.min(maxTokens || 220, 220),
-          sampling: { temp: 0.35, top_p: 0.9, penalty_repeat: 1.1 },
-          useCache: true,
+          sampling: { temp: 0.6, top_p: 0.9, penalty_repeat: 1.15 },
           stopTokens: this.stopTokenIds!,
           abortSignal: abort.signal,
           onNewToken: (_token, piece) => {
