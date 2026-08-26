@@ -26,6 +26,7 @@ const G = {
   dark: "linear-gradient(135deg, #1E2922, #0F1512)",
   sky: "linear-gradient(135deg, #0891B2, #056680)",
   ghost: "linear-gradient(135deg, #4B4B5E, #14141C)",
+  osc: "linear-gradient(135deg, #3A3A46, #10101A)",
 }
 
 export const APP_CATALOG: AppMeta[] = [
@@ -72,6 +73,7 @@ export const APP_CATALOG: AppMeta[] = [
   // Studio
   { id: "glyph", name: "Glyph Studio", glyph: "✺", gradient: G.pink, desc: "Draw dot glyphs, export art", category: "Studio", href: "/glyph", status: "installed" },
   { id: "ghost", name: "Ghost", glyph: "◍", gradient: G.ghost, desc: "Offline AI tutor — lives on your phone", category: "Studio", href: "/ghost", status: "installed" },
+  { id: "osc", name: "OSC-1", glyph: "∿", gradient: G.osc, desc: "Pocket synthesizer — beats from thin air", category: "Studio", href: "/osc", status: "installed" },
   // Coming soon
   { id: "soon-expense", name: "Expense Tracker", glyph: "₿", gradient: G.teal, desc: "Budgets & spending charts", category: "Life", status: "soon" },
   { id: "soon-calendar", name: "Calendar", glyph: "▦", gradient: G.ember, desc: "Events with reminders", category: "Life", status: "soon" },
