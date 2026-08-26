@@ -3135,8 +3135,10 @@ code, pre { font-family: var(--font-mono); }
 .osc-readout { font: 800 22px "Doto", var(--font-mono); min-width: 64px; text-align: center; letter-spacing: .04em; }
 .osc-nudge { width: 28px; height: 28px; border: 1.5px solid var(--line); background: var(--paper-raised); font: 700 14px var(--font-mono); cursor: pointer; border-radius: 6px; }
 
-.osc-grid-wrap { border: 2px solid var(--ink); border-radius: var(--radius); padding: 10px; background: var(--paper-raised); overflow-x: auto; }
-.osc-grid { display: flex; flex-direction: column; gap: 4px; min-width: 420px; }
+.osc-grid-wrap { border: 2px solid var(--ink); border-radius: var(--radius); padding: 8px; background: var(--paper-raised); overflow-x: auto; scrollbar-width: none; }
+.osc-grid-wrap::-webkit-scrollbar { display: none; }
+.osc-grid { display: flex; flex-direction: column; gap: 4px; min-width: min(420px, 100%); }
+.osc-cell { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
 .osc-row { display: grid; grid-template-columns: 34px repeat(16, 1fr); gap: 4px; align-items: center; }
 .osc-note { font: 600 9px var(--font-mono); color: var(--ink-soft); text-align: right; padding-right: 6px; }
 .osc-cell { aspect-ratio: 1; border: none; background: var(--line); opacity: 0.45; cursor: pointer; border-radius: 3px; transition: opacity 90ms, background 90ms, transform 60ms; }
@@ -3192,7 +3194,7 @@ code, pre { font-family: var(--font-mono); }
   .osc-readout { font-size: 16px; min-width: 48px; }
   .osc-nudge { width: 24px; height: 24px; font-size: 12px; }
   .osc-grid-wrap { padding: 7px; }
-  .osc-grid { min-width: 330px; gap: 3px; }
+  .osc-grid { gap: 3px; }
   .osc-row { gap: 3px; grid-template-columns: 28px repeat(16, 1fr); }
   .osc-note { font-size: 8px; padding-right: 3px; }
   .osc-cell { border-radius: 2px; }
@@ -3215,9 +3217,12 @@ code, pre { font-family: var(--font-mono); }
   .osc-vis-label { top: 9px; left: 11px; font-size: 7px; }
 }
 
+/* Ultra-narrow: drop note labels so the grid fits edge-to-edge, no dead gutter */
+@media (max-width: 359px) {
+  .osc-note { display: none; }
+  .osc-row { grid-template-columns: repeat(16, 1fr); }
+}
 @media (max-width: 340px) {
-  .osc-grid { min-width: 292px; }
-  .osc-row { grid-template-columns: 24px repeat(16, 1fr); }
   .osc-led { width: 22px; height: 22px; font-size: 9px; }
   .osc-pads { gap: 5px; }
   .osc-pad { font-size: 10px; }

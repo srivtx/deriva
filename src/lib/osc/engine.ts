@@ -247,7 +247,8 @@ class OscEngine {
     let shown = this.active
     for (let i = this.scheduled.length - 1; i >= 0; i--) {
       if (this.scheduled[i].time <= now) {
-        shown = Math.floor((this.absStep - 1 - (this.scheduled.length - 1 - i)) / STEPS) % 4
+        const raw = Math.floor((this.absStep - 1 - (this.scheduled.length - 1 - i)) / STEPS)
+        shown = ((raw % 4) + 4) % 4
         break
       }
     }

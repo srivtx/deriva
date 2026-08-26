@@ -56,6 +56,12 @@ export default function OscPage() {
   const [rendering, setRendering] = useState(false)
   const visRef = useRef<HTMLCanvasElement>(null)
   const smoothRef = useRef<Float32Array>(new Float32Array(16))
+  const hiColorRef = useRef("#2F8F5B")
+  useEffect(() => {
+    const el = document.querySelector(".osc-app")
+    const v = el ? getComputedStyle(el).getPropertyValue("--osc-hi").trim() : ""
+    hiColorRef.current = v || "#2F8F5B"
+  }, [face])
 
   // Hydrate engine from saved state once.
   useEffect(() => {
@@ -73,9 +79,10 @@ export default function OscPage() {
     rerender()
   }, [rerender])
 
-  // Autosave (debounced).
+  // Autosave: interval-based (never per-frame), plus flush on hide/unmount.
+  const saveRef = useRef<() => void>(() => {})
   useEffect(() => {
-    const id = setTimeout(() => {
+    saveRef.current = () => {
       try {
         localStorage.setItem(SAVE_KEY, JSON.stringify({
           patterns: oscEngine.patterns,
@@ -90,9 +97,12 @@ export default function OscPage() {
           song: oscEngine.songMode,
         }))
       } catch {}
-    }, 400)
-    return () => clearTimeout(id)
-  })
+    }
+    const id = setInterval(saveRef.current, 900)
+    const onHide = () => { if (document.visibilityState === "hidden") saveRef.current() }
+    document.addEventListener("visibilitychange", onHide)
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onHide); saveRef.current() }
+  }, [face])
 
   // Playhead follows the audio clock.
   useEffect(() => {
@@ -133,8 +143,7 @@ export default function OscPage() {
           ctx2d.clearRect(0, 0, w, h)
           const levels = oscEngine.levels(16)
           const sm = smoothRef.current
-          const appEl = cv.closest(".osc-app")
-          const hi = (appEl ? getComputedStyle(appEl).getPropertyValue("--osc-hi") : "").trim() || "#2F8F5B"
+          const hi = hiColorRef.current
           const rows = 6
           const colW = w / 16
           const dotW = Math.min(colW - 3, 14)
