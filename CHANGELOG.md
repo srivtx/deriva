@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.6.0 — Studio expansion (2026-08-26)
+
+### New
+- **OSC-1, a pocket synthesizer** (`/osc`): 16-step × 8-voice dot-matrix sequencer with sample-accurate audio-clock scheduling, A-minor pentatonic grid, wave/cutoff/delay voice, swing + gate controls, song-chain mode (A→B→C→D), four faceplates (DOT/MOSS/EMBER/ULTRA), haptics and autosave. Full shell integration: catalog, drawer, command center, home tiles, icon packs.
+- **QR tools rebuilt**: universal scanning via jsQR (works on all browsers; BarcodeDetector fast-path where available), live code regeneration while typing, Open-link for detected URLs.
+- **Image tools fixed**: crop can be drawn anywhere on the image (was trapped inside the old box), corner-grip resize, rule-of-thirds overlay with outside dimming, drag & drop + clipboard-paste upload.
+
+### Fixed
+- QR scanner fatal stale-closure that aborted detection on its first frame.
+- Image crop pointer handlers trapped inside the crop box; degenerate-crop outputs; object-URL leaks.
+
+### Changed
+- README rebuilt around the moss logo with corrected Ghost facts (SmolLM2 brains, multithreaded WASM).
+
 ## v1.5.1 — Ghost (2026-08-26)
 
 ### New
