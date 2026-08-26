@@ -249,8 +249,17 @@ export default function GhostPage() {
     const result = await ghostEngine.delete(url)
     await refreshStorage()
     setAction(null)
-    if (!result.verified) setError("Could not fully free that brain's storage — tap DELETE again.")
-  }, [action, refreshStorage])
+    if (!result.verified) {
+      setError("Could not fully free that brain's storage — tap DELETE again.")
+      return
+    }
+    // Deleting the active brain ends the session — back to the intro screen.
+    if (url === getSelectedModel().url && phase !== "intro") {
+      setPhase("intro")
+      setMessages([])
+      persistSession([])
+    }
+  }, [action, refreshStorage, phase])
 
   const startGet = useCallback(async (m: GhostModel) => {
     if (action) return

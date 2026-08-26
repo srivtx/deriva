@@ -585,23 +585,30 @@ class GhostEngine {
   }
 
   // Cold delete: release every OPFS handle first, then remove + verify.
-  async delete(url: string): Promise<{ verified: boolean }> {
+  async delete(url: string): Promise<{ verified: boolean; freedEntries?: number }> {
     if (await gpuAvailable()) {
       const id = (GHOST_MODELS.find(m => m.url === url)?.id ?? "")
+      const repo = GPU_MODEL_REPOS[id]
       gpuBytesCache.delete(id)
       this.pipes.delete(id)
       await gpuUnmark(id)
-      // Free the shared browser cache only when no other GPU brain remains.
-      let remaining = false
-      for (const m of GHOST_MODELS) {
-        if (m.id !== id && (await gpuBytes(m.id)) > 0) { remaining = true; break }
-      }
-      if (!remaining) {
-        for (const name of ["models-cache", "transformers-cache"]) {
-          try { await caches.delete(name) } catch {}
+      // Surgical eviction: remove this repo's entries from the shared
+      // transformers cache without touching the other brain's files.
+      let removed = 0
+      try {
+        const cache = await caches.open("transformers-cache")
+        const keys = await cache.keys()
+        for (const req of keys) {
+          if (!repo || req.url.includes(repo)) {
+            await cache.delete(req)
+            removed += 1
+          }
         }
+      } catch {}
+      if (!repo || removed > 0) {
+        try { await caches.delete("models-cache") } catch {}
       }
-      return { verified: true }
+      return { verified: true, freedEntries: removed }
     }
     await this.releaseRuntime()
     try {
