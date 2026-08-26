@@ -234,7 +234,7 @@ export default function OscPage() {
             <button type="button" className="osc-minibtn" onClick={clearPattern}>CLEAR PATTERN</button>
           </div>
           <div className="osc-knob"><span>SWING</span>
-            <input type="range" min={0} max={0.5} step={0.02} value={swing}
+            <input type="range" min={0} max={0.5} step={0.02} value={swing} title="Delays every second (off-beat) step — place notes on odd steps to hear it"
               onChange={e => { const v = Number(e.target.value); oscEngine.setSwing(v); setSwingState(v) }} />
           </div>
           <div className="osc-knob"><span>GATE</span>
@@ -250,7 +250,7 @@ export default function OscPage() {
           </div>
         </div>
 
-        <p className="osc-hint">TAP CELLS TO PLACE NOTES · A-MINOR PENTATONIC · PATTERNS AUTO-SAVE</p>
+        <p className="osc-hint">SWING SHIFTS OFF-BEAT STEPS · GATE STRETCHES NOTE LENGTH · PATTERNS AUTO-SAVE</p>
       </div>
     </div>
   )

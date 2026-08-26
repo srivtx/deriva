@@ -85,9 +85,13 @@ class OscEngine {
     const gate = Math.max(0.06, ((60 / this.bpm) / 4) * this.gate)
     const peak = 0.28
 
+    // Sustain through the gate, release at its edge — otherwise the natural
+    // decay masks the GATE control entirely.
     const env = ctx.createGain()
+    const release = Math.min(0.09, gate * 0.35)
     env.gain.setValueAtTime(0.0001, time)
     env.gain.linearRampToValueAtTime(peak, time + 0.005)
+    env.gain.setValueAtTime(peak, time + Math.max(0.006, gate - release))
     env.gain.exponentialRampToValueAtTime(0.0008, time + gate)
 
     const osc = ctx.createOscillator()
