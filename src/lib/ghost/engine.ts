@@ -234,6 +234,16 @@ function baseName(url: string): string {
   try { return new URL(url).pathname.split("/").pop() || url } catch { return url }
 }
 
+async function wipeDir(dirName: string): Promise<void> {
+  try {
+    const root = await navigator.storage.getDirectory()
+    const dir = await root.getDirectoryHandle(dirName)
+    for await (const name of dir.keys()) {
+      try { await dir.removeEntry(name, { recursive: true }) } catch { try { await dir.removeEntry(name) } catch {} }
+    }
+  } catch {}
+}
+
 async function opfsSweep(fragment: string): Promise<void> {
   try {
     const root = await navigator.storage.getDirectory()
@@ -598,32 +608,20 @@ class GhostEngine {
     setSelectedModel(next.id)
   }
 
-  // Cold delete: release every OPFS handle first, then remove + verify.
+  // Cold delete: purge every trace across ALL storage layers, then verify.
   async delete(url: string): Promise<{ verified: boolean; freedEntries?: number }> {
-    if (await this.useGpu()) {
-      const id = (GHOST_MODELS.find(m => m.url === url)?.id ?? "")
-      const repo = GPU_MODEL_REPOS[id]
-      gpuBytesCache.delete(id)
-      this.pipes.delete(id)
-      await gpuUnmark(id)
-      // Surgical eviction: remove this repo's entries from the shared
-      // transformers cache without touching the other brain's files.
-      let removed = 0
-      try {
-        const cache = await caches.open("transformers-cache")
-        const keys = await cache.keys()
-        for (const req of keys) {
-          if (!repo || req.url.includes(repo)) {
-            await cache.delete(req)
-            removed += 1
-          }
-        }
-      } catch {}
-      if (!repo || removed > 0) {
-        try { await caches.delete("models-cache") } catch {}
+    const modelId = GHOST_MODELS.find(m => m.url === url)?.id ?? ""
+    const repo = GPU_MODEL_REPOS[modelId]
+    gpuBytesCache.delete(modelId)
+    this.pipes.delete(modelId)
+    await gpuUnmark(modelId).catch(() => {})
+    let removed = 0
+    try {
+      const cache = await caches.open("transformers-cache")
+      for (const req of await cache.keys()) {
+        if (!repo || req.url.includes(repo)) { await cache.delete(req); removed += 1 }
       }
-      return { verified: true, freedEntries: removed }
-    }
+    } catch {}
     await this.releaseRuntime()
     try {
       const c = store()
@@ -633,22 +631,29 @@ class GhostEngine {
         await opfsSweep(baseName(url))
         blob = await c.open(url).catch(() => null)
       }
-      return { verified: !blob || blob.size === 0 }
+      const manifestGone = (await gpuBytes(modelId).catch(() => 0)) === 0
+      return { verified: (!blob || blob.size === 0) && manifestGone, freedEntries: removed }
     } catch {
       return { verified: false }
     }
   }
 
   async clearAll(): Promise<void> {
+    await this.releaseRuntime()
     this.pipes.clear()
     gpuBytesCache.clear()
-    for (const id of GHOST_MODELS.map(m => m.id)) await gpuUnmark(id).catch(() => {})
-    for (const name of ["models-cache", "transformers-cache"]) {
-      try { await caches.delete(name) } catch {}
+    // Every OPFS directory Ghost or its past engines ever used.
+    for (const dir of ["cache", "ghost-gpu", "wllama", "ghost-models"]) {
+      await wipeDir(dir)
     }
-    await this.releaseRuntime()
+    // Every browser cache that could plausibly hold model weights.
+    try {
+      for (const name of await caches.keys()) {
+        if (/transformers|onnx|models-cache/i.test(name)) await caches.delete(name)
+      }
+    } catch {}
     for (const url of [...GHOST_MODELS.map(m => m.url), ...GHOST_LEGACY_URLS]) {
-      await this.delete(url).catch(() => {})
+      await store().delete(url).catch(() => {})
     }
     try { localStorage.removeItem("deriva-ghost-ready") } catch {}
   }
