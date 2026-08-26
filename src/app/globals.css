@@ -3113,7 +3113,8 @@ code, pre { font-family: var(--font-mono); }
 .ghost-card-del:active { transform: scale(0.94); }
 
 /* ─── OSC-1 · pocket synthesizer ─────────────────────────────────────── */
-.osc-app { --osc-hi: var(--ink); }
+.osc-app { --osc-hi: var(--ink); touch-action: pan-y; }
+.osc-pads .osc-pad, .osc-grid-wrap, .osc-cell { touch-action: manipulation; }
 .osc-app[data-face="dot"] { --osc-hi: var(--ink); }
 .osc-app[data-face="moss"] { --osc-hi: #2F8F5B; }
 .osc-app[data-face="ember"] { --osc-hi: #E8710A; }
@@ -3142,7 +3143,8 @@ code, pre { font-family: var(--font-mono); }
 .osc-cell[data-bar="1"] { opacity: 0.62; }
 .osc-cell:hover { opacity: 0.85; }
 .osc-cell:active { transform: scale(1.25); }
-.osc-cell[data-on="1"] { background: var(--osc-hi); opacity: 1; }
+.osc-cell[data-on="1"] { background: var(--osc-hi); opacity: 0.85; }
+.osc-cell[data-accent="1"] { background: var(--osc-hi); opacity: 1; box-shadow: 0 0 0 2px var(--paper-raised) inset, 0 0 10px color-mix(in srgb, var(--osc-hi) 60%, transparent); }
 .osc-cell[data-head="1"] { outline: 2px solid var(--ink); outline-offset: 1px; opacity: 1; }
 .osc-cell[data-on="1"][data-head="1"] { filter: brightness(1.35); }
 
@@ -3169,7 +3171,7 @@ code, pre { font-family: var(--font-mono); }
 .osc-pad:active { transform: scale(0.96); background: var(--osc-hi, var(--accent)); color: #fff; }
 
 .osc-vis-box { position: relative; border: 2px solid var(--ink); border-radius: var(--radius); background: var(--paper-raised); padding: 8px; }
-.osc-vis { width: 100%; height: 96px; display: block; }
+.osc-vis { width: 100%; height: 56px; display: block; }
 .osc-vis-label { position: absolute; top: 12px; left: 14px; font: 700 8px var(--font-ui); letter-spacing: .16em; color: var(--ink-soft); }
 
 @media (max-width: 480px) {
@@ -3209,7 +3211,7 @@ code, pre { font-family: var(--font-mono); }
   .osc-pads { gap: 6px; }
   .osc-pad { font-size: 12px; border-radius: 9px; }
   .osc-vis-box { padding: 6px; }
-  .osc-vis { height: 78px; }
+  .osc-vis { height: 50px; }
   .osc-vis-label { top: 9px; left: 11px; font-size: 7px; }
 }
 

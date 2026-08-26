@@ -15,10 +15,11 @@ export const NOTE_NAMES = ["D5", "C5", "A4", "G4", "E4", "D4", "C4", "A3"]
 export const freqFor = (row: number) => 440 * Math.pow(2, (MIDI[row] - 69) / 12)
 
 export type Wave = "sine" | "triangle" | "sawtooth" | "square"
-export type Pattern = boolean[][]
+// Cell values: 0 off · 1 normal · 2 accented (louder)
+export type Pattern = number[][]
 
 export function emptyPattern(): Pattern {
-  return Array.from({ length: PITCHES }, () => Array(STEPS).fill(false))
+  return Array.from({ length: PITCHES }, () => Array<number>(STEPS).fill(0))
 }
 
 const LOOKAHEAD = 0.12
@@ -99,11 +100,11 @@ class OscEngine {
     }
   }
 
-  private voiceOn(target: Chain, row: number, time: number) {
+  private voiceOn(target: Chain, row: number, time: number, vel = 0.62) {
     const ctx = target.filter.context as AudioContext
     const sixteenth = 60 / this.bpm / 4
     const gate = Math.max(0.06, sixteenth * this.gate)
-    const peak = 0.28
+    const peak = 0.28 * vel
 
     // Sustain through the gate, release at its edge — otherwise natural decay
     // masks the GATE control entirely.
@@ -134,7 +135,8 @@ class OscEngine {
     const col = this.patterns[this.patternForAbs()]
     if (!this.chain) return
     for (let row = 0; row < PITCHES; row++) {
-      if (col[row]?.[step]) this.voiceOn(this.chain, row, time)
+      const v = col[row]?.[step] ?? 0
+      if (v) this.voiceOn(this.chain, row, time, v === 2 ? 1 : 0.62)
     }
   }
 
@@ -193,7 +195,7 @@ class OscEngine {
     this.ensureGraph()
     if (!this.ctx || !this.chain) return
     if (this.ctx.state === "suspended") void this.ctx.resume()
-    this.voiceOn(this.chain, row, this.ctx.currentTime + 0.01)
+    this.voiceOn(this.chain, row, this.ctx.currentTime + 0.01, 1)
   }
 
   /* ---------- spectrum ---------- */

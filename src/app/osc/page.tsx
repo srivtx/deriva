@@ -10,6 +10,7 @@ import {
   type Wave,
   emptyPattern,
 } from "@/lib/osc/engine"
+import { encodeShare, decodeShare } from "@/lib/osc/share"
 
 const SAVE_KEY = "deriva-osc-state"
 type Face = "dot" | "moss" | "ember" | "ultra"
@@ -60,7 +61,7 @@ export default function OscPage() {
   useEffect(() => {
     const s = initial.current
     if (!s) return
-    oscEngine.patterns = s.patterns.map(p => p.map(r => Array.isArray(r) ? [...r] : []))
+    oscEngine.patterns = s.patterns.map(p => p.map(r => Array.isArray(r) ? r.map(c => typeof c === "number" ? c : c ? 1 : 0) : []))
     oscEngine.active = s.active ?? 0
     oscEngine.setBpm(s.bpm)
     oscEngine.setWave(s.wave)
@@ -183,13 +184,59 @@ export default function OscPage() {
     }
   }, [])
 
+  // Three states: off -> normal -> accented (louder) -> off.
   const toggleCell = useCallback((row: number, step: number) => {
     const col = oscEngine.patterns[oscEngine.active]
-    col[row][step] = !col[row][step]
+    const cur = col[row][step] ?? 0
+    col[row][step] = cur === 0 ? 1 : cur === 1 ? 2 : 0
     if (col[row][step]) {
       oscEngine.preview(row)
       navigator.vibrate?.(4)
     }
+    rerender()
+  }, [rerender])
+
+  // Hold a pattern LED for ~550ms: copy the active pattern into the next slot.
+  const holdRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const ledHoldStart = useCallback((slot: number) => {
+    holdRef.current = setTimeout(() => {
+      holdRef.current = null
+      const next = (slot + 1) % 4
+      oscEngine.patterns[next] = oscEngine.patterns[slot].map(r => [...r])
+      navigator.vibrate?.([10, 40, 10])
+      rerender()
+    }, 550)
+  }, [rerender])
+  const ledHoldCancel = useCallback(() => {
+    if (holdRef.current) { clearTimeout(holdRef.current); holdRef.current = null }
+  }, [])
+
+  const [shareNote, setShareNote] = useState("")
+  const doShare = useCallback(() => {
+    const code = encodeShare({
+      bpm: oscEngine.bpm, wave: oscEngine.wave, cutoff: oscEngine.cutoff,
+      delayMix: oscEngine.delayMix, swing: oscEngine.swing, gate: oscEngine.gate,
+      song: oscEngine.songMode, active: oscEngine.active, patterns: oscEngine.patterns,
+    })
+    navigator.clipboard?.writeText(code).then(
+      () => setShareNote("SHARE CODE COPIED — PASTE IT TO A FRIEND"),
+      () => setShareNote(code),
+    )
+    rerender()
+  }, [rerender])
+  const doImport = useCallback(() => {
+    const code = window.prompt("Paste an OSC-1 share code:")
+    if (!code) return
+    const s = decodeShare(code)
+    if (!s) { setShareNote("INVALID SHARE CODE"); return }
+    oscEngine.patterns = s.patterns
+    oscEngine.active = s.active
+    oscEngine.setBpm(s.bpm); oscEngine.setWave(s.wave); oscEngine.setCutoff(s.cutoff)
+    oscEngine.setDelayMix(s.delayMix); oscEngine.setSwing(s.swing); oscEngine.setGate(s.gate)
+    oscEngine.setSongMode(s.song)
+    setBpmState(s.bpm); setWaveState(s.wave); setCutoffState(s.cutoff)
+    setDelayState(s.delayMix); setSwingState(s.swing); setGateState(s.gate); setSongState(s.song)
+    setShareNote("IMPORTED")
     rerender()
   }, [rerender])
 
@@ -229,8 +276,11 @@ export default function OscPage() {
               <button
                 key={i}
                 type="button"
+                title="Tap to select · hold to copy this pattern into the next slot"
                 className={`osc-led${(playing && oscEngine.songMode ? oscEngine.displaySlot() : oscEngine.active) === i ? " on" : ""}`}
-                onClick={() => selectPattern(i)}
+                onPointerDown={() => ledHoldStart(i)}
+                onPointerUp={() => { ledHoldCancel(); selectPattern(i) }}
+                onPointerLeave={ledHoldCancel}
               >
                 {"ABCD"[i]}
               </button>
@@ -271,7 +321,8 @@ export default function OscPage() {
                     type="button"
                     aria-label={`${NOTE_NAMES[row]} step ${step + 1}`}
                     data-step={step}
-                    data-on={grid[row]?.[step] ? "1" : "0"}
+                    data-on={(grid[row]?.[step] ?? 0) > 0 ? "1" : "0"}
+                    data-accent={grid[row]?.[step] === 2 ? "1" : "0"}
                     data-head={playhead === step ? "1" : "0"}
                     data-bar={step % 4 === 0 ? "1" : "0"}
                     className="osc-cell"
@@ -323,7 +374,10 @@ export default function OscPage() {
             <button type="button" className="osc-minibtn" disabled={rendering} onClick={exportWav}>{rendering ? "RENDERING…" : "EXPORT WAV"}</button>
                         <button type="button" className={`osc-minibtn${song ? " live" : ""}`} onClick={() => { oscEngine.setSongMode(!oscEngine.songMode); setSongState(oscEngine.songMode); navigator.vibrate?.(4); rerender() }}>SONG {song ? "ON" : "OFF"}</button>
             <button type="button" className="osc-minibtn" onClick={clearPattern}>CLEAR PATTERN</button>
+            <button type="button" className="osc-minibtn" onClick={doShare}>SHARE</button>
+            <button type="button" className="osc-minibtn" onClick={doImport}>IMPORT</button>
           </div>
+          {shareNote && <p className="qr-error">{shareNote}</p>}
           <div className="osc-knob"><span>SWING</span>
             <input type="range" min={0} max={0.5} step={0.02} value={swing} title="Delays every second (off-beat) step — place notes on odd steps to hear it"
               onChange={e => { const v = Number(e.target.value); oscEngine.setSwing(v); setSwingState(v) }} />
