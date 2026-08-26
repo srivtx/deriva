@@ -3105,7 +3105,8 @@ code, pre { font-family: var(--font-mono); }
 .ghost-card-del:active { transform: scale(0.94); }
 
 /* ─── OSC-1 · pocket synthesizer ─────────────────────────────────────── */
-.osc-app { --osc-hi: var(--accent); }
+.osc-app { --osc-hi: var(--ink); }
+.osc-app[data-face="dot"] { --osc-hi: var(--ink); }
 .osc-app[data-face="moss"] { --osc-hi: #2F8F5B; }
 .osc-app[data-face="ember"] { --osc-hi: #E8710A; }
 .osc-app[data-face="ultra"] { --osc-hi: #6C5CE7; }
