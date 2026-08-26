@@ -18,12 +18,15 @@ interface ChatMessage {
 
 const SYS_SOCRATIC = "You are Ghost, a DSA tutor. Reply with one short hint or question, under 50 words."
 const SYS_ANSWER = "Answer the user directly in a few short sentences."
-const ANSWER_INTENT =
-  /\b(solve|solution|answer(?:\s+it)?|compute|calculate|evaluate|what.s the (?:result|answer|output)|final|run it|dry run|tell me the)\b/i
+// Deterministic mode: the FIRST verb of the latest user message decides.
+// Starts with answer/solve/compute/calculate/evaluate -> direct answer.
+// Everything else -> Socratic hint. No mid-sentence keyword flakiness.
+const ANSWER_COMMAND =
+  /^\s*(?:please\s+|ghost[,:\s]+)?(?:now\s+)?(answer|solve|compute|calculate|evaluate)\b/i
 
 function systemFor(history: { role: string; content: string }[]): string {
   const lastUser = [...history].reverse().find(m => m.role === "user")
-  return lastUser && ANSWER_INTENT.test(lastUser.content) ? SYS_ANSWER : SYS_SOCRATIC
+  return lastUser && ANSWER_COMMAND.test(lastUser.content) ? SYS_ANSWER : SYS_SOCRATIC
 }
 
 function everDownloaded(): Set<string> {
