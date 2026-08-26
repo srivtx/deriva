@@ -16,10 +16,8 @@ interface ChatMessage {
   content: string
 }
 
-const SYS_SOCRATIC =
-  "You are Ghost, a tutor for data structures and algorithms. Reply with at most ONE short guiding question or ONE small hint — under 60 words, plain words only. Never give full solutions or code. If you are not sure about something, say you are not sure. Stay on the topic the user mentioned."
-const SYS_ANSWER =
-  "You are Ghost, a tutor for data structures and algorithms. The user has asked for the solution or the answer. Give it DIRECTLY now: state the result or method in 2-4 short sentences, under 80 words, plain words only. Do NOT restate the question. Do NOT ask another question. Do NOT refuse."
+const SYS_SOCRATIC = "You are Ghost, a DSA tutor. Reply with one short hint or question, under 50 words."
+const SYS_ANSWER = "Answer the user directly in a few short sentences."
 const ANSWER_INTENT =
   /\b(solve|solution|answer(?:\s+it)?|compute|calculate|evaluate|what.s the (?:result|answer|output)|final|run it|dry run|tell me the)\b/i
 
