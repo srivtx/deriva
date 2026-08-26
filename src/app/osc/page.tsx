@@ -12,7 +12,8 @@ import {
 } from "@/lib/osc/engine"
 
 const SAVE_KEY = "deriva-osc-state"
-type Saved = { patterns: Pattern[]; bpm: number; wave: Wave; cutoff: number; delayMix: number; active: number }
+type Face = "dot" | "moss" | "ember" | "ultra"
+type Saved = { patterns: Pattern[]; bpm: number; wave: Wave; cutoff: number; delayMix: number; active: number; face?: Face; swing?: number; gate?: number; song?: boolean }
 
 function load(): Saved | null {
   try {
@@ -36,6 +37,10 @@ export default function OscPage() {
   const [wave, setWaveState] = useState<Wave>(initial.current?.wave ?? "sawtooth")
   const [cutoff, setCutoffState] = useState(initial.current?.cutoff ?? 1400)
   const [delayMix, setDelayState] = useState(initial.current?.delayMix ?? 0.22)
+  const [face, setFaceState] = useState<Face>(initial.current?.face ?? "dot")
+  const [swing, setSwingState] = useState(initial.current?.swing ?? 0)
+  const [gateLen, setGateState] = useState(initial.current?.gate ?? 0.85)
+  const [song, setSongState] = useState(initial.current?.song ?? false)
 
   // Hydrate engine from saved state once.
   useEffect(() => {
@@ -47,6 +52,9 @@ export default function OscPage() {
     oscEngine.setWave(s.wave)
     oscEngine.setCutoff(s.cutoff)
     oscEngine.setDelayMix(s.delayMix)
+    oscEngine.setSwing(s.swing ?? 0)
+    oscEngine.setGate(s.gate ?? 0.85)
+    oscEngine.setSongMode(s.song ?? false)
     rerender()
   }, [rerender])
 
@@ -61,6 +69,10 @@ export default function OscPage() {
           cutoff: oscEngine.cutoff,
           delayMix: oscEngine.delayMix,
           active: oscEngine.active,
+          face,
+          swing: oscEngine.swing,
+          gate: oscEngine.gate,
+          song: oscEngine.songMode,
         }))
       } catch {}
     }, 400)
@@ -72,9 +84,14 @@ export default function OscPage() {
     if (!playing) { setPlayhead(-1); return }
     let raf = 0
     let last = -2
+    let lastSlot = -2
     const loop = () => {
       const s = oscEngine.displayStep()
       if (s !== last) { last = s; setPlayhead(s) }
+      if (oscEngine.songMode) {
+        const slot = oscEngine.displaySlot()
+        if (slot !== lastSlot) { lastSlot = slot; force(n => n + 1) }
+      }
       raf = requestAnimationFrame(loop)
     }
     raf = requestAnimationFrame(loop)
@@ -116,7 +133,7 @@ export default function OscPage() {
 
   return (
     <div className="app-content">
-      <div className="osc-app">
+      <div className="osc-app" data-face={face}>
         <header className="osc-head">
           <span className="osc-brand">OSC&#8209;1</span>
           <span className="osc-sub">POCKET SYNTHESIZER</span>
@@ -137,7 +154,7 @@ export default function OscPage() {
               <button
                 key={i}
                 type="button"
-                className={`osc-led${oscEngine.active === i ? " on" : ""}`}
+                className={`osc-led${(playing && oscEngine.songMode ? oscEngine.displaySlot() : oscEngine.active) === i ? " on" : ""}`}
                 onClick={() => selectPattern(i)}
               >
                 {"ABCD"[i]}
@@ -203,7 +220,25 @@ export default function OscPage() {
               onChange={e => { const v = Number(e.target.value); oscEngine.setDelayMix(v); setDelayState(v) }}
             />
           </label>
-          <button type="button" className="osc-minibtn" onClick={clearPattern}>CLEAR PATTERN</button>
+          <div className="osc-rowbtns">
+            <button type="button" className={`osc-minibtn${song ? " live" : ""}`} onClick={() => { oscEngine.setSongMode(!oscEngine.songMode); setSongState(oscEngine.songMode); navigator.vibrate?.(4); rerender() }}>SONG {song ? "ON" : "OFF"}</button>
+            <button type="button" className="osc-minibtn" onClick={clearPattern}>CLEAR PATTERN</button>
+          </div>
+          <div className="osc-knob"><span>SWING</span>
+            <input type="range" min={0} max={0.5} step={0.02} value={swing}
+              onChange={e => { const v = Number(e.target.value); oscEngine.setSwing(v); setSwingState(v) }} />
+          </div>
+          <div className="osc-knob"><span>GATE</span>
+            <input type="range" min={0.15} max={1} step={0.05} value={gateLen}
+              onChange={e => { const v = Number(e.target.value); oscEngine.setGate(v); setGateState(v) }} />
+          </div>
+          <div className="osc-faces">
+            <span className="osc-faces-label">FACE</span>
+            {([["dot","DOT"],["moss","MOSS"],["ember","EMBER"],["ultra","ULTRA"]] as const).map(([id,label]) => (
+              <button key={id} type="button" className={`osc-face-chip${face === id ? " on" : ""}`} data-face={id}
+                onClick={() => { setFaceState(id as Face); navigator.vibrate?.(4) }}>{label}</button>
+            ))}
+          </div>
         </div>
 
         <p className="osc-hint">TAP CELLS TO PLACE NOTES · A-MINOR PENTATONIC · PATTERNS AUTO-SAVE</p>

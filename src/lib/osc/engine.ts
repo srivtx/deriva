@@ -35,6 +35,9 @@ class OscEngine {
 
   playing = false
   bpm = 128
+  swing = 0        // 0..0.5 — delays every other 16th for groove
+  gate = 0.85      // 0.15..1 — note length multiplier
+  songMode = false // chain A→B→C→D, one bar each
   wave: Wave = "sawtooth"
   cutoff = 1400
   delayMix = 0.22
@@ -43,6 +46,7 @@ class OscEngine {
   active = 0
 
   private step = 0
+  private absStep = 0
   private nextTime = 0
   private timer: ReturnType<typeof setInterval> | null = null
   private scheduled: ScheduledStep[] = []
@@ -78,7 +82,7 @@ class OscEngine {
   private noteOn(row: number, time: number) {
     if (!this.ctx || !this.filter) return
     const ctx = this.ctx
-    const gate = Math.max(0.08, ((60 / this.bpm) / 4) * 0.85)
+    const gate = Math.max(0.06, ((60 / this.bpm) / 4) * this.gate)
     const peak = 0.28
 
     const env = ctx.createGain()
@@ -98,8 +102,12 @@ class OscEngine {
 
   /* ---------- sequencer ---------- */
 
+  private patternForAbs(): number {
+    return this.songMode ? (Math.floor(this.absStep / STEPS) % 4) : this.active
+  }
+
   private scheduleColumn(step: number, time: number) {
-    const col = this.patterns[this.active]
+    const col = this.patterns[this.patternForAbs()]
     for (let row = 0; row < PITCHES; row++) {
       if (col[row]?.[step]) this.noteOn(row, time)
     }
@@ -109,11 +117,13 @@ class OscEngine {
     if (!this.ctx || !this.playing) return
     const sixteenth = 60 / this.bpm / 4
     while (this.nextTime < this.ctx.currentTime + LOOKAHEAD) {
-      this.scheduleColumn(this.step, this.nextTime)
-      this.scheduled.push({ step: this.step, time: this.nextTime })
+      const swingOffset = this.step % 2 === 1 ? this.swing * sixteenth * 0.5 : 0
+      this.scheduleColumn(this.step, this.nextTime + swingOffset)
+      this.scheduled.push({ step: this.step, time: this.nextTime + swingOffset })
       if (this.scheduled.length > 32) this.scheduled.splice(0, 16)
       this.nextTime += sixteenth
       this.step = (this.step + 1) % STEPS
+      this.absStep += 1
     }
   }
 
@@ -124,6 +134,7 @@ class OscEngine {
     if (this.playing) return
     this.playing = true
     this.step = 0
+    this.absStep = 0
     this.scheduled = []
     this.nextTime = this.ctx.currentTime + 0.08
     this.timer = setInterval(this.tick, TICK_MS)
@@ -180,6 +191,22 @@ class OscEngine {
   }
   setActivePattern(i: number) {
     this.active = Math.max(0, Math.min(3, i))
+  }
+  setSwing(v: number) { this.swing = Math.max(0, Math.min(0.5, v)) }
+  setGate(v: number) { this.gate = Math.max(0.15, Math.min(1, v)) }
+  setSongMode(on: boolean) { this.songMode = on }
+  /** Which pattern slot is sounding right now (song chains A→B→C→D). */
+  displaySlot(): number {
+    if (!this.ctx || !this.playing || !this.songMode) return this.active
+    const now = this.ctx.currentTime
+    let shown = this.active
+    for (let i = this.scheduled.length - 1; i >= 0; i--) {
+      if (this.scheduled[i].time <= now) {
+        shown = Math.floor((this.absStep - 1 - (this.scheduled.length - 1 - i)) / STEPS) % 4
+        break
+      }
+    }
+    return shown
   }
 }
 
