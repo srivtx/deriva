@@ -32,6 +32,15 @@ export default function OscPage() {
   const [, force] = useState(0)
   const rerender = useCallback(() => force(n => n + 1), [])
   const [playing, setPlaying] = useState(false)
+
+  // Engine is the source of truth — playback survives navigation, so the
+  // transport must reflect reality on mount and while the page is open.
+  useEffect(() => {
+    const sync = () => setPlaying(oscEngine.playing)
+    sync()
+    const id = setInterval(sync, 300)
+    return () => clearInterval(id)
+  }, [])
   const [playhead, setPlayhead] = useState(-1)
   const [bpm, setBpmState] = useState(initial.current?.bpm ?? 128)
   const [wave, setWaveState] = useState<Wave>(initial.current?.wave ?? "sawtooth")
