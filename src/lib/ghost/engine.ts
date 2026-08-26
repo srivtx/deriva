@@ -156,6 +156,33 @@ function tf(): Promise<TfLike> {
   return tfPromise
 }
 
+const gpuBytesCache = new Map<string, number>()
+async function gpuMark(modelId: string, bytes: number): Promise<void> {
+  try {
+    const root = await navigator.storage.getDirectory()
+    const dir = await root.getDirectoryHandle("ghost-gpu", { create: true })
+    const fh = await dir.getFileHandle(`${modelId}.json`, { create: true })
+    const w = await fh.createWritable()
+    await w.write(JSON.stringify({ bytes, createdAt: Date.now() }))
+    await w.close()
+  } catch {}
+}
+async function gpuUnmark(modelId: string): Promise<void> {
+  try {
+    const root = await navigator.storage.getDirectory()
+    const dir = await root.getDirectoryHandle("ghost-gpu")
+    await dir.removeEntry(`${modelId}.json`)
+  } catch {}
+}
+async function gpuBytes(modelId: string): Promise<number> {
+  try {
+    const root = await navigator.storage.getDirectory()
+    const dir = await root.getDirectoryHandle("ghost-gpu")
+    const f = await (await dir.getFileHandle(`${modelId}.json`)).getFile()
+    return JSON.parse(await f.text())?.bytes ?? 0
+  } catch { return 0 }
+}
+
 let gpuProbe: Promise<boolean> | null = null
 function gpuAvailable(): Promise<boolean> {
   if (!gpuProbe) {
@@ -218,6 +245,7 @@ class GhostEngine {
   private loadedUrl: string | null = null
   private pipes = new Map<string, unknown>()
   private stopDetached = false
+  private gpuBytesSeen = false
   private stopTokenIds: number[] | null = null
   private stopIdsUrl: string | null = null
   private activeAbort: AbortController | null = null
@@ -265,18 +293,24 @@ class GhostEngine {
     const repo = GPU_MODEL_REPOS[modelId]
     if (!repo) throw new Error("MODEL_NOT_CACHED · download the brain first")
     const T = await tf()
-    const pipe = await T.pipeline("text-generation", repo, {
+    let seenTotal = 0
+    const pipe = (await T.pipeline("text-generation", repo, {
       device: "webgpu",
       dtype: "q4f16",
       progress_callback: (info: { status?: string; loaded?: number; total?: number }) => {
-        if (info?.status === "progress" && onProgress) {
+        if (info?.status === "progress") {
           const loaded = Number(info.loaded ?? 0)
           const total = Number(info.total ?? 0)
-          onProgress(total > 0 ? Math.min(1, loaded / total) : 0, loaded / 1048576, total / 1048576)
+          if (total > seenTotal && total < 10 * 1024 * 1024 * 1024) seenTotal = total
+          if (onProgress) onProgress(total > 0 ? Math.min(1, loaded / total) : 0, loaded / 1048576, total / 1048576)
         }
       },
-    })
+    } as Record<string, unknown>)) as unknown
     this.pipes.set(modelId, pipe)
+    if (!gpuBytesCache.has(modelId)) {
+      gpuBytesCache.set(modelId, seenTotal)
+      void gpuMark(modelId, seenTotal)
+    }
     return pipe
   }
 
@@ -313,12 +347,22 @@ class GhostEngine {
     return { webgpu: typeof navigator !== "undefined" && "gpu" in navigator, storageQuotaMb, cachedMb }
   }
 
+  private async gpuCachedBytes(modelId: string): Promise<number> {
+    if (!(await gpuAvailable())) return 0
+    if (!gpuBytesCache.has(modelId)) {
+      gpuBytesCache.set(modelId, await gpuBytes(modelId))
+    }
+    return gpuBytesCache.get(modelId) ?? 0
+  }
+
   async cachedUrls(): Promise<string[]> {
     const out: string[] = []
     const c = store()
     for (const url of [...GHOST_MODELS.map(m => m.url), ...GHOST_LEGACY_URLS]) {
       const blob = await c.open(url).catch(() => null)
-      if (blob && blob.size > 0) out.push(url)
+      if (blob && blob.size > 0) { out.push(url); continue }
+      const model = GHOST_MODELS.find(m => m.url === url)
+      if (model && (await this.gpuCachedBytes(model.id)) > 0) out.push(url)
     }
     return out
   }
@@ -328,14 +372,21 @@ class GhostEngine {
     const c = store()
     for (const url of [...GHOST_MODELS.map(m => m.url), ...GHOST_LEGACY_URLS]) {
       const blob = await c.open(url).catch(() => null)
-      if (blob && blob.size > 0) out.push({ url, sizeMb: Math.round(blob.size / (1024 * 1024)) })
+      if (blob && blob.size > 0) { out.push({ url, sizeMb: Math.round(blob.size / (1024 * 1024)) }); continue }
+      const model = GHOST_MODELS.find(m => m.url === url)
+      if (model) {
+        const bytes = await this.gpuCachedBytes(model.id)
+        if (bytes > 0) out.push({ url, sizeMb: Math.round(bytes / (1024 * 1024)) })
+      }
     }
     return out
   }
 
   async cachedBytesFor(url: string): Promise<number> {
     const blob = await store().open(url).catch(() => null)
-    return blob?.size ?? 0
+    if (blob && blob.size > 0) return blob.size
+    const model = GHOST_MODELS.find(m => m.url === url)
+    return model ? this.gpuCachedBytes(model.id) : 0
   }
 
   /* ---------- download ---------- */
@@ -346,6 +397,9 @@ class GhostEngine {
   ): Promise<void> {
     if (await gpuAvailable()) {
       await this.ensurePipeline(model.id, onProgress)
+      const bytes = gpuBytesCache.get(model.id) ?? model.sizeMb * 1048576
+      gpuBytesCache.set(model.id, bytes)
+      await gpuMark(model.id, bytes)
       setSelectedModel(model.id)
       try { localStorage.setItem("deriva-ghost-ready", "1") } catch {}
       return
@@ -533,12 +587,20 @@ class GhostEngine {
   // Cold delete: release every OPFS handle first, then remove + verify.
   async delete(url: string): Promise<{ verified: boolean }> {
     if (await gpuAvailable()) {
-      // transformers.js keeps all repos in shared browser caches — surgical
-      // per-model removal isn't exposed, so a GPU-brain delete clears them.
-      for (const name of ["models-cache", "transformers-cache"]) {
-        try { await caches.delete(name) } catch {}
+      const id = (GHOST_MODELS.find(m => m.url === url)?.id ?? "")
+      gpuBytesCache.delete(id)
+      this.pipes.delete(id)
+      await gpuUnmark(id)
+      // Free the shared browser cache only when no other GPU brain remains.
+      let remaining = false
+      for (const m of GHOST_MODELS) {
+        if (m.id !== id && (await gpuBytes(m.id)) > 0) { remaining = true; break }
       }
-      this.pipes.clear()
+      if (!remaining) {
+        for (const name of ["models-cache", "transformers-cache"]) {
+          try { await caches.delete(name) } catch {}
+        }
+      }
       return { verified: true }
     }
     await this.releaseRuntime()
@@ -557,6 +619,12 @@ class GhostEngine {
   }
 
   async clearAll(): Promise<void> {
+    this.pipes.clear()
+    gpuBytesCache.clear()
+    for (const id of GHOST_MODELS.map(m => m.id)) await gpuUnmark(id).catch(() => {})
+    for (const name of ["models-cache", "transformers-cache"]) {
+      try { await caches.delete(name) } catch {}
+    }
     await this.releaseRuntime()
     for (const url of [...GHOST_MODELS.map(m => m.url), ...GHOST_LEGACY_URLS]) {
       await this.delete(url).catch(() => {})
