@@ -1,12 +1,13 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 type Format = "image/png" | "image/jpeg" | "image/webp"
 
 interface Crop { x: number; y: number; w: number; h: number }
 
 export default function ImagesPage() {
+  const [dropping, setDropping] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [src, setSrc] = useState("")
   const [nat, setNat] = useState({ w: 0, h: 0 })
@@ -18,15 +19,28 @@ export default function ImagesPage() {
   const [outSize, setOutSize] = useState(0)
   const [outDims, setOutDims] = useState({ w: 0, h: 0 })
   const imgRef = useRef<HTMLImageElement>(null)
-  const drag = useRef<{ mode: "new" | "move"; ox: number; oy: number; start: Crop } | null>(null)
+  const drag = useRef<{ mode: "new" | "move" | "resize"; ox: number; oy: number; start: Crop } | null>(null)
+  const [imgError, setImgError] = useState("")
 
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (!f) return
-    setFile(f); setOutUrl("")
+  const acceptFile = useCallback((f?: File | null) => {
+    if (!f || !f.type.startsWith("image/")) return
+    setFile(f)
+    if (outUrl) { URL.revokeObjectURL(outUrl); setOutUrl("") }
     if (src) URL.revokeObjectURL(src)
     setSrc(URL.createObjectURL(f))
-  }
+    setImgError("")
+  }, [outUrl, src])
+
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const item = Array.from(e.clipboardData?.items ?? []).find(i => i.type.startsWith("image/"))
+      if (item) acceptFile(item.getAsFile())
+    }
+    window.addEventListener("paste", onPaste)
+    return () => window.removeEventListener("paste", onPaste)
+  }, [acceptFile])
+
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => acceptFile(e.target.files?.[0])
 
   const measure = () => {
     const img = imgRef.current
@@ -40,26 +54,43 @@ export default function ImagesPage() {
     return { x: ((clientX - r.left) / r.width) * nat.w, y: ((clientY - r.top) / r.height) * nat.h }
   }
 
+  const MIN_CROP = 16
+
   const pointerDown = (e: React.PointerEvent) => {
-    if (!crop) return
+    if (!crop || !nat.w) return
     e.preventDefault()
     const p = toNatural(e.clientX, e.clientY)
     const inside = p.x >= crop.x && p.x <= crop.x + crop.w && p.y >= crop.y && p.y <= crop.y + crop.h
-    drag.current = inside
-      ? { mode: "move", ox: p.x - crop.x, oy: p.y - crop.y, start: crop }
-      : { mode: "new", ox: p.x, oy: p.y, start: { x: p.x, y: p.y, w: 0, h: 0 } }
-    ;(e.target as Element).setPointerCapture(e.pointerId)
+    const onGrip =
+      p.x >= crop.x + crop.w - nat.w * 0.06 && p.y >= crop.y + crop.h - nat.h * 0.06 &&
+      p.x <= crop.x + crop.w + nat.w * 0.02 && p.y <= crop.y + crop.h + nat.w * 0.02
+    drag.current = onGrip
+      ? { mode: "resize", ox: crop.x, oy: crop.y, start: crop }
+      : inside
+        ? { mode: "move", ox: p.x - crop.x, oy: p.y - crop.y, start: crop }
+        : { mode: "new", ox: p.x, oy: p.y, start: { x: p.x, y: p.y, w: 0, h: 0 } }
+    ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
   }
+
+  const clampCrop = (c: Crop): Crop => ({
+    x: Math.max(0, Math.min(c.x, nat.w - MIN_CROP)),
+    y: Math.max(0, Math.min(c.y, nat.h - MIN_CROP)),
+    w: Math.max(MIN_CROP, Math.min(c.w, nat.w - Math.max(0, c.x))),
+    h: Math.max(MIN_CROP, Math.min(c.h, nat.h - Math.max(0, c.y))),
+  })
 
   const pointerMove = (e: React.PointerEvent) => {
     if (!drag.current) return
+    e.preventDefault()
     const p = toNatural(e.clientX, e.clientY)
     const d = drag.current
     if (d.mode === "new") {
       const x = Math.min(d.ox, p.x), y = Math.min(d.oy, p.y)
-      setCrop({ x: Math.max(0, x), y: Math.max(0, y), w: Math.min(nat.w - x, Math.abs(p.x - d.ox)), h: Math.min(nat.h - y, Math.abs(p.y - d.oy)) })
+      setCrop(clampCrop({ x, y, w: Math.abs(p.x - d.ox), h: Math.abs(p.y - d.oy) }))
+    } else if (d.mode === "move") {
+      setCrop({ ...d.start, x: Math.max(0, Math.min(p.x - d.ox, nat.w - d.start.w)), y: Math.max(0, Math.min(p.y - d.oy, nat.h - d.start.h)) })
     } else {
-      setCrop({ x: Math.max(0, Math.min(p.x - d.ox, nat.w - d.start.w)), y: Math.max(0, Math.min(p.y - d.oy, nat.h - d.start.h)), w: d.start.w, h: d.start.h })
+      setCrop(clampCrop({ x: d.start.x, y: d.start.y, w: Math.max(MIN_CROP, p.x - d.start.x), h: Math.max(MIN_CROP, p.y - d.start.y) }))
     }
   }
 
@@ -69,6 +100,8 @@ export default function ImagesPage() {
 
   const process = () => {
     if (!imgRef.current || !crop) return
+    if (crop.w < 8 || crop.h < 8) { setImgError("Crop is too small — drag a larger region."); return }
+    setImgError("")
     const scale = maxDim > 0 ? Math.min(1, maxDim / Math.max(crop.w, crop.h)) : 1
     const dw = Math.max(1, Math.round(crop.w * scale))
     const dh = Math.max(1, Math.round(crop.h * scale))
@@ -95,10 +128,21 @@ export default function ImagesPage() {
         <p>Everything runs in your browser. Your photo never leaves the device.</p>
       </header>
 
-      <label className="images-upload">
-        <input type="file" accept="image/*" onChange={onFile} />
-        <span>{file ? file.name : "Choose an image…"}</span>
-      </label>
+      <div
+        className={`images-upload${dropping ? " dropping" : ""}`}
+        onDragOver={e => { e.preventDefault(); setDropping(true) }}
+        onDragLeave={() => setDropping(false)}
+        onDrop={e => { e.preventDefault(); setDropping(false); acceptFile(e.dataTransfer.files?.[0]) }}
+        onClick={() => document.getElementById("images-file-input")?.click()}
+        role="button" tabIndex={0}
+        onKeyDown={e => { if (e.key === "Enter") document.getElementById("images-file-input")?.click() }}
+      >
+        <input id="images-file-input" type="file" accept="image/*" onChange={onFile} hidden />
+        <span className="images-upload-plus">＋</span>
+        <span className="images-upload-text">
+          {file ? file.name : "Drop an image · paste from clipboard · click to browse"}
+        </span>
+      </div>
 
       {src && (
         <>
@@ -127,18 +171,24 @@ export default function ImagesPage() {
           <div className="images-stage">
             <div className="images-canvas-wrap">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img ref={imgRef} src={src} alt="preview" onLoad={measure} draggable={false} />
-              {crop && nat.w > 0 && (
-                <div
-                  className="images-crop"
-                  style={{ left: `${(crop.x / nat.w) * 100}%`, top: `${(crop.y / nat.h) * 100}%`, width: `${(crop.w / nat.w) * 100}%`, height: `${(crop.h / nat.h) * 100}%` }}
-                  onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp}
-                >
-                  <span className="images-crop-size">{Math.round(crop.w)}×{Math.round(crop.h)}</span>
-                </div>
-              )}
+              <img ref={imgRef} src={src} alt="preview" onLoad={measure} onError={() => setImgError("Couldn't load that image — try a PNG/JPG/WebP.")} draggable={false} />
+              <div
+                className="images-stage-hit"
+                onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp}
+              >
+                {crop && nat.w > 0 && (
+                  <div
+                    className="images-crop"
+                    style={{ left: `${(crop.x / nat.w) * 100}%`, top: `${(crop.y / nat.h) * 100}%`, width: `${(crop.w / nat.w) * 100}%`, height: `${(crop.h / nat.h) * 100}%` }}
+                  >
+                    <span className="images-crop-size">{Math.round(crop.w)}×{Math.round(crop.h)}</span>
+                    <span className="images-grip" aria-hidden />
+                  </div>
+                )}
+              </div>
             </div>
-            <p className="images-hint">Drag on the image to select a crop region. Move the box to reposition.</p>
+            {imgError && <p className="qr-error">{imgError}</p>}
+            <p className="images-hint">Drag anywhere to draw a crop · drag inside to move · corner grip to resize.</p>
           </div>
 
           {outUrl && (
@@ -155,22 +205,34 @@ export default function ImagesPage() {
       )}
 
       <style>{`
-        .images-upload { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 12px; background: var(--paper-raised); cursor: pointer; color: var(--ink-soft); font: 600 13px var(--font-ui); }
+        .images-upload { display: flex; align-items: center; gap: 14px; padding: 18px 16px; border: 2px dashed var(--line); border-radius: var(--radius); background: var(--paper-raised); cursor: pointer; transition: border-color var(--dur-fast), background var(--dur-fast); }
+        .images-upload:hover, .images-upload.dropping { border-color: var(--accent); background: var(--accent-soft, var(--paper-raised)); }
         .images-upload input { display: none; }
-        .images-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; margin: 16px 0; }
+        .images-upload-plus { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 2px solid var(--ink); border-radius: 8px; font: 800 16px var(--font-mono); color: var(--ink); flex-shrink: 0; }
+        .images-upload-text { color: var(--ink-soft); font: 600 12px var(--font-ui); letter-spacing: .02em; overflow-wrap: anywhere; }
+
+        .images-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; align-items: end; margin: 18px 0; padding: 16px; border: 2px solid var(--ink); border-radius: var(--radius); background: var(--paper-raised); }
+        .super-field span { font: 700 9px var(--font-ui) !important; letter-spacing: .14em; text-transform: uppercase; }
+        .segmented button { text-transform: uppercase; font-weight: 800; letter-spacing: .06em; }
         .images-control-actions { display: flex; gap: 8px; align-items: end; }
+        .images-control-actions .super-primary { text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
+
         .images-stage { margin-top: 8px; }
-        .images-canvas-wrap { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; line-height: 0; border-radius: 12px; overflow: hidden; touch-action: none; background: #fff; }
-        .images-canvas-wrap img { display: block; max-width: 100%; max-height: 60vh; width: auto; height: auto; margin: 0 auto; user-select: none; -webkit-user-drag: none; }
-        .images-crop { position: absolute; border: 2px solid var(--accent); background: rgba(47,143,91,0.12); cursor: move; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: flex-end; }
-        .images-crop-size { font: 700 10px var(--font-mono); color: #fff; background: var(--accent); padding: 2px 6px; border-radius: 6px; margin: 4px; }
-        .images-hint { color: var(--ink-soft); font: 12px var(--font-ui); margin: 8px 0 0; }
-        .images-result { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding: 16px; border: 1px solid var(--accent); border-radius: calc(var(--radius) + 6px); background: var(--paper-raised); }
-        .images-result-stats { display: flex; gap: 20px; flex-wrap: wrap; }
-        .images-result-stats div { display: grid; }
-        .images-result-stats span { color: var(--ink-soft); font: 700 9px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
-        .images-result-stats strong { font: 700 16px var(--font-mono); }
-        .images-saved { color: var(--viz-settled); }
+        .images-canvas-wrap { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; line-height: 0; border: 2px solid var(--ink); border-radius: var(--radius); overflow: hidden; touch-action: none; background: #fff; }
+        .images-canvas-wrap img { display: block; max-width: 100%; max-height: 58vh; width: auto; height: auto; margin: 0 auto; user-select: none; -webkit-user-drag: none; }
+        .images-stage-hit { position: absolute; inset: 0; touch-action: none; cursor: crosshair; }
+
+        .images-crop { position: absolute; border: 2px solid var(--accent); box-shadow: 0 0 0 9999px rgba(12,12,16,.45); cursor: move; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: flex-end; background-image: linear-gradient(to right, transparent calc(33.3% - .5px), rgba(255,255,255,.35) 33.3%, transparent calc(33.3% + .5px)), linear-gradient(to right, transparent calc(66.6% - .5px), rgba(255,255,255,.35) 66.6%, transparent calc(66.6% + .5px)), linear-gradient(to bottom, transparent calc(33.3% - .5px), rgba(255,255,255,.35) 33.3%, transparent calc(33.3% + .5px)), linear-gradient(to bottom, transparent calc(66.6% - .5px), rgba(255,255,255,.35) 66.6%, transparent calc(66.6% + .5px)); }
+        .images-grip { position: absolute; right: -2px; bottom: -2px; width: 20px; height: 20px; background: var(--accent); border: 2px solid #fff; border-radius: 4px; cursor: nwse-resize; box-shadow: none; }
+        .images-crop-size { font: 800 11px var(--font-mono); color: var(--paper-raised); background: var(--accent); padding: 3px 7px; border-radius: 6px; margin: 5px; }
+        .images-hint { color: var(--ink-soft); font: 600 11px var(--font-ui); letter-spacing: .04em; margin: 10px 0 0; text-align: center; }
+
+        .images-result { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding: 16px; border: 2px solid var(--ink); border-radius: var(--radius); background: var(--paper-raised); }
+        .images-result-stats { display: flex; gap: 26px; flex-wrap: wrap; }
+        .images-result-stats div { display: grid; gap: 2px; }
+        .images-result-stats span { color: var(--ink-soft); font: 700 9px var(--font-ui); letter-spacing: .14em; text-transform: uppercase; }
+        .images-result-stats strong { font: 800 20px "Doto", var(--font-mono); letter-spacing: .02em; }
+        .images-saved { color: var(--accent); }
         @media (max-width: 480px) { .images-result { flex-direction: column; align-items: stretch; } .images-result .super-primary { justify-content: center; } }
       `}</style>
     </main>
