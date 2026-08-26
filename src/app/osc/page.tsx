@@ -263,7 +263,7 @@ export default function OscPage() {
   const grid = oscEngine.patterns[oscEngine.active]
 
   return (
-    <div className="app-content">
+    <div className="osc-scroll">
       <div className="osc-app" data-face={face}>
         <header className="osc-head">
           <span className="osc-brand">OSC&#8209;1</span>

@@ -3120,6 +3120,26 @@ code, pre { font-family: var(--font-mono); }
 .osc-app[data-face="ember"] { --osc-hi: #E8710A; }
 .osc-app[data-face="ultra"] { --osc-hi: #6C5CE7; }
 .osc-app { max-width: 560px; width: 100%; margin: 0 auto; padding: clamp(14px, 3vw, 32px); min-height: 70vh; display: flex; flex-direction: column; gap: 14px; }
+
+/* Reliable mobile scroll. The shared app-shell uses body{overflow:hidden} +
+   a nested flex:1 scroller, which is fragile on iOS Safari (gestures sink and
+   the page will not scroll). OSC opts into its own fixed, stretched viewport
+   pinned between the fixed header and the bottom safe-area — the scroll pattern
+   that actually works on real phones. It is a no-op outside app-mode (desktop). */
+.osc-scroll { width: 100%; }
+@media (max-width: 700px) {
+  body.app-mode-active .osc-scroll {
+    position: fixed;
+    top: var(--mobile-header-height);
+    left: 0;
+    right: 0;
+    bottom: env(safe-area-inset-bottom);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    padding-bottom: 16px;
+  }
+}
 .osc-head { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 8px; }
 .osc-brand { font: 800 26px var(--font-mono); letter-spacing: -0.02em; }
 .osc-sub { font: 700 9px var(--font-ui); letter-spacing: .18em; color: var(--ink-soft); }
@@ -3159,9 +3179,9 @@ code, pre { font-family: var(--font-mono); }
 .osc-seg { flex: 1; padding: 9px 0; background: transparent; border: none; border-right: 1.5px solid var(--line); font: 700 11px var(--font-mono); letter-spacing: .08em; cursor: pointer; color: var(--ink-soft); }
 .osc-seg:last-child { border-right: none; }
 .osc-seg.on { background: var(--ink); color: var(--paper-raised); }
-.osc-knob { display: flex; align-items: center; gap: 10px; }
-.osc-knob span { font: 700 9px var(--font-ui); letter-spacing: .14em; color: var(--ink-soft); width: 52px; }
-.osc-knob input[type="range"] { flex: 1; accent-color: var(--osc-hi); height: 22px; }
+.osc-knob { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.osc-knob span { font: 700 9px var(--font-ui); letter-spacing: .14em; color: var(--ink-soft); width: 52px; flex: 0 0 auto; }
+.osc-knob input[type="range"] { flex: 1; min-width: 0; accent-color: var(--osc-hi); height: 22px; }
 .osc-minibtn { align-self: flex-start; border: 1.5px solid var(--line); background: var(--paper-raised); font: 700 10px var(--font-ui); letter-spacing: .1em; padding: 7px 12px; cursor: pointer; border-radius: 6px; color: var(--ink-soft); }
 .osc-minibtn:hover { border-color: var(--ink); color: var(--ink); }
 .osc-hint { font: 600 9px var(--font-ui); letter-spacing: .13em; color: var(--ink-soft); text-align: center; margin-top: 4px; }
