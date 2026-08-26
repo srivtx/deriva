@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import QRCode from "qrcode"
+import jsQR from "jsqr"
 
 type Tab = "generate" | "scan"
 
@@ -13,87 +14,130 @@ export default function QrPage() {
   const [dataUrl, setDataUrl] = useState("")
   const [genError, setGenError] = useState("")
 
-  const [supported, setSupported] = useState(false)
+  const hasDetector = typeof window !== "undefined" && "BarcodeDetector" in window
   const [scanResult, setScanResult] = useState("")
+  const [scanNote, setScanNote] = useState("")
   const [scanning, setScanning] = useState(false)
-  const [camError, setCamError] = useState("")
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const rafRef = useRef<number | null>(null)
+  const scanningRef = useRef(false)
 
+  // Live regeneration — the code always reflects what you typed.
   useEffect(() => {
-    setSupported(typeof window !== "undefined" && "BarcodeDetector" in window)
-    return () => stopScan()
-  }, [])
+    let cancelled = false
+    const id = setTimeout(async () => {
+      setGenError("")
+      if (!text.trim()) { setDataUrl(""); return }
+      try {
+        const url = await QRCode.toDataURL(text, { width: size, errorCorrectionLevel: level, margin: 2 })
+        if (!cancelled) setDataUrl(url)
+      } catch { if (!cancelled) { setDataUrl(""); setGenError("Couldn't generate that.") } }
+    }, 250)
+    return () => { cancelled = true; clearTimeout(id) }
+  }, [text, size, level])
 
-  const generate = async () => {
-    setGenError("")
-    if (!text.trim()) { setGenError("Enter some text or a link."); return }
-    try {
-      const url = await QRCode.toDataURL(text, { width: size, errorCorrectionLevel: level, margin: 2 })
-      setDataUrl(url)
-    } catch { setGenError("Couldn't generate that.") }
-  }
-
-  useEffect(() => { generate() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => stopScan(), [])
 
   const stopScan = () => {
+    scanningRef.current = false
     setScanning(false)
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    rafRef.current = null
     streamRef.current?.getTracks().forEach(t => t.stop())
     streamRef.current = null
   }
 
-  const detectFromFile = async (file: File) => {
-    setScanResult("")
-    const img = new Image()
-    img.onload = async () => {
-      const canvas = document.createElement("canvas")
-      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight
-      canvas.getContext("2d")!.drawImage(img, 0, 0)
+  /** Universal decode: BarcodeDetector when present, jsQR everywhere else. */
+  const decodeCanvas = async (canvas: HTMLCanvasElement): Promise<string | null> => {
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!
+    if (hasDetector) {
       try {
         const Detector = (window as any).BarcodeDetector
-        const codes = await new Detector().detect(canvas)
-        setScanResult(codes[0]?.rawValue ?? "No QR code found in image.")
-      } catch { setScanResult("Scanning not supported in this browser.") }
+        const codes = await new Detector({ formats: ["qr_code"] }).detect(canvas)
+        if (codes.length) return codes[0].rawValue
+      } catch {}
     }
-    img.src = URL.createObjectURL(file)
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    const found = jsQR(data.data, data.width, data.height, { inversionAttempts: "dontInvert" })
+    return found?.data ?? null
+  }
+
+  const detectFromFile = async (file: File) => {
+    setScanResult(""); setScanNote("")
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = async () => {
+      try {
+        const canvas = document.createElement("canvas")
+        const maxDim = 1280
+        const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight))
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+        canvas.getContext("2d", { willReadFrequently: true })!.drawImage(img, 0, 0, canvas.width, canvas.height)
+        const found = await decodeCanvas(canvas)
+        setScanResult(found ?? "")
+        setScanNote(found ? "" : "No QR code found in that image.")
+      } catch {
+        setScanNote("Couldn't read that image.")
+      } finally {
+        URL.revokeObjectURL(url)
+      }
+    }
+    img.onerror = () => { setScanNote("Couldn't read that image."); URL.revokeObjectURL(url) }
+    img.src = url
   }
 
   const startCamera = async () => {
-    setCamError(""); setScanResult("")
+    setScanNote(""); setScanResult("")
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setScanNote("No camera access in this browser — scan from an image instead.")
+      return
+    }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      })
       streamRef.current = stream
       const video = videoRef.current!
       video.srcObject = stream
       await video.play()
+      scanningRef.current = true
       setScanning(true)
-      const Detector = (window as any).BarcodeDetector
-      const detector = new Detector()
+
       const loop = async () => {
-        if (!scanning) return
-        const canvas = canvasRef.current!
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight
-        if (canvas.width > 0) {
-          canvas.getContext("2d")!.drawImage(video, 0, 0)
+        if (!scanningRef.current) return
+        const v = videoRef.current
+        const canvas = canvasRef.current
+        if (v && canvas && v.videoWidth > 0) {
+          canvas.width = v.videoWidth
+          canvas.height = v.videoHeight
+          canvas.getContext("2d", { willReadFrequently: true })!.drawImage(v, 0, 0)
           try {
-            const codes = await detector.detect(canvas)
-            if (codes.length) { setScanResult(codes[0].rawValue); stopScan(); return }
+            const found = await decodeCanvas(canvas)
+            if (found) {
+              setScanResult(found)
+              navigator.vibrate?.(12)
+              stopScan()
+              return
+            }
           } catch {}
         }
         rafRef.current = requestAnimationFrame(loop)
       }
-      loop()
+      rafRef.current = requestAnimationFrame(loop)
     } catch {
-      setCamError("Camera unavailable. You can still scan from an image.")
+      setScanNote("Camera unavailable or permission denied — scan from an image instead.")
+      scanningRef.current = false
       setScanning(false)
     }
   }
 
+  const isUrl = /^https?:\/\//i.test(scanResult)
   const copyResult = async () => {
-    if (scanResult) { try { await navigator.clipboard.writeText(scanResult); setCamError("Copied") } catch {} }
+    if (scanResult) { try { await navigator.clipboard.writeText(scanResult); setScanNote("Copied") } catch {} }
   }
 
   return (
@@ -139,22 +183,25 @@ export default function QrPage() {
 
       {tab === "scan" && (
         <div className="qr-scan">
-          {!supported && <p className="qr-error">QR scanning isn&apos;t supported in this browser. Try the latest Chrome/Edge on Android.</p>}
+          <p className="qr-note">Works on every browser{hasDetector ? "" : " · using built-in jsQR decoder"}.</p>
           <div className="qr-scan-actions">
-            <button type="button" className="super-primary" onClick={startCamera} disabled={!supported || scanning}>Use camera</button>
+            {!scanning && <button type="button" className="super-primary" onClick={startCamera}>Use camera</button>}
             <label className="super-ghost qr-file">Scan from image
               <input type="file" accept="image/*" onChange={e => e.target.files?.[0] && detectFromFile(e.target.files[0])} hidden />
             </label>
             {scanning && <button type="button" className="super-ghost" onClick={stopScan}>Stop</button>}
           </div>
-          {camError && <p className="qr-error">{camError}</p>}
+          {scanNote && <p className="qr-error">{scanNote}</p>}
           <video ref={videoRef} className="qr-video" playsInline muted hidden={!scanning} />
           <canvas ref={canvasRef} hidden />
           {scanResult && (
             <div className="qr-result">
               <span className="super-kicker">DETECTED</span>
               <code>{scanResult}</code>
-              <button type="button" className="super-ghost" onClick={copyResult}>Copy</button>
+              <div className="qr-result-actions">
+                {isUrl && <a className="super-ghost" href={scanResult} target="_blank" rel="noreferrer">Open</a>}
+                <button type="button" className="super-ghost" onClick={copyResult}>Copy</button>
+              </div>
             </div>
           )}
         </div>
@@ -166,13 +213,15 @@ export default function QrPage() {
         .qr-tab.active { border-color: var(--accent); background: var(--accent); color: var(--paper-raised); }
         .qr-gen-row { display: grid; grid-template-columns: 1fr 140px; gap: 12px; align-items: end; }
         .qr-error { color: var(--viz-pruned); font: 600 13px var(--font-ui); }
+        .qr-note { color: var(--ink-soft); font: 600 12px var(--font-ui); margin-bottom: 10px; }
         .qr-output { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-top: 16px; }
-        .qr-output img { width: 256px; max-width: 100%; border-radius: 12px; border: 1px solid var(--line); background: #fff; padding: 10px; }
+        .qr-output img { width: ${Math.min(size, 320)}px; max-width: 100%; border-radius: 12px; border: 1px solid var(--line); background: #fff; padding: 10px; }
         .qr-scan-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
         .qr-file { display: inline-flex; align-items: center; min-height: 38px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink-soft); font: 600 13px var(--font-ui); cursor: pointer; }
         .qr-video { width: 100%; max-width: 420px; border-radius: 12px; border: 1px solid var(--line); }
         .qr-result { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; padding: 14px; border: 1px solid var(--accent); border-radius: 12px; background: var(--paper-raised); }
-        .qr-result code { flex: 1; min-width: 0; overflow-wrap: anywhere; font: 13px var(--font-mono); color: var(--accent); }
+        .qr-result code { flex: 1; min-width: 160px; overflow-wrap: anywhere; font: 13px var(--font-mono); color: var(--accent); }
+        .qr-result-actions { display: flex; gap: 8px; }
         @media (max-width: 480px) { .qr-gen-row { grid-template-columns: 1fr; } }
       `}</style>
     </main>
