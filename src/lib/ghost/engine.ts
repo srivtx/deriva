@@ -183,6 +183,16 @@ async function gpuBytes(modelId: string): Promise<number> {
   } catch { return 0 }
 }
 
+export function gpuOptIn(): boolean {
+  try { return localStorage.getItem("deriva-ghost-gpu") === "1" } catch { return false }
+}
+export function setGpuOptIn(on: boolean) {
+  try {
+    if (on) localStorage.setItem("deriva-ghost-gpu", "1")
+    else localStorage.removeItem("deriva-ghost-gpu")
+  } catch {}
+}
+
 let gpuProbe: Promise<boolean> | null = null
 function gpuAvailable(): Promise<boolean> {
   if (!gpuProbe) {
@@ -315,7 +325,11 @@ class GhostEngine {
   }
 
   async backend(): Promise<"webgpu" | "cpu"> {
-    return (await gpuAvailable()) ? "webgpu" : "cpu"
+    return (await gpuAvailable()) && gpuOptIn() ? "webgpu" : "cpu"
+  }
+
+  private async useGpu(): Promise<boolean> {
+    return (await gpuAvailable()) && gpuOptIn()
   }
 
   /* ---------- storage queries ---------- */
@@ -324,7 +338,7 @@ class GhostEngine {
 
   async diagnostics(): Promise<{ isolated: boolean; threads: number; resident: boolean; backend: "webgpu" | "cpu" }> {
     const isolated = typeof crossOriginIsolated !== "undefined" ? crossOriginIsolated : false
-    const backend = (await gpuAvailable()) ? "webgpu" as const : "cpu" as const
+    const backend = (await this.useGpu()) ? "webgpu" as const : "cpu" as const
     if (this.instance && this.lastThreads > 0) {
       return { isolated, threads: this.lastThreads, resident: true, backend }
     }
@@ -348,7 +362,7 @@ class GhostEngine {
   }
 
   private async gpuCachedBytes(modelId: string): Promise<number> {
-    if (!(await gpuAvailable())) return 0
+    if (!(await this.useGpu())) return 0
     if (!gpuBytesCache.has(modelId)) {
       gpuBytesCache.set(modelId, await gpuBytes(modelId))
     }
@@ -395,7 +409,7 @@ class GhostEngine {
     model: GhostModel,
     onProgress: (fraction: number, mbLoaded: number, mbTotal: number) => void,
   ): Promise<void> {
-    if (await gpuAvailable()) {
+    if (await this.useGpu()) {
       await this.ensurePipeline(model.id, onProgress)
       const bytes = gpuBytesCache.get(model.id) ?? model.sizeMb * 1048576
       gpuBytesCache.set(model.id, bytes)
@@ -428,7 +442,7 @@ class GhostEngine {
 
   async load(model: GhostModel, onProgress?: (label: string) => void): Promise<void> {
     onProgress?.(`waking ${model.name}`)
-    if (await gpuAvailable()) {
+    if (await this.useGpu()) {
       await this.ensurePipeline(model.id)
       return
     }
@@ -444,7 +458,7 @@ class GhostEngine {
     const started = performance.now()
     const clean = (s: unknown) => String(s ?? "").replace(/<\|[a-z_]+\|>/g, "")
 
-    if (await gpuAvailable()) {
+    if (await this.useGpu()) {
       const pipe = (await this.ensurePipeline(model.id)) as {
         (messages: unknown, opts?: Record<string, unknown>): Promise<Array<{ generated_text: Array<{ role: string; content: string }> }>>
         tokenizer: unknown
@@ -586,7 +600,7 @@ class GhostEngine {
 
   // Cold delete: release every OPFS handle first, then remove + verify.
   async delete(url: string): Promise<{ verified: boolean; freedEntries?: number }> {
-    if (await gpuAvailable()) {
+    if (await this.useGpu()) {
       const id = (GHOST_MODELS.find(m => m.url === url)?.id ?? "")
       const repo = GPU_MODEL_REPOS[id]
       gpuBytesCache.delete(id)

@@ -9,6 +9,8 @@ import {
   getSelectedModel,
   setSelectedModel,
   type GhostModel,
+  gpuOptIn,
+  setGpuOptIn,
 } from "@/lib/ghost/engine"
 
 interface ChatMessage {
@@ -682,6 +684,20 @@ export default function GhostPage() {
                 {diag.resident
                   ? `live: ${diag.threads > 1 ? `${diag.threads} threads` : "single thread"}`
                   : `idle · ${diag.threads} threads on wake`}
+              </p>
+              <button
+                type="button"
+                className="ghost-brain-meta"
+                style={{ padding: "6px 16px", opacity: 0.85, textAlign: "left" }}
+                onClick={() => {
+                  const next = !gpuOptIn()
+                  setGpuOptIn(next)
+                  ghostEngine.diagnostics().then(setDiag).catch(() => {})
+                }}
+              >
+                GPU BRAIN · EXPERIMENTAL · {gpuOptIn() ? "ON — unstable on some devices" : "OFF"}
+              </button>
+              <p className="ghost-brain-meta" style={{ padding: "0 16px 4px", display: "none"}}>.
               </p>
               <span className="ghost-sheet-foot-actions">
                 <button type="button" className="ghost-minibtn" disabled={!!action || busy || messages.length === 0} onClick={clearChat}>CLEAR CHAT</button>
