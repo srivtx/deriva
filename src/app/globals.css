@@ -3199,10 +3199,25 @@ code, pre { font-family: var(--font-mono); }
   .osc-knob span { width: 44px; font-size: 8px; }
 }
 
+/* v2 components */
+.osc-rowbtns { display: flex; flex-wrap: wrap; gap: 8px; }
+.osc-rowbtns .osc-minibtn { flex: 1 1 auto; text-align: center; white-space: nowrap; }
+
+@media (max-width: 400px) {
+  .osc-mode-seg { padding: 9px 0; font-size: 10px; letter-spacing: .06em; }
+  .osc-pads { gap: 6px; }
+  .osc-pad { font-size: 12px; border-radius: 9px; }
+  .osc-vis-box { padding: 6px; }
+  .osc-vis { height: 78px; }
+  .osc-vis-label { top: 9px; left: 11px; font-size: 7px; }
+}
+
 @media (max-width: 340px) {
   .osc-grid { min-width: 292px; }
   .osc-row { grid-template-columns: 24px repeat(16, 1fr); }
   .osc-led { width: 22px; height: 22px; font-size: 9px; }
+  .osc-pads { gap: 5px; }
+  .osc-pad { font-size: 10px; }
 }
 
 .osc-rowbtns { display: flex; gap: 8px; }
