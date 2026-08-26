@@ -9,6 +9,7 @@ import Logo from "./logo"
 import NotificationCenter from "./notification-center"
 import CommandCenter from "./command-center"
 import FloatingFocus from "./floating-focus"
+import FloatingOsc from "./floating-osc"
 import AppIcon from "./app-icon"
 import NavSlotIcon from "./nav-slot-icon"
 import { NAV_ITEM_MAP } from "@/data/nav-items"
@@ -454,6 +455,7 @@ export default function AppShell() {
        </div>}
         <CommandCenter open={commandOpen} onClose={() => setCommandOpen(false)} />
         <FloatingFocus />
+        <FloatingOsc />
        <style>{`
          .app-shell-header { height: var(--app-header-height); border-bottom: 1px solid var(--line); background: var(--paper-raised); display: flex; align-items: center; padding: 0 16px; position: sticky; top: 0; z-index: 50; }
          .app-mode-header { display: none; }
