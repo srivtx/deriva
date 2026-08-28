@@ -1,0 +1,463 @@
+:root {
+  --te-black: #000000;
+  --te-orange: #ff4f00;
+  --te-white: #ffffff;
+  --te-aluminum: #b8b8b8;
+  --te-green: #00ff87;
+  --te-dim: #2a2a2a;
+  --te-line: #1c1c1c;
+  --te-red: #ff3b30;
+  --te-mono: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--te-black);
+  color: var(--te-white);
+  font-family: var(--te-mono);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.01em;
+}
+
+button {
+  font-family: var(--te-mono);
+  cursor: pointer;
+}
+
+/* ---------- layout shell ---------- */
+.rig-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+  background: var(--te-black);
+}
+
+.rig-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--te-line);
+}
+
+.brand {
+  color: var(--te-orange);
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  font-size: 15px;
+}
+
+.kicker {
+  color: var(--te-aluminum);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 10px;
+}
+
+.rig-body {
+  display: grid;
+  grid-template-columns: 260px 1fr 360px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rig-col {
+  border-right: 1px solid var(--te-line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rig-col:last-child {
+  border-right: none;
+}
+
+.rig-col-head {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--te-line);
+  color: var(--te-aluminum);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ---------- panels / modules ---------- */
+.rig-panel {
+  border: 1px solid var(--te-orange);
+  margin: 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #050505;
+}
+
+.rig-panel > .ph {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--te-orange);
+  color: var(--te-orange);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rig-panel > .pb {
+  padding: 10px;
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+/* ---------- LED ---------- */
+.led {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 1px solid #000;
+  background: var(--te-dim);
+  box-shadow: inset 0 0 2px #000;
+}
+.led.on {
+  background: var(--te-green);
+  box-shadow: 0 0 6px var(--te-green);
+}
+.led.busy {
+  background: var(--te-orange);
+  box-shadow: 0 0 6px var(--te-orange);
+  animation: blink 1s steps(2) infinite;
+}
+.led.warn {
+  background: var(--te-red);
+  box-shadow: 0 0 6px var(--te-red);
+  animation: blink 0.6s steps(2) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* ---------- buttons ---------- */
+.btn {
+  background: #0b0b0b;
+  color: var(--te-white);
+  border: 1px solid var(--te-aluminum);
+  padding: 8px 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  border-radius: 0;
+}
+.btn:hover {
+  border-color: var(--te-white);
+}
+.btn.primary {
+  background: var(--te-orange);
+  color: #000;
+  border-color: var(--te-orange);
+  font-weight: 700;
+}
+.btn.primary:active {
+  transform: translateY(1px);
+}
+.btn.danger {
+  border-color: var(--te-red);
+  color: var(--te-red);
+}
+.btn.sm {
+  padding: 5px 9px;
+  font-size: 10px;
+}
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ---------- fields ---------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+}
+.field > label {
+  color: var(--te-aluminum);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+}
+.input,
+.select,
+.textarea {
+  background: #050505;
+  color: var(--te-white);
+  border: 1px solid var(--te-aluminum);
+  padding: 8px 10px;
+  font-family: var(--te-mono);
+  font-size: 13px;
+  border-radius: 0;
+  width: 100%;
+}
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--te-orange);
+}
+.textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* ---------- chat ---------- */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  overflow: auto;
+  height: 100%;
+}
+.bubble {
+  border: 1px solid var(--te-line);
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.bubble.user {
+  border-color: var(--te-aluminum);
+  background: #0a0a0a;
+}
+.bubble.assistant {
+  border-color: #14241b;
+  background: #06120c;
+  color: var(--te-green);
+}
+.bubble.tool {
+  border-color: var(--te-line);
+  color: var(--te-aluminum);
+  font-size: 12px;
+}
+.bubble .who {
+  color: var(--te-orange);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 9px;
+  display: block;
+  margin-bottom: 4px;
+}
+.bubble.err {
+  border-color: var(--te-red);
+  color: var(--te-red);
+}
+
+/* ---------- feed ---------- */
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  overflow: auto;
+  height: 100%;
+}
+.tblock {
+  border: 1px solid var(--te-line);
+  padding: 8px 10px;
+}
+.tblock .tname {
+  color: var(--te-orange);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.tblock pre {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  color: var(--te-white);
+  max-height: 220px;
+  overflow: auto;
+}
+.tblock .ok {
+  color: var(--te-green);
+}
+.tblock .bad {
+  color: var(--te-red);
+}
+.diff {
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+.diff .add {
+  color: var(--te-green);
+}
+.diff .del {
+  color: var(--te-orange);
+}
+.perm-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* ---------- connect ---------- */
+.connect-wrap {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.connect-card {
+  border: 1px solid var(--te-orange);
+  padding: 26px;
+  width: 100%;
+  max-width: 420px;
+}
+.connect-card h1 {
+  color: var(--te-orange);
+  letter-spacing: 0.3em;
+  margin: 0 0 4px;
+}
+.connect-card .hint {
+  color: var(--te-aluminum);
+  font-size: 11px;
+  margin: 4px 0 16px;
+}
+.pair-link {
+  color: var(--te-green);
+  font-size: 11px;
+  word-break: break-all;
+}
+
+/* ---------- rigs list ---------- */
+.rig-item {
+  border: 1px solid var(--te-line);
+  padding: 8px 10px;
+  margin: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rig-item.active {
+  border-color: var(--te-orange);
+}
+.rig-item .t {
+  color: var(--te-white);
+  font-size: 13px;
+}
+.rig-item .c {
+  color: var(--te-aluminum);
+  font-size: 10px;
+  word-break: break-all;
+}
+.rig-item .led {
+  margin-right: 6px;
+}
+
+/* ---------- transport (phone) ---------- */
+.transport {
+  display: none;
+  border-top: 1px solid var(--te-orange);
+  background: #050505;
+}
+.transport .tabs {
+  display: flex;
+}
+.transport .tab {
+  flex: 1;
+  border: none;
+  background: #050505;
+  color: var(--te-aluminum);
+  padding: 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  border-right: 1px solid var(--te-line);
+}
+.transport .tab.active {
+  color: #000;
+  background: var(--te-orange);
+  font-weight: 700;
+}
+.composer {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid var(--te-line);
+  background: #050505;
+}
+.composer .textarea {
+  flex: 1;
+}
+
+/* ---------- knob ---------- */
+.knob {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+}
+.knob svg {
+  cursor: ns-resize;
+  touch-action: none;
+}
+.knob .klabel {
+  color: var(--te-aluminum);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+  min-width: 64px;
+}
+.knob .kval {
+  color: var(--te-green);
+  font-size: 12px;
+}
+
+/* ---------- phone ---------- */
+@media (max-width: 760px) {
+  .rig-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+  }
+  .rig-col {
+    display: none;
+    border-right: none;
+  }
+  .rig-col.show {
+    display: flex;
+  }
+  .rig-top .desktop-only {
+    display: none;
+  }
+  .transport {
+    display: block;
+  }
+  .rig-shell {
+    grid-template-rows: auto 1fr auto auto;
+  }
+}

@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" data-theme="moss" data-accent="mint">
+    <html lang="en" data-theme="moss" data-accent="mint" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{

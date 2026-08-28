@@ -74,6 +74,7 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "glyph", name: "Glyph Studio", glyph: "✺", gradient: G.pink, desc: "Draw dot glyphs, export art", category: "Studio", href: "/glyph", status: "installed" },
   { id: "ghost", name: "Ghost", glyph: "◍", gradient: G.ghost, desc: "Offline AI tutor — lives on your phone", category: "Studio", href: "/ghost", status: "installed" },
   { id: "osc", name: "OSC-1", glyph: "∿", gradient: G.osc, desc: "Pocket synthesizer — beats from thin air", category: "Studio", href: "/osc", status: "installed" },
+  { id: "rig", name: "RIG", glyph: "⌘", gradient: G.osc, desc: "Code on your Mac — from anywhere", category: "Studio", href: "/rig", status: "installed" },
   // Coming soon
   { id: "soon-expense", name: "Expense Tracker", glyph: "₿", gradient: G.teal, desc: "Budgets & spending charts", category: "Life", status: "soon" },
   { id: "soon-calendar", name: "Calendar", glyph: "▦", gradient: G.ember, desc: "Events with reminders", category: "Life", status: "soon" },
