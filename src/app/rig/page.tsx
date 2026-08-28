@@ -290,6 +290,32 @@ export default function RigPage() {
     [send, onMessage],
   );
 
+  /**
+   * Find the engine on THIS machine, wherever the page was served from.
+   * A page from https://deriva.srivtx.xyz can still reach the local daemon
+   * (browsers treat localhost as trustworthy); the old code only probed
+   * location.hostname — which on the deployed domain is Vercel, not the Mac.
+   */
+  const probeEngine = useCallback(async (): Promise<{ host: string; token: string; port: number } | null> => {
+    const hosts = Array.from(new Set(
+      [
+        typeof window !== "undefined" ? window.location.hostname : "",
+        "localhost",
+        "127.0.0.1",
+      ].filter(Boolean),
+    ));
+    for (const h of hosts) {
+      try {
+        const r = await fetch(`http://${h}:8787/api/local-token`, { cache: "no-store", signal: AbortSignal.timeout(2000) });
+        if (r.ok) {
+          const j = await r.json();
+          return { host: h, token: j.token, port: j.port };
+        }
+      } catch {}
+    }
+    return null;
+  }, []);
+
   useEffect(() => {
     if (didInit.current) return;
     didInit.current = true;
@@ -299,31 +325,23 @@ export default function RigPage() {
       return;
     }
     (async () => {
-      try {
-        const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
-        const r = await fetch(`http://${host}:8787/api/local-token`, { cache: "no-store" });
-        if (r.ok) {
-          const j = await r.json();
-          connect(`ws://${host}:${j.port}`, j.token, true);
-          return;
-        }
-      } catch {}
+      const hit = await probeEngine();
+      if (hit) {
+        connect(`ws://${hit.host}:${hit.port}`, hit.token, true);
+        return;
+      }
       setPhase("pair");
     })();
-  }, [connect]);
+  }, [connect, probeEngine]);
 
   const retryLocal = () => {
     setPhase("auto");
     (async () => {
-      try {
-        const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
-        const r = await fetch(`http://${host}:8787/api/local-token`, { cache: "no-store" });
-        if (r.ok) {
-          const j = await r.json();
-          connect(`ws://${host}:${j.port}`, j.token, true);
-          return;
-        }
-      } catch {}
+      const hit = await probeEngine();
+      if (hit) {
+        connect(`ws://${hit.host}:${hit.port}`, hit.token, true);
+        return;
+      }
       setPhase("pair");
     })();
   };
@@ -508,11 +526,11 @@ export default function RigPage() {
               </>
             ) : (
               <>
-                <div className="hint">RIG's engine isn't running on this Mac yet.</div>
+                <div className="hint">RIG's engine isn't reachable on this Mac right now.</div>
                 <ol className="steps">
-                  <li>Open a terminal in <code>deriva/harness</code>.</li>
-                  <li>Run <code>pnpm rig</code> — it stays on in the background.</li>
-                  <li>RIG will then open here by itself.</li>
+                  <li>The engine is a login service — it normally starts with your Mac. No terminal needed.</li>
+                  <li>If it stopped, restart it once: <code>launchctl kickstart -k "gui/$(id -u)/com.deriva.rig"</code></li>
+                  <li>Then tap RETRY — this page finds it by itself.</li>
                 </ol>
                 <button className="btn primary" style={{ width: "100%", marginTop: 10 }} onClick={retryLocal}>RETRY</button>
               </>
