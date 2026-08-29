@@ -85,7 +85,7 @@ const MORE_GROUPS: MoreGroup[] = [
       { label: "System Design", href: "/design", desc: "HLD" },
       { label: "LLD Ladder", href: "/lld", desc: "55 design problems" },
       { label: "DB Ladder", href: "/db", desc: "50 SQL problems" },
-      { label: "Ultron", href: "/ultron", desc: "50 AI/ML drills" },
+      { label: "Ultron", href: "/ultron", desc: "60 AI/ML drills" },
       { label: "Expedition", href: "/expedition", desc: "retrieval" },
       { label: "Game Mode", href: "/games", desc: "play" },
     ],

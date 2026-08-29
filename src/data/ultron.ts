@@ -1,5 +1,5 @@
 // ── Ultron — the AI/ML ladder ────────────────────────────────────────────────
-// 50 problems, 10 stages, strictly linear: every problem teaches exactly one
+// 60 problems, 11 stages, strictly linear: every problem teaches exactly one
 // ML thinking-move in pure NumPy, and every later problem composes only moves
 // taught earlier. No sklearn, no torch — you build each model from math you
 // can write on one napkin. Execution: real NumPy inside the Pyodide worker.
@@ -8,21 +8,55 @@
 
 export interface UltronProblem {
   id: number; stage: number; title: string; pattern: string; skill: string
-  statement: string; examples: { input: string; output: string; explain?: string }[]
+  statement: string; diagram?: string; examples: { input: string; output: string; explain?: string }[]
   why: string; starterCode: string; hints: string[]; solution: string; walkthrough: string; testCode: string
 }
 
 export const STAGES_ULTRON = [
-  { id: 0, name: "The Substrate", desc: "arrays are the noun" },
-  { id: 1, name: "The Line", desc: "your first model, from math" },
-  { id: 2, name: "The Descent", desc: "learning is controlling the step" },
-  { id: 3, name: "The Bend", desc: "a line that outputs probability" },
-  { id: 4, name: "The Judge", desc: "the error you can't see" },
-  { id: 5, name: "Neighbors & Clusters", desc: "similarity is geometry" },
-  { id: 6, name: "The Tree", desc: "split the world by asking" },
-  { id: 7, "name": "The Network", desc: "stack the bends" },
-  { id: 8, name: "Backprop", desc: "blame flows backwards" },
-  { id: 9, name: "The Craft", desc: "grade like a practitioner" },
+  {
+    id: 0, name: "The Substrate", desc: "arrays are the noun",
+    creed: "Before models, there is the noun: the ndarray. Every dataset, label, weight and prediction you will ever touch is a rectangle of numbers with a shape, and ML is the craft of moving through those rectangles without copying them.\n\nThis stage drills the reflexes — building arrays, reshaping without reordering, broadcasting a (3,) against a (4,1), masking with a boolean array. None of it looks like intelligence. All of it is load-bearing: the shape error you learn to read here is the error you will hit inside a neural net in stage 8.\n\nThe bar to leave: when an operation fails, your first question is 'what are the two shapes?' — not 'what went wrong?'",
+  },
+  {
+    id: 1, name: "The Line", desc: "your first model, from math",
+    creed: "The first model is not a library call — it is two numbers, w and b, and a belief that the world is roughly straight. You define what 'wrong' means (mean squared error), take its derivative by hand, and watch the slope point downhill.\n\nBy the end of this stage you have derived gradient descent AND the closed-form normal equation on the same data, and checked that both land on the same line. That cross-check is the habit of a practitioner: two independent paths agreeing is the cheapest proof you own.\n\nThe bar to leave: you can predict with a line, measure the error, and say exactly how each parameter should move to reduce it.",
+  },
+  {
+    id: 2, name: "The Descent", desc: "learning is controlling the step",
+    creed: "Knowing the direction is half the craft; choosing how far to step is the other half — and it is where most training silently dies. Too bold and the loss explodes; too timid and you mistake slowness for convergence.\n\nThis stage makes the failure modes visible on purpose: the diverging rate, the ill-conditioned valley where raw features fight each other, the noise floor that mini-batches introduce and momentum rides through. You end by holding a validation set up against the training loss and stopping when the unseen data says stop.\n\nThe bar to leave: given a loss curve, you can name what is wrong — rate, conditioning, or noise — and fix it.",
+  },
+  {
+    id: 3, name: "The Bend", desc: "a line that outputs probability",
+    creed: "A straight line answers 'how much'; the world mostly asks 'yes or no'. One sigmoid bend turns any score into a probability, and one loss — cross-entropy — replaces the crude squared error with something that punishes confident mistakes.\n\nThe deep move here is the threshold: the model outputs 0.93 and 0.55, and YOU decide what counts as a positive. That decision, not the model, sets the false-alarm rate — and on imbalanced data the lazy 95%-accuracy model is exposed for what it is.\n\nThe bar to leave: you can train a classifier from scratch and defend where you drew the line.",
+  },
+  {
+    id: 4, name: "The Judge", desc: "the error you can't see",
+    creed: "Training error is a mirror — it only shows what the model already saw. This stage installs the discipline of judging models on data they never touched: holdout sets, the polynomial zoo where degree 9 memorizes noise, and ridge penalties that buy stability with bias.\n\nThen the machinery of honest comparison: k-fold cross-validation, and the leaked-exam bug — the single most common way real ML projects lie to themselves. Standardize inside the fold, never before.\n\nThe bar to leave: you trust no number that was computed on data the model trained on.",
+  },
+  {
+    id: 5, name: "Neighbors & Clusters", desc: "similarity is geometry",
+    creed: "Not every model draws a line. kNN predicts by geometry — find the closest examples and vote — and works startlingly well until a feature measured in dollars shouts down a feature measured in years. Scale, again, decides truth.\n\nThen the unsupervised turn: no labels at all, just structure. k-means asks the data to organize itself, and inertia shows the price of every assumption about how many clusters exist.\n\nThe bar to leave: you can predict by proximity and cluster by structure — and you know both live or die by the metric you measure distance with.",
+  },
+  {
+    id: 6, name: "The Tree", desc: "split the world by asking",
+    creed: "A tree learns by asking questions: is the amount above 4.5? Each split chooses the question that most reduces the mess — gini or entropy — and recursion does the rest. You build the search for the best split by hand, so 'the model found a rule' becomes 'the model counted every candidate threshold and took the cleanest'.\n\nThen the ensemble trick: one deep tree memorizes, but many shallow trees voting on bootstrap samples — bagging — average their disagreements into stability.\n\nThe bar to leave: you can grow a stump from raw counts and explain why a forest beats a tree.",
+  },
+  {
+    id: 7, name: "The Network", desc: "stack the bends",
+    creed: "Stack logistic units and something qualitatively new appears: layers bend the space, and bends compose. The forward pass is just matrix products with a nonlinearity between them — but without the nonlinearity, a hundred layers collapse into one straight line, as XOR proves.\n\nSoftmax extends the bend to many classes, and cross-entropy hands you a gradient so clean it feels like cheating: prediction minus truth.\n\nThe bar to leave: you can run data through a hand-built two-layer network and say why every piece — weights, bias, activation — is where it is.",
+  },
+  {
+    id: 8, name: "Backprop", desc: "blame flows backwards",
+    creed: "Training a network means asking every one of its parameters: how much did you contribute to this mistake? Backpropagation answers with the chain rule, flowing blame backwards through the graph. You verify every gradient against the numeric definition — because a gradient you have not checked is a rumor.\n\nThen the loop comes alive: forward, backward, step, repeat — and XOR, the problem a straight line can never solve, falls to a two-layer net. You assemble Adam from its parts and see momentum and adaptive scaling as one optimizer.\n\nThe bar to leave: you can differentiate a network by hand and trust it, because you checked it numerically.",
+  },
+  {
+    id: 9, name: "The Craft", desc: "grade like a practitioner",
+    creed: "A model is not finished when it trains; it is finished when it is graded honestly. The confusion grid turns '92% accurate' into four numbers you can argue with. Precision and recall force the trade a threshold hides. The ROC curve grades the ranking itself, independent of any cutoff.\n\nThen the practitioner's ritual on real data: k-fold model selection, a metrics report, and the discipline to let validation — not hope — pick the model.\n\nThe bar to leave: given any classifier, you can produce its confusion grid, its F1, and its ROC — and read all three aloud.",
+  },
+  {
+    id: 10, name: "The Deep", desc: "beyond the ladder, where it compounds",
+    creed: "The ladder ends; the craft compounds. This tier takes moves you already own and pushes each to its professional edge: softmax to many classes, filters to images, eigen-axes to PCA, dot products to meaning, L1 to sparsity, schedules to convergence.\n\nThere is no new noun here — numpy is still the whole language. What is new is the expectation: compose scaling, logistic regression, cross-validation and metrics into one pipeline, then defend every choice in it.\n\nThe bar to leave: given a raw dataset, you can run the full loop — split, scale, train, tune, grade — and no step in it is a library call.",
+  },
 ]
 
 export const PROBLEMS_ULTRON: UltronProblem[] = [
@@ -46,6 +80,13 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 2, stage: 0, title: "The Shape Question", pattern: "reshape", skill: "reshape regroups, never copies meaning",
+    diagram: `12 readings, one order — three shapes, same order
+
+   (12,)    ●●●●●●●●●●●●
+   (3,4)    ●●●● │ ●●●● │ ●●●●
+   (12,1)   ●
+            ●
+            ⋮         reshape regroups — it never reorders`,
     statement: "You receive 12 hourly temperature readings as the 1-D array temps (already defined). Produce: week = temps reshaped into 3 rows of 4 (each row is one 4-hour block), and col = temps as a column vector of shape (12, 1). Same 12 numbers, two different shapes.",
     examples: [
       { input: "temps = [10 11 12 13 14 15 16 17 18 19 20 21]", output: "week shape (3, 4); col shape (12, 1)", explain: "regrouped, not reordered" },
@@ -167,6 +208,15 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 9, stage: 1, title: "The Descent Step", pattern: "gradient-descent", skill: "step against the slope, repeatedly",
+    diagram: `        loss(w)
+          ▲      ●   ← slope says: w is too big
+          │       ╲
+          │        ╲   step = η × slope
+          │         ○
+          │          ╲
+          │           ●  ← closer
+          └──────────────────▶ w
+             η too big → overshoot · η too small → crawl`,
     statement: "Implement full-batch gradient descent on line_world: start at w=0, b=0, take 200 steps with learning rate 0.02, each step updating both parameters against the mean-squared-error gradient (use the per-point gradients, averaged). Record the loss after every step in losses. The model learns the data's recipe (3x+2) from nothing but the gradient.",
     examples: [
       { input: "start w=0 b=0, loss≈38", output: "after 200 steps: w≈3, b≈2, loss≈noise floor", explain: "opposite of the gradient is downhill" },
@@ -256,6 +306,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 14, stage: 2, title: "Remember the Push", pattern: "momentum", skill: "average recent gradients",
+    diagram: `   plain:    ●···●···●···●         zig-zags across the ravine
+   momentum: ●→●→●→●→●             v carries the floor direction
+
+     v = β·v − η·slope
+     w ← w + v        ravine walls cancel · floor speed adds up`,
     statement: "Plain GD crawls along valley_world's shallow direction: the optimal slope is w = 30, but x barely moves, so the loss surface is a long flat canyon — legal steps barely change w. Add momentum: v = beta * v - lr * grad; w += v. Implement gd_momentum(beta, steps=150, lr=0.4) returning the final loss. Run beta=0 (plain) and beta=0.9; momentum must land far lower — pushes along the canyon add up, oscillations cancel.",
     examples: [
       { input: "beta = 0", output: "w crawls toward 30, loss still high after 150 steps", explain: "no memory, tiny steps along the flat" },
@@ -348,6 +403,12 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 19, stage: 3, title: "Slide the Threshold", pattern: "threshold-tradeoff", skill: "buy recall with precision",
+    diagram: `   scores:  ● · ● · ○ │ ○ · ○ · ●        │ = cutoff t
+                       │
+              slide t  ◀━━━━━▶  and watch the trade flip
+     t high:  few alarms · misses fraud    (precision ↑ recall ↓)
+     t low:   catches fraud · false alarms (precision ↓ recall ↑)
+     the model outputs probabilities — YOU pick the operating point`,
     statement: "spam_world gives model scores and true labels (1 = spam). At threshold t, predict spam when score ≥ t. Implement counts(t) returning (tp, fp, fn, tn) and report them at t=0.5, then precision_03 / recall_03 at t=0.3 and precision_07 / recall_07 at t=0.7. Watch the trade: lower the bar, catch more spam, sound more false alarms.",
     examples: [
       { input: "t = 0.3 (loose)", output: "recall rises, precision falls", explain: "more flagged, more falsely flagged" },
@@ -403,6 +464,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 22, stage: 4, title: "Buy Fit, Pay Generalization", pattern: "overfitting", skill: "more capacity, less truth",
+    diagram: `   degree 1  ─────────      too simple: misses the bend (bias)
+   degree 3  ⌒⌒⌒            follows the true curve (sweet spot)
+   degree 9  ∿∿∿∿∿∿∿        threads every noisy point (variance)
+
+     train error ↓ always  ·  test error ↓ … then ↑`,
     statement: "quad_world: 9 training points from a curve plus noise, 5 test points from the same recipe. Fit polynomials of degree 1, 3, and 9 (np.vander(x, d+1) builds the design matrix; np.linalg.lstsq handles the rank-deficient degree-9 case). Report train_mses and test_mses as dicts keyed 1, 3, 9. Watch: training error falls with degree; test error falls, then explodes.",
     examples: [
       { input: "degree 1", output: "big train error, mediocre test error", explain: "underfit: the model is too stiff" },
@@ -511,6 +577,10 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 28, stage: 5, title: "Distance Is Dishonest", pattern: "scale-sensitivity", skill: "make the ruler fair",
+    diagram: `   raw:   beds (1–4)  ·  age (5–40)     d = √(Δbeds² + Δage²)
+          Δage = 30 shouts, Δbeds = 3 whispers → age IS the metric
+
+   z-score: every column → mean 0 · std 1 → honest meters`,
     statement: "customers: (spend_in_rupees, visits) — spend in the thousands, visits in the single digits. A query customer sits between a 'high-spend, few visits' neighbor and a 'low-spend, many visits' one. Compute nearest_raw (kNN k=1 on raw features) and nearest_scaled (k=1 after z-scoring each feature across the 8 rows). They differ — the rupee axis was silently swallowing the visit axis.",
     examples: [
       { input: "raw distance", output: "spend difference of 3000 dwarfs visit difference of 4", explain: "one feature rules the ruler" },
@@ -567,6 +637,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   // ══ STAGE 6 — The Tree ══
   {
     id: 31, stage: 6, title: "One Question", pattern: "split", skill: "cut the rows by a test",
+    diagram: `     x: 1..8    t: 0 0 1 0 1 1 1 1      gini(parent) = 30/64
+   split at 4.5:
+   ├── x ≤ 4.5   t: 0 0 1 0     gini = 3/8
+   └── x >  4.5  t: 1 1 1 1     gini = 0  ← pure
+        gain = 30/64 − 3/16      the question that cleans the most`,
     statement: "tree_world: one feature x (8 rows) and a label t (0 = fail, 1 = pass). Split the rows at threshold t_split = 4.5: x < 4.5 goes left, the rest right. Report n_left, ones_left (label-1 count on the left), n_right, ones_right. A decision tree is nothing but questions like this, stacked.",
     examples: [
       { input: "x = [1, 2, 3, 4 | 5, 6, 7, 8]", output: "left 4 rows, right 4 rows", explain: "the question carves the table in two" },
@@ -676,6 +751,9 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 37, stage: 7, title: "The Hidden Layer", pattern: "forward-pass", skill: "two matmuls, one bend",
+    diagram: `   X(4,2) ─▶[ X@W1 + b1 ]─▶ H = tanh(·)(4,4) ─▶[ H@W2 + b2 ]─▶ ŷ(4,1)
+               4 bends side by side              one bend to close
+   shapes: (4,2)@(2,4) = (4,4)   ·   (4,4)@(4,1) = (4,1)`,
     statement: "Using net_world (the four XOR corners, X of shape (4, 2)) and net_init (frozen weights W1 (2,4), b1 (4,), W2 (4,1), b2 (1,)): compute H = tanh(X @ W1 + b1) and out = H @ W2 + b2. Assign H and out. Shapes to verify: (4,2) → (4,4) → (4,1). This two-matmul pattern is the entire forward pass of every deep network — deeper just means more of them.",
     examples: [
       { input: "X row [0, 0]", output: "H row = tanh(b1) (4 values)", explain: "the bias IS the pre-activation here" },
@@ -750,6 +828,12 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   // ══ STAGE 8 — Backprop ══
   {
     id: 41, stage: 8, title: "The Chain, By Hand", pattern: "chain-rule", skill: "blame flows backwards",
+    diagram: `   z ──▶ a = tanh(z) ──▶ L
+   ▲          │
+   └──────────┴── dL/dz = dL/da × da/dz
+
+   backprop = walk the arrows backwards, multiplying the
+   local factor of each arrow along the way`,
     statement: "A two-parameter scalar net: h = tanh(wa·x), out = wb·h, loss L = (out − y)². Derive dL/dwb = 2(out−y)·h and dL/dwa = 2(out−y)·wb·(1−h²)·x. Implement grad_wb(x, y, wa, wb) and grad_wa(x, y, wa, wb). The tests probe each parameter numerically (nudge ±1e-6, re-measure L) — your chain rule must match to 6 decimals.",
     examples: [
       { input: "out = wb·tanh(wa·x)", output: "dL/dwb = 2(out−y)·tanh(wa·x)", explain: "blame the output weight directly" },
@@ -843,6 +927,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   // ══ STAGE 9 — The Craft ══
   {
     id: 46, stage: 9, title: "The Four Fates", pattern: "confusion-grid", skill: "count every outcome",
+    diagram: `                  actual
+                yes      no
+    pred yes    TP   ·   FP        two ways to be right
+    pred no     FN   ·   TN        two ways to be wrong — not equal sins
+    accuracy hides which sin · precision and recall name them`,
     statement: "From spam_world at threshold 0.5, build the confusion grid: grid = [[tn, fp], [fn, tp]] as literal integers. Every classification metric you will ever use — precision, recall, specificity, F1, MCC — is arithmetic on these four numbers. Count them by mask, then hardcode-free verify against Problem 19's counts().",
     examples: [
       { input: "spam caught (tp)", output: "true positive column", explain: "the grid is the model's autobiography" },
@@ -916,6 +1005,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 50, stage: 9, title: "Earn the Complexity", pattern: "model-comparison", skill: "the simplest model that wins",
+    diagram: `        ○ ●          one straight line can never part these
+        ● ○          every line cuts 3-1 → stuck at 50%
+
+   a bent space can:   X → W1 → tanh → W2   →   100%
+   capacity buys the bend the data demands`,
     statement: "The finale, on net_world (XOR): train the logistic exactly as in Problem 18 (800 steps, lr=0.5, from w = zeros) and report acc_line. Train the 2→4→1 net exactly as in Problem 43 and report acc_net. The line is stuck at a saddle — its gradient is EXACTLY zero at this init on this data — while the network's nonlinearity breaks the tie. Report both; let the data choose the model.",
     examples: [
       { input: "logistic on XOR", output: "accuracy exactly 0.5 — the gradient is identically zero at the origin", explain: "p = 0.5 everywhere; symmetry cancels every gradient term" },
@@ -932,4 +1026,244 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
     walkthrough: "Run it and watch the line refuse to move: at w = 0 every corner gets p = 0.5, and the gradient terms cancel pairwise — (0,0) and (1,1) pull opposite ways, as do (0,1) and (1,0) — so 800 steps multiply zero. The saddle is not bad luck; it is the data's symmetry speaking through the loss. The net breaks the symmetry because its hidden layer maps the four corners to four DIFFERENT points (Problem 38's blindness was the init's fault, and the asymmetric errors fix it). End of the ladder, and the pattern is now yours: write the hypothesis, price the errors, differentiate, descend — and always ask whether the model you're paying for is the one the problem needs.",
     testCode: "assert acc_line == 0.5, acc_line\nassert acc_net == 1.0, acc_net\nassert acc_net > acc_line\nprint('All tests passed!')"
   },
+  // ══ STAGE 10 — The Deep ══
+  {
+    id: 51, stage: 10, title: "One Model, Many Classes", pattern: "softmax-regression", skill: "extend the bend to k classes",
+    diagram: `   x ● ──▶[ Xb @ W ]──▶ z = (z0, z1, z2) ──▶ softmax ──▶ (p0, p1, p2)
+
+      three classes share one softmax row
+      each row of P sums to 1  ·  argmax P = predicted class`,
+    statement: "softmax_world gives 15 points in 2-D from three classes (y is 0, 1 or 2). Build a 3-class softmax classifier: add a bias column to X, one-hot Y with np.eye(3)[y], and train W (shape (3, 3)) for 400 steps at lr = 0.5 with the gradient Xb.T @ (P - Y) / n. Report initial_ce (cross-entropy at W = 0), final_ce, final_acc, and the trained W.",
+    examples: [
+      { input: "Z = Xb @ W, P = softmax(Z)", output: "rows of P sum to 1; argmax = prediction", explain: "one matrix product replaces three separate logistic models" },
+    ],
+    why: "Binary classification was the warm-up — the world has many labels. Softmax regression is logistic regression with more columns: each class gets a score, the scores compete through one softmax, and cross-entropy measures them together. The gradient stays beautifully simple — prediction minus truth — which is why the last layer of every deep network is exactly this move.",
+    starterCode: "import numpy as np\n\nX, y = softmax_world()\nn, d = X.shape\n\nXb = None  # add a bias column of ones -> shape (15, 3)\nY = None   # one-hot rows: np.eye(3)[y]\nW = None   # zeros, shape (3, 3)\n\ninitial_ce = None  # cross-entropy at W = 0\n\n# train: 400 steps, lr = 0.5, G = Xb.T @ (P - Y) / n\n\nfinal_ce = None\nfinal_acc = None",
+    hints: [
+      "Stable softmax: subtract the row max before exp — Z = Z - Z.max(axis=1, keepdims=True).",
+      "Cross-entropy with one-hot Y: -np.log(P[np.arange(n), y]).mean().",
+      "The whole update is four lines: score, softmax, gradient Xb.T @ (P - Y) / n, step.",
+    ],
+    solution: "import numpy as np\n\nX, y = softmax_world()\nn, d = X.shape\n\nXb = np.column_stack([X, np.ones(n)])\nY = np.eye(3)[y]\nW = np.zeros((d + 1, 3))\n\ndef softmax_ce(W):\n    Z = Xb @ W\n    Z = Z - Z.max(axis=1, keepdims=True)\n    P = np.exp(Z)\n    P /= P.sum(axis=1, keepdims=True)\n    return -np.log(P[np.arange(n), y]).mean(), P\n\ninitial_ce, _ = softmax_ce(W)\nfor step in range(400):\n    _, P = softmax_ce(W)\n    W -= 0.5 * (Xb.T @ (P - Y) / n)\n\nfinal_ce, P = softmax_ce(W)\nfinal_acc = (P.argmax(axis=1) == y).mean()\nprint(initial_ce, final_ce, final_acc)",
+    walkthrough: "With W = 0 every score is 0, so the softmax is uniform: P = 1/3 per class and cross-entropy is -ln(1/3) = ln(3) ≈ 1.0986 — the know-nothing baseline every training run starts from. Each step: score every point against every class (one matrix product), softmax the rows into probability distributions, and the gradient Xb.T @ (P - Y) / n says 'move each column of W away from the wrong classes, toward the true one'. After 400 steps the three clusters separate perfectly and the loss has collapsed from 1.0986 to under 0.01. Notice what you did NOT do: train three separate logistic models. The softmax makes the classes compete, and one gradient updates all of them together.",
+    testCode: "assert round(initial_ce, 4) == 1.0986, initial_ce\nassert final_ce < 0.05, final_ce\nassert final_acc == 1.0, final_acc\nassert W.shape == (3, 3), W.shape\nZ = np.column_stack([X, np.ones(len(X))]) @ W\nP = np.exp(Z - Z.max(axis=1, keepdims=True))\nP /= P.sum(axis=1, keepdims=True)\nassert np.abs(P.sum(axis=1) - 1).max() < 1e-9\nprint('All tests passed!')"
+  },
+  {
+    id: 52, stage: 10, title: "The Sliding Filter", pattern: "convolution", skill: "filters see locally",
+    diagram: `   kernel k            image (6x6)              conv (4x4)
+   1  0 -1            10 11 12 │ 2 3 4         -6 27  27 -6
+   1  0 -1   ▶        10 11 12 │ 2 3 4    ▶    -6 27  27 -6
+   1  0 -1            10 11 12 │ 2 3 4         -6 27  27 -6
+                      ────edge────             fires at the edge
+
+   response = left column − right column, summed over 3 rows`,
+    statement: "pixel_world returns a 6x6 image with a vertical edge: bright columns 0-2, dark columns 3-5. Slide the vertical-edge kernel k = [[1,0,-1],[1,0,-1],[1,0,-1]] over it (deep-learning convention: no flip) and collect (img[i:i+3, j:j+3] * k).sum() into conv, shape (4, 4). Then take stride 2 with conv[::2, ::2] as stride2, and max-pool conv in 2x2 windows into pool, shape (2, 2).",
+    examples: [
+      { input: "kernel over columns 10,11,12 | 2,3,4", output: "left col − right col, summed over 3 rows", explain: "the edge fires where bright meets dark" },
+    ],
+    why: "A convolution is the array skill from stage 0 aimed at structure: a small kernel slides across the image and responds to one local pattern — an edge, a corner, a texture. Everything a convolutional network sees is stacks of this one move. Max-pooling then keeps the strongest response in each window, buying translation tolerance for free.",
+    starterCode: "import numpy as np\n\nimg = pixel_world()\nk = np.array([[1.0, 0.0, -1.0],\n              [1.0, 0.0, -1.0],\n              [1.0, 0.0, -1.0]])\n\nconv = None    # (4, 4): slide k over every 3x3 window\nstride2 = None # conv[::2, ::2]\npool = None    # (2, 2): max of each 2x2 block of conv",
+    hints: [
+      "Valid positions: i in range(4), j in range(4) — the window img[i:i+3, j:j+3].",
+      "The response is elementwise multiply then sum: (window * k).sum().",
+      "Max-pool: pool[i, j] = conv[2*i:2*i+2, 2*j:2*j+2].max().",
+    ],
+    solution: "import numpy as np\n\nimg = pixel_world()\nk = np.array([[1.0, 0.0, -1.0],\n              [1.0, 0.0, -1.0],\n              [1.0, 0.0, -1.0]])\n\nH, W = img.shape\nconv = np.zeros((H - 2, W - 2))\nfor i in range(H - 2):\n    for j in range(W - 2):\n        conv[i, j] = (img[i:i+3, j:j+3] * k).sum()\n\nstride2 = conv[::2, ::2]\n\npool = np.zeros((2, 2))\nfor i in range(2):\n    for j in range(2):\n        pool[i, j] = conv[2*i:2*i+2, 2*j:2*j+2].max()\nprint(conv, stride2, pool)",
+    walkthrough: "The kernel answers one question at every window: how much brighter is the left column than the right? Columns 0-2 are bright (10, 11, 12) and columns 3-5 dark (2, 3, 4), so left minus right per row is -2, -1, 0, +9, +9, -2 across the four window positions — the response pattern [-6, 27, 27, -6] repeats for every row because the edge is vertical. Stride 2 then samples every other response, and max-pooling keeps the strongest activation in each quadrant — the 27s, discarding the -6s. A real convnet does exactly this thousands of times, except it LEARNS the kernel values from data instead of you handing them over. The loop you wrote is the forward pass of the most profitable architecture in deep learning.",
+    testCode: "expected = np.array([[-6.0, 27.0, 27.0, -6.0],\n                     [-6.0, 27.0, 27.0, -6.0],\n                     [-6.0, 27.0, 27.0, -6.0],\n                     [-6.0, 27.0, 27.0, -6.0]])\nassert np.array_equal(conv, expected), conv\nassert np.array_equal(stride2, expected[::2, ::2])\nassert np.array_equal(pool, np.array([[27.0, 27.0], [27.0, 27.0]])), pool\nprint('All tests passed!')"
+  },
+  {
+    id: 53, stage: 10, title: "The Axis That Matters", pattern: "pca", skill: "eigenvectors find the spine",
+    diagram: `      y                         ●
+      │                   ●            ●     eigenvectors of C:
+      │              ●                    ●    λ1 = 7.92  → pc1 ≈ ±(0.707, 0.707)
+      │          ●          ●   ●          λ2 = 0.007  → the noise floor
+      │      ●                            keep pc1: 99.9% of the variance
+      └─────────────────────────── x`,
+    statement: "cloud_world returns 11 points lying almost on the diagonal y = x. Center the data, build the covariance matrix C = Xc.T @ Xc / (n - 1), and diagonalize with np.linalg.eigh. Take the eigenvector of the LARGEST eigenvalue as pc1, project the centered points onto it, and report lam1, lam2, evr = lam1 / C.trace(), proj, and recon_mse — the mean squared error of rebuilding Xc from the projection alone.",
+    examples: [
+      { input: "eigen-decompose the covariance", output: "pc1 ≈ ±(0.707, 0.707)", explain: "the diagonal IS the data; the perpendicular is noise" },
+    ],
+    why: "PCA is the geometry behind dimensionality reduction: the covariance matrix's eigenvectors are the axes along which the data actually varies, sorted by eigenvalue. Keep the top one and you can rebuild almost the whole dataset from a single number per point. The same eigen-machinery powers whitening, initialization schemes, and the spectral tricks hiding all over modern ML.",
+    starterCode: "import numpy as np\n\nP = cloud_world()\n\nXc = None          # center each column\nC = None           # covariance: Xc.T @ Xc / (n - 1)\nvals, vecs = None, None  # np.linalg.eigh(C)\n\npc1 = None         # eigenvector of the LARGEST eigenvalue\nproj = None        # centered points projected onto pc1\nlam1 = None\nlam2 = None\nevr = None         # lam1 / C.trace()\nrecon_mse = None   # rebuild from proj alone: np.outer(proj, pc1)",
+    hints: [
+      "eigh returns eigenvalues ascending — the principal axis is the last column, or argsort descending and take index 0.",
+      "The eigenvector's sign is arbitrary; directions, not arrows.",
+      "Reconstruction: Xc ≈ proj @ pc1.T when pc1 is a unit vector — that is np.outer(proj, pc1).",
+    ],
+    solution: "import numpy as np\n\nP = cloud_world()\n\nXc = P - P.mean(axis=0)\nC = Xc.T @ Xc / (len(P) - 1)\nvals, vecs = np.linalg.eigh(C)\norder = np.argsort(vals)[::-1]\nlam1, lam2 = vals[order[0]], vals[order[1]]\npc1 = vecs[:, order[0]]\nproj = Xc @ pc1\n\nevr = lam1 / C.trace()\nrecon = np.outer(proj, pc1)\nrecon_mse = ((Xc - recon) ** 2).mean()\nprint(pc1, lam1, lam2, evr, recon_mse)",
+    walkthrough: "eigh returns eigenvalues ascending, so the principal axis is the last column — or, safer, argsort descending and take index 0. The eigenvector comes out as ±(0.707, 0.707); the sign is arbitrary because eigenvectors are directions, not arrows, which is why the tests compare absolute values. Projecting the centered points onto that single axis and rebuilding loses almost nothing: the reconstruction error (~0.003) is a rounding error next to the raw variance (~3.6), and the explained-variance ratio reads 99.9%. One number per point now carries the whole dataset — that is what 'the data was really 1-dimensional' means, measured instead of assumed.",
+    testCode: "assert abs(abs(pc1[0]) - 0.7071) < 0.01 and abs(abs(pc1[1]) - 0.7071) < 0.01, pc1\nassert abs(abs(pc1[0]) - abs(pc1[1])) < 0.01, pc1\nassert evr > 0.99, evr\nassert lam2 < 0.05, lam2\nassert abs(proj.var(ddof=1) - lam1) < 1e-6\nassert recon_mse < 0.02, recon_mse\nprint('All tests passed!')"
+  },
+  {
+    id: 54, stage: 10, title: "Meaning Is Geometry", pattern: "embeddings", skill: "directions carry relationships",
+    diagram: `             royalty ↑
+               │    ● king        ● queen
+               │
+               │    ● man         ● woman
+               │
+   ────────────┼─────────────────  gender →
+   fruit corner:  ● apple  ● banana   (far side of the space)
+
+   king − man + woman  =  a parallelogram  →  lands on queen`,
+    statement: "vocab_world gives six words and a 4-dimensional embedding each, built so royalty lives in one dimension and gender in another. Normalize the rows (E divided by its row norms) into En, form the cosine similarity matrix S = En @ En.T, then test the famous arithmetic: target = En[king] - En[man] + En[woman]. Rank all words by cosine similarity to target and report analogy_best. Also report apple_order — the words ranked by similarity to apple, excluding apple itself.",
+    examples: [
+      { input: "king - man + woman", output: "queen", explain: "the royal direction is consistent across the table" },
+    ],
+    why: "Word embeddings turned language into linear algebra: each word is a vector, similarity is a dot product, analogy is a parallelogram. This is the conceptual heart of every modern language model — attention, retrieval, and image-text search are all versions of 'which vectors point the same way'. One small table makes the geometry visible without a GPU.",
+    starterCode: "import numpy as np\n\nwords, E = vocab_world()\n\nEn = None           # normalize each row of E to unit length\nS = None            # cosine similarity matrix: En @ En.T\nidx = {w: i for i, w in enumerate(words)}\n\ntarget = None       # En[king] - En[man] + En[woman]\nsims = None         # similarity of every word to target\nanalogy_best = None # highest-similarity word\napple_order = None  # words ranked by similarity to apple, apple removed",
+    hints: [
+      "Row norms: np.linalg.norm(E, axis=1, keepdims=True).",
+      "After normalization, dot products ARE cosine similarities: En @ En.T.",
+      "Rank with np.argsort(-sims) — descending without reversing.",
+    ],
+    solution: "import numpy as np\n\nwords, E = vocab_world()\nEn = E / np.linalg.norm(E, axis=1, keepdims=True)\nS = En @ En.T\nidx = {w: i for i, w in enumerate(words)}\n\ntarget = En[idx['king']] - En[idx['man']] + En[idx['woman']]\nsims = En @ target\nanalogy_best = words[int(np.argmax(sims))]\n\napple_sims = En @ En[idx['apple']]\napple_order = [words[i] for i in np.argsort(-apple_sims) if words[i] != 'apple']\nprint(analogy_best, apple_order)",
+    walkthrough: "Normalizing rows turns dot products into cosine similarity — pure direction, magnitude ignored. The similarity matrix comes out symmetric with a unit diagonal: a free self-check of your normalization. The magic line is target = king - man + woman: subtracting man removes the male direction, adding woman adds the female one, and what remains is a royal-plus-female vector — queen, at similarity 1.0, because this toy table laid the royal direction into its coordinates. Real embedding tables learn the same structure from raw word statistics alone. And note apple's neighborhood: banana first (both point into the fruit corner), royalty nowhere in sight. Nearest-neighbor search over vectors is half of what semantic search means.",
+    testCode: "assert analogy_best == 'queen', analogy_best\nassert sims[idx['queen']] > sims[idx['man']]\nassert S[0, 1] > S[0, 4]\nassert apple_order[0] == 'banana', apple_order\nassert np.allclose(S, S.T) and np.allclose(np.diag(S), 1.0)\nprint('All tests passed!')"
+  },
+  {
+    id: 55, stage: 10, title: "Delete the Dead Features", pattern: "lasso", skill: "L1 zeros what does not help",
+    diagram: `   pull from data          push from L1:  0.3 · sign(w)
+        ↓↓ strong                 ↓ constant, absolute
+   w0 ●──────────────────▶  +0.35   survives
+   w1 ●──────────────────▶  -0.35   survives
+   w2 ●──▶  0.00   ← pinned: noise can't out-pull the corner
+   w3 ●─▶   0.00
+   w4 ●▶    0.00`,
+    statement: "sparse_world returns 16 rows and 5 features — but only the first two actually drive the target; the last three are pure noise. Standardize X and y, then minimize mean squared error plus 0.3 * sum(|w|) by subgradient descent: 1000 steps at lr = 0.05, with gradient Xs.T @ (Xs @ w - ys) / n + 0.3 * np.sign(w). Report w and mse. Watch what the L1 penalty does to the noise weights.",
+    examples: [
+      { input: "MSE + 0.3 * L1", output: "w[0] ≈ 0.35, w[1] ≈ -0.35, noise weights ≈ 0", explain: "the penalty deletes, it does not just shrink" },
+    ],
+    why: "Ridge (L2) shrinks weights toward zero but never reaches it. The L1 penalty has a corner at exactly zero, and corners pin weights there: LASSO performs feature selection as a side effect of training. When you hear 'the model uses 40 of 5000 features', this corner is why — and you just built it from one call to np.sign.",
+    starterCode: "import numpy as np\n\nX, y = sparse_world()\n\nXs = None  # standardize columns\nys = None  # standardize the target\nw = np.zeros(5)\n\nfor step in range(1000):\n    pass  # grad = Xs.T @ (Xs @ w - ys) / n + 0.3 * np.sign(w); w -= 0.05 * grad\n\nmse = None",
+    hints: [
+      "Standardize exactly like stage 2: (X - mean) / std per column, same for y.",
+      "np.sign(w) is +1, -1, or 0 — the subgradient of |w|.",
+      "The L1 force is the same absolute size on every weight; the data's pull decides who survives.",
+    ],
+    solution: "import numpy as np\n\nX, y = sparse_world()\nXs = (X - X.mean(axis=0)) / X.std(axis=0)\nys = (y - y.mean()) / y.std()\nw = np.zeros(5)\nfor step in range(1000):\n    grad = Xs.T @ (Xs @ w - ys) / len(ys) + 0.3 * np.sign(w)\n    w -= 0.05 * grad\nmse = ((Xs @ w - ys) ** 2).mean()\nprint(w, mse)",
+    walkthrough: "Start from zeros and watch the first steps: the two informative features pull their weights hard (the data insists on them), while the three noise columns pull weakly — they correlate with the target at about zero by construction. Then the L1 term does its quiet work: 0.3 * sign(w) pushes EVERY weight toward zero with the same absolute force, and for the noise weights that constant push wins — they stall at about ±0.01, effectively deleted. The informative weights survive because the gradient from the data outweighs the penalty. End state: w ≈ [0.35, -0.35, ~0, ~0, ~0] with MSE ≈ 0.07 — the model kept exactly the two real features and built a sparse, readable rule. Same descent loop as stage 1; one sign() changed its character.",
+    testCode: "assert (np.abs(w[2:]) < 0.02).all(), w\nassert abs(w[0]) > 0.3 and abs(w[1]) > 0.3, w\nassert round(w[0], 2) == 0.35 and round(w[1], 2) == -0.35, w\nassert mse < 0.15, mse\nprint('All tests passed!')"
+  },
+  {
+    id: 56, stage: 10, title: "Three Kinds of Wrong", pattern: "bias-variance", skill: "decompose the error",
+    diagram: `   true f ~ sin  ·  200 noisy samples of 10 points each
+
+   deg 1:  ─────────      bias² big   · variance tiny
+   deg 3:  ⌒⌒⌒⌒⌒         bias tiny   · variance medium   ← the trade
+   deg 9:  ∿∿∿∿∿∿∿∿       bias zero   · variance DETONATES
+
+   err = bias² + variance + noise    (holds to 1e-8)`,
+    statement: "sine_world gives the true curve f = sin(2*pi*x) on a 50-point grid. Draw 200 training sets of 10 points each with RandomState(7): xt = rs.rand(10), yt = sin(2*pi*xt) + rs.randn(10) * 0.3. Fit polynomials of degree 1, 3, and 9 to each set (np.polyfit / np.polyval) and evaluate all 200 fits on the grid. For each degree report bias_sq = mean over grid of (mean prediction - f_true)^2, var = mean of the prediction variance across trials, and err = mean((predictions - f_true)^2) + sigma^2 — the expected error on a fresh noisy point.",
+    examples: [
+      { input: "degree 1 vs 3 vs 9", output: "bias falls, variance explodes", explain: "err = bias^2 + variance + noise, measured" },
+    ],
+    why: "Every model's expected error on new data splits into exactly three parts: bias (systematically wrong), variance (fragile to the training draw), and irreducible noise. You have SEEN the trade-off in the polynomial zoo — now you measure it 200 times and watch the identity hold to floating-point precision. Degree 9 with 10 points turns noise into curvature: bias near zero, variance astronomical.",
+    starterCode: "import numpy as np\n\ngrid, f_true = sine_world()\nsigma = 0.3\nrs = np.random.RandomState(7)\ntrials = 200\n\ndef decompose(deg):\n    preds = np.zeros((trials, len(grid)))\n    for t in range(trials):\n        xt = None\n        yt = None\n        coefs = None\n        preds[t] = None\n    bias_sq = None\n    var = None\n    err = None\n    return bias_sq, var, err\n\nb1, v1, e1 = decompose(1)\nb3, v3, e3 = decompose(3)\nb9, v9, e9 = decompose(9)",
+    hints: [
+      "Draw each training set in the same rs order: rs.rand(10) first, then rs.randn(10) — every call advances the stream.",
+      "bias_sq: ((preds.mean(axis=0) - f_true) ** 2).mean(). var: preds.var(axis=0).mean().",
+      "err adds the noise floor: ((preds - f_true) ** 2).mean() + sigma ** 2.",
+    ],
+    solution: "import numpy as np\n\ngrid, f_true = sine_world()\nsigma = 0.3\nrs = np.random.RandomState(7)\ntrials = 200\n\ndef decompose(deg):\n    preds = np.zeros((trials, len(grid)))\n    for t in range(trials):\n        xt = rs.rand(10)\n        yt = np.sin(2 * np.pi * xt) + rs.randn(10) * sigma\n        coefs = np.polyfit(xt, yt, deg)\n        preds[t] = np.polyval(coefs, grid)\n    bias_sq = ((preds.mean(axis=0) - f_true) ** 2).mean()\n    var = preds.var(axis=0).mean()\n    err = ((preds - f_true) ** 2).mean() + sigma ** 2\n    return bias_sq, var, err\n\nb1, v1, e1 = decompose(1)\nb3, v3, e3 = decompose(3)\nb9, v9, e9 = decompose(9)\nprint(b1, v1, e1, b3, v3, e3, e9)",
+    walkthrough: "Degree 1: the line cannot bend, so it is wrong the same way every time — bias² ≈ 0.21 dominates its total error ≈ 0.39. Degree 3: flexible enough to hug the true curve (bias² collapses to 0.007) but each of the 200 noisy training sets bends it differently — variance triples to 0.30. Total error barely moved: you traded bias for variance, roughly break-even. Degree 9: ten coefficients, ten points — the polynomial threads every noisy observation, bias ≈ 0, and variance detonates (errors beyond 10^10 on some fits; a single near-vertical swing between adjacent points does it). The identity err = bias² + variance + noise holds for every degree to 1e-8 — that is not an approximation, it is algebra. This is why more model is not better model: capacity converts to variance the moment data runs out.",
+    testCode: "assert abs(b1 + v1 + sigma ** 2 - e1) < 1e-8\nassert abs(b3 + v3 + sigma ** 2 - e3) < 1e-8\nassert b3 < b1 and v3 > v1\nassert e9 > 100 and np.isfinite(e9)\nprint('All tests passed!')"
+  },
+  {
+    id: 57, stage: 10, title: "Cool Down to Land", pattern: "lr-schedule", skill: "anneal the step, kill the jitter",
+    diagram: `   loss
+    ▲    constant 1.0:  ⎺⎺⎺⎺⎺  overshoots forever → ~222
+    │   ╱
+    │  ╱  cosine 1.0:   ───▶ anneal ───▶ 0.06  lands
+    │ ╱   step 1.0:     ───▶ halve every 30 ─▶ 0.08
+    └───────────────────────────────▶ epochs (120)
+          hot early  ·  cold late`,
+    statement: "valley_world is a steep, narrow valley. Run mini-batch SGD (batches of 4, RandomState(7), one rs.permutation per epoch) for 120 epochs from w = b = 0 with THREE schedules from the same lr0 = 1.0: constant; cosine, lr = 1.0 * (1 + cos(pi * e / 119)) / 2 at epoch e; and step, lr halved every 30 epochs. Report loss_const, loss_cos, loss_step — the final full-batch MSE of each.",
+    examples: [
+      { input: "same lr0 = 1.0, same 120 epochs", output: "constant ~222; cosine ~0.06; step ~0.08", explain: "big steps explore, small steps settle" },
+    ],
+    why: "A fixed learning rate forces a terrible bargain: small enough to be stable means slow, big enough to be fast means the late-stage jitter never settles. Schedules break the bargain — start bold, anneal to fine steps. Cosine decay is the default in modern deep learning for exactly the effect you are about to measure: the same aggressive rate that blows up under constant stepping converges once it cools.",
+    starterCode: "import numpy as np\n\nx, yv = valley_world()\nrs = np.random.RandomState(7)\nepochs = 120\n\ndef sgd(mode):\n    w, b = 0.0, 0.0\n    for e in range(epochs):\n        lr = 1.0\n        if mode == 'cos':\n            pass  # lr = 1.0 * (1 + cos(pi * e / (epochs - 1))) / 2\n        if mode == 'step':\n            pass  # lr = 1.0 * 0.5 ** (e // 30)\n        order = rs.permutation(len(x))\n        for k in range(0, len(x), 4):\n            idx = order[k:k + 4]\n            r = w * x[idx] + b - yv[idx]\n            pass  # step w and b\n    return ((w * x + b - yv) ** 2).mean()\n\nloss_const = None\nloss_cos = None\nloss_step = None",
+    hints: [
+      "Set lr from the mode BEFORE drawing the permutation — the schedule never touches the random stream.",
+      "Cosine: lr = 1.0 * (1 + np.cos(np.pi * e / (epochs - 1))) / 2 — full speed at e = 0, near zero at the end.",
+      "Mini-batch update, batches of 4: w -= lr * (2 * r * x[idx]).mean(); b -= lr * (2 * r).mean().",
+    ],
+    solution: "import numpy as np\n\nx, yv = valley_world()\nrs = np.random.RandomState(7)\nepochs = 120\n\ndef sgd(mode):\n    w, b = 0.0, 0.0\n    for e in range(epochs):\n        lr = 1.0\n        if mode == 'cos':\n            lr = 1.0 * (1 + np.cos(np.pi * e / (epochs - 1))) / 2\n        if mode == 'step':\n            lr = 1.0 * 0.5 ** (e // 30)\n        order = rs.permutation(len(x))\n        for k in range(0, len(x), 4):\n            idx = order[k:k + 4]\n            r = w * x[idx] + b - yv[idx]\n            w -= lr * (2 * r * x[idx]).mean()\n            b -= lr * (2 * r).mean()\n    return ((w * x + b - yv) ** 2).mean()\n\nloss_const = sgd('const')\nloss_cos = sgd('cos')\nloss_step = sgd('step')\nprint(loss_const, loss_cos, loss_step)",
+    walkthrough: "Three runs, identical data, identical starting rate 1.0 — wildly different endings. Constant 1.0 never settles: each mini-batch's slope is a wild overestimate of the valley's, the step overshoots the floor, and the loss ends near 220 — worse than predicting the mean. Step decay (halve every 30 epochs) lands at ≈ 0.08; cosine glides from full speed to nearly zero and lands at ≈ 0.06 — over 3000x better than constant, same budget, same lr0. Look at the cosine curve: early epochs run at big rates (crossing the valley fast) and the final epochs at tiny rates (settling into the bottom without kicking up dust). That asymmetry — explore hot, finish cold — is why every modern training recipe decays the rate.",
+    testCode: "assert loss_const > 10, loss_const\nassert loss_cos < 0.2, loss_cos\nassert loss_step < 0.2, loss_step\nassert loss_const > 100 * loss_cos\nprint('All tests passed!')"
+  },
+  {
+    id: 58, stage: 10, title: "Standardize, Then Learn", pattern: "batch-norm", skill: "tame the scales inside the net",
+    diagram: `   raw columns            xhat = (X−μ)/(σ+ε)       out = γ·xhat + β
+   income ●── 52000    →   mean 0 · std 1    →    mean β · std γ
+   age     ●── 34      →   same shape         →    learned back
+   score   ●· 0.12     →                      →
+   σ spread 57,000x  ───▶  one scale  ───▶  what the net wants`,
+    statement: "batch_world returns 8 rows whose columns span wildly different scales (currency, years, fractions). Batch-normalize: xhat = (X - mu) / (sd + 1e-8), then out = gamma * xhat + beta with gamma = [1, 2, 0.5] and beta = [0, -1, 3]. Report mu, sd, xhat, out, and spread = sd[0] / sd[2].",
+    examples: [
+      { input: "out = gamma * xhat + beta", output: "column means ≈ beta, column stds ≈ gamma", explain: "z-score first; gamma and beta restore what the model needs" },
+    ],
+    why: "You standardized features by hand in stage 2 to help gradient descent. Batch norm does the same thing INSIDE the network — per layer, per batch — and then adds gamma and beta so the network can un-standardize whatever it needs. It is a large part of why deep nets train at depth at all: no layer ever receives inputs whose scale runs away with the gradients.",
+    starterCode: "import numpy as np\n\nX = batch_world()\n\nmu = None\nsd = None\nxhat = None  # (X - mu) / (sd + 1e-8)\ngamma = np.array([1.0, 2.0, 0.5])\nbeta = np.array([0.0, -1.0, 3.0])\nout = None\nspread = None  # sd[0] / sd[2]",
+    hints: [
+      "mu = X.mean(axis=0), sd = X.std(axis=0) — the batch statistics.",
+      "The +1e-8 guards against dividing by a zero-std column; it is invisible otherwise.",
+      "gamma and beta broadcast across rows: out = gamma * xhat + beta.",
+    ],
+    solution: "import numpy as np\n\nX = batch_world()\nmu = X.mean(axis=0)\nsd = X.std(axis=0)\nxhat = (X - mu) / (sd + 1e-8)\ngamma = np.array([1.0, 2.0, 0.5])\nbeta = np.array([0.0, -1.0, 3.0])\nout = gamma * xhat + beta\nspread = sd[0] / sd[2]\nprint(spread, xhat.mean(axis=0), out.mean(axis=0), out.std(axis=0))",
+    walkthrough: "The raw columns are obscene together: income's std is roughly 57,000x the score's. Fed straight into a dot product, income IS the model. After normalization every column has mean 0 and std 1 — the exact move you have used since stage 2 — with a tiny +1e-8 guarding zero-variance columns. Then gamma and beta re-open the door: the output columns have means exactly beta and stds exactly gamma. The network normalized for stability, then learned back the offsets and scales it wants. Notice the division of labor: the normalization is fixed math, gamma and beta are learned parameters. That two-step — force a standard shape, then learn the deviation from it — recurs all over deep learning.",
+    testCode: "assert (np.abs(xhat.mean(axis=0)) < 1e-9).all()\nassert np.abs(out.mean(axis=0) - beta).max() < 1e-6\nassert np.abs(out.std(axis=0) - gamma).max() < 1e-3\nassert spread > 100, spread\nprint('All tests passed!')"
+  },
+  {
+    id: 59, stage: 10, title: "Grade the Ranking", pattern: "auc", skill: "the curve under the cutoffs",
+    diagram: `   TPR
+    1 ┤              ⎺⎺⎺⎺●
+      │         ●●●●●
+      │      ●●
+      │    ● │
+      │   ●  │  auc = 0.9143
+      │  ●   │  (area under the sweep)
+    0 ┤ ●    │
+      └──────┴───────────────── FPR
+          0.286  ← cutoff 0.5 is ONE point on this curve`,
+    statement: "spam_world returns 12 model scores and true labels. Sweep thresholds over [1.01] followed by the scores sorted high to low; at each threshold record (fpr, tpr) into roc, an (n, 2) array whose first point is (0, 0) and last is (1, 1). Compute auc = np.trapz(tpr, fpr). Also report tpr_half and fpr_half — the rates at the single cutoff 0.5.",
+    examples: [
+      { input: "thresholds: every score", output: "13 ROC points; auc ≈ 0.914", explain: "one cutoff = one point; the curve is the whole model" },
+    ],
+    why: "Threshold metrics — accuracy, precision, recall — describe one operating point, and you learned in stage 3 how much a bad cutoff can hide. The ROC curve grades the RANKING: can the model put spam above ham at every cutoff? AUC, the area under it, reads as 'the probability a random spam scores above a random ham'. It is the standard headline metric for scored models in industry for exactly that reason.",
+    starterCode: "import numpy as np\n\nscores, y = spam_world()\n\nthresholds = None  # [1.01] + scores sorted high to low\nroc = None         # (n, 2): rows of (fpr, tpr)\nfpr = None\ntpr = None\nauc = None\ntpr_half = None    # TPR at the single cutoff 0.5\nfpr_half = None",
+    hints: [
+      "thresholds = np.concatenate([[1.01], np.sort(scores)[::-1]]) — start above every score.",
+      "Per threshold: pred = scores >= t, then tp, fp, fn, tn by combining pred with y.",
+      "fpr = fp / (fp + tn), tpr = tp / (tp + fn); area: np.trapz(tpr, fpr).",
+    ],
+    solution: "import numpy as np\n\nscores, y = spam_world()\nthresholds = np.concatenate([[1.01], np.sort(scores)[::-1]])\nroc = []\nfor t in thresholds:\n    pred = scores >= t\n    tp = ((pred == 1) & (y == 1)).sum()\n    fp = ((pred == 1) & (y == 0)).sum()\n    fn = ((pred == 0) & (y == 1)).sum()\n    tn = ((pred == 0) & (y == 0)).sum()\n    roc.append((fp / (fp + tn), tp / (tp + fn)))\nroc = np.array(roc)\nfpr, tpr = roc[:, 0], roc[:, 1]\nauc = np.trapz(tpr, fpr)\ntpr_half = ((scores >= 0.5) & (y == 1)).sum() / (y == 1).sum()\nfpr_half = ((scores >= 0.5) & (y == 0)).sum() / (y == 0).sum()\nprint(auc, tpr_half, fpr_half)",
+    walkthrough: "Sweep the threshold from above 1.0 down through every score. At first everything is predicted ham — the point (0, 0). As the threshold passes each score, one more email flips to spam: if it was spam, TPR rises (a free win); if ham, FPR rises (a cost). The curve's shape IS the model's skill — hug the top-left corner and every early gain is free. This model's AUC = 0.9143: pick a random spam and a random ham, and 91% of the time the spam scores higher. Now compare the single cutoff 0.5: TPR 0.8, FPR 0.286 — a legitimate operating point that says nothing about the eleven other cutoffs you did not choose. The curve grades the model; the cutoff is a business decision. And np.trapz integrates the staircase exactly — no approximation needed.",
+    testCode: "assert roc[0, 0] == 0.0 and roc[0, 1] == 0.0\nassert roc[-1, 0] == 1.0 and roc[-1, 1] == 1.0\nassert (np.diff(fpr) >= -1e-12).all()\nassert round(auc, 4) == 0.9143, auc\nassert tpr_half == 0.8 and abs(fpr_half - 2 / 7) < 1e-12\nprint('All tests passed!')"
+  },
+  {
+    id: 60, stage: 10, title: "The Whole Loop", pattern: "grid-search", skill: "split, scale, train, tune, grade",
+    diagram: `   raw cases ─▶ split 4 folds ─▶ scale (train stats!) ─▶ logistic
+                        │                                   ▲
+                        ▼                                   │
+      grid: (0.1,5)  (0.1,200)  (0.5,5)  (0.5,200) ── cv ───┘
+                        │
+      best: lr 0.5 · 200 steps ─▶ retrain all ─▶ tp 20 · fp 1`,
+    statement: "case_world is this week's case file: 200 transactions, 20 fraudulent, with three weak signals (high amount, night hours, new device). Build the full pipeline: 4-fold CV (contiguous folds of 50 by index) over the grid [(0.1, 5), (0.1, 200), (0.5, 5), (0.5, 200)] of (lr, steps) for your own logistic regression — standardize INSIDE each fold on train statistics only. Pick the best combo by mean fold accuracy, retrain on all 200, and report best, worst_cv, and the confusion counts tp, fp, fn plus recall and precision at threshold 0.5.",
+    examples: [
+      { input: "4 hyperparameter combos x 4 folds", output: "best: lr 0.5, 200 steps, cv 0.99", explain: "the lazy all-ham baseline scores 0.90; the pipeline beats it and catches all 20" },
+    ],
+    why: "This is the loop every applied ML project runs — split, scale on train stats, train, tune by cross-validation, retrain, grade — except every piece of it is code you wrote from math. No pipeline helper, no LogisticRegression: the grid search is honest because the model is yours. And the grid does real work here: 5-step models are undertrained and the 200-step models separate them.",
+    starterCode: "import numpy as np\n\nX, y = case_world()\nn = len(y)\nidx = np.arange(n)\n\ndef sigmoid(z):\n    return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))\n\ndef fit_logistic(Xtr, ytr, lr, steps):\n    pass  # standardize on train stats; gradient descent; return w, b, mu, sd\n\ngrid = [(0.1, 5), (0.1, 200), (0.5, 5), (0.5, 200)]\nresults = []\nfor lr, steps in grid:\n    pass  # 4 folds: te = idx[k*50:(k+1)*50]; tr = np.setdiff1d(idx, te)\n\nbest = None\nworst_cv = None\nw, b, mu, sd = fit_logistic(X, y, best['lr'], best['steps'])\np = sigmoid(((X - mu) / sd) @ w + b)\npred = (p >= 0.5).astype(float)\ntp = int(((pred == 1) & (y == 1)).sum())\nfp = int(((pred == 1) & (y == 0)).sum())\nfn = int(((pred == 0) & (y == 1)).sum())\nrecall = None\nprecision = None",
+    hints: [
+      "fit_logistic mirrors stage 3: mu/sd from Xtr only, Xs = (Xtr - mu) / sd, gradient descent steps, return w, b, mu, sd.",
+      "Fold k: te = idx[k*50:(k+1)*50], tr = np.setdiff1d(idx, te) — scale with train stats, apply to the test fold.",
+      "best = max(results, key=lambda r: r['cv']); retrain on the FULL data with the winning combo.",
+    ],
+    solution: "import numpy as np\n\nX, y = case_world()\nn = len(y)\nidx = np.arange(n)\n\ndef sigmoid(z):\n    return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))\n\ndef fit_logistic(Xtr, ytr, lr, steps):\n    mu = Xtr.mean(axis=0)\n    sd = Xtr.std(axis=0)\n    sd = np.where(sd == 0, 1.0, sd)\n    Xs = (Xtr - mu) / sd\n    w = np.zeros(Xs.shape[1])\n    b = 0.0\n    for s in range(steps):\n        p = sigmoid(Xs @ w + b)\n        w -= lr * (Xs.T @ (p - ytr) / len(ytr))\n        b -= lr * (p - ytr).mean()\n    return w, b, mu, sd\n\ngrid = [(0.1, 5), (0.1, 200), (0.5, 5), (0.5, 200)]\nresults = []\nfor lr, steps in grid:\n    fold_acc = []\n    for k in range(4):\n        te = idx[k * 50:(k + 1) * 50]\n        tr = np.setdiff1d(idx, te)\n        w, b, mu, sd = fit_logistic(X[tr], y[tr], lr, steps)\n        p = sigmoid(((X[te] - mu) / sd) @ w + b)\n        fold_acc.append(float(((p >= 0.5).astype(float) == y[te]).mean()))\n    results.append({'lr': lr, 'steps': steps, 'cv': float(np.mean(fold_acc))})\n\nbest = max(results, key=lambda r: r['cv'])\nworst_cv = min(r['cv'] for r in results)\nw, b, mu, sd = fit_logistic(X, y, best['lr'], best['steps'])\np = sigmoid(((X - mu) / sd) @ w + b)\npred = (p >= 0.5).astype(float)\ntp = int(((pred == 1) & (y == 1)).sum())\nfp = int(((pred == 1) & (y == 0)).sum())\nfn = int(((pred == 0) & (y == 1)).sum())\nrecall = tp / (tp + fn)\nprecision = tp / (tp + fp) if tp + fp > 0 else 0.0\nprint(best, worst_cv, tp, fp, fn, recall, precision)",
+    walkthrough: "Read the grid before trusting the winner: the two 5-step combos plateau at cv ≈ 0.98 — undertrained, they fire on too much (fp = 4 on the full data) because the weights have not yet settled into the amount/hour/device consensus. The 200-step models reach cv 0.99, and the grid hands the win to lr = 0.5: same data, same model, and the extra accuracy bought purely by training longer and stepping bolder. Retrained on all 200 with the winning combo, the final model catches all 20 frauds with a single false alarm — precision 0.952, recall 1.0 — against the all-ham baseline's 0.90 accuracy and zero frauds caught. That contrast is the entire craft in one paragraph: accuracy hid the failure; the pipeline, graded honestly, did not. Every function in this file — sigmoid, gradient, fold split, grid — is one you built earlier on this ladder.",
+    testCode: "assert best['steps'] == 200 and best['lr'] == 0.5, best\nassert best['cv'] > 0.9, best\nassert worst_cv < best['cv']\nassert tp == 20 and fn == 0, (tp, fp, fn)\nassert fp == 1, fp\nassert recall == 1.0 and precision > 0.9\nprint('All tests passed!')"
+  },
 ]
+

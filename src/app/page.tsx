@@ -31,6 +31,7 @@ const G = {
   pink: "linear-gradient(135deg, #DB2777, #A31D58)",
   dark: "linear-gradient(135deg, #1E2922, #0F1512)",
   sky: "linear-gradient(135deg, #0891B2, #056680)",
+  ultron: "linear-gradient(135deg, #6D28D9, #3B0E7E)",
 }
 
 const APP_SECTIONS = [
@@ -53,24 +54,24 @@ const APP_SECTIONS = [
     { id: "notebook", href: "/notebook", name: "Notebook", glyph: "✎", gradient: G.gold },
   ] },
   { label: "Studio", apps: [
-    { id: "media", href: "/media", name: "Media Studio", glyph: "▷", gradient: G.ember },
+    { id: "media", href: "/media", name: "Media Studio", glyph: "◑", gradient: G.ember },
     { id: "glyph", href: "/glyph", name: "Glyph Studio", glyph: "✺", gradient: G.pink },
     { id: "ghost", href: "/ghost", name: "Ghost", glyph: "◍", gradient: "linear-gradient(135deg, #4B4B5E, #14141C)" },
-    { id: "osc", href: "/osc", name: "OSC-1", glyph: "∿", gradient: "linear-gradient(135deg, #3A3A46, #10101A)" },
+    { id: "osc", href: "/osc", name: "OSC-1", glyph: "≋", gradient: "linear-gradient(135deg, #3A3A46, #10101A)" },
     { id: "rig", href: "/rig", name: "RIG", glyph: "⌘", gradient: "linear-gradient(135deg, #3A3A46, #10101A)" },
   ] },
   { label: "Life", apps: [
     { id: "toolkit", href: "/toolkit", name: "Toolkit", glyph: "▦", gradient: G.teal },
     { id: "tasks", href: "/toolkit?tool=tasks", name: "Tasks", glyph: "☑", gradient: G.teal },
     { id: "focus", href: "/toolkit?tool=focus", name: "Focus", glyph: "◔", gradient: G.ember },
-    { id: "habits", href: "/toolkit?tool=habits", name: "Habits", glyph: "▦", gradient: G.green },
+    { id: "habits", href: "/toolkit?tool=habits", name: "Habits", glyph: "☾", gradient: G.green },
     { id: "vault", href: "/vault", name: "Password Vault", glyph: "⚿", gradient: G.slate },
     { id: "weather", href: "/weather", name: "Weather", glyph: "⛅", gradient: G.sky },
     { id: "images", href: "/images", name: "Image Tools", glyph: "◳", gradient: G.pink },
     { id: "qr", href: "/qr", name: "QR Tools", glyph: "⊞", gradient: G.violet },
     { id: "whiteboard", href: "/whiteboard", name: "Whiteboard", glyph: "✏", gradient: G.gold },
     { id: "expenses", href: "/expenses", name: "Expense Tracker", glyph: "₿", gradient: G.teal },
-    { id: "calendar", href: "/calendar", name: "Calendar", glyph: "▦", gradient: G.ember },
+    { id: "calendar", href: "/calendar", name: "Calendar", glyph: "◷", gradient: G.ember },
     { id: "translate", href: "/translate", name: "Translator", glyph: "⇄", gradient: G.violet },
   ] },
   { label: "Explore", apps: [
@@ -78,13 +79,13 @@ const APP_SECTIONS = [
     { id: "design", href: "/design", name: "Design", glyph: "▣", gradient: G.cobalt },
     { id: "lld", href: "/lld", name: "LLD", glyph: "◇", gradient: G.teal },
     { id: "db", href: "/db", name: "DB", glyph: "⌗", gradient: "linear-gradient(135deg, #1F6F8B, #123F52)" },
-    { id: "ultron", href: "/ultron", name: "Ultron", glyph: "λ", gradient: "linear-gradient(135deg, #6D28D9, #3B0E7E)" },
+    { id: "ultron", href: "/ultron", name: "Ultron", glyph: "⊛", gradient: G.ultron },
     { id: "expedition", href: "/expedition", name: "Expedition", glyph: "△", gradient: G.ember },
     { id: "res", href: "/res", name: "RES", glyph: "∴", gradient: "linear-gradient(135deg, #A0305A, #6E1F3E)" },
     { id: "games", href: "/games", name: "Games", glyph: "◆", gradient: G.pink },
   ] },
   { label: "System", apps: [
-    { id: "observatory", href: "/observatory", name: "Observatory", glyph: "◔", gradient: G.slate },
+    { id: "observatory", href: "/observatory", name: "Observatory", glyph: "◌", gradient: G.slate },
     { id: "dashboard", href: "/dashboard", name: "Progress", glyph: "▤", gradient: G.slate },
     { id: "store", href: "/store", name: "App Center", glyph: "❖", gradient: G.cobalt },
     { id: "android", href: "/android", name: "Get app", glyph: "⤓", gradient: G.green },

@@ -13,7 +13,13 @@ const TIERS: { name: string; note: string; stages: number[] }[] = [
   { name: "IV — Bend & Judge", note: "probability, generalization, leakage", stages: [3, 4] },
   { name: "V — Geometry & Questions", note: "neighbors, clusters, trees", stages: [5, 6] },
   { name: "VI — Go Deep", note: "networks, backprop, craft", stages: [7, 8, 9] },
+  { name: "VII — The Deep", note: "multiclass, filters, PCA, sparsity, the pipeline", stages: [10] },
 ]
+
+const STAGE_GLYPH: Record<number, string> = {
+  0: "◌", 1: "╱", 2: "↘", 3: "◔", 4: "◉", 5: "⊙",
+  6: "⁂", 7: "⊛", 8: "⊚", 9: "⌾", 10: "◍",
+}
 
 export default function UltronLadderPage() {
   const [completed, setCompleted] = useState<number[]>([])
@@ -79,13 +85,14 @@ export default function UltronLadderPage() {
                 return (
                   <li key={stageId} className={`icpc-section${complete ? " complete" : ""}`}>
                     <div className="icpc-section-head">
-                      <span className="icpc-section-num">{String(stageId).padStart(2, "0")}</span>
+                      <span className="icpc-section-num">{STAGE_GLYPH[stageId] ?? String(stageId).padStart(2, "0")}</span>
                       <div className="icpc-section-title">
                         <h2>{stage.name}</h2>
                         <span>{stage.desc}</span>
                       </div>
                       <span className={`icpc-section-count${complete ? " done" : ""}`}>{sectionDone}/{problems.length}</span>
                     </div>
+                    <p className="ultron-creed">{stage.creed}</p>
                     <ul className="icpc-problem-list">
                       {problems.map(p => (
                         <li key={p.id}>
@@ -110,6 +117,34 @@ export default function UltronLadderPage() {
           </div>
         )
       })}
+
+      {hydrated && doneCount === total && total > 0 && (
+        <section className="ultron-certified" aria-label="Ladder cleared">
+          <span className="ultron-certified-mark">◍</span>
+          <div>
+            <span className="ultron-certified-kicker">Ladder cleared</span>
+            <strong>All {total} drills — from the first array to the whole loop.</strong>
+            <p>You can now split, scale, train, tune and grade a model with nothing but NumPy and the math underneath it. Rerun any drill to keep the reflexes sharp.</p>
+          </div>
+          <Link className="ultron-certified-cta" href="/ai-ml">Labs &amp; questions →</Link>
+        </section>
+      )}
+
+      <style>{`
+        .icpc-section-num { font-family: var(--font-mono); }
+        .ultron-creed { max-width: 68ch; margin: 4px 0 14px; font-size: 13px; line-height: 1.7; color: var(--ink-soft); white-space: pre-wrap; }
+        .ultron-certified { display: flex; gap: 14px; align-items: center; margin: 26px 0 10px; padding: 18px 20px; border: 1px solid var(--success-line); border-radius: calc(var(--radius) + 4px); background: var(--success-soft); }
+        .ultron-certified-mark { display: grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--viz-settled); color: var(--paper-raised); font-size: 20px; }
+        .ultron-certified-kicker { display: block; font: 800 10px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--viz-settled); }
+        .ultron-certified strong { font: 700 15px var(--font-narrative); }
+        .ultron-certified p { max-width: 56ch; margin: 4px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-soft); }
+        .ultron-certified-cta { margin-left: auto; flex: 0 0 auto; padding: 9px 16px; border: 1px solid var(--success-line); border-radius: 999px; background: var(--paper-raised); color: var(--ink); font: 700 12px var(--font-ui); text-decoration: none; }
+        .ultron-certified-cta:hover { border-color: var(--viz-settled); }
+        @media (max-width: 640px) {
+          .ultron-certified { flex-wrap: wrap; }
+          .ultron-certified-cta { margin-left: 0; }
+        }
+      `}</style>
     </main>
   )
 }

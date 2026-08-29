@@ -180,7 +180,7 @@ workbenches (deriva-db-progress-v1, NextActionKind "db").
 
 ### Ultron — the AI/ML ladder (2026-08-30)
 
-`/ultron` + `/ultron/practice`: 50 pure-NumPy drills across 10 stages — arrays
+`/ultron` + `/ultron/practice`: 60 pure-NumPy drills across 11 stages — arrays
 and broadcasting, linear regression (gradient descent AND the closed form),
 optimization craft (learning rates, scaling, mini-batches, momentum, early
 stopping), logistic regression and threshold trades, generalization
@@ -191,8 +191,22 @@ XOR training loop, softmax's clean gradient, Adam assembled), and evaluation
 craft (confusion grid, precision/recall/F1, ROC sweep, CV model selection,
 and the finale: a line provably stuck at a saddle while the net learns XOR).
 No sklearn — every model is built from math. All datasets are frozen worlds
-in the workbench DEPS; every problem verified in real Python (50/50 locally)
-and end-to-end through the real Pyodide worker (50/50 via CDP).
+in the workbench DEPS; every problem verified in real Python (60/60 locally)
+and end-to-end through the real Pyodide worker (60/60 via CDP).
+
+Stage 11, The Deep, extends the ladder to its professional edge: multi-class
+softmax, 2-D convolutions with max-pooling, PCA by eigendecomposition,
+embeddings and cosine analogy, LASSO sparsity by subgradient descent, the
+bias-variance decomposition measured over 200 trials, learning-rate schedules
+(constant vs step vs cosine under SGD noise), batch norm, AUC from a full ROC
+sweep, and a grid-search finale running the complete split-scale-train-tune-
+grade pipeline on a harder case file. Every drill can carry a hand-drawn ASCII
+diagram (`diagram` field, the house natural-symbol style) rendered in the
+workbench, and each of the 11 stages opens with a creed essay on the ladder
+and a collapsible stage brief in the workbench. A certified panel appears
+when all 60 are cleared. App icons de-duplicated into the single natural-
+symbol family (Ultron ⊛, Media Studio ◑, Habits ☾, Calendar ◷, Observatory
+◌, OSC-1 ≋, Voice Memos ◠) with Ultron's gradient tokenized as G.ultron.
 Engine fixes shipped with it: numpy is unvendored in Pyodide 0.25 like
 sqlite3 — lazy per-name package lock in the worker, 60s first-run leash,
 warmup flag — plus a promise-singleton loadPyodide (a warmup and a first Run

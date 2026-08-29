@@ -20,6 +20,7 @@ export default function UltronPracticePage() {
   const executionRef = useRef<AbortController | null>(null)
 
   const problem = PROBLEMS_ULTRON.find(p => p.id === currentId) || PROBLEMS_ULTRON[0]
+  const currentStage = STAGES_ULTRON[problem.stage]
   const doneSet = new Set(completed)
   const hints = hintLevel[currentId] || 0
   const isRevealed = revealed[currentId] || false
@@ -144,6 +145,11 @@ export default function UltronPracticePage() {
 
         <div className="pbar"><div className="pbar-track"><div className="pbar-fill" style={{ width: pct+"%" }} /></div><span className="pbar-label">{completed.length}/{PROBLEMS_ULTRON.length}</span></div>
 
+        <details className="stage-brief">
+          <summary>Stage {String(problem.stage).padStart(2, "0")} — {currentStage.name} · <span className="stage-brief-hint">why this stage exists</span></summary>
+          <p>{currentStage.creed}</p>
+        </details>
+
         <div className="card">
           <h3 className="card-h3">Problem</h3>
           <p className="stmt">{problem.statement}</p>
@@ -152,6 +158,12 @@ export default function UltronPracticePage() {
               <div key={i} className="ex-box"><strong>Example {i+1}:</strong> {ex.input} → {ex.output}{ex.explain && <><br/><span className="mu">{ex.explain}</span></>}</div>
             ))}
           </div>
+          {problem.diagram && (
+            <div className="diagram-card">
+              <span className="diagram-kicker">The sketch</span>
+              <pre className="diagram">{problem.diagram}</pre>
+            </div>
+          )}
         </div>
 
         <div className="why"><span className="why-lbl">Why this matters</span>{problem.why}</div>
@@ -269,6 +281,14 @@ export default function UltronPracticePage() {
         .hint-b { background: var(--accent); color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }
         .sol { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; overflow-x: auto; white-space: pre; }
         .wlk { font-size: 13px; line-height: 1.7; color: var(--ink); white-space: pre-wrap; }
+        .stage-brief { margin: 0 0 14px; padding: 10px 16px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--paper); }
+        .stage-brief summary { cursor: pointer; font: 700 12px var(--font-ui); color: var(--ink); }
+        .stage-brief summary::marker { color: var(--accent); }
+        .stage-brief-hint { font-weight: 500; color: var(--ink-soft); }
+        .stage-brief p { margin: 10px 0 4px; font-size: 13px; line-height: 1.7; color: var(--ink-soft); white-space: pre-wrap; }
+        .diagram-card { margin-top: 12px; padding: 12px 14px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); overflow-x: auto; }
+        .diagram-kicker { display: block; margin-bottom: 6px; font: 800 10px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+        .diagram { margin: 0; font: 12.5px/1.45 var(--font-mono); color: var(--ink); white-space: pre; }
         .kbd { margin-top: 18px; color: var(--ink-soft); font: 11px var(--font-mono); }
         .learning-checkpoint { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--success-line); border-radius: calc(var(--radius) + 2px); background: var(--success-soft); }
         .completion-mark { display: grid; width: 26px; height: 26px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--viz-settled); color: var(--paper-raised); font-weight: 800; }
@@ -386,4 +406,68 @@ def net_init():
     W2 = np.array([[0.4], [-0.4], [0.5], [-0.5]])
     b2 = np.array([0.0])
     return W1, b1, W2, b2
+
+def softmax_world():
+    X = np.array([[0.0, 0.2], [0.3, -0.1], [-0.2, 0.4], [0.2, 0.0], [-0.1, -0.3],
+                  [4.0, 0.1], [4.3, -0.2], [3.8, 0.4], [4.1, 0.2], [3.9, -0.4],
+                  [2.0, 3.4], [1.7, 3.1], [2.3, 3.7], [2.1, 3.2], [1.8, 3.8]])
+    y = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2])
+    return X, y
+
+def pixel_world():
+    img = np.tile(np.array([10.0, 11.0, 12.0, 2.0, 3.0, 4.0]), (6, 1))
+    return img
+
+def cloud_world():
+    t = np.array([-3.0, -2.4, -1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8, 2.4, 3.0])
+    eps = np.array([-0.05, 0.08, -0.03, 0.06, -0.09, 0.04, -0.07, 0.02, 0.05, -0.04, 0.03])
+    P = np.outer(t, [1.0, 1.0]) + np.outer(eps, [1.0, -1.0])
+    return P
+
+def vocab_world():
+    words = ["king", "queen", "man", "woman", "apple", "banana"]
+    E = np.array([
+        [0.9, 0.8, 0.1, 0.2],
+        [0.9, 0.8, 0.9, 0.1],
+        [0.9, 0.0, 0.1, 0.2],
+        [0.9, 0.0, 0.9, 0.1],
+        [0.1, 0.2, 0.1, 0.9],
+        [0.1, 0.2, 0.1, 0.85],
+    ])
+    return words, E
+
+def sparse_world():
+    rs = np.random.RandomState(7)
+    f1 = np.array([1.0, 1.8, 2.6, 3.4, 4.2, 5.0, 5.8, 6.6, 7.4, 8.2, 9.0, 9.8,
+                   10.6, 11.4, 12.2, 13.0])
+    f2 = -0.7 * f1 + 9.0
+    noise = rs.randn(16, 3) * 2.0
+    X = np.column_stack([f1, f2, noise])
+    y = 3.0 * f1 - 2.0 * f2 + rs.randn(16) * 0.5
+    return X, y
+
+def sine_world():
+    grid = np.linspace(0.0, 1.0, 50)
+    f_true = np.sin(2.0 * np.pi * grid)
+    return grid, f_true
+
+def batch_world():
+    X = np.array([[52000.0, 34, 0.12], [61000.0, 45, 0.87], [48000.0, 29, 0.45],
+                  [92000.0, 51, 0.93], [37500.0, 23, 0.08], [71000.0, 38, 0.66],
+                  [55000.0, 41, 0.31], [88000.0, 27, 0.79]])
+    return X
+
+def case_world():
+    rs = np.random.RandomState(7)
+    n = 200
+    amount = 20.0 + rs.rand(n) * 540.0
+    hour = 8.0 + rs.rand(n) * 16.0
+    device = (rs.rand(n) < 0.2).astype(float)
+    y = np.zeros(n)
+    fraud_idx = rs.choice(n, 20, replace=False)
+    amount[fraud_idx] = 500.0 + rs.rand(20) * 80.0
+    hour[fraud_idx] = rs.rand(20) * 7.0
+    device[fraud_idx] = (rs.rand(20) < 0.8).astype(float)
+    y[fraud_idx] = 1.0
+    return np.column_stack([amount, hour, device]), y
 `
