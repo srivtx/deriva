@@ -183,6 +183,14 @@ export default function MediaPage() {
     }
   }
 
+  const changeOp = (id: Op) => {
+    setOp(id)
+    setError("")
+    setPct(0)
+    if (outRef.current) { URL.revokeObjectURL(outRef.current.url); outRef.current = null }
+    setOut(null)
+  }
+
   const validate = (): string => {
     if (!file) return ""
     if (op === "trim" || op === "gif") {
@@ -309,14 +317,14 @@ export default function MediaPage() {
           </div>
 
           <div className="media-controls">
-            <div className="super-field"><span>Operation</span>
+            <div className="super-field media-op-field"><span>Operation</span>
               <div className="segmented media-ops" role="group" aria-label="Operation">
                 {OPS.filter(o => {
                   if (o.id === "audio") return kind === "video"
                   if (o.id === "gif" || o.id === "resize") return kind === "video"
                   return true
                 }).map(o => (
-                  <button key={o.id} type="button" className={op === o.id ? "selected" : ""} onClick={() => { setOp(o.id); setError("") }}>{o.label}</button>
+                  <button key={o.id} type="button" className={op === o.id ? "selected" : ""} onClick={() => changeOp(o.id)}>{o.label}</button>
                 ))}
               </div>
             </div>
@@ -453,13 +461,15 @@ export default function MediaPage() {
         .media-upload-text { color: var(--ink-soft); font: 600 12px var(--font-ui); letter-spacing: .02em; overflow-wrap: anywhere; }
 
         .media-preview { margin: 16px 0 0; border: 2px solid var(--ink); border-radius: var(--radius); background: var(--paper-raised); padding: 12px; }
-        .media-preview video, .media-preview audio { display: block; width: 100%; max-height: 52vh; border-radius: 6px; background: #000; }
+        .media-preview video { display: block; width: auto; max-width: 100%; max-height: 48vh; margin: 0 auto; border-radius: 6px; background: #000; }
+        .media-preview audio { display: block; width: 100%; }
         .media-meta { margin: 8px 0 0; color: var(--ink-soft); font: 600 11px var(--font-mono); letter-spacing: .04em; }
 
         .media-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: end; margin: 16px 0; padding: 16px; border: 2px solid var(--ink); border-radius: var(--radius); background: var(--paper-raised); }
-        .media-ops { grid-column: 1 / -1; }
+        .media-op-field { grid-column: 1 / -1; }
         .super-field span { font: 700 9px var(--font-ui) !important; letter-spacing: .14em; text-transform: uppercase; }
         .segmented button { text-transform: uppercase; font-weight: 800; letter-spacing: .06em; }
+        .media-controls .segmented button { padding: 0 16px; white-space: nowrap; flex-shrink: 0; }
         .media-actions { display: flex; align-items: end; }
         .media-actions .super-primary { text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
         .media-actions .super-primary:disabled { opacity: .5; cursor: default; }
@@ -476,7 +486,7 @@ export default function MediaPage() {
         .media-error { margin: 0 0 14px; padding: 12px; border: 2px solid #b3261e; border-radius: var(--radius); background: var(--paper-raised); color: #b3261e; font: 600 11px var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 
         .media-result { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; margin-top: 4px; padding: 16px; border: 2px solid var(--ink); border-radius: var(--radius); background: var(--paper-raised); }
-        .media-result-preview video, .media-result-preview img { display: block; width: 100%; max-height: 46vh; border-radius: 6px; background: #000; }
+        .media-result-preview video, .media-result-preview img { display: block; width: auto; max-width: 100%; max-height: 46vh; margin: 0 auto; border-radius: 6px; background: #000; }
         .media-result-preview audio { display: block; width: 100%; }
         .media-result-stats { display: grid; gap: 12px; align-content: start; }
         .media-result-stats div { display: grid; gap: 2px; }
@@ -486,6 +496,11 @@ export default function MediaPage() {
         .media-saved { color: var(--accent); }
         .media-note { margin-top: 18px; color: var(--ink-soft); font: 600 12px var(--font-ui); letter-spacing: .02em; text-align: center; }
 
+        @media (max-width: 720px) {
+          .media-op-field .segmented { overflow: visible; border-radius: var(--radius); flex-wrap: wrap; gap: 4px; }
+          .media-op-field .segmented button { min-width: 0; }
+          .media-op-field .segmented button.selected { border-radius: 999px; }
+        }
         @media (max-width: 640px) { .media-result { grid-template-columns: 1fr; } }
       `}</style>
     </main>
