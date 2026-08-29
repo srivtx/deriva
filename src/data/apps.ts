@@ -27,6 +27,7 @@ const G = {
   sky: "linear-gradient(135deg, #0891B2, #056680)",
   ghost: "linear-gradient(135deg, #4B4B5E, #14141C)",
   osc: "linear-gradient(135deg, #3A3A46, #10101A)",
+  wine: "linear-gradient(135deg, #A0305A, #6E1F3E)",
 }
 
 export const APP_CATALOG: AppMeta[] = [
@@ -63,6 +64,7 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "design", name: "Design", glyph: "▣", gradient: G.cobalt, desc: "System design problems", category: "Explore", href: "/design", status: "installed" },
   { id: "lld", name: "LLD", glyph: "◇", gradient: G.teal, desc: "Low-level design", category: "Explore", href: "/lld", status: "installed" },
   { id: "expedition", name: "Expedition", glyph: "△", gradient: G.ember, desc: "Retrieve & transfer ideas", category: "Explore", href: "/expedition", status: "installed" },
+  { id: "res", name: "RES", glyph: "∴", gradient: G.wine, desc: "Research brainstorm trainer", category: "Explore", href: "/res", status: "installed" },
   { id: "games", name: "Games", glyph: "◆", gradient: G.pink, desc: "Practice through play", category: "Explore", href: "/games", status: "installed" },
   // System
   { id: "observatory", name: "Observatory", glyph: "◔", gradient: G.slate, desc: "Concept map", category: "System", href: "/observatory", status: "installed" },

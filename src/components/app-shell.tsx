@@ -50,6 +50,7 @@ const MORE_GROUPS: MoreGroup[] = [
       { label: "ICPC Ladder", href: "/icpc", desc: "91 contest problems" },
       { label: "Algorithm Atlas", href: "/atlas", desc: "watch algorithms move" },
       { label: "Cheatsheet Hub", href: "/cheatsheets", desc: "contest templates" },
+      { label: "RES Brainstorm", href: "/res", desc: "research thinking, rehearsed" },
     ],
   },
   {
@@ -117,6 +118,8 @@ function Breadcrumbs() {
     parts.push({ label: "LLD", href: "/lld" })
   } else if (pathname === "/one") {
     parts.push({ label: "0NE Ladder", href: "/one" })
+  } else if (pathname === "/res") {
+    parts.push({ label: "RES Brainstorm", href: "/res" })
   } else if (pathname === "/icpc") {
     parts.push({ label: "ICPC Ladder", href: "/icpc" })
   } else if (pathname === "/daily") {
@@ -227,7 +230,7 @@ function ProgressBadge({ className = "" }: { className?: string }) {
   )
 }
 
-  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig"]
+  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig"]
 
 export default function AppShell() {
   const pathname = usePathname()
@@ -350,8 +353,8 @@ export default function AppShell() {
       document.removeEventListener("keydown", onKey)
     }
   }, [moreOpen])
-  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/one" ? "0NE Ladder" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : pathname === "/focus" ? "Focus Dial" : pathname === "/glyph" ? "Glyph Studio" : pathname === "/ghost" ? "Ghost" : pathname === "/osc" ? "OSC-1" : pathname === "/rig" ? "RIG" : "Deriva"
-  const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/one" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/complexity" || pathname === "/notebook" || pathname === "/toolkit" || pathname === "/playground" || pathname === "/releases"
+  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/one" ? "0NE Ladder" : pathname === "/res" ? "RES Brainstorm" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : pathname === "/focus" ? "Focus Dial" : pathname === "/glyph" ? "Glyph Studio" : pathname === "/ghost" ? "Ghost" : pathname === "/osc" ? "OSC-1" : pathname === "/rig" ? "RIG" : "Deriva"
+  const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/one" || pathname === "/res" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/complexity" || pathname === "/notebook" || pathname === "/toolkit" || pathname === "/playground" || pathname === "/releases"
   const navSlots = preferences.navSlots.length ? preferences.navSlots : ["home", "learn", "patterns", "observe"]
   const slotItems = navSlots.map(id => NAV_ITEM_MAP[id]).filter(Boolean)
   const iconPack = currentIconPack()
