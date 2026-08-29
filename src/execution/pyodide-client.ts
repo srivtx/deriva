@@ -63,3 +63,12 @@ export async function runAiTraced(
 export function cancelPythonExecution() {
   workerBridge.cancel()
 }
+
+// Preload the sandbox while the user reads. `sqlite` also pulls the unvendored
+// sqlite3 package — used by the DB workbench so the first Run is instant.
+export function warmPython(sqlite = false) {
+  if (typeof window === "undefined") return
+  try {
+    workerBridge.warmup(sqlite)
+  } catch {}
+}

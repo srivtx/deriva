@@ -21,7 +21,7 @@ type WorkerRequest =
   | { type: "runAiTrace"; code: string; entryPoint: string; payload: unknown; budget: number }
   // systems-atelier-plan.md: run a system under a deterministic load shape
   | { type: "runSimulation"; code: string; scenario: SimulationRunSpec; budget: number }
-  | { type: "warmup" }
+  | { type: "warmup"; sqlite?: boolean }
 
 export type WorkerMessage = WorkerRequest & { id: string }
 
@@ -53,7 +53,13 @@ class WorkerBridge {
     const worker = new Worker(new URL("./sandbox.worker.ts", import.meta.url))
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => this.handleResponse(event.data)
     worker.onerror = event => {
-      this.reset(new Error(event.message || "Python worker failed"))
+      // Keep the real cause in the console — the UI message is for humans.
+      console.error("[sandbox worker]", event.message || "unspecified worker error",
+        event.filename ? `${event.filename}:${event.lineno}` : "")
+      const cause = event.message || "the sandbox crashed before Python could run"
+      this.reset(new Error(
+        `${cause}. The sandbox restarts on your next Run — if it repeats, check your connection (first runs load Python + SQLite from a CDN) and reload the page.`,
+      ))
     }
     this.worker = worker
     return worker
@@ -153,9 +159,9 @@ class WorkerBridge {
     return response
   }
 
-  warmup() {
+  warmup(sqlite = false) {
     const id = `warmup-${++this.sequence}`
-    this.getWorker().postMessage({ type: "warmup", id } satisfies WorkerMessage)
+    this.getWorker().postMessage({ type: "warmup", sqlite, id } satisfies WorkerMessage)
   }
 
   cancel() {

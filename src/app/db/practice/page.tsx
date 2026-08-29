@@ -5,7 +5,7 @@ import { STAGES_DB, PROBLEMS_DB } from "@/data/db"
 import MobileProblemNav from "@/components/mobile-problem-nav"
 import { loadWorkbenchProgress, saveWorkbenchProgress } from "@/persistence/workbench-progress"
 import { loadTheoryNote, saveTheoryNote } from "@/persistence/theory-notes"
-import { runScript } from "@/execution/pyodide-client"
+import { runScript, warmPython } from "@/execution/pyodide-client"
 
 export default function DBPracticePage() {
   const [currentId, setCurrentId] = useState(1)
@@ -26,6 +26,10 @@ export default function DBPracticePage() {
   const currentCode = savedCode[currentId] || problem.starterCode
 
   useEffect(() => () => executionRef.current?.abort(), [])
+
+  // Warm the sandbox (Pyodide + the sqlite3 package) while the user reads the
+  // problem — the first Run should execute, not download.
+  useEffect(() => { warmPython(true) }, [])
 
   useEffect(() => {
     const saved = loadWorkbenchProgress("db")

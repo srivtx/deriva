@@ -242,8 +242,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   const msg = event.data
   try {
     if (msg.type === "warmup") {
-      await loadPyodide()
-      ctx.postMessage({ type: "ready", id: msg.id } satisfies WorkerResponse)
+      await warm(msg)
     } else if (msg.type === "runTests") {
       await runTests(msg)
     } else if (msg.type === "runScript") {
@@ -258,4 +257,12 @@ ctx.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   } catch (error) {
     ctx.postMessage({ type: "error", id: msg.id, message: error instanceof Error ? error.message : String(error) } satisfies WorkerResponse)
   }
+}
+
+async function warm(msg: Extract<WorkerMessage, { type: "warmup" }>) {
+  const py = await loadPyodide()
+  // DB ladder: pull the unvendored sqlite3 package while the user reads the
+  // problem, so the first Run executes against a hot sandbox.
+  if (msg.sqlite) await py.loadPackage("sqlite3")
+  ctx.postMessage({ type: "ready", id: msg.id } satisfies WorkerResponse)
 }
