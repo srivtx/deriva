@@ -16,6 +16,8 @@
   "license": "ISC",
   "packageManager": "pnpm@10.26.2",
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@gsap/react": "^2.1.2",
     "@huggingface/transformers": "^4.2.0",
     "@xyflow/react": "^12.11.2",

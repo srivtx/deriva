@@ -203,3 +203,25 @@ custom wrapper worker; inference runs in wllama's own internal sandboxed
 worker. Multi-threading stays off until COOP/COEP headers are deliberately
 adopted. If v3's WebGPU/vision features are ever wanted, migration is a
 deliberate, device-tested change — not a version bump.
+
+## D15. Media Studio runs ffmpeg.wasm 0.12.15 with a self-contained same-origin class worker (Media Studio, 2026-08-30)
+
+**Decision:** media processing uses `@ffmpeg/ffmpeg` **0.12.15** + `@ffmpeg/util`
+with the **single-threaded core** (`@ffmpeg/core@0.12.10`, fetched from unpkg via
+`toBlobURL` at runtime, browser-cached). The library's class worker is **not**
+loaded through its default `new Worker(new URL("./worker.js", import.meta.url))`
+path — which Turbopack emits as a raw static asset and browsers cannot execute
+(the same failure class as the sandbox worker, D-record for the deployed-site
+worker fix). Instead, `dist/esm/worker.js` is bundled with esbuild into one
+dependency-free file at `public/ffmpeg/ffmpeg-worker.js` and passed as
+`classWorkerURL` (same-origin, served as `application/javascript`).
+
+**Context:** the multithreaded core requires SharedArrayBuffer (COOP/COEP
+headers) which the site does not send, so the single-threaded core is the
+correct default; encoding quality choices (x264 `veryfast`, palette-based GIF)
+favor speed inside a WASM budget. Memory is reclaimed by deleting input/output
+files after every run.
+
+**Consequences:** no upload path exists — files stay on device. Engine
+download (~30 MB) happens once and is cached by the browser, not by us. If
+multithreaded speed is ever needed, adopt COOP/COEP deliberately first.

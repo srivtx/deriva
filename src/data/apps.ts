@@ -76,6 +76,7 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "settings", name: "Settings", glyph: "⚙", gradient: G.slate, desc: "Preferences", category: "System", href: "/settings", status: "installed" },
   { id: "store", name: "App Center", glyph: "❖", gradient: G.cobalt, desc: "Install & manage apps", category: "System", href: "/store", status: "installed" },
   // Studio
+  { id: "media", name: "Media Studio", glyph: "▷", gradient: G.ember, desc: "Cut · convert · compress — nothing uploaded", category: "Studio", href: "/media", status: "installed" },
   { id: "glyph", name: "Glyph Studio", glyph: "✺", gradient: G.pink, desc: "Draw dot glyphs, export art", category: "Studio", href: "/glyph", status: "installed" },
   { id: "ghost", name: "Ghost", glyph: "◍", gradient: G.ghost, desc: "Offline AI tutor — lives on your phone", category: "Studio", href: "/ghost", status: "installed" },
   { id: "osc", name: "OSC-1", glyph: "∿", gradient: G.osc, desc: "Pocket synthesizer — beats from thin air", category: "Studio", href: "/osc", status: "installed" },

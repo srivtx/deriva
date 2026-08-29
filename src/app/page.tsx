@@ -53,6 +53,7 @@ const APP_SECTIONS = [
     { id: "notebook", href: "/notebook", name: "Notebook", glyph: "✎", gradient: G.gold },
   ] },
   { label: "Studio", apps: [
+    { id: "media", href: "/media", name: "Media Studio", glyph: "▷", gradient: G.ember },
     { id: "glyph", href: "/glyph", name: "Glyph Studio", glyph: "✺", gradient: G.pink },
     { id: "ghost", href: "/ghost", name: "Ghost", glyph: "◍", gradient: "linear-gradient(135deg, #4B4B5E, #14141C)" },
     { id: "osc", href: "/osc", name: "OSC-1", glyph: "∿", gradient: "linear-gradient(135deg, #3A3A46, #10101A)" },
