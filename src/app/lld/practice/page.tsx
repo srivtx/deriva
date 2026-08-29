@@ -190,7 +190,17 @@ export default function LLDPage() {
 
         {isRevealed && (
           <div className="card" style={{ marginTop: 14 }}>
-            <h3 className="card-h3">Solution</h3>
+            <div className="solution-head">
+              <h3 className="card-h3">Solution</h3>
+              <button
+                className="btn btn-load"
+                onClick={() => {
+                  setSavedCode({ ...savedCode, [currentId]: problem.solution })
+                  setOutput("Solution loaded into the editor — run it, then rewrite it from memory.")
+                }}
+                aria-label="Load solution into the editor"
+              >Load into editor</button>
+            </div>
             <pre className="sol">{problem.solution}</pre>
             <h3 className="card-h3" style={{ marginTop: 16 }}>Walkthrough</h3>
             <div className="wlk">{problem.walkthrough}</div>
@@ -244,6 +254,9 @@ export default function LLDPage() {
         .btn:disabled { opacity: 0.4; cursor: default; }
         .btn-p { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
         .btn-s { background: var(--success-soft); color: var(--viz-settled); border-color: var(--success-line); }
+        .solution-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .btn-load { min-height: 32px; padding: 5px 12px; font-size: 11px; font-weight: 700; border: 1px solid var(--accent); color: var(--accent); background: var(--paper-raised); }
+        .btn-load:hover { background: var(--accent); color: #fff; }
         .out { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; min-height: 50px; max-height: 250px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 14px; }
         .hint-row { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; font-size: 13px; }
         .hint-b { background: var(--accent); color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }

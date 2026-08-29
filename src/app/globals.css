@@ -325,7 +325,7 @@ pre, code { overflow-wrap: anywhere; }
 .icpc-hero-signal small { color: var(--ink-soft); font: 10px var(--font-ui); }
 .icpc-signal-track { height: 6px; overflow: hidden; border-radius: 999px; background: var(--line); }
 .icpc-signal-track div { height: 100%; border-radius: inherit; background: var(--accent); transition: width var(--dur-slow) var(--ease-standard); }
-.icpc-ladder { display: grid; gap: 12px; margin: 24px 0 0; padding: 0; list-style: none; }
+.icpc-ladder { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 24px 0 0; padding: 0; list-style: none; }
 .icpc-section { padding: 18px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); background: var(--paper-raised); box-shadow: var(--shadow-raised); }
 .icpc-section.complete { border-color: var(--success-line); }
 .icpc-section-head { display: flex; align-items: center; gap: 14px; }
@@ -336,13 +336,13 @@ pre, code { overflow-wrap: anywhere; }
 .icpc-section-title span { color: var(--ink-soft); font: 11px var(--font-ui); }
 .icpc-section-count { color: var(--ink-soft); font: 700 12px var(--font-mono); }
 .icpc-section-count.done { color: var(--viz-settled); }
-.icpc-problem-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
-.icpc-problem { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); text-decoration: none; transition: border-color var(--dur-fast), transform var(--dur-fast); }
+.icpc-problem-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
+.icpc-problem { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); text-decoration: none; transition: border-color var(--dur-fast), transform var(--dur-fast); }
 .icpc-problem:hover { border-color: var(--accent); transform: translateX(2px); }
 .icpc-problem.done .icpc-problem-name { color: var(--viz-settled); }
 .icpc-problem-dot { display: grid; width: 24px; height: 24px; flex: 0 0 auto; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--paper-raised); color: var(--ink-soft); font: 700 10px var(--font-mono); }
 .icpc-problem.done .icpc-problem-dot { border-color: var(--viz-settled); background: var(--viz-settled); color: var(--paper-raised); }
-.icpc-problem-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px var(--font-ui); }
+.icpc-problem-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px var(--font-ui); }
 .icpc-diff { flex: 0 0 auto; padding: 2px 7px; border-radius: 999px; font: 700 9px var(--font-mono); letter-spacing: .04em; }
 .icpc-diff-easy { color: var(--viz-settled); background: var(--success-soft); border: 1px solid var(--success-line); }
 .icpc-diff-medium { color: var(--viz-cached); background: color-mix(in srgb, var(--viz-cached) 10%, var(--paper)); border: 1px solid color-mix(in srgb, var(--viz-cached) 40%, var(--line)); }
@@ -1091,13 +1091,16 @@ body.app-mode-active .practice-wrap .main { padding-bottom: 28px; }
 }
 
 @media (max-width: 700px) {
-  .icpc-hero { grid-template-columns: 1fr; }
-  .icpc-hero-signal { order: -1; }
-  .icpc-problem-list { grid-template-columns: 1fr; }
+  .icpc-hero { grid-template-columns: minmax(0, 1fr); }
+  .icpc-hero-signal { order: -1; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-width: 0; }
+  .icpc-problem-list { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ── LLD Ladder ── */
 .lld-skill { max-width: 175px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); background: var(--paper); border: 1px solid var(--line); }
+@media (max-width: 420px) {
+  .lld-skill { max-width: 132px; }
+}
 
 /* ── RES — research brainstorm trainer ── */
 .res-ghost-btn { display: inline-flex; align-items: center; padding: 12px 16px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); background: var(--paper); color: var(--ink); font: 700 13px var(--font-ui); cursor: pointer; transition: border-color var(--dur-fast), transform var(--dur-fast); }
