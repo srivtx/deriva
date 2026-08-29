@@ -100,7 +100,10 @@ async function applyPwaBranding(preferences: Preferences) {
       restoreDefaultBranding()
       return
     }
-    setManifestHref(manifestBlobUrl(preferences, installable))
+    // Keep the served manifest: blob-URL manifests have no valid base URL, so
+    // start_url/scope become invalid (console warnings, broken installability).
+    // Custom branding still reaches the browser through the icon hrefs below.
+    setManifestHref(STATIC_MANIFEST_HREF)
     setIconHref("icon", installable, "image/png")
     setIconHref("apple-touch-icon", installable, "image/png")
   } catch (error) {
@@ -108,30 +111,6 @@ async function applyPwaBranding(preferences: Preferences) {
     try { sessionStorage.setItem("deriva-error-log", JSON.stringify([{ at: Date.now(), message: String(error).slice(0, 200), source: "branding" }, ...readErrorLog()].slice(0, 6))) } catch {}
     restoreDefaultBranding()
   }
-}
-
-let activeBlobUrl: string | null = null
-
-function manifestBlobUrl(preferences: Preferences, iconPng: string): string {
-  const styles = getComputedStyle(document.documentElement)
-  const manifest = {
-    name: `${preferences.brandName} — ${preferences.tagline}`,
-    short_name: preferences.brandName,
-    description: preferences.tagline,
-    start_url: "/",
-    scope: "/",
-    display: "standalone",
-    orientation: "any",
-    background_color: styles.getPropertyValue("--paper").trim() || "#F2F4EC",
-    theme_color: styles.getPropertyValue("--accent").trim() || "#2F8F5B",
-    icons: [
-      { src: iconPng, sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: iconPng, sizes: "512x512", type: "image/png", purpose: "maskable" },
-    ],
-  }
-  if (activeBlobUrl) URL.revokeObjectURL(activeBlobUrl)
-  activeBlobUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" }))
-  return activeBlobUrl
 }
 
 export default function PwaBranding() {
