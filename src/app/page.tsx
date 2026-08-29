@@ -78,6 +78,7 @@ const APP_SECTIONS = [
     { id: "design", href: "/design", name: "Design", glyph: "▣", gradient: G.cobalt },
     { id: "lld", href: "/lld", name: "LLD", glyph: "◇", gradient: G.teal },
     { id: "db", href: "/db", name: "DB", glyph: "⌗", gradient: "linear-gradient(135deg, #1F6F8B, #123F52)" },
+    { id: "ultron", href: "/ultron", name: "Ultron", glyph: "λ", gradient: "linear-gradient(135deg, #6D28D9, #3B0E7E)" },
     { id: "expedition", href: "/expedition", name: "Expedition", glyph: "△", gradient: G.ember },
     { id: "res", href: "/res", name: "RES", glyph: "∴", gradient: "linear-gradient(135deg, #A0305A, #6E1F3E)" },
     { id: "games", href: "/games", name: "Games", glyph: "◆", gradient: G.pink },

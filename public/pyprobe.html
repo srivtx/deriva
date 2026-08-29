@@ -1,0 +1,16 @@
+<!doctype html><meta charset="utf-8"><title>pyprobe</title><pre id=out>booting</pre><script>
+const out = document.getElementById("out")
+const log = (m) => { out.textContent += "\n" + m; document.title = "step" }
+(async () => {
+  try {
+    await new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"; sc.onload = res; sc.onerror = () => rej(new Error("pyodide.js failed")); document.head.appendChild(sc) })
+    log("script loaded")
+    const py = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/" })
+    log("pyodide ready")
+    await py.loadPackage("numpy")
+    log("numpy loaded")
+    py.runPython("import numpy as np\nprint(np.__version__)")
+    log("numpy works: " + py.runPython("np.__version__"))
+  } catch (e) { log("ERROR: " + e.message) }
+})()
+</script>

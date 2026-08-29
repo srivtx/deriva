@@ -85,6 +85,7 @@ const MORE_GROUPS: MoreGroup[] = [
       { label: "System Design", href: "/design", desc: "HLD" },
       { label: "LLD Ladder", href: "/lld", desc: "55 design problems" },
       { label: "DB Ladder", href: "/db", desc: "50 SQL problems" },
+      { label: "Ultron", href: "/ultron", desc: "50 AI/ML drills" },
       { label: "Expedition", href: "/expedition", desc: "retrieval" },
       { label: "Game Mode", href: "/games", desc: "play" },
     ],
@@ -189,6 +190,8 @@ function Breadcrumbs() {
     parts.push({ label: "Password Vault", href: "/vault" })
   } else if (pathname === "/weather") {
     parts.push({ label: "Weather", href: "/weather" })
+  } else if (pathname === "/ultron") {
+    parts.push({ label: "Ultron", href: "/ultron" })
   } else if (pathname === "/media") {
     parts.push({ label: "Media Studio", href: "/media" })
   } else if (pathname === "/images") {
@@ -240,7 +243,7 @@ function ProgressBadge({ className = "" }: { className?: string }) {
   )
 }
 
-  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig"]
+  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/ultron", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig"]
 
 export default function AppShell() {
   const pathname = usePathname()
@@ -363,7 +366,7 @@ export default function AppShell() {
       document.removeEventListener("keydown", onKey)
     }
   }, [moreOpen])
-  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/one" ? "0NE Ladder" : pathname === "/res" ? "RES Brainstorm" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "LLD Ladder" : pathname.startsWith("/lld/practice") ? "LLD Workbench" : pathname === "/db" ? "DB Ladder" : pathname.startsWith("/db/practice") ? "DB Workbench" : pathname === "/settings" ? "Settings" : pathname === "/focus" ? "Focus Dial" : pathname === "/media" ? "Media Studio" : pathname === "/glyph" ? "Glyph Studio" : pathname === "/ghost" ? "Ghost" : pathname === "/osc" ? "OSC-1" : pathname === "/rig" ? "RIG" : "Deriva"
+  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/one" ? "0NE Ladder" : pathname === "/res" ? "RES Brainstorm" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "LLD Ladder" : pathname.startsWith("/lld/practice") ? "LLD Workbench" : pathname === "/db" ? "DB Ladder" : pathname.startsWith("/db/practice") ? "DB Workbench" : pathname === "/ultron" ? "Ultron Ladder" : pathname.startsWith("/ultron/practice") ? "Ultron Workbench" : pathname === "/settings" ? "Settings" : pathname === "/focus" ? "Focus Dial" : pathname === "/media" ? "Media Studio" : pathname === "/glyph" ? "Glyph Studio" : pathname === "/ghost" ? "Ghost" : pathname === "/osc" ? "OSC-1" : pathname === "/rig" ? "RIG" : "Deriva"
   const moreActive = pathname === "/design" || pathname.startsWith("/lld") || pathname.startsWith("/db") || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/one" || pathname === "/res" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/complexity" || pathname === "/notebook" || pathname === "/toolkit" || pathname === "/playground" || pathname === "/releases"
   const navSlots = preferences.navSlots.length ? preferences.navSlots : ["home", "learn", "patterns", "observe"]
   const slotItems = navSlots.map(id => NAV_ITEM_MAP[id]).filter(Boolean)

@@ -21,7 +21,7 @@ type WorkerRequest =
   | { type: "runAiTrace"; code: string; entryPoint: string; payload: unknown; budget: number }
   // systems-atelier-plan.md: run a system under a deterministic load shape
   | { type: "runSimulation"; code: string; scenario: SimulationRunSpec; budget: number }
-  | { type: "warmup"; sqlite?: boolean }
+  | { type: "warmup"; sqlite?: boolean; numpy?: boolean }
 
 export type WorkerMessage = WorkerRequest & { id: string }
 
@@ -136,9 +136,10 @@ class WorkerBridge {
   }
 
   async runScript(code: string, testCode: string, setup?: string, signal?: AbortSignal) {
-    // DB-ladder scripts pull the unvendored sqlite3 package on first run —
-    // give them a longer leash than the standard 15s sandbox timeout.
-    const timeoutMs = setup?.includes("sqlite3") ? 60_000 : DEFAULT_TIMEOUT_MS
+    // DB-ladder and Ultron scripts pull unvendored packages (sqlite3, numpy)
+    // on first run — give them a longer leash than the 15s sandbox timeout.
+    const needsLongLeash = setup?.includes("sqlite3") || setup?.includes("numpy") || code.includes("numpy")
+    const timeoutMs = needsLongLeash ? 60_000 : DEFAULT_TIMEOUT_MS
     const response = await this.request({ type: "runScript", code, testCode, setup }, timeoutMs, signal)
     if (response.type !== "script-result") throw new Error("Worker returned an invalid script response")
     return response
@@ -162,9 +163,9 @@ class WorkerBridge {
     return response
   }
 
-  warmup(sqlite = false) {
+  warmup(sqlite = false, numpy = false) {
     const id = `warmup-${++this.sequence}`
-    this.getWorker().postMessage({ type: "warmup", sqlite, id } satisfies WorkerMessage)
+    this.getWorker().postMessage({ type: "warmup", sqlite, numpy, id } satisfies WorkerMessage)
   }
 
   cancel() {

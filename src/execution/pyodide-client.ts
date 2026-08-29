@@ -66,9 +66,9 @@ export function cancelPythonExecution() {
 
 // Preload the sandbox while the user reads. `sqlite` also pulls the unvendored
 // sqlite3 package — used by the DB workbench so the first Run is instant.
-export function warmPython(sqlite = false) {
+export function warmPython(sqlite = false, numpy = false) {
   if (typeof window === "undefined") return
   try {
-    workerBridge.warmup(sqlite)
+    workerBridge.warmup(sqlite, numpy)
   } catch {}
 }

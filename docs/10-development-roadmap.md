@@ -177,3 +177,24 @@ ladder law (one thinking-move per problem, strictly linear, compose-only-earlier
 
 Progress, notes, and the home "resume" queue treat both like the existing
 workbenches (deriva-db-progress-v1, NextActionKind "db").
+
+### Ultron — the AI/ML ladder (2026-08-30)
+
+`/ultron` + `/ultron/practice`: 50 pure-NumPy drills across 10 stages — arrays
+and broadcasting, linear regression (gradient descent AND the closed form),
+optimization craft (learning rates, scaling, mini-batches, momentum, early
+stopping), logistic regression and threshold trades, generalization
+(train/test, overfitting polynomials, ridge, k-fold, leakage), kNN and
+k-means, decision trees (gini, best-split, stumps, bagging), neural nets
+(forward pass, softmax/CE), backprop (numeric-gradient-verified, vectorized,
+XOR training loop, softmax's clean gradient, Adam assembled), and evaluation
+craft (confusion grid, precision/recall/F1, ROC sweep, CV model selection,
+and the finale: a line provably stuck at a saddle while the net learns XOR).
+No sklearn — every model is built from math. All datasets are frozen worlds
+in the workbench DEPS; every problem verified in real Python (50/50 locally)
+and end-to-end through the real Pyodide worker (50/50 via CDP).
+Engine fixes shipped with it: numpy is unvendored in Pyodide 0.25 like
+sqlite3 — lazy per-name package lock in the worker, 60s first-run leash,
+warmup flag — plus a promise-singleton loadPyodide (a warmup and a first Run
+arriving together previously spawned TWO Pyodide instances and the drill ran
+in the one without numpy).

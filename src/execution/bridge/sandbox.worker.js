@@ -21,14 +21,20 @@ self.addEventListener("error", (event) => {
   ctx.postMessage({ type: "error", message: "sandbox top-level error: " + (event.message || "unknown") + (event.filename ? ` (${event.filename}:${event.lineno})` : "") })
 })
 
-let pyodide = null
 
+let pyodideReadyPromise = null
 async function loadPyodide() {
-  if (pyodide) return pyodide
-  if (!ctx.loadPyodide) ctx.importScripts(PYODIDE_SCRIPT)
-  if (!ctx.loadPyodide) throw new Error("Pyodide failed to load inside the worker")
-  pyodide = await ctx.loadPyodide({ indexURL: PYODIDE_INDEX })
-  return pyodide
+  // Promise-singleton: a warmup and a first Run can arrive together, and both
+  // must share ONE Pyodide instance (two copies would load packages
+  // separately — numpy installed in one while the drill runs in the other).
+  if (pyodideReadyPromise) return pyodideReadyPromise
+  pyodideReadyPromise = (async () => {
+    if (!ctx.loadPyodide) ctx.importScripts(PYODIDE_SCRIPT)
+    if (!ctx.loadPyodide) throw new Error("Pyodide failed to load inside the worker")
+    return await ctx.loadPyodide({ indexURL: PYODIDE_INDEX })
+  })()
+  pyodideReadyPromise.catch(() => { pyodideReadyPromise = null })
+  return pyodideReadyPromise
 }
 
 const TEST_RUNNER = `
@@ -50,13 +56,23 @@ def __deriva_run_tests(tests_json, ns):
     return json.dumps(out)
 `
 
+// sqlite3 and numpy are unvendored in Pyodide 0.25 — load each only when a
+  // script needs it (DB ladder / Ultron). A shared promise keeps the warmup
+  // and a first Run from racing the same package load.
+const packageLock = {}
+function ensurePackage(py, name) {
+  if (!packageLock[name]) packageLock[name] = py.loadPackage(name).catch(err => { packageLock[name] = null; throw err })
+  return packageLock[name]
+}
+
 async function runScript(msg) {
   const py = await loadPyodide()
   const source = [msg.setup, msg.code, msg.testCode].filter(Boolean).join("\n\n")
-  // sqlite3 is unvendored in Pyodide 0.25 — load it only when a script needs it
-  // (the DB ladder), so every other drill keeps its zero-extra-download warmup.
   if (source.includes("sqlite3")) {
-    await py.loadPackage("sqlite3")
+    await ensurePackage(py, "sqlite3")
+  }
+  if (source.includes("numpy")) {
+    await ensurePackage(py, "numpy")
   }
   py.runPython(`import io, sys\n__deriva_out = io.StringIO()\nsys.stdout = __deriva_out\nsys.stderr = __deriva_out`)
   try {
@@ -694,9 +710,10 @@ async function runSimulation(msg) {
 
 async function warm(msg) {
   const py = await loadPyodide()
-  // DB ladder: pull the unvendored sqlite3 package while the user reads the
+  // DB ladder / Ultron: pull unvendored packages while the user reads the
   // problem, so the first Run executes against a hot sandbox.
-  if (msg.sqlite) await py.loadPackage("sqlite3")
+  if (msg.sqlite) await ensurePackage(py, "sqlite3")
+  if (msg.numpy) await ensurePackage(py, "numpy")
   ctx.postMessage({ type: "ready", id: msg.id })
 }
 
