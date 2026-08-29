@@ -323,7 +323,26 @@ export const PROBLEMS_ICPC_A: ICPCProblem[] = [
     testCode: "assert min_eating_speed([3,6,7,11], 8) == 4\nassert min_eating_speed([30,11,23,4,20], 5) == 30\nassert min_eating_speed([5], 10) == 1\nassert min_eating_speed([1000000], 2) == 500000\nprint('All tests passed!')"
   },
   {
-    id: 18, stage: 2, title: "Integer Square Root", pattern: "binary search boundary", skill: "hand-rolled bisection", difficulty: "Easy",
+    id: 18, stage: 2, title: "Cube Root, Exactly", pattern: "binary search on reals", skill: "precision as a stopping rule", difficulty: "Medium",
+    statement: "Given a non-negative real number x, return its cube root rounded to 6 decimal places. You may use only multiplication and comparison — no exponent operator, no math.pow.",
+    examples: [
+      { input: "x = 27", output: "3.0", explain: "3 × 3 × 3 = 27 exactly" },
+      { input: "x = 2", output: "1.259921", explain: "1.259921³ ≈ 1.9999998 — within 6 decimals of the true root" },
+      { input: "x = 0.027", output: "0.3", explain: "0.3³ = 0.027 — the answer is LARGER than x when x < 1" },
+    ],
+    why: "Binary search on integers steps by ±1 because 1 is the smallest unit. Reals have no next value, so the stopping rule changes: run until the interval is smaller than the error you tolerate. Same loop as Koko Eating Bananas — new termination physics.",
+    starterCode: "def cube_root(x):\n    pass",
+    hints: [
+      "Bounds: lo = 0, hi = max(1.0, x). The max matters when x < 1 — the root of 0.027 is 0.3, bigger than x.",
+      "Shrink by half every iteration: if mid³ < x the root lies right of mid, else left.",
+      "100 iterations turns any hi ≤ 1e9 into an interval far below 1e-6. Prefer a fixed count over 'while hi - lo > eps' — adjacent floats can make that loop spin.",
+    ],
+    solution: "def cube_root(x):\n    lo, hi = 0.0, max(1.0, x)\n    for _ in range(100):\n        mid = (lo + hi) / 2\n        if mid * mid * mid < x:\n            lo = mid\n        else:\n            hi = mid\n    return round(hi, 6)",
+    walkthrough: "The invariant is 'the root is always in [lo, hi]'. Each iteration halves the interval, so after k iterations it is (hi−lo)/2^k wide — 100 halvings of 1e9 is astronomically past 1e-6. Rounding at the end is presentation; the search already guaranteed 6 correct decimals.",
+    testCode: "assert abs(cube_root(27) - 3.0) < 1e-5\nassert abs(cube_root(2) - 1.259921) < 1e-5\nassert abs(cube_root(0.027) - 0.3) < 1e-5\nassert abs(cube_root(64) - 4.0) < 1e-5\nassert abs(cube_root(1000000000) - 1000.0) < 1e-4\nprint('All tests passed!')"
+  },
+  {
+    id: 19, stage: 2, title: "Integer Square Root", pattern: "binary search boundary", skill: "hand-rolled bisection", difficulty: "Easy",
     statement: "Return the largest integer r such that r*r <= n, for a non-negative integer n, without using any square-root function.",
     examples: [
       { input: "n = 17", output: "4" },
@@ -341,7 +360,7 @@ export const PROBLEMS_ICPC_A: ICPCProblem[] = [
     testCode: "assert isqrt(17) == 4\nassert isqrt(0) == 0\nassert isqrt(1) == 1\nassert isqrt(10**12) == 10**6\nprint('All tests passed!')"
   },
   {
-    id: 19, stage: 3, title: "Range Sum Queries", pattern: "prefix sums", skill: "precompute once, query O(1)", difficulty: "Easy",
+    id: 20, stage: 3, title: "Range Sum Queries", pattern: "prefix sums", skill: "precompute once, query O(1)", difficulty: "Easy",
     statement: "Given an array and q queries (l, r), 0-indexed inclusive, return the list of sums of nums[l..r]. Precompute so each query is O(1).",
     examples: [
       { input: "nums = [1, 2, 3, 4], queries = [(0, 2), (1, 3), (2, 2)]", output: "[6, 9, 3]" },
@@ -359,7 +378,7 @@ export const PROBLEMS_ICPC_A: ICPCProblem[] = [
     testCode: "assert range_sums([1,2,3,4], [(0,2),(1,3),(2,2)]) == [6, 9, 3]\nassert range_sums([5], [(0, 0)]) == [5]\nassert range_sums([2, -1, 3], [(0, 1), (1, 2)]) == [1, 2]\nprint('All tests passed!')"
   },
   {
-    id: 20, stage: 3, title: "Subarrays Divisible by K", pattern: "prefix mod counting", skill: "count residue pairs", difficulty: "Medium",
+    id: 21, stage: 3, title: "Subarrays Divisible by K", pattern: "prefix mod counting", skill: "count residue pairs", difficulty: "Medium",
     statement: "Given an integer array (may contain negatives) and k, return the number of contiguous subarrays whose sum is divisible by k.",
     examples: [
       { input: "nums = [4, 5, 0, -2, -3, 7], k = 9", output: "7" },
@@ -377,7 +396,7 @@ export const PROBLEMS_ICPC_A: ICPCProblem[] = [
     testCode: "assert count_divisible_subarrays([4,5,0,-2,-3,7], 9) == 4\nassert count_divisible_subarrays([5], 9) == 0\nassert count_divisible_subarrays([1, 2, 3], 3) == 3\nassert count_divisible_subarrays([-1, -2], 3) == 1\nprint('All tests passed!')"
   },
   {
-    id: 21, stage: 3, title: "Matrix Block Sum", pattern: "2D prefix sums", skill: "inclusion-exclusion", difficulty: "Medium",
+    id: 22, stage: 3, title: "Matrix Block Sum", pattern: "2D prefix sums", skill: "inclusion-exclusion", difficulty: "Medium",
     statement: "Given an m x n matrix and integer k, return a matrix where each cell (i, j) is the sum of all matrix cells (r, c) with i-k <= r <= i+k and j-k <= c <= j+k (clamped to the matrix).",
     examples: [
       { input: "mat = [[1,2,3],[4,5,6],[7,8,9]], k = 1", output: "[[12,21,16],[27,45,33],[24,39,28]]" },
@@ -395,7 +414,7 @@ export const PROBLEMS_ICPC_A: ICPCProblem[] = [
     testCode: "assert matrix_block_sum([[1,2,3],[4,5,6],[7,8,9]], 1) == [[12,21,16],[27,45,33],[24,39,28]]\nassert matrix_block_sum([[5]], 1) == [[5]]\nassert matrix_block_sum([[1,2],[3,4]], 0) == [[1,2],[3,4]]\nprint('All tests passed!')"
   },
   {
-    id: 22, stage: 3, title: "Flight Bookings", pattern: "difference array", skill: "defer range updates", difficulty: "Medium",
+    id: 23, stage: 3, title: "Flight Bookings", pattern: "difference array", skill: "defer range updates", difficulty: "Medium",
     statement: "There are n flights numbered 1..n. Each booking books `seats` seats on every flight from i to j inclusive. Given the booking list, return the seats booked on each flight.",
     examples: [
       { input: "bookings = [[1, 3, 2], [2, 3, 1]], n = 3", output: "[2, 3, 3]" },
@@ -413,7 +432,7 @@ export const PROBLEMS_ICPC_A: ICPCProblem[] = [
     testCode: "assert flight_bookings([[1,3,2],[2,3,1]], 3) == [2, 3, 3]\nassert flight_bookings([[1,2,1]], 3) == [1, 1, 0]\nassert flight_bookings([], 2) == [0, 0]\nprint('All tests passed!')"
   },
   {
-    id: 23, stage: 3, title: "XOR of Range Queries", pattern: "prefix XOR", skill: "XOR cancels pairs", difficulty: "Easy",
+    id: 24, stage: 3, title: "XOR of Range Queries", pattern: "prefix XOR", skill: "XOR cancels pairs", difficulty: "Easy",
     statement: "Given an array and queries (l, r) inclusive 0-indexed, return the XOR of nums[l..r] for each query, using precomputation.",
     examples: [
       { input: "nums = [1, 3, 4, 8], queries = [(0, 1), (1, 3), (0, 3)]", output: "[2, 15, 14]" },
@@ -429,5 +448,40 @@ export const PROBLEMS_ICPC_A: ICPCProblem[] = [
     solution: "def xor_queries(nums, queries):\n    prefix = [0]\n    for x in nums:\n        prefix.append(prefix[-1] ^ x)\n    return [prefix[r + 1] ^ prefix[l] for l, r in queries]",
     walkthrough: "Because a ^ a = 0, subtracting becomes XOR-ing: the shared prefix cancels and only the range survives. Identical shape to range sums.",
     testCode: "assert xor_queries([1,3,4,8], [(0,1),(1,3),(0,3)]) == [2, 15, 14]\nassert xor_queries([4,8,2], [(0,0),(2,2)]) == [4, 2]\nassert xor_queries([7], [(0, 0)]) == [7]\nprint('All tests passed!')"
-  }
+  },
+  {
+    id: 25, stage: 3, title: "Static Range Minimum", pattern: "sparse table", skill: "precompute overlapping powers", difficulty: "Medium",
+    statement: "Given an array of n integers and q queries (l, r), return the minimum of arr[l..r] inclusive for each query. n, q up to 2×10⁵ — you need O(n log n) build and O(1) query.",
+    examples: [
+      { input: "arr = [4, 1, 7, 2, 9], queries = [(1,3), (0,4), (2,3)]", output: "[1, 1, 2]", explain: "min([1,7,2])=1, min(whole)=1, min([7,2])=2" },
+      { input: "arr = [-5], queries = [(0,0)]", output: "[-5]", explain: "single element ranges are their own answer" },
+    ],
+    why: "Prefix sums answer ranges because subtraction undoes addition — but min has no inverse, so that trick dies. Scanning each range costs O(n·q) = 4×10¹⁰. The fix exploits an algebraic accident: min(a, a) = a. Idempotent folds may OVERLAP two precomputed blocks, so two power-of-two blocks cover any range in O(1).",
+    starterCode: "def build_sparse(arr):\n    pass\n\ndef range_min(table, l, r):\n    pass",
+    hints: [
+      "table[j][i] = min of the block starting at i with length 2^j. Build row j from row j−1: two half-blocks side by side.",
+      "Query [l, r]: let k = floor(log2(r − l + 1)). Answer = min(table[k][l], table[k][r − 2^k + 1]).",
+      "The two covering blocks may overlap — harmless for min, fatal for sum. That is exactly why prefix sums exist for sums.",
+    ],
+    solution: "def build_sparse(arr):\n    n = len(arr)\n    table = [arr[:]]\n    j = 1\n    while (1 << j) <= n:\n        prev = table[-1]\n        half = 1 << (j - 1)\n        table.append([min(prev[i], prev[i + half]) for i in range(n - (1 << j) + 1)])\n        j += 1\n    return table\n\ndef range_min(table, l, r):\n    k = (r - l + 1).bit_length() - 1\n    return min(table[k][l], table[k][r - (1 << k) + 1])",
+    walkthrough: "Each table row doubles the block size, so there are log₂n rows: O(n log n) build. A query covers its range with at most two blocks of the largest fitting power of two — the overlap vanishes because min ignores duplicates. Remember: this trick ONLY works for idempotent folds; sum needs the Fenwick tree coming next.",
+    testCode: "t = build_sparse([4, 1, 7, 2, 9])\nassert range_min(t, 1, 3) == 1\nassert range_min(t, 0, 4) == 1\nassert range_min(t, 2, 3) == 2\nassert range_min(t, 4, 4) == 9\nt2 = build_sparse([-5])\nassert range_min(t2, 0, 0) == -5\nt3 = build_sparse([3, 3, 3])\nassert range_min(t3, 0, 2) == 3\nprint('All tests passed!')"
+  },
+  {
+    id: 26, stage: 3, title: "Prefix Sums That Update", pattern: "Fenwick tree", skill: "index arithmetic i & -i", difficulty: "Hard",
+    statement: "Start with an array of n zeros. Process operations: ('add', i, d) adds d to element i; ('sum', i) returns the prefix sum arr[0..i]. n and operations up to 2×10⁵. Return the list of 'sum' answers.",
+    examples: [
+      { input: "n = 5, ops = [('add',0,5), ('add',2,3), ('sum',2), ('add',1,2), ('sum',2)]", output: "[8, 10]", explain: "[5,0,3,0,0] → prefix 2 = 8; then [5,2,3,0,0] → prefix 2 = 10" },
+    ],
+    why: "The prefix array queries in O(1) but one add forces an O(n) rebuild — 2×10⁵ adds cost 4×10¹⁰. The Fenwick tree makes the trade explicit: give up O(1) queries, gain O(log n) updates. Every index i stores the block of length i & -i ending at i; both operations then walk O(log n) blocks by flipping that bit.",
+    starterCode: "def fenwick_ops(n, ops):\n    pass",
+    hints: [
+      "i & -i isolates the lowest set bit of i — exactly the length of the block tree[i] covers.",
+      "Update: tree[i] += d, then i += i & -i climbs to every block containing position i.",
+      "Query: peel from the top — s += tree[i], then i -= i & -i, until i = 0. Mind the 1-indexing: shift +1 on the way in.",
+    ],
+    solution: "def fenwick_ops(n, ops):\n    tree = [0] * (n + 1)\n    out = []\n    def add(i, d):\n        i += 1\n        while i <= n:\n            tree[i] += d\n            i += i & -i\n    def pref(i):\n        i += 1\n        s = 0\n        while i > 0:\n            s += tree[i]\n            i -= i & -i\n        return s\n    for op in ops:\n        if op[0] == 'add':\n            add(op[1], op[2])\n        else:\n            out.append(pref(op[1]))\n    return out",
+    walkthrough: "Why does i & -i work? Write i in binary: prefix(i) = block ending at i (size lowbit) + block ending at i − lowbit + … Each peel removes the lowest set bit — O(log n) blocks. Updates climb the same ladder upward: every block whose range contains i has i on its ladder. This is the bridge from static prefix sums to the segment tree next stage, which generalizes to any fold.",
+    testCode: "assert fenwick_ops(5, [('add',0,5),('add',2,3),('sum',2),('add',1,2),('sum',2)]) == [8, 10]\nimport random\nrandom.seed(7)\narr = [0]*12\nops = []\nexpected = []\nfor _ in range(60):\n    if random.random() < 0.5:\n        i, d = random.randrange(12), random.randrange(-5, 6)\n        arr[i] += d\n        ops.append(('add', i, d))\n    else:\n        i = random.randrange(12)\n        ops.append(('sum', i))\n        expected.append(sum(arr[:i+1]))\nassert fenwick_ops(12, ops) == expected\nprint('All tests passed!')"
+  },
 ]

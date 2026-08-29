@@ -2,7 +2,7 @@ import type { ICPCProblem } from "./icpc-a"
 
 export const PROBLEMS_ICPC_C: ICPCProblem[] = [
   {
-    id: 42, stage: 7, title: "Kruskal MST Cost", pattern: "sort edges + DSU", skill: "accept cheapest safe edge", difficulty: "Medium",
+    id: 49, stage: 7, title: "Kruskal MST Cost", pattern: "sort edges + DSU", skill: "accept cheapest safe edge", difficulty: "Medium",
     statement: "Given an undirected weighted graph with n nodes and edge list (u, v, w), return the total weight of a minimum spanning tree, or -1 if the graph is disconnected.",
     examples: [
       { input: "n = 4, edges = [(0,1,1),(1,2,2),(2,3,3),(0,3,4),(0,2,5)]", output: "6", explain: "edges 1, 2, 3 form the MST" },
@@ -20,7 +20,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert kruskal_cost(4, [(0,1,1),(1,2,2),(2,3,3),(0,3,4),(0,2,5)]) == 6\nassert kruskal_cost(3, [(0, 1, 1)]) == -1\nassert kruskal_cost(2, [(0, 1, 7)]) == 7\nassert kruskal_cost(1, []) == 0\nprint('All tests passed!')"
   },
   {
-    id: 43, stage: 7, title: "Prim MST Cost", pattern: "heap frontier growth", skill: "grow from a seed", difficulty: "Medium",
+    id: 50, stage: 7, title: "Prim MST Cost", pattern: "heap frontier growth", skill: "grow from a seed", difficulty: "Medium",
     statement: "Compute the minimum spanning tree total weight of an undirected weighted graph by Prim's algorithm: start at node 0 and repeatedly add the cheapest edge leaving the grown tree. Return the total, or -1 if some node can never be reached.",
     examples: [
       { input: "n = 4, edges = [(0,1,1),(1,2,2),(2,3,3),(0,3,4),(0,2,5)]", output: "6" },
@@ -38,7 +38,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert prim_cost(4, [(0,1,1),(1,2,2),(2,3,3),(0,3,4),(0,2,5)]) == 6\nassert prim_cost(3, [(0, 1, 1)]) == -1\nassert prim_cost(2, [(1, 0, 7)]) == 7\nassert prim_cost(1, []) == 0\nprint('All tests passed!')"
   },
   {
-    id: 44, stage: 7, title: "Connected Components Count", pattern: "flood fill", skill: "BFS/DFS per unvisited seed", difficulty: "Easy",
+    id: 51, stage: 7, title: "Connected Components Count", pattern: "flood fill", skill: "BFS/DFS per unvisited seed", difficulty: "Easy",
     statement: "Given an undirected graph with n nodes (0..n-1) and an edge list, return the number of connected components.",
     examples: [
       { input: "n = 5, edges = [(0, 1), (2, 3)]", output: "3", explain: "components {0,1}, {2,3}, {4}" },
@@ -56,7 +56,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert count_components(5, [(0,1),(2,3)]) == 3\nassert count_components(4, [(0,1),(1,2),(2,3)]) == 1\nassert count_components(3, []) == 3\nassert count_components(2, [(0, 1), (1, 0)]) == 1\nprint('All tests passed!')"
   },
   {
-    id: 45, stage: 7, title: "Strongly Connected Components", pattern: "Kosaraju two-pass", skill: "order on reverse graph", difficulty: "Hard",
+    id: 52, stage: 7, title: "Strongly Connected Components", pattern: "Kosaraju two-pass", skill: "order on reverse graph", difficulty: "Hard",
     statement: "Given a directed graph with n nodes and edge list, return the number of strongly connected components. Use Kosaraju's algorithm with iterative DFS (no recursion) to survive deep graphs.",
     examples: [
       { input: "n = 5, edges = [(1,0),(0,2),(2,1),(0,3),(3,4)]", output: "3", explain: "{0,1,2}, {3}, {4}" },
@@ -74,7 +74,26 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert count_scc(5, [(1,0),(0,2),(2,1),(0,3),(3,4)]) == 3\nassert count_scc(3, [(0,1),(1,2)]) == 3\nassert count_scc(2, [(0,1),(1,0)]) == 1\nassert count_scc(1, []) == 1\nprint('All tests passed!')"
   },
   {
-    id: 46, stage: 7, title: "Possible Bipartition", pattern: "2-coloring BFS", skill: "parity of distance", difficulty: "Medium",
+    id: 53, stage: 7, title: "Count the Bridges", pattern: "bridges via low-link", skill: "DFS tree + back-edge reach", difficulty: "Hard",
+    statement: "Given an undirected graph with n nodes and an edge list (no parallel edges), count the BRIDGES: edges whose removal increases the number of connected components. n and edges up to 2×10⁵.",
+    examples: [
+      { input: "n = 4, edges = [[0,1],[1,2],[2,0],[2,3]]", output: "1", explain: "triangle {0,1,2} is a cycle; edge 2–3 is the only escape" },
+      { input: "n = 5, edges = [[0,1],[1,2],[2,3],[3,0],[2,4]]", output: "1", explain: "cycle 0-1-2-3 hangs node 4 off node 2" },
+      { input: "n = 6, edges = [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3]]", output: "0", explain: "two separate cycles, no bridges" },
+    ],
+    why: "Deleting each edge and flood-filling costs O(E·(V+E)) — dead at 10⁵. Every DFS you have written already computes tin (entry time) implicitly; bridges ask one sharper question of that DFS tree: a tree edge u→v is a bridge iff NOTHING in v's subtree reaches u or above — written low[v] > tin[u]. One extra low-link array turns a global question into a per-edge check.",
+    starterCode: "def count_bridges(n, edges):\n    pass",
+    hints: [
+      "Skip the edge you arrived on (compare edge INDICES, not the parent node — that's the parallel-edge-safe habit).",
+      "Back-edge v→w with w already visited: low[v] = min(low[v], tin[w]). After a child returns: low[v] = min(low[v], low[child]).",
+      "Bridge test at the parent: after dfs(child) returns, if low[child] > tin[v], the edge v–child is a bridge.",
+    ],
+    solution: "def count_bridges(n, edges):\n    import sys\n    sys.setrecursionlimit(300000)\n    adj = [[] for _ in range(n)]\n    for i, (a, b) in enumerate(edges):\n        adj[a].append((b, i))\n        adj[b].append((a, i))\n    tin = [-1] * n\n    low = [0] * n\n    timer = 0\n    bridges = 0\n    def dfs(v, pe):\n        nonlocal timer, bridges\n        tin[v] = low[v] = timer\n        timer += 1\n        for to, eid in adj[v]:\n            if eid == pe:\n                continue\n            if tin[to] != -1:\n                if tin[to] < low[v]:\n                    low[v] = tin[to]\n            else:\n                dfs(to, eid)\n                if low[to] > tin[v]:\n                    bridges += 1\n                if low[to] < low[v]:\n                    low[v] = low[to]\n    for v in range(n):\n        if tin[v] == -1:\n            dfs(v, -1)\n    return bridges",
+    walkthrough: "low[v] answers: 'how high can v's subtree climb using at most one back edge?' If even the best climb stays strictly below u (low[child] > tin[u]), the edge is the ONLY thread — cut it and the subtree falls. This is the second low-link you've met — and articulation points are the vertex-flavored sibling, a two-line twist away. Same DFS, different question.",
+    testCode: "assert count_bridges(4, [[0,1],[1,2],[2,0],[2,3]]) == 1\nassert count_bridges(5, [[0,1],[1,2],[2,3],[3,0],[2,4]]) == 1\nassert count_bridges(6, [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3]]) == 0\nassert count_bridges(2, [[0,1]]) == 1\nprint('All tests passed!')"
+  },
+  {
+    id: 54, stage: 7, title: "Possible Bipartition", pattern: "2-coloring BFS", skill: "parity of distance", difficulty: "Medium",
     statement: "n people dislike certain pairings, given as an edge list. Split everyone into two groups so no disliked pair shares a group. Return True if such a bipartition exists.",
     examples: [
       { input: "n = 4, dislikes = [(1, 2), (1, 3), (2, 4)]", output: "True", explain: "groups {1,4} and {2,3}" },
@@ -92,7 +111,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert possible_bipartition(4, [(1,2),(1,3),(2,4)]) == True\nassert possible_bipartition(3, [(1,2),(2,3),(3,1)]) == False\nassert possible_bipartition(1, []) == True\nassert possible_bipartition(5, [(1,2),(3,4)]) == True\nprint('All tests passed!')"
   },
   {
-    id: 47, stage: 7, title: "Maximum Bipartite Matching", pattern: "Kuhn augmenting paths", skill: "reroute to free a slot", difficulty: "Hard",
+    id: 55, stage: 7, title: "Maximum Bipartite Matching", pattern: "Kuhn augmenting paths", skill: "reroute to free a slot", difficulty: "Hard",
     statement: "Applicants (0..n-1) each list jobs they can do (jobs numbered 0..m-1). Each job takes one applicant. Return the maximum number of applicants that can be assigned distinct jobs.",
     examples: [
       { input: "n = 3, m = 3, prefs = [[0, 1], [0], [1, 2]]", output: "3", explain: "a0->1, a1->0, a2->2" },
@@ -110,7 +129,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert max_matching(3, 3, [[0,1],[0],[1,2]]) == 3\nassert max_matching(2, 1, [[0],[0]]) == 1\nassert max_matching(2, 3, [[0,1,2],[0,1,2]]) == 2\nassert max_matching(1, 2, [[]]) == 0\nprint('All tests passed!')"
   },
   {
-    id: 48, stage: 8, title: "Frog Jump Cost", pattern: "linear DP", skill: "best cost to reach i", difficulty: "Easy",
+    id: 56, stage: 8, title: "Frog Jump Cost", pattern: "linear DP", skill: "best cost to reach i", difficulty: "Easy",
     statement: "A frog crosses stones 0..n-1; from stone i it may jump to i+1 or i+2, paying |h[i] - h[j]| energy. Return the minimum total energy to reach the last stone.",
     examples: [
       { input: "h = [10, 30, 40, 20]", output: "30", explain: "10 -> 30 -> 20 costs 20 + 10" },
@@ -128,7 +147,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert frog_cost([10,30,40,20]) == 30\nassert frog_cost([10, 10]) == 0\nassert frog_cost([30, 10, 60, 10, 60, 50]) == 40\nassert frog_cost([5]) == 0\nprint('All tests passed!')"
   },
   {
-    id: 49, stage: 8, title: "House Robber", pattern: "take-or-skip DP", skill: "adjacent exclusion", difficulty: "Easy",
+    id: 57, stage: 8, title: "House Robber", pattern: "take-or-skip DP", skill: "adjacent exclusion", difficulty: "Easy",
     statement: "Houses hold loot values in a row; robbing two adjacent houses triggers an alarm. Return the maximum loot obtainable.",
     examples: [
       { input: "vals = [2, 7, 9, 3, 1]", output: "12", explain: "rob 2, 9, 1" },
@@ -146,7 +165,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert rob([2,7,9,3,1]) == 12\nassert rob([2,1,1,2]) == 4\nassert rob([5]) == 5\nassert rob([]) == 0\nprint('All tests passed!')"
   },
   {
-    id: 50, stage: 8, title: "0/1 Knapsack", pattern: "capacity DP", skill: "item in or out", difficulty: "Medium",
+    id: 58, stage: 8, title: "0/1 Knapsack", pattern: "capacity DP", skill: "item in or out", difficulty: "Medium",
     statement: "Given item weights and values, choose a subset with total weight at most W maximizing total value. Each item may be used at most once. Return the maximum value.",
     examples: [
       { input: "weights = [1, 3, 4], values = [15, 20, 30], W = 4", output: "35", explain: "items 0 and 1" },
@@ -164,7 +183,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert knapsack([1,3,4],[15,20,30], 4) == 35\nassert knapsack([5],[10], 4) == 0\nassert knapsack([2,2,2],[5,5,5], 6) == 15\nassert knapsack([1,2,3],[6,10,12], 5) == 22\nprint('All tests passed!')"
   },
   {
-    id: 51, stage: 8, title: "Coin Change Minimum", pattern: "unbounded knapsack", skill: "last-coin decomposition", difficulty: "Medium",
+    id: 59, stage: 8, title: "Coin Change Minimum", pattern: "unbounded knapsack", skill: "last-coin decomposition", difficulty: "Medium",
     statement: "Given coin denominations (unlimited supply) and an amount, return the fewest coins summing to the amount, or -1 if impossible.",
     examples: [
       { input: "coins = [1, 2, 5], amount = 11", output: "3", explain: "5+5+1" },
@@ -182,7 +201,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert coin_change([1,2,5], 11) == 3\nassert coin_change([2], 3) == -1\nassert coin_change([1], 0) == 0\nassert coin_change([1, 5, 6, 9], 11) == 2\nprint('All tests passed!')"
   },
   {
-    id: 52, stage: 8, title: "Longest Increasing Subsequence", pattern: "patience sorting", skill: "binary search tails", difficulty: "Hard",
+    id: 60, stage: 8, title: "Longest Increasing Subsequence", pattern: "patience sorting", skill: "binary search tails", difficulty: "Hard",
     statement: "Return the length of the longest strictly increasing subsequence of the array, in O(n log n).",
     examples: [
       { input: "nums = [10, 9, 2, 5, 3, 7, 101, 18]", output: "4", explain: "2, 3, 7, 101 (or 2,5,7,101)" },
@@ -200,7 +219,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert lis_length([10,9,2,5,3,7,101,18]) == 4\nassert lis_length([7,7,7]) == 1\nassert lis_length([]) == 0\nassert lis_length([1, 3, 2, 4]) == 3\nprint('All tests passed!')"
   },
   {
-    id: 53, stage: 8, title: "Maximum Subarray", pattern: "Kadane", skill: "extend or restart", difficulty: "Easy",
+    id: 61, stage: 8, title: "Maximum Subarray", pattern: "Kadane", skill: "extend or restart", difficulty: "Easy",
     statement: "Return the largest sum of any contiguous non-empty subarray.",
     examples: [
       { input: "nums = [-2, 1, -3, 4, -1, 2, 1, -5, 4]", output: "6", explain: "[4, -1, 2, 1]" },
@@ -218,7 +237,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert max_subarray([-2,1,-3,4,-1,2,1,-5,4]) == 6\nassert max_subarray([-3,-1,-2]) == -1\nassert max_subarray([5]) == 5\nassert max_subarray([1, 2, 3]) == 6\nprint('All tests passed!')"
   },
   {
-    id: 54, stage: 9, title: "Grid Paths with Obstacles", pattern: "2D grid DP", skill: "accumulate from top and left", difficulty: "Medium",
+    id: 62, stage: 9, title: "Grid Paths with Obstacles", pattern: "2D grid DP", skill: "accumulate from top and left", difficulty: "Medium",
     statement: "A robot walks on a grid from the top-left to the bottom-right, moving only right or down. Cells with 1 are obstacles. Return the number of distinct paths.",
     examples: [
       { input: "grid = [[0, 0, 0], [0, 1, 0], [0, 0, 0]]", output: "2", explain: "around the center block" },
@@ -236,7 +255,26 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert count_paths([[0,0,0],[0,1,0],[0,0,0]]) == 2\nassert count_paths([[0,1],[1,0]]) == 0\nassert count_paths([[0]]) == 1\nassert count_paths([[0, 0], [0, 0]]) == 2\nprint('All tests passed!')"
   },
   {
-    id: 55, stage: 9, title: "Digit DP: Adjacent Different", pattern: "digit DP", skill: "tight flag + previous digit", difficulty: "Hard",
+    id: 63, stage: 9, title: "Meet in the Middle", pattern: "meet in the middle", skill: "split, enumerate, combine", difficulty: "Medium",
+    statement: "Given n ≤ 30 item weights and a capacity W, choose a subset with the maximum total weight not exceeding W. Return that total.",
+    examples: [
+      { input: "W = 9, weights = [3, 34, 4, 12, 5, 2]", output: "9", explain: "3 + 4 + 2 = 9" },
+      { input: "W = 30, weights = [3, 34, 4, 12, 5, 2]", output: "26", explain: "3 + 4 + 12 + 5 + 2 = 26" },
+      { input: "W = 2³⁰−1, weights = [1, 2, 4, …, 2²⁹]", output: "2³⁰−1", explain: "take everything except the top weight — the powers of two sum exactly" },
+    ],
+    why: "All 2³⁰ ≈ 10⁹ subsets overflow any time limit. But the space SPLITS cleanly: enumerate 2¹⁵ sums of each half, sort one side, and for every a in the first half binary-search the largest b ≤ W − a (stage 2's move). 2 × 2¹⁵ + 15 × 2¹⁵ ≈ 10⁶ — a thousand-fold win for one split.",
+    starterCode: "def best_load(w, weights):\n    pass",
+    hints: [
+      "Write subset_sums(vals): start with [0]; for each v append v to every existing sum (the list doubles).",
+      "Sort the second half's sums. For each a in the first half, legal partners satisfy b ≤ w − a: bisect_right finds the boundary.",
+      "Answer = max(a + B[i]) over all a; track the running best.",
+    ],
+    solution: "def best_load(w, weights):\n    import bisect\n    def subset_sums(vals):\n        sums = [0]\n        for v in vals:\n            sums += [s + v for s in sums]\n        return sums\n    h = len(weights) // 2\n    A = subset_sums(weights[:h])\n    B = sorted(subset_sums(weights[h:]))\n    ans = 0\n    for a in A:\n        if a > w:\n            continue\n        i = bisect.bisect_right(B, w - a) - 1\n        if i >= 0 and a + B[i] > ans:\n            ans = a + B[i]\n    return ans",
+    walkthrough: "The art is noticing which problems split: n ≈ 30 with a 'pick a subset' shape is the signature. Half-enumeration is exponential twice — 2^(n/2) — polynomially tiny compared to 2^n. Meet-in-the-middle composes three moves you already own: subset enumeration, sorting, binary search.",
+    testCode: "assert best_load(9, [3, 34, 4, 12, 5, 2]) == 9\nassert best_load(30, [3, 34, 4, 12, 5, 2]) == 26\nassert best_load(2**30 - 1, [2**i for i in range(30)]) == 2**30 - 1\nassert best_load(5, [10, 20]) == 0\nprint('All tests passed!')"
+  },
+  {
+    id: 64, stage: 9, title: "Digit DP: Adjacent Different", pattern: "digit DP", skill: "tight flag + previous digit", difficulty: "Hard",
     statement: "Count the integers from 1 to n (inclusive) whose decimal digits are all pairwise-adjacent different — no two neighboring digits are equal. n can be large, so do not iterate the range.",
     examples: [
       { input: "n = 100", output: "90", explain: "1-9 plus 10-99 minus the nine repeats (11, 22, ...)" },
@@ -254,7 +292,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert count_adjacent_different(100) == 90\nassert count_adjacent_different(9) == 9\nassert count_adjacent_different(11) == 10\nassert count_adjacent_different(120) == 100\nprint('All tests passed!')"
   },
   {
-    id: 56, stage: 9, title: "Traveling Salesman (Bitmask)", pattern: "bitmask DP", skill: "subset as a mask", difficulty: "Hard",
+    id: 65, stage: 9, title: "Traveling Salesman (Bitmask)", pattern: "bitmask DP", skill: "subset as a mask", difficulty: "Hard",
     statement: "Given an n x n distance matrix (n <= 15), return the length of the shortest route that starts at node 0, visits every node exactly once, and returns to node 0.",
     examples: [
       { input: "dist = [[0,10,15,20],[10,0,35,25],[15,35,0,30],[20,25,30,0]]", output: "80", explain: "0 -> 1 -> 3 -> 2 -> 0" },
@@ -272,7 +310,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert tsp([[0,10,15,20],[10,0,35,25],[15,35,0,30],[20,25,30,0]]) == 80\nassert tsp([[0,5],[5,0]]) == 10\nassert tsp([[0]]) == 0\nassert tsp([[0,1,8],[1,0,2],[8,2,0]]) == 11\nprint('All tests passed!')"
   },
   {
-    id: 57, stage: 9, title: "Matrix Chain Multiplication", pattern: "interval DP", skill: "split the last multiplication", difficulty: "Hard",
+    id: 66, stage: 9, title: "Matrix Chain Multiplication", pattern: "interval DP", skill: "split the last multiplication", difficulty: "Hard",
     statement: "Matrices A_1..A_n with dimensions given as the array dims (A_i is dims[i-1] x dims[i]). Find the minimum number of scalar multiplications to compute the product A_1 * A_2 * ... * A_n.",
     examples: [
       { input: "dims = [10, 30, 5, 60]", output: "4500", explain: "(A1*A2)*A3" },
@@ -290,7 +328,7 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     testCode: "assert matrix_chain([10,30,5,60]) == 4500\nassert matrix_chain([40,20,30,10,30]) == 26000\nassert matrix_chain([5, 10]) == 0\nassert matrix_chain([1, 2, 3, 4]) == 18\nprint('All tests passed!')"
   },
   {
-    id: 58, stage: 9, title: "Tree Max Independent Set", pattern: "tree DP", skill: "in/out states per node", difficulty: "Hard",
+    id: 67, stage: 9, title: "Tree Max Independent Set", pattern: "tree DP", skill: "in/out states per node", difficulty: "Hard",
     statement: "Given a tree with n nodes (rooted at 0, edge list), return the size of the largest set of nodes with no two adjacent — the maximum independent set.",
     examples: [
       { input: "n = 5, edges = [(0, 1), (0, 2), (2, 3), (2, 4)]", output: "3", explain: "{1, 3, 4}" },
@@ -306,5 +344,23 @@ export const PROBLEMS_ICPC_C: ICPCProblem[] = [
     solution: "from collections import deque\n\ndef tree_independent_set(n, edges):\n    children = [[] for _ in range(n)]\n    for a, b in edges:\n        children[a].append(b)\n    order, q = [], deque([0])\n    while q:\n        node = q.popleft()\n        order.append(node)\n        q.extend(children[node])\n    taken = [0] * n\n    skipped = [0] * n\n    for node in reversed(order):\n        taken[node] = 1 + sum(skipped[c] for c in children[node])\n        skipped[node] = sum(max(taken[c], skipped[c]) for c in children[node])\n    return max(taken[0], skipped[0])",
     walkthrough: "Taking a node bans its children, so their 'skipped' values are forced; skipping a node lets each child choose freely. Reverse BFS order makes the two-state accumulation recursion-free.",
     testCode: "assert tree_independent_set(5, [(0,1),(0,2),(2,3),(2,4)]) == 3\nassert tree_independent_set(2, [(0, 1)]) == 1\nassert tree_independent_set(1, []) == 1\nassert tree_independent_set(4, [(0,1),(1,2),(2,3)]) == 2\nprint('All tests passed!')"
-  }
+  },
+  {
+    id: 68, stage: 9, title: "Sum of Distances Everywhere", pattern: "rerooting", skill: "two passes: down then up", difficulty: "Hard",
+    statement: "Given a tree of n nodes as an edge list, return ans[v] = the sum of distances from v to every other node, for ALL v at once. n up to 2×10⁵ — O(n) expected.",
+    examples: [
+      { input: "n = 3, edges = [[0,1],[1,2]]", output: "[3, 2, 3]", explain: "from 0: 1+2 = 3; from the middle: 1+1 = 2" },
+      { input: "n = 4, edges = [[0,1],[0,2],[0,3]]", output: "[3, 5, 5, 5]", explain: "center reaches everyone in 1; a leaf pays 2 for each sibling leaf" },
+    ],
+    why: "Running a DFS per node is O(n²) = 4×10¹⁰. Root once: pass 1 computes each subtree's size and internal distance sum (the tree-DP move from 'Tree Max Independent Set'). Pass 2 walks down the tree converting the parent's finished answer into the child's: crossing edge p–v makes sz[v] nodes get 1 closer and n − sz[v] nodes get 1 farther — ans[v] = ans[p] − sz[v] + (n − sz[v]). Two walks, every root answered.",
+    starterCode: "def distance_sums(n, edges):\n    pass",
+    hints: [
+      "Build an order that lists parents before children (stack preorder from root 0); reuse it reversed for post-order accumulation.",
+      "Pass 1 (reversed order): sz[p] += sz[v]; down[p] += down[v] + sz[v].",
+      "Pass 2 (preorder): ans[0] = down[0]; ans[v] = ans[parent] − sz[v] + (n − sz[v]).",
+    ],
+    solution: "def distance_sums(n, edges):\n    adj = [[] for _ in range(n)]\n    for a, b in edges:\n        adj[a].append(b)\n        adj[b].append(a)\n    sz = [1] * n\n    down = [0] * n\n    ans = [0] * n\n    parent = [-1] * n\n    order = []\n    seen = [False] * n\n    seen[0] = True\n    stack = [0]\n    while stack:\n        v = stack.pop()\n        order.append(v)\n        for c in adj[v]:\n            if not seen[c]:\n                seen[c] = True\n                parent[c] = v\n                stack.append(c)\n    for v in reversed(order):\n        if parent[v] != -1:\n            sz[parent[v]] += sz[v]\n            down[parent[v]] += down[v] + sz[v]\n    ans[0] = down[0]\n    for v in order:\n        p = parent[v]\n        if p != -1:\n            ans[v] = ans[p] - sz[v] + (n - sz[v])\n    return ans",
+    walkthrough: "The rerooting insight: adjacent answers differ by a TEAR along their connecting edge. Inside v's subtree (sz[v] nodes) every distance shrinks by 1; everything else (n − sz[v] nodes) grows by 1. One subtraction, one addition — the n-root problem collapses into two linear scans. Expect this 'root it, then push answers down' shape in many tree problems.",
+    testCode: "assert distance_sums(3, [[0,1],[1,2]]) == [3, 2, 3]\nassert distance_sums(4, [[0,1],[0,2],[0,3]]) == [3, 5, 5, 5]\nassert distance_sums(2, [[0,1]]) == [1, 1]\nprint('All tests passed!')"
+  },
 ]
