@@ -1098,8 +1098,11 @@ body.app-mode-active .practice-wrap .main { padding-bottom: 28px; }
 
 /* ── LLD Ladder ── */
 .lld-skill { max-width: 175px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); background: var(--paper); border: 1px solid var(--line); }
+
+/* ── DB Ladder ── */
+.db-skill { max-width: 175px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); background: var(--paper); border: 1px solid var(--line); }
 @media (max-width: 420px) {
-  .lld-skill { max-width: 132px; }
+  .lld-skill, .db-skill { max-width: 132px; }
 }
 
 /* ── RES — research brainstorm trainer ── */

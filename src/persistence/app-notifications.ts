@@ -11,7 +11,7 @@ export type AppNotification = {
   title: string
   body: string
   href: string
-  kind: "practice" | "patterns" | "design" | "lld" | "quiz" | "review"
+  kind: "practice" | "patterns" | "design" | "lld" | "db" | "quiz" | "review"
 }
 
 const READ_KEY = "deriva-notifications-read-v1"

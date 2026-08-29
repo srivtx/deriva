@@ -127,7 +127,10 @@ class WorkerBridge {
   }
 
   async runScript(code: string, testCode: string, setup?: string, signal?: AbortSignal) {
-    const response = await this.request({ type: "runScript", code, testCode, setup }, DEFAULT_TIMEOUT_MS, signal)
+    // DB-ladder scripts pull the unvendored sqlite3 package on first run —
+    // give them a longer leash than the standard 15s sandbox timeout.
+    const timeoutMs = setup?.includes("sqlite3") ? 60_000 : DEFAULT_TIMEOUT_MS
+    const response = await this.request({ type: "runScript", code, testCode, setup }, timeoutMs, signal)
     if (response.type !== "script-result") throw new Error("Worker returned an invalid script response")
     return response
   }

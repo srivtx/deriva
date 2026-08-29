@@ -2,35 +2,34 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { STAGES_LLD, PROBLEMS_LLD } from "@/data/lld"
+import { STAGES_DB, PROBLEMS_DB } from "@/data/db"
 import ProgressRing from "@/components/progress-ring"
 import { loadWorkbenchProgress } from "@/persistence/workbench-progress"
 
 const TIERS: { name: string; note: string; stages: number[] }[] = [
-  { name: "I — Model It", note: "nouns, responsibilities", stages: [0, 1] },
-  { name: "II — Connect It", note: "relationships, state machines", stages: [2, 3] },
-  { name: "III — Feel the Pain", note: "god classes and smells", stages: [4] },
-  { name: "IV — Fix It", note: "patterns and first full systems", stages: [5, 6] },
-  { name: "V — Name It", note: "SOLID and five more patterns", stages: [7, 8] },
-  { name: "VI — The Second Canon", note: "the classic interview systems", stages: [9] },
-  { name: "VII — Under the Lock", note: "races, mutexes, deadlock", stages: [10] },
+  { name: "I — Read It", note: "rows, filters, shape", stages: [0, 1] },
+  { name: "II — Collapse It", note: "aggregates and groups", stages: [2] },
+  { name: "III — Connect It", note: "joins and subqueries", stages: [3, 4] },
+  { name: "IV — See Windows", note: "rank, lag, CTE pipelines", stages: [5, 6] },
+  { name: "V — Design It", note: "schema, normalization, indexes", stages: [7, 8] },
+  { name: "VI — Trust It", note: "transactions and idempotency", stages: [9] },
 ]
 
-export default function LLDLadderPage() {
+export default function DBLadderPage() {
   const [completed, setCompleted] = useState<number[]>([])
   const [currentId, setCurrentId] = useState(1)
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    const saved = loadWorkbenchProgress("lld")
-    setCompleted(saved.completed.filter(id => PROBLEMS_LLD.some(p => p.id === id)))
+    const saved = loadWorkbenchProgress("db")
+    setCompleted(saved.completed.filter(id => PROBLEMS_DB.some(p => p.id === id)))
     setCurrentId(saved.currentId)
     setHydrated(true)
   }, [])
 
   const done = new Set(completed)
   const doneCount = done.size
-  const total = PROBLEMS_LLD.length
+  const total = PROBLEMS_DB.length
   const pct = total > 0 ? (doneCount / total) * 100 : 0
   const started = doneCount > 0
 
@@ -38,29 +37,29 @@ export default function LLDLadderPage() {
     <main className="icpc-page">
       <section className="icpc-hero">
         <div className="icpc-hero-copy">
-          <span className="icpc-kicker one-kicker">LLD LADDER / {STAGES_LLD.length} SECTIONS &middot; {total} PROBLEMS</span>
-          <h1>Design the objects. Name the principles.</h1>
+          <span className="icpc-kicker one-kicker">DB LADDER / {STAGES_DB.length} SECTIONS &middot; {total} PROBLEMS</span>
+          <h1>Ask the data. Trust the answer.</h1>
           <p>
-            The low-level design ladder, strictly linear: every problem teaches exactly one design move,
-            and every full system composes only moves taught earlier. From noun-to-class reflex through
-            state machines and smells, into patterns, SOLID, and the complete interview canon — parking
-            lots to news feeds — each solved in the browser with instant Python tests.
+            The database ladder, strictly linear: every problem teaches exactly one SQL move against
+            real SQLite — from the first SELECT through joins, window functions and CTE pipelines,
+            into schema design, index plans and transactions that survive replays. Each query runs in
+            the browser with instant tests on seeded data.
           </p>
           <div className="icpc-hero-actions">
-            <Link className="icpc-primary" href={`/lld/practice?problem=${started ? currentId : 1}`}>
-              {started ? "Continue designing" : "Start the ladder"} <span aria-hidden="true">-&gt;</span>
+            <Link className="icpc-primary" href={`/db/practice?problem=${started ? currentId : 1}`}>
+              {started ? "Continue querying" : "Start the ladder"} <span aria-hidden="true">-&gt;</span>
             </Link>
             <span className="icpc-hero-meta">Progress saves locally on this device.</span>
           </div>
         </div>
         <div className="icpc-hero-signal" aria-label="Ladder progress">
-          <span>DESIGNED</span>
+          <span>QUERIED</span>
           <ProgressRing value={hydrated ? pct : 0} size={80} stroke={8} label={hydrated ? `${doneCount}` : "0"} sub={`of ${total}`} />
         </div>
       </section>
 
       {TIERS.map(tier => {
-        const tierProblems = PROBLEMS_LLD.filter(p => tier.stages.includes(p.stage))
+        const tierProblems = PROBLEMS_DB.filter(p => tier.stages.includes(p.stage))
         const tierDone = tierProblems.filter(p => done.has(p.id)).length
         const tierPct = tierProblems.length ? Math.round((tierDone / tierProblems.length) * 100) : 0
         return (
@@ -72,8 +71,8 @@ export default function LLDLadderPage() {
             </div>
             <ol className="icpc-ladder">
               {tier.stages.map(stageId => {
-                const stage = STAGES_LLD[stageId]
-                const problems = PROBLEMS_LLD.filter(p => p.stage === stageId)
+                const stage = STAGES_DB[stageId]
+                const problems = PROBLEMS_DB.filter(p => p.stage === stageId)
                 const sectionDone = problems.filter(p => done.has(p.id)).length
                 const complete = sectionDone === problems.length
                 const firstId = problems[0]?.id
@@ -90,15 +89,15 @@ export default function LLDLadderPage() {
                     <ul className="icpc-problem-list">
                       {problems.map(p => (
                         <li key={p.id}>
-                          <Link href={`/lld/practice?problem=${p.id}`} className={`icpc-problem${done.has(p.id) ? " done" : ""}`}>
+                          <Link href={`/db/practice?problem=${p.id}`} className={`icpc-problem${done.has(p.id) ? " done" : ""}`}>
                             <span className="icpc-problem-dot">{done.has(p.id) ? "✓" : p.id}</span>
                             <span className="icpc-problem-name">{p.title}</span>
-                            <span className="icpc-diff lld-skill">{p.skill}</span>
+                            <span className="icpc-diff db-skill">{p.skill}</span>
                           </Link>
                         </li>
                       ))}
                     </ul>
-                    <Link className="icpc-section-cta" href={`/lld/practice?problem=${firstId}`}>
+                    <Link className="icpc-section-cta" href={`/db/practice?problem=${firstId}`}>
                       Practice section <span aria-hidden="true">-&gt;</span>
                     </Link>
                   </li>

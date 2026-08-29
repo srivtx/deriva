@@ -76,6 +76,7 @@ const APP_SECTIONS = [
     { id: "ai-ml", href: "/ai-ml", name: "AI/ML", glyph: "✳", gradient: G.violet },
     { id: "design", href: "/design", name: "Design", glyph: "▣", gradient: G.cobalt },
     { id: "lld", href: "/lld", name: "LLD", glyph: "◇", gradient: G.teal },
+    { id: "db", href: "/db", name: "DB", glyph: "⌗", gradient: "linear-gradient(135deg, #1F6F8B, #123F52)" },
     { id: "expedition", href: "/expedition", name: "Expedition", glyph: "△", gradient: G.ember },
     { id: "res", href: "/res", name: "RES", glyph: "∴", gradient: "linear-gradient(135deg, #A0305A, #6E1F3E)" },
     { id: "games", href: "/games", name: "Games", glyph: "◆", gradient: G.pink },
@@ -272,8 +273,9 @@ export default function HomePage() {
             <Link href="/patterns" className="explore-link"><b>Pattern Journal</b><span>Recognize the thinking moves</span></Link>
             <Link href="/expedition" className="explore-link"><b>Expedition</b><span>Retrieve, break, and transfer an idea</span></Link>
             <Link href="/games" className="explore-link"><b>Game Mode</b><span>Practice invariants through play</span></Link>
-            <Link href="/design" className="explore-link"><b>System Design</b><span>45 architecture problems</span></Link>
-            <Link href="/lld" className="explore-link"><b>Low-Level Design</b><span>35 object design problems</span></Link>
+            <Link href="/design" className="explore-link"><b>System Design</b><span>53 architecture problems</span></Link>
+            <Link href="/lld" className="explore-link"><b>Low-Level Design</b><span>55 object design problems, now with concurrency</span></Link>
+            <Link href="/db" className="explore-link"><b>Database & SQL</b><span>50 query problems on real SQLite</span></Link>
           </div>
           <h3>DSA Topics</h3>
           <div className="topic-grid">

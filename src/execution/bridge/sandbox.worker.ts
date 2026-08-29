@@ -42,6 +42,11 @@ def __deriva_run_tests(tests_json, ns):
 async function runScript(msg: Extract<WorkerMessage, { type: "runScript" }>) {
   const py = await loadPyodide()
   const source = [msg.setup, msg.code, msg.testCode].filter(Boolean).join("\n\n")
+  // sqlite3 is unvendored in Pyodide 0.25 — load it only when a script needs it
+  // (the DB ladder), so every other drill keeps its zero-extra-download warmup.
+  if (source.includes("sqlite3")) {
+    await py.loadPackage("sqlite3")
+  }
   py.runPython(`import io, sys\n__deriva_out = io.StringIO()\nsys.stdout = __deriva_out\nsys.stderr = __deriva_out`)
   try {
     py.runPython(source)

@@ -155,3 +155,25 @@ pattern in 04 §4 is earned in the journal at least once by the founder.
 
 Code merged, tests green, docs updated (AGENTS.md + any doc its work touched), metrics
 instrumented, and the milestone's exit criteria demonstrated — not asserted.
+
+## Post-M7 additions — the interview quartet (Aug 2026)
+
+Two curriculum expansions outside the original DSA milestones, both following the
+ladder law (one thinking-move per problem, strictly linear, compose-only-earlier):
+
+1. **DB Ladder** (`/db`, 50 problems, 10 stages): SELECT reflex → filters/shape →
+   aggregation → joins → subqueries → window functions → CTE pipelines → schema
+   design (constraints, FKs, 3NF) → index plans (EXPLAIN QUERY PLAN) →
+   transactions (BEGIN/ROLLBACK, locking, UPSERT, idempotent ingest). Runs real
+   SQLite via Python's stdlib in the Pyodide worker. Worker change: `sqlite3` is
+   unvendored in Pyodide 0.25 — the sandbox lazy-loads it only for DB scripts and
+   gives them a 60s budget; all starters guard auto-execution against empty
+   statements because the unvendored build fatally asserts on them.
+
+2. **LLD Stage 10 — Concurrency** (problems 51–55): a deterministic round-robin
+   op-scheduler replaces real threads (Pyodide is single-threaded and
+   nondeterministic tests are forbidden anyway). Lost update → mutex → bounded
+   buffer → deadlock + lock ordering → check-and-act-inside-the-lock meter.
+
+Progress, notes, and the home "resume" queue treat both like the existing
+workbenches (deriva-db-progress-v1, NextActionKind "db").

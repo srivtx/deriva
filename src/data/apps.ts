@@ -28,6 +28,7 @@ const G = {
   ghost: "linear-gradient(135deg, #4B4B5E, #14141C)",
   osc: "linear-gradient(135deg, #3A3A46, #10101A)",
   wine: "linear-gradient(135deg, #A0305A, #6E1F3E)",
+  lake: "linear-gradient(135deg, #1F6F8B, #123F52)",
 }
 
 export const APP_CATALOG: AppMeta[] = [
@@ -62,7 +63,8 @@ export const APP_CATALOG: AppMeta[] = [
   // Explore
   { id: "ai-ml", name: "AI/ML", glyph: "✳", gradient: G.violet, desc: "Labs + 180 questions", category: "Explore", href: "/ai-ml", status: "installed" },
   { id: "design", name: "Design", glyph: "▣", gradient: G.cobalt, desc: "System design problems", category: "Explore", href: "/design", status: "installed" },
-  { id: "lld", name: "LLD", glyph: "◇", gradient: G.teal, desc: "50 design problems, SOLID to systems", category: "Explore", href: "/lld", status: "installed" },
+    { id: "lld", name: "LLD", glyph: "◇", gradient: G.teal, desc: "55 design problems, SOLID to concurrency", category: "Explore", href: "/lld", status: "installed" },
+    { id: "db", name: "DB", glyph: "⌗", gradient: G.lake, desc: "50 problems, SELECT to transactions", category: "Explore", href: "/db", status: "installed" },
   { id: "expedition", name: "Expedition", glyph: "△", gradient: G.ember, desc: "Retrieve & transfer ideas", category: "Explore", href: "/expedition", status: "installed" },
   { id: "res", name: "RES", glyph: "∴", gradient: G.wine, desc: "Research brainstorm trainer", category: "Explore", href: "/res", status: "installed" },
   { id: "games", name: "Games", glyph: "◆", gradient: G.pink, desc: "Practice through play", category: "Explore", href: "/games", status: "installed" },
