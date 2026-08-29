@@ -50,7 +50,10 @@ class WorkerBridge {
 
   private createWorker(): Worker {
     if (typeof Worker === "undefined") throw new Error("Web Workers are unavailable in this browser")
-    const worker = new Worker(new URL("./sandbox.worker.ts", import.meta.url))
+    // Plain JS on purpose: Turbopack emits `new URL(...)` worker targets as raw
+    // static media, and a raw .ts file can't execute — the sandbox died on the
+    // deployed site. See the header comment in sandbox.worker.js.
+    const worker = new Worker(new URL("./sandbox.worker.js", import.meta.url))
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => this.handleResponse(event.data)
     worker.onerror = event => {
       // Keep the real cause in the console — the UI message is for humans.
