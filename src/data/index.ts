@@ -13,6 +13,7 @@ import { STAGES_ADVANCED_GRAPHS, PROBLEMS_ADVANCED_GRAPHS } from "./advanced-gra
 import { STAGES_BIT, PROBLEMS_BIT } from "./bit-manipulation"
 import { STAGES_MATH, PROBLEMS_MATH } from "./math"
 import { STAGES_ICPC, PROBLEMS_ICPC } from "./icpc"
+import { STAGES_ONE, PROBLEMS_ONE } from "./one"
 
 export interface Problem {
   id: number; stage: number; title: string; pattern: string; skill: string
@@ -39,6 +40,7 @@ export const TOPICS: Record<string, Topic> = {
   "bit-manipulation":{id:"bit-manipulation",name: "Bit Manipulation",     stages: STAGES_BIT as Stage[],            problems: PROBLEMS_BIT,             buildCode: "" },
   math:            { id: "math",            name: "Math",                 stages: STAGES_MATH as Stage[],           problems: PROBLEMS_MATH,           buildCode: "" },
   icpc:            { id: "icpc",            name: "ICPC Ladder",          stages: STAGES_ICPC,                      problems: PROBLEMS_ICPC,           buildCode: "" },
+  one:             { id: "one",             name: "0NE Ladder",           stages: STAGES_ONE,                       problems: PROBLEMS_ONE,            buildCode: "" },
 }
 
 export const TOPIC_LIST = Object.values(TOPICS)

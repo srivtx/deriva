@@ -1077,6 +1077,19 @@ body.app-mode-active .practice-wrap .main { padding-bottom: 28px; }
   .super-page { padding-bottom: 64px; }
 }
 
+/* ── 0NE Ladder ── */
+.one-kicker { font-family: var(--font-mono); }
+.one-tier { display: flex; align-items: baseline; gap: 12px; margin: 34px 0 -6px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.one-tier-name { color: var(--accent); font: 700 13px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.one-tier-note { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); font: 11px var(--font-ui); }
+.one-tier-count { color: var(--ink-soft); font: 700 11px var(--font-mono); }
+.one-tier-progress { height: 3px; overflow: hidden; margin-top: 12px; border-radius: 999px; background: var(--line); }
+.one-tier-progress div { height: 100%; border-radius: inherit; background: var(--accent); transition: width var(--dur-slow) var(--ease-standard); }
+
+@media (max-width: 700px) {
+  .one-tier { gap: 8px; }
+}
+
 @media (max-width: 700px) {
   .icpc-hero { grid-template-columns: 1fr; }
   .icpc-hero-signal { order: -1; }
