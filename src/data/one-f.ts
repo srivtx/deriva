@@ -260,7 +260,7 @@ export const PROBLEMS_ONE_F: OneProblem[] = [
       { input: "the 6-node network (answer 23)", output: "23" },
       { input: "caps: 0->1:5, 1->2:3; s=0, t=2", output: "3" },
     ],
-    why: "Dinic is Edmonds-Karp with one structural upgrade: the level graph lets each phase cancel MANY augmenting paths at once (a blocking flow), giving O(V²·E) and surviving graphs where BFS-per-path would crawl. It is the last algorithm on this ladder not because it is hardest to write — it is a DFS you already know plus a distance array — but because writing it proves you can compose every idea since stage 0: amortization, invariants, greedy proofs, and layered thinking. One hundred problems. One ladder. This is the top rung.",
+    why: "Dinic is Edmonds-Karp with one structural upgrade: the level graph lets each phase cancel MANY augmenting paths at once (a blocking flow), giving O(V²·E) and surviving graphs where BFS-per-path would crawl. It is the last algorithm on this ladder not because it is hardest to write — it is a DFS you already know plus a distance array — but because writing it proves you can compose every idea since stage 0: amortization, invariants, greedy proofs, and layered thinking. One hundred problems form the spine of this ladder — the mastery extensions follow. This is the top of the spine.",
     starterCode: "def dinic(caps, s, t):\n    pass",
     hints: [
       "BFS levels: level[s] = 0; only traverse residual > 0 edges; level[v] = level[u] + 1.",

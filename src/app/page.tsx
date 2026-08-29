@@ -42,6 +42,7 @@ const APP_SECTIONS = [
   ] },
   { label: "Practice", apps: [
     { id: "practice", href: "/practice", name: "Drill", glyph: "▶", gradient: G.cobalt },
+    { id: "one", href: "/one", name: "0NE", glyph: "⊙", gradient: G.violet },
     { id: "icpc", href: "/icpc", name: "ICPC", glyph: "⚑", gradient: G.green },
     { id: "atlas", href: "/atlas", name: "Atlas", glyph: "◎", gradient: G.sky },
     { id: "cheatsheets", href: "/cheatsheets", name: "Cheatsheets", glyph: "≡", gradient: G.gold },

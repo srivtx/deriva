@@ -5,6 +5,10 @@ import { PROBLEMS_ONE_C } from "./one-c"
 import { PROBLEMS_ONE_D } from "./one-d"
 import { PROBLEMS_ONE_E } from "./one-e"
 import { PROBLEMS_ONE_F } from "./one-f"
+import { PROBLEMS_ONE_G } from "./one-g"
+import { PROBLEMS_ONE_H } from "./one-h"
+import { PROBLEMS_ONE_I } from "./one-i"
+import { PROBLEMS_ONE_J } from "./one-j"
 
 export type OneProblem = Problem
 
@@ -27,6 +31,14 @@ export const STAGES_ONE: Stage[] = [
   { id: 15, name: "DP II — Tables & Trees", desc: "two strings, a set, a tree" },
   { id: 16, name: "Expert Structures", desc: "tries, bounds, borders, bits" },
   { id: 17, name: "Flows & Matching", desc: "capacity is the last boss" },
+  { id: 18, name: "Greedy", desc: "prove the local choice safe" },
+  { id: 19, name: "Bit Manipulation", desc: "the mask is the data" },
+  { id: 20, name: "Math & Numbers", desc: "Euclid, primes, exponents" },
+  { id: 21, name: "Strings Deep", desc: "hashes, borders, calculators" },
+  { id: 22, name: "BST & Serialization", desc: "order, stored and rebuilt" },
+  { id: 23, name: "DP III", desc: "circles, squares, intervals, stars" },
+  { id: 24, name: "Advanced Graphs", desc: "reverse the search, model the state" },
+  { id: 25, name: "Design & Amortized", desc: "structures you invent" },
 ]
 
 export const PROBLEMS_ONE: Problem[] = [
@@ -36,4 +48,8 @@ export const PROBLEMS_ONE: Problem[] = [
   ...PROBLEMS_ONE_D,
   ...PROBLEMS_ONE_E,
   ...PROBLEMS_ONE_F,
+  ...PROBLEMS_ONE_G,
+  ...PROBLEMS_ONE_H,
+  ...PROBLEMS_ONE_I,
+  ...PROBLEMS_ONE_J,
 ]

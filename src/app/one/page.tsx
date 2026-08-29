@@ -18,6 +18,10 @@ const TIERS: { name: string; note: string; stages: number[] }[] = [
   { name: "IV — Graphs", note: "search, weights, components", stages: [11, 12, 13] },
   { name: "V — Dynamic Programming", note: "the state is everything", stages: [14, 15] },
   { name: "VI — The Last Boss", note: "expert structures & flows", stages: [16, 17] },
+  { name: "VII — Greedy & Bits", note: "safe local choices, raw bits", stages: [18, 19] },
+  { name: "VIII — Numbers & Strings", note: "Euclid to rolling hashes", stages: [20, 21] },
+  { name: "IX — Deeper Structures", note: "BSTs, intervals, stars", stages: [22, 23] },
+  { name: "X — Graph Mastery & Design", note: "model it, then build it", stages: [24, 25] },
 ]
 
 export default function OnePage() {
@@ -44,11 +48,11 @@ export default function OnePage() {
       <section className="icpc-hero">
         <div className="icpc-hero-copy">
           <span className="icpc-kicker one-kicker">0NE LADDER / {STAGES_ONE.length} SECTIONS &middot; {total} PROBLEMS</span>
-          <h1>One hundred problems. Zero to mastery.</h1>
+          <h1>Zero to mastery. Then beyond.</h1>
           <p>
             The complete DSA ladder, curated to be strictly linear: every problem teaches exactly one
-            new move, and every Hard composes only moves taught earlier on the ladder. Six tiers take
-            you from counting loop steps to max-flow. Solve in the browser with instant Python tests.
+            new move, and every Hard composes only moves taught earlier on the ladder. Ten tiers take
+            you from counting loop steps to LFU caches. Solve in the browser with instant Python tests.
           </p>
           <div className="icpc-hero-actions">
             <Link className="icpc-primary" href={`/practice?topic=one&problem=${PROBLEMS_ONE[0]?.id ?? 1}`}>
