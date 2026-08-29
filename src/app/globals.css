@@ -1096,6 +1096,9 @@ body.app-mode-active .practice-wrap .main { padding-bottom: 28px; }
   .icpc-problem-list { grid-template-columns: 1fr; }
 }
 
+/* ── LLD Ladder ── */
+.lld-skill { max-width: 175px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); background: var(--paper); border: 1px solid var(--line); }
+
 /* ── RES — research brainstorm trainer ── */
 .res-ghost-btn { display: inline-flex; align-items: center; padding: 12px 16px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); background: var(--paper); color: var(--ink); font: 700 13px var(--font-ui); cursor: pointer; transition: border-color var(--dur-fast), transform var(--dur-fast); }
 .res-ghost-btn:hover { border-color: var(--accent); transform: translateY(-2px); }

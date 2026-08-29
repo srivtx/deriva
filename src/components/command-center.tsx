@@ -47,6 +47,7 @@ export default function CommandCenter({ open, onClose }: { open: boolean; onClos
       { id: "one", title: "Open 0NE Ladder", meta: "Practice · 148 problems, zero to mastery", keywords: "one ladder dsa mastery complete linear greedy bits math strings dp design flow", href: "/one" },
       { id: "res", title: "Open RES Brainstorm", meta: "Research · open-ended interview prep", keywords: "res research brainstorm interview ai safety open ended thinking aloud drill", href: "/res" },
       { id: "icpc", title: "Open ICPC Ladder", meta: "Practice · 91 contest problems", keywords: "icpc contest ladder competitive programming", href: "/icpc" },
+      { id: "lld", title: "Open LLD Ladder", meta: "Design · 50 problems, SOLID to systems", keywords: "lld low level design ladder oop solid patterns parking lot splitwise state machine", href: "/lld" },
       { id: "daily", title: "Open Daily Challenge", meta: "Habit · today's problem", keywords: "daily challenge today streak", href: "/daily" },
       { id: "review", title: "Open Review Queue", meta: "Memory · spaced repetition", keywords: "review flashcards spaced repetition patterns due", href: "/review" },
       { id: "contest", title: "Start a Contest", meta: "Pressure · 3 problems, one clock", keywords: "contest simulator timer virtual icpc", href: "/contest" },

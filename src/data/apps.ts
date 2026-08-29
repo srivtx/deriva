@@ -62,7 +62,7 @@ export const APP_CATALOG: AppMeta[] = [
   // Explore
   { id: "ai-ml", name: "AI/ML", glyph: "✳", gradient: G.violet, desc: "Labs + 180 questions", category: "Explore", href: "/ai-ml", status: "installed" },
   { id: "design", name: "Design", glyph: "▣", gradient: G.cobalt, desc: "System design problems", category: "Explore", href: "/design", status: "installed" },
-  { id: "lld", name: "LLD", glyph: "◇", gradient: G.teal, desc: "Low-level design", category: "Explore", href: "/lld", status: "installed" },
+  { id: "lld", name: "LLD", glyph: "◇", gradient: G.teal, desc: "50 design problems, SOLID to systems", category: "Explore", href: "/lld", status: "installed" },
   { id: "expedition", name: "Expedition", glyph: "△", gradient: G.ember, desc: "Retrieve & transfer ideas", category: "Explore", href: "/expedition", status: "installed" },
   { id: "res", name: "RES", glyph: "∴", gradient: G.wine, desc: "Research brainstorm trainer", category: "Explore", href: "/res", status: "installed" },
   { id: "games", name: "Games", glyph: "◆", gradient: G.pink, desc: "Practice through play", category: "Explore", href: "/games", status: "installed" },

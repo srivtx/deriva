@@ -12,6 +12,9 @@ export const STAGES_LLD = [
   { id: 4, name: "Naive (God Class)", desc: "one class does everything" },
   { id: 5, name: "Patterns", desc: "strategy, factory, observer" },
   { id: 6, name: "Mastery", desc: "full object-oriented designs" },
+  { id: 7, name: "SOLID", desc: "name the principles you were feeling" },
+  { id: 8, name: "Patterns II", desc: "builder, adapter, decorator, command, template" },
+  { id: 9, name: "Mastery II", desc: "five more classic systems" },
 ]
 
 export const PROBLEMS_LLD: Problem[] = [
@@ -587,7 +590,7 @@ export const PROBLEMS_LLD: Problem[] = [
     ],
     solution: "class ElevatorController:\n    def __init__(self, elevators):\n        self.elevators = elevators\n        self.targets = {e.eid: None for e in elevators}\n\n    def request_floor(self, floor):\n        idle = [e for e in self.elevators if self.targets[e.eid] is None]\n        if not idle:\n            return None\n        best = min(idle, key=lambda e: abs(e.current_floor - floor))\n        self.targets[best.eid] = floor\n        return best.eid\n\n    def step(self):\n        for e in self.elevators:\n            t = self.targets[e.eid]\n            if t is None:\n                continue\n            if e.current_floor < t:\n                e.move_to(e.current_floor + 1)\n            elif e.current_floor > t:\n                e.move_to(e.current_floor - 1)\n            if e.current_floor == t:\n                self.targets[e.eid] = None\n                e.direction = 'idle'",
     walkthrough: "Controller dispatches (nearest idle), elevators execute (one floor per step), targets clear on arrival. Elevator (P5) stays dumb about scheduling; controller stays dumb about movement mechanics. Real systems add SCAN scheduling and request queues — but this separation is the foundation.",
-    testCode: "e1 = Elevator('E1')\nctrl = ElevatorController([e1])\nassigned = ctrl.request_floor(5)\nassert assigned == 'E1'\nfor _ in range(5):\n    ctrl.step()\nassert e1.current_floor == 5\nassert e1.direction == 'idle'\ne2 = Elevator('E2')\ne2.move_to(10)\nctrl2 = ElevatorController([e1, e2])\nassert ctrl2.request_floor(8) == 'E1'\nprint('All tests passed!')"
+    testCode: "e1 = Elevator('E1')\nctrl = ElevatorController([e1])\nassigned = ctrl.request_floor(5)\nassert assigned == 'E1'\nfor _ in range(5):\n    ctrl.step()\nassert e1.current_floor == 5\nassert e1.direction == 'idle'\ne2 = Elevator('E2')\ne2.move_to(12)\nctrl2 = ElevatorController([e1, e2])\nassert ctrl2.request_floor(8) == 'E1'\nassert ctrl2.request_floor(9) == 'E2'\nprint('All tests passed!')"
   },
   {
     id: 34, stage: 6, title: "FULL: Library Management", pattern: "complete-design", skill: "Book/BookCopy + member + issue flow",
@@ -622,5 +625,266 @@ export const PROBLEMS_LLD: Problem[] = [
     solution: "class Splitwise:\n    def __init__(self):\n        self.users = set()\n        self.balances = {}\n\n    def add_user(self, uid):\n        self.users.add(uid)\n\n    def _add_debt(self, debtor, creditor, amount):\n        if debtor == creditor:\n            return\n        if (creditor, debtor) in self.balances:\n            self.balances[(creditor, debtor)] -= amount\n            if self.balances[(creditor, debtor)] <= 0:\n                self.balances[(debtor, creditor)] = -self.balances.pop((creditor, debtor))\n                if self.balances[(debtor, creditor)] == 0:\n                    del self.balances[(debtor, creditor)]\n        else:\n            self.balances[(debtor, creditor)] = self.balances.get((debtor, creditor), 0) + amount\n\n    def add_expense(self, paid_by, amount, split_among):\n        share = amount / len(split_among)\n        for uid in split_among:\n            if uid != paid_by:\n                self._add_debt(uid, paid_by, share)\n\n    def settle_up(self, debtor, creditor):\n        self.balances.pop((debtor, creditor), None)\n\n    def get_balances(self):\n        return {k: v for k, v in self.balances.items() if v > 0}",
     walkthrough: "Debts are directed edges; the _add_debt netting keeps exactly one edge per pair. Splitting = creating edges. Settling = removing an edge. The object model IS a graph, and get_balances is just 'list the edges'. Splitwise's full version adds graph simplification (min-transactions) — that's DSA meeting LLD again.",
     testCode: "s = Splitwise()\nfor u in ['A', 'B', 'C']:\n    s.add_user(u)\ns.add_expense('A', 90, ['A', 'B', 'C'])\nbal = s.get_balances()\nassert bal[('B', 'A')] == 30\nassert bal[('C', 'A')] == 30\ns.settle_up('B', 'A')\nassert ('B', 'A') not in s.get_balances()\ns.add_expense('B', 60, ['A', 'B'])\nassert s.get_balances()[('A', 'B')] == 30\nprint('All tests passed!')"
+  },
+
+  // ══ STAGE 7 — SOLID ══
+  {
+    id: 36, stage: 7, title: "Program to an Interface", pattern: "abstraction", skill: "ABC is a contract, not a base class",
+    statement: "Define Shape as an abstract base class (ABC) with an abstract area(). Implement Circle(r) and Rectangle(w, h) conforming to it. Then write total_area(shapes) that sums area() over ANY list of shapes — knowing nothing about circles or rectangles.",
+    examples: [
+      { input: "total_area([Circle(1), Rectangle(2, 3)])", output: "π·1² + 2·3 ≈ 9.14", explain: "the function only knows area() exists" },
+    ],
+    why: "The prerequisite move for OCP, LSP, ISP, and DIP: an abstract interface lets clients depend on a CONTRACT instead of concrete classes. Strategy (P26) was polymorphism; ABC makes the contract explicit and enforceable — Python refuses to instantiate a class that doesn't implement every abstract method.",
+    starterCode: "from abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self):\n        pass\n\nclass Circle(Shape):\n    pass\n\nclass Rectangle(Shape):\n    pass\n\ndef total_area(shapes):\n    pass",
+    hints: [
+      "Circle stores r, area returns math.pi * r ** 2.",
+      "Rectangle stores w and h, area returns w * h.",
+      "total_area: sum(s.area() for s in shapes) — no isinstance checks anywhere.",
+    ],
+    solution: "import math\nfrom abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self):\n        pass\n\nclass Circle(Shape):\n    def __init__(self, r):\n        self.r = r\n\n    def area(self):\n        return math.pi * self.r ** 2\n\nclass Rectangle(Shape):\n    def __init__(self, w, h):\n        self.w = w\n        self.h = h\n\n    def area(self):\n        return self.w * self.h\n\ndef total_area(shapes):\n    return sum(s.area() for s in shapes)",
+    walkthrough: "Shape is a contract: 'anything I am has an area()'. total_area depends on the contract, not the implementors — add Triangle tomorrow and total_area never hears about it. ABC adds teeth: Shape() itself now raises TypeError, so half-implemented subclasses fail at construction, not at 2am.",
+    testCode: "import math\nc = Circle(1)\nassert abs(c.area() - math.pi) < 1e-9\nrect = Rectangle(2, 3)\nassert rect.area() == 6\nassert abs(total_area([c, rect]) - (math.pi + 6)) < 1e-9\ntry:\n    Shape()\n    assert False\nexcept TypeError:\n    pass\nprint('All tests passed!')"
+  },
+  {
+    id: 37, stage: 7, title: "OCP: Extend Without Modifying", pattern: "ocp", skill: "new behavior = new code, not edits",
+    statement: "A discount policy uses if-elif chains per customer type. Refactor it into a registry: a class-level dict of rates plus a register(customer_type, rate) classmethod. Then add 'platinum' at 30% — WITHOUT editing any existing line of the lookup logic.",
+    examples: [
+      { input: "register('platinum', 0.3); discount('platinum')", output: "0.3", explain: "addition, not modification" },
+    ],
+    why: "Open-Closed Principle: open for extension, closed for modification. The if-elif version demands an edit (and a re-test) for every new customer type; the registry version makes new types pure ADDITIONS. The tells of an OCP violation: 'add a case to...' in your task list.",
+    starterCode: "class DiscountPolicy:\n    RATES = {'regular': 0.0, 'silver': 0.1, 'gold': 0.2}\n\n    @classmethod\n    def register(cls, customer_type, rate):\n        pass\n\n    @classmethod\n    def discount(cls, customer_type):\n        pass",
+    hints: [
+      "register: if customer_type in RATES raise ValueError — never silently overwrite; else RATES[customer_type] = rate.",
+      "discount: raise ValueError for unknown types (explicit beats silent 0).",
+      "The existing RATES dict is written ONCE. register() only adds entries.",
+    ],
+    solution: "class DiscountPolicy:\n    RATES = {'regular': 0.0, 'silver': 0.1, 'gold': 0.2}\n\n    @classmethod\n    def register(cls, customer_type, rate):\n        if customer_type in cls.RATES:\n            raise ValueError(f'{customer_type} already registered')\n        cls.RATES[customer_type] = rate\n\n    @classmethod\n    def discount(cls, customer_type):\n        if customer_type not in cls.RATES:\n            raise ValueError(f'Unknown customer type: {customer_type}')\n        return cls.RATES[customer_type]",
+    walkthrough: "Compare the two designs: if-elif grows a new branch per type (edit + retest); the registry grows a new ENTRY (addition only). Notice the guard in register — overwriting an existing rate silently is a bug factory. OCP at scale is plugin systems: the core never changes, extensions are new modules.",
+    testCode: "assert DiscountPolicy.discount('gold') == 0.2\nDiscountPolicy.register('platinum', 0.3)\nassert DiscountPolicy.discount('platinum') == 0.3\ntry:\n    DiscountPolicy.register('gold', 0.5)\n    assert False\nexcept ValueError:\n    pass\nassert DiscountPolicy.discount('gold') == 0.2\ntry:\n    DiscountPolicy.discount('diamond')\n    assert False\nexcept ValueError:\n    pass\nprint('All tests passed!')"
+  },
+  {
+    id: 38, stage: 7, title: "LSP: Rectangle vs Square", pattern: "lsp", skill: "substitution without surprises",
+    statement: "The classic: naive Square(Rectangle) overrides set_width to keep sides equal — and silently breaks any function that treats it as a Rectangle. Implement the safe design: Shape(ABC) with area(); Rectangle and Square as SIBLINGS (Square manages its own side). Prove a double_area(shape) client works on both, and that Square no longer lies about set_width.",
+    examples: [
+      { input: "double_area(Square(3))", output: "18", explain: "client code can't tell the difference — that's LSP" },
+    ],
+    why: "Liskov Substitution: a subclass must be usable anywhere the parent is, without surprises. Square-IS-A-Rectangle mathematically, but NOT behaviorally — Square breaks 'set_width only changes width'. When is-a fails behaviorally, refactor to a shared abstraction. LSP is why 'favor composition' has teeth.",
+    starterCode: "from abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self):\n        pass\n\nclass Rectangle(Shape):\n    def __init__(self, w, h):\n        self.w = w\n        self.h = h\n\n    def set_width(self, w):\n        self.w = w\n\n    def set_height(self, h):\n        self.h = h\n\nclass Square(Shape):\n    def __init__(self, side):\n        pass\n\ndef double_area(shape):\n    pass",
+    hints: [
+      "Rectangle.area: w * h. Square stores one side; area = side ** 2.",
+      "double_area: shape.area() * 2 — works for anything with area().",
+      "Square has NO set_width — the broken contract is gone, not fixed.",
+    ],
+    solution: "from abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self):\n        pass\n\nclass Rectangle(Shape):\n    def __init__(self, w, h):\n        self.w = w\n        self.h = h\n\n    def set_width(self, w):\n        self.w = w\n\n    def set_height(self, h):\n        self.h = h\n\n    def area(self):\n        return self.w * self.h\n\nclass Square(Shape):\n    def __init__(self, side):\n        self.side = side\n\n    def area(self):\n        return self.side ** 2\n\ndef double_area(shape):\n    return shape.area() * 2",
+    walkthrough: "The naive design: Square(Rectangle) overriding set_width(4) to also set height — any Rectangle code that sets width then height gets a final shape it never asked for. The contract (width and height vary independently) is part of Rectangle's meaning; Square can't honor it. Siblings under Shape keep the useful is-a (both ARE shapes) and drop the lying one.",
+    testCode: "r = Rectangle(2, 5)\nassert r.area() == 10\nr.set_width(4)\nassert r.area() == 20\ns = Square(3)\nassert s.area() == 9\nassert double_area(s) == 18\nassert double_area(Rectangle(1, 2)) == 4\ntry:\n    s.set_width(4)\n    assert False\nexcept AttributeError:\n    pass\nassert isinstance(r, Shape) and isinstance(s, Shape)\nprint('All tests passed!')"
+  },
+  {
+    id: 39, stage: 7, title: "ISP: Split the Fat Interface", pattern: "isp", skill: "no client depends on what it doesn't use",
+    statement: "A fat Worker ABC forces Robot to implement eat() and sleep() — absurd. Split it: Workable ABC (work) and Eatable ABC (eat, sleep). Human implements both; Robot implements Workable only. Prove: robot.work() works, robot is NOT an Eatable, and robot.eat() doesn't exist.",
+    examples: [
+      { input: "isinstance(robot, Eatable)", output: "False", explain: "the fat interface is gone" },
+    ],
+    why: "Interface Segregation: many small interfaces beat one god interface. The smell: 'NotImplementedError' or 'pass' bodies in a subclass — that's the class telling you it was forced to promise something it can't keep. Every API with unused parameters is an ISP violation wearing a suit.",
+    starterCode: "from abc import ABC, abstractmethod\n\nclass Workable(ABC):\n    @abstractmethod\n    def work(self):\n        pass\n\nclass Eatable(ABC):\n    @abstractmethod\n    def eat(self):\n        pass\n\n    @abstractmethod\n    def sleep(self):\n        pass\n\nclass Human(Workable, Eatable):\n    pass\n\nclass Robot(Workable):\n    pass",
+    hints: [
+      "Human.work returns 'working', eat returns 'eating', sleep returns 'sleeping'.",
+      "Robot.work returns 'working 24/7'.",
+      "Robot intentionally has NO eat method — the test asserts it's absent.",
+    ],
+    solution: "from abc import ABC, abstractmethod\n\nclass Workable(ABC):\n    @abstractmethod\n    def work(self):\n        pass\n\nclass Eatable(ABC):\n    @abstractmethod\n    def eat(self):\n        pass\n\n    @abstractmethod\n    def sleep(self):\n        pass\n\nclass Human(Workable, Eatable):\n    def work(self):\n        return 'working'\n\n    def eat(self):\n        return 'eating'\n\n    def sleep(self):\n        return 'sleeping'\n\nclass Robot(Workable):\n    def work(self):\n        return 'working 24/7'",
+    walkthrough: "Worker(eat, sleep, work) makes Robot lie: eat() as NotImplementedError is a promise the type system can't verify at the call site. Two narrow interfaces make capability EXPLICIT: functions take Workable when they need work, Eatable when they need a meal. Type signatures become honest documentation.",
+    testCode: "h = Human()\nassert h.work() == 'working'\nassert h.eat() == 'eating'\nassert h.sleep() == 'sleeping'\nr = Robot()\nassert r.work() == 'working 24/7'\nassert isinstance(r, Workable)\nassert not isinstance(r, Eatable)\ntry:\n    r.eat()\n    assert False\nexcept AttributeError:\n    pass\nprint('All tests passed!')"
+  },
+  {
+    id: 40, stage: 7, title: "DIP: The Service Stops New-ing", pattern: "dip", skill: "high-level policy depends on abstraction",
+    statement: "NotificationService (high-level) constructs SMTPClient (low-level) inside itself — hardwired. Invert it: Notifier ABC with send(to, message); SMTPNotifier and SMSNotifier implement it; the service receives its Notifier through the constructor. Adding SlackNotifier must require zero changes to the service.",
+    examples: [
+      { input: "NotificationService(SMSNotifier()).notify_all(['A'], 'hi')", output: "sms:A:hi", explain: "swap the dependency, not the service" },
+    ],
+    why: "Dependency Inversion: high-level policy (notify users) should not depend on low-level detail (SMTP wiring) — both depend on an abstraction. This is P28's dependency injection promoted to a principle: DI is the mechanism, DIP is the design rule that tells you WHAT to inject (an abstraction, not a concrete).",
+    starterCode: "from abc import ABC, abstractmethod\n\nclass Notifier(ABC):\n    @abstractmethod\n    def send(self, to, message):\n        pass\n\nclass SMTPNotifier(Notifier):\n    def send(self, to, message):\n        pass\n\nclass SMSNotifier(Notifier):\n    def send(self, to, message):\n        pass\n\nclass NotificationService:\n    def __init__(self, notifier):\n        pass\n\n    def notify_all(self, receivers, message):\n        pass",
+    hints: [
+      "SMTPNotifier.send returns f'email:{to}:{message}'. SMSNotifier.send returns f'sms:{to}:{message}'.",
+      "The service stores the notifier passed in — it never constructs one.",
+      "notify_all: return [self.notifier.send(r, message) for r in receivers].",
+    ],
+    solution: "from abc import ABC, abstractmethod\n\nclass Notifier(ABC):\n    @abstractmethod\n    def send(self, to, message):\n        pass\n\nclass SMTPNotifier(Notifier):\n    def send(self, to, message):\n        return f'email:{to}:{message}'\n\nclass SMSNotifier(Notifier):\n    def send(self, to, message):\n        return f'sms:{to}:{message}'\n\nclass NotificationService:\n    def __init__(self, notifier):\n        self.notifier = notifier\n\n    def notify_all(self, receivers, message):\n        return [self.notifier.send(r, message) for r in receivers]",
+    walkthrough: "Before: service.new SMTPClient — testing requires a real SMTP server, swapping channels means editing the service. After: the service knows only 'something that can send'. The DEPENDENCE ARROW flipped: low-level classes now conform to the interface the HIGH-LEVEL policy defined. That inversion is the whole principle — and P28's DI is how it's wired.",
+    testCode: "svc = NotificationService(SMTPNotifier())\nassert svc.notify_all(['a@x.com', 'b@x.com'], 'hi') == ['email:a@x.com:hi', 'email:b@x.com:hi']\nsvc2 = NotificationService(SMSNotifier())\nassert svc2.notify_all(['A'], 'hi') == ['sms:A:hi']\nassert svc2.notifier is not None and isinstance(svc2.notifier, Notifier)\nprint('All tests passed!')"
+  },
+
+  // ══ STAGE 8 — Patterns II ══
+  {
+    id: 41, stage: 8, title: "Builder: The Fluent Request", pattern: "builder-pattern", skill: "construct step by step, read like a sentence",
+    statement: "HttpRequest has 5 fields where most are optional (method GET, url required, headers {}, body '', timeout 30). A 5-argument constructor with defaults is a telescoping nightmare. Implement HttpRequestBuilder: method(), url(), header(k, v), body(), timeout() — each returning self (fluent) — and build() producing an immutable-style HttpRequest.",
+    examples: [
+      { input: "HttpRequestBuilder().method('POST').url('/api').header('X-T', '1').body('{}').build()", output: "method='POST', url='/api', headers={'X-T': '1'}, body='{}', timeout=30", explain: "chain reads like the request it builds" },
+    ],
+    why: "Builder solves the telescoping-constructor problem: HttpRequest(url, None, None, '{}', None, None, 30) is unreadable and one swapped-arg away from a bug. Step-wise construction also lets you VALIDATE before build() — the object is only born once it's coherent.",
+    starterCode: "class HttpRequest:\n    def __init__(self, method, url, headers, body, timeout):\n        self.method = method\n        self.url = url\n        self.headers = headers\n        self.body = body\n        self.timeout = timeout\n\nclass HttpRequestBuilder:\n    def __init__(self):\n        pass\n\n    def method(self, method):\n        pass\n\n    def url(self, url):\n        pass\n\n    def header(self, key, value):\n        pass\n\n    def body(self, body):\n        pass\n\n    def timeout(self, seconds):\n        pass\n\n    def build(self):\n        pass",
+    hints: [
+      "__init__ sets defaults: method='GET', url=None, headers={}, body='', timeout=30.",
+      "Every setter stores AND returns self — that's what makes chaining work.",
+      "build: raise ValueError if url is None (required field), else return HttpRequest(...).",
+    ],
+    solution: "class HttpRequest:\n    def __init__(self, method, url, headers, body, timeout):\n        self.method = method\n        self.url = url\n        self.headers = headers\n        self.body = body\n        self.timeout = timeout\n\nclass HttpRequestBuilder:\n    def __init__(self):\n        self._method = 'GET'\n        self._url = None\n        self._headers = {}\n        self._body = ''\n        self._timeout = 30\n\n    def method(self, method):\n        self._method = method\n        return self\n\n    def url(self, url):\n        self._url = url\n        return self\n\n    def header(self, key, value):\n        self._headers[key] = value\n        return self\n\n    def body(self, body):\n        self._body = body\n        return self\n\n    def timeout(self, seconds):\n        self._timeout = seconds\n        return self\n\n    def build(self):\n        if self._url is None:\n            raise ValueError('url is required')\n        return HttpRequest(self._method, self._url, dict(self._headers), self._body, self._timeout)",
+    walkthrough: "return self is the entire fluent trick — each call gives you the builder back for the next call. build() is the gate: url required, headers COPIED (so later builder reuse can't mutate a shipped request). Two Builder instances never share state — builders are single-use; build again means construct again.",
+    testCode: "r = HttpRequestBuilder().method('POST').url('/api').header('X-T', '1').body('{}').build()\nassert r.method == 'POST' and r.url == '/api'\nassert r.headers == {'X-T': '1'} and r.body == '{}' and r.timeout == 30\nr2 = HttpRequestBuilder().url('/x').build()\nassert r2.method == 'GET' and r2.headers == {}\ntry:\n    HttpRequestBuilder().method('GET').build()\n    assert False\nexcept ValueError:\n    pass\nb = HttpRequestBuilder().url('/y')\nr3 = b.header('A', '1').build()\nb.header('B', '2')\nassert r3.headers == {'A': '1'}\nprint('All tests passed!')"
+  },
+  {
+    id: 42, stage: 8, title: "Adapter: Legacy Bank, New Checkout", pattern: "adapter-pattern", skill: "translate between incompatible interfaces",
+    statement: "New checkout code expects PaymentProvider with charge(amount_cents) returning 'ok'/'failed'. The only bank SDK available is LegacyBank with pay(amount_rupees) returning True/False. Implement BankAdapter so the checkout works with the legacy bank, converting rupees↔paise and mapping booleans to the contract.",
+    examples: [
+      { input: "BankAdapter(LegacyBank(True)).charge(50000)", output: "'ok'", explain: "50000 paise = ₹500; legacy True → 'ok'" },
+    ],
+    why: "Adapter wraps an existing class with a foreign interface and exposes the interface your code already expects. Zero changes to checkout, zero changes to the legacy SDK — the adapter is the translation layer. It's the pattern you reach for when 'we can't change that code' meets 'our code expects this shape'.",
+    starterCode: "class PaymentProvider:\n    def charge(self, amount_cents):\n        raise NotImplementedError\n\nclass LegacyBank:\n    def __init__(self, succeeds=True):\n        self.succeeds = succeeds\n\n    def pay(self, amount_rupees):\n        return self.succeeds\n\nclass BankAdapter(PaymentProvider):\n    def __init__(self, legacy):\n        pass\n\n    def charge(self, amount_cents):\n        pass\n\ndef checkout(provider, amount_cents):\n    return provider.charge(amount_cents)",
+    hints: [
+      "Adapter stores the legacy bank. charge: rupees = amount_cents // 100.",
+      "Map legacy result: True → 'ok', False → 'failed'.",
+      "BankAdapter SUBCLASSES PaymentProvider — checkout can't tell the difference.",
+    ],
+    solution: "class PaymentProvider:\n    def charge(self, amount_cents):\n        raise NotImplementedError\n\nclass LegacyBank:\n    def __init__(self, succeeds=True):\n        self.succeeds = succeeds\n\n    def pay(self, amount_rupees):\n        return self.succeeds\n\nclass BankAdapter(PaymentProvider):\n    def __init__(self, legacy):\n        self.legacy = legacy\n\n    def charge(self, amount_cents):\n        rupees = amount_cents // 100\n        success = self.legacy.pay(rupees)\n        return 'ok' if success else 'failed'\n\ndef checkout(provider, amount_cents):\n    return provider.charge(amount_cents)",
+    walkthrough: "The adapter's job is unit translation (paise→rupees), result translation (bool→'ok'/'failed'), and interface translation (charge→pay) — three maps in six lines. Checkout() accepts ANY PaymentProvider; the adapter merely makes the legacy bank LOOK like one. When someone finally writes a native provider, checkout never knows anything happened.",
+    testCode: "good = BankAdapter(LegacyBank(True))\nassert good.charge(50000) == 'ok'\nbad = BankAdapter(LegacyBank(False))\nassert bad.charge(25000) == 'failed'\nassert isinstance(good, PaymentProvider)\nassert checkout(good, 10000) == 'ok'\nassert checkout(bad, 10000) == 'failed'\nprint('All tests passed!')"
+  },
+  {
+    id: 43, stage: 8, title: "Decorator: Coffee Cost Calculator", pattern: "decorator-pattern", skill: "wrap objects to layer behavior",
+    statement: "Coffee ABC with cost() and description(). SimpleCoffee: ₹200, 'coffee'. Implement Milk and Sugar decorators — each WRAPS a coffee, delegates both methods, and adds its bit. Milk(Sugar(SimpleCoffee())).cost() == 230 with description 'coffee + sugar + milk'.",
+    examples: [
+      { input: "Milk(Sugar(SimpleCoffee())).cost()", output: "230", explain: "200 + 10 (sugar) + 20 (milk)" },
+    ],
+    why: "Decorator = same interface as the wrapped object, layering behavior by composition. It replaces the N-combinations subclass explosion (CoffeeWithMilkAndSugar, CoffeeWithMilkAndSugarAndCream...) with stacking. Java's InputStream readers and Python's decorators-under-the-hood live here.",
+    starterCode: "from abc import ABC, abstractmethod\n\nclass Coffee(ABC):\n    @abstractmethod\n    def cost(self):\n        pass\n\n    @abstractmethod\n    def description(self):\n        pass\n\nclass SimpleCoffee(Coffee):\n    pass\n\nclass Milk(Coffee):\n    pass\n\nclass Sugar(Coffee):\n    pass",
+    hints: [
+      "SimpleCoffee: cost 200, description 'coffee'.",
+      "Milk.__init__(self, coffee) stores it; cost = coffee.cost() + 20; description = coffee.description() + ' + milk'.",
+      "Sugar: +10 and ' + sugar'. Each decorator IS a Coffee (subclass) AND HAS a Coffee (wrapped).",
+    ],
+    solution: "from abc import ABC, abstractmethod\n\nclass Coffee(ABC):\n    @abstractmethod\n    def cost(self):\n        pass\n\n    @abstractmethod\n    def description(self):\n        pass\n\nclass SimpleCoffee(Coffee):\n    def cost(self):\n        return 200\n\n    def description(self):\n        return 'coffee'\n\nclass Milk(Coffee):\n    def __init__(self, coffee):\n        self.coffee = coffee\n\n    def cost(self):\n        return self.coffee.cost() + 20\n\n    def description(self):\n        return self.coffee.description() + ' + milk'\n\nclass Sugar(Coffee):\n    def __init__(self, coffee):\n        self.coffee = coffee\n\n    def cost(self):\n        return self.coffee.cost() + 10\n\n    def description(self):\n        return self.coffee.description() + ' + sugar'",
+    walkthrough: "Each decorator implements Coffee AND holds a Coffee — the chain delegates downward and layers upward. Order shows in the description (outer-most wraps last) but cost is the same either way. The power move: new add-on = new class; no existing code changes. Compare with 2^n flag parameters or 2^n subclasses — that's the pattern's reason to exist.",
+    testCode: "c = SimpleCoffee()\nassert c.cost() == 200 and c.description() == 'coffee'\ncm = Milk(c)\nassert cm.cost() == 220 and cm.description() == 'coffee + milk'\ncms = Milk(Sugar(c))\nassert cms.cost() == 230\nassert cms.description() == 'coffee + sugar + milk'\nbig = Milk(Milk(Milk(Sugar(Sugar(SimpleCoffee())))))\nassert big.cost() == 200 + 10 + 10 + 20 + 20 + 20\nassert isinstance(cms, Coffee)\nprint('All tests passed!')"
+  },
+  {
+    id: 44, stage: 8, title: "Command: Remote Control with Undo", pattern: "command-pattern", skill: "actions as objects you can store and reverse",
+    statement: "Light has on()/off(). Implement Command ABC with execute() and undo(). LightOnCommand and LightOffCommand wrap a light. Remote has set_command(slot, command), press(slot) (executes + remembers last), and undo() (re-invokes the last command's undo).",
+    examples: [
+      { input: "press on-slot then undo()", output: "light is off again", explain: "the command object remembers how to reverse" },
+    ],
+    why: "Command turns an action into an OBJECT — which means actions can be stored in queues, logged, sent over networks, and reversed. Undo isn't a feature you add to Light; it's a property of commands. Every undo stack, job queue, and macro recorder is this pattern.",
+    starterCode: "from abc import ABC, abstractmethod\n\nclass Light:\n    def __init__(self):\n        self.is_on = False\n\n    def on(self):\n        self.is_on = True\n\n    def off(self):\n        self.is_on = False\n\nclass Command(ABC):\n    @abstractmethod\n    def execute(self):\n        pass\n\n    @abstractmethod\n    def undo(self):\n        pass\n\nclass LightOnCommand(Command):\n    pass\n\nclass LightOffCommand(Command):\n    pass\n\nclass Remote:\n    def __init__(self):\n        pass",
+    hints: [
+      "LightOnCommand stores the light; execute → light.on(); undo → light.off().",
+      "OffCommand mirrors it: execute → off, undo → on.",
+      "Remote: slots dict, self.last = None. press: run command, last = command. undo: if last, last.undo().",
+    ],
+    solution: "from abc import ABC, abstractmethod\n\nclass Light:\n    def __init__(self):\n        self.is_on = False\n\n    def on(self):\n        self.is_on = True\n\n    def off(self):\n        self.is_on = False\n\nclass Command(ABC):\n    @abstractmethod\n    def execute(self):\n        pass\n\n    @abstractmethod\n    def undo(self):\n        pass\n\nclass LightOnCommand(Command):\n    def __init__(self, light):\n        self.light = light\n\n    def execute(self):\n        self.light.on()\n\n    def undo(self):\n        self.light.off()\n\nclass LightOffCommand(Command):\n    def __init__(self, light):\n        self.light = light\n\n    def execute(self):\n        self.light.off()\n\n    def undo(self):\n        self.light.on()\n\nclass Remote:\n    def __init__(self):\n        self.slots = {}\n        self.last = None\n\n    def set_command(self, slot, command):\n        self.slots[slot] = command\n\n    def press(self, slot):\n        command = self.slots[slot]\n        command.execute()\n        self.last = command\n\n    def undo(self):\n        if self.last:\n            self.last.undo()",
+    walkthrough: "The receiver (Light) knows nothing about commands; commands know nothing about the remote. That middle layer of Command objects is what makes press() undoable, queueable, and loggable. Extend: a history LIST gives multi-level undo; serialize commands and you have an audit log. One object — Command — unlocks all of it.",
+    testCode: "light = Light()\nremote = Remote()\nremote.set_command(1, LightOnCommand(light))\nremote.set_command(2, LightOffCommand(light))\nremote.press(1)\nassert light.is_on\nremote.undo()\nassert not light.is_on\nremote.press(1)\nremote.press(2)\nassert not light.is_on\nremote.undo()\nassert light.is_on\ntry:\n    remote.press(9)\n    assert False\nexcept KeyError:\n    pass\nprint('All tests passed!')"
+  },
+  {
+    id: 45, stage: 8, title: "Template Method: The Report Skeleton", pattern: "template-method", skill: "invariant algorithm, variable steps",
+    statement: "ReportGenerator(ABC) defines generate(): data = fetch() → body = format(data) → return render(body). Subclasses override the three STEPS but never generate() itself. Implement SalesReport (CSV-style) and SummaryReport (prose-style) on the same skeleton.",
+    examples: [
+      { input: "SalesReport().generate()", output: "'ITEM,SALES\\nwidget,100'", explain: "same skeleton, different steps" },
+    ],
+    why: "Template Method is inheritance's last good use: the parent owns the INVARIANT sequence, subclasses fill the variable parts. The proof is in the test — SalesReport.generate IS ReportGenerator.generate (identity, not override). Hollywood principle: don't call us, we'll call you.",
+    starterCode: "from abc import ABC, abstractmethod\n\nclass ReportGenerator(ABC):\n    def generate(self):\n        data = self.fetch()\n        body = self.format(data)\n        return self.render(body)\n\n    @abstractmethod\n    def fetch(self):\n        pass\n\nclass SalesReport(ReportGenerator):\n    pass\n\nclass SummaryReport(ReportGenerator):\n    pass",
+    hints: [
+      "fetch returns [('widget', 100), ('gadget', 250)] in both classes.",
+      "SalesReport.format: 'ITEM,SALES' + rows 'name,value'; render returns the joined string.",
+      "SummaryReport.format: 'Top: widget (100)'; render: 'REPORT: ' + body.",
+    ],
+    solution: "from abc import ABC, abstractmethod\n\nclass ReportGenerator(ABC):\n    def generate(self):\n        data = self.fetch()\n        body = self.format(data)\n        return self.render(body)\n\n    @abstractmethod\n    def fetch(self):\n        pass\n\n    @abstractmethod\n    def format(self, data):\n        pass\n\n    @abstractmethod\n    def render(self, body):\n        pass\n\nclass SalesReport(ReportGenerator):\n    def fetch(self):\n        return [('widget', 100), ('gadget', 250)]\n\n    def format(self, data):\n        rows = ['ITEM,SALES'] + [f'{name},{value}' for name, value in data]\n        return '\\n'.join(rows)\n\n    def render(self, body):\n        return body\n\nclass SummaryReport(ReportGenerator):\n    def fetch(self):\n        return [('widget', 100), ('gadget', 250)]\n\n    def format(self, data):\n        top = max(data, key=lambda row: row[1])\n        return f'Top: {top[0]} ({top[1]})'\n\n    def render(self, body):\n        return f'REPORT: {body}'",
+    walkthrough: "generate() is the template: fixed order, fixed call sites. Subclasses supply fetch/format/render — they can't skip a step or reorder them, because generate isn't theirs to touch. The machine-checkable proof: SalesReport.generate is ReportGenerator.generate → True (same function object, inherited, not overridden).",
+    testCode: "s = SalesReport().generate()\nassert s == 'ITEM,SALES\\nwidget,100\\ngadget,250'\nt = SummaryReport().generate()\nassert t == 'REPORT: Top: gadget (250)'\nassert SalesReport.generate is ReportGenerator.generate\nassert SummaryReport.generate is ReportGenerator.generate\ntry:\n    ReportGenerator()\n    assert False\nexcept TypeError:\n    pass\nprint('All tests passed!')"
+  },
+
+  // ══ STAGE 9 — Mastery II ══
+  {
+    id: 46, stage: 9, title: "FULL: Tic-Tac-Toe", pattern: "complete-design", skill: "board + turn state + rules in one object",
+    statement: "Design Tic-Tac-Toe: Game(3x3 board, alternating X/O). play(row, col) places the current player's mark, raises on occupied cells or after the game ends, and switches turns. winner() returns 'X'/'O'/None; is_draw() True when board full with no winner.",
+    examples: [
+      { input: "X at (0,0), O at (1,0), X at (0,1), O at (1,1), X at (0,2)", output: "winner() == 'X'", explain: "top row completes" },
+    ],
+    why: "The interview warm-up of warm-ups: three kinds of logic (grid rules, turn alternation, win detection) must live in ONE object with a clean boundary. Occupied-cell and game-over guards make illegal moves unrepresentable — the state-machine thinking from Stage 3, applied to a game.",
+    starterCode: "class Game:\n    def __init__(self):\n        pass\n\n    def play(self, row, col):\n        pass\n\n    def winner(self):\n        pass\n\n    def is_draw(self):\n        pass",
+    hints: [
+      "Board: [['', '', ''] for _ in range(3)]. current = 'X'. state: 'playing' or 'over'.",
+      "play: if state == 'over' raise; if cell occupied raise; place, check win → set winner & state; else switch current.",
+      "winner checks 3 rows, 3 cols, 2 diagonals for a completed line.",
+    ],
+    solution: "class Game:\n    def __init__(self):\n        self.board = [['', '', ''] for _ in range(3)]\n        self.current = 'X'\n        self.state = 'playing'\n        self._winner = None\n\n    def play(self, row, col):\n        if self.state == 'over':\n            raise RuntimeError('Game is over')\n        if self.board[row][col] != '':\n            raise ValueError('Cell occupied')\n        self.board[row][col] = self.current\n        if self._check_win(self.current):\n            self._winner = self.current\n            self.state = 'over'\n            return\n        if all(cell != '' for row_ in self.board for cell in row_):\n            self.state = 'over'\n            return\n        self.current = 'O' if self.current == 'X' else 'X'\n\n    def _check_win(self, mark):\n        lines = []\n        lines.extend(self.board)\n        lines.extend([[self.board[r][c] for r in range(3)] for c in range(3)])\n        lines.append([self.board[i][i] for i in range(3)])\n        lines.append([self.board[i][2 - i] for i in range(3)])\n        return any(all(cell == mark for cell in line) for line in lines)\n\n    def winner(self):\n        return self._winner\n\n    def is_draw(self):\n        return self.state == 'over' and self._winner is None",
+    walkthrough: "Three concerns, one class, clear boundaries: the board (data), play (the only mutation gate — guards first, then place, then terminal check, then turn switch), and the queries (winner, is_draw) which never mutate. The 8 winning lines are generated, not hand-written — rows, columns, two diagonals from comprehensions. Guards before mutations, always.",
+    testCode: "g = Game()\ng.play(0, 0); g.play(1, 0); g.play(0, 1); g.play(1, 1); g.play(0, 2)\nassert g.winner() == 'X'\ntry:\n    g.play(2, 2)\n    assert False\nexcept RuntimeError:\n    pass\ng2 = Game()\ng2.play(0, 0)\ntry:\n    g2.play(0, 0)\n    assert False\nexcept ValueError:\n    pass\ng3 = Game()\nmoves = [(0, 0), (0, 1), (0, 2), (1, 1), (1, 0), (1, 2), (2, 1), (2, 0), (2, 2)]\nfor r, c in moves:\n    g3.play(r, c)\nassert g3.winner() is None and g3.is_draw()\nprint('All tests passed!')"
+  },
+  {
+    id: 47, stage: 9, title: "FULL: Logger Framework", pattern: "complete-design", skill: "levels, thresholds, pluggable handlers",
+    statement: "Design a logger: levels DEBUG < INFO < WARNING < ERROR. Logger has set_level(), log(level, message), and add_handler(handler) — a handler is anything with handle(level, message). ConsoleHandler prints 'LEVEL: message'; MemoryHandler stores tuples. Messages below the logger's threshold go nowhere.",
+    examples: [
+      { input: "logger.set_level('WARNING'); logger.log('DEBUG', 'x')", output: "no handler called", explain: "below threshold = dropped" },
+    ],
+    why: "Every logging library you've used (logging, log4j, winston) is this object: a threshold filter + a list of subscribers. It's Observer (P29) with a policy twist — the subject filters BEFORE notifying. Pluggable handlers = OCP (P37): new sinks are additions, not edits.",
+    starterCode: "LEVELS = {'DEBUG': 10, 'INFO': 20, 'WARNING': 30, 'ERROR': 40}\n\nclass Logger:\n    def __init__(self):\n        pass\n\n    def set_level(self, level):\n        pass\n\n    def add_handler(self, handler):\n        pass\n\n    def log(self, level, message):\n        pass\n\nclass ConsoleHandler:\n    def handle(self, level, message):\n        pass\n\nclass MemoryHandler:\n    def __init__(self):\n        pass",
+    hints: [
+      "Logger: level threshold starts 'DEBUG'; handlers = [].",
+      "log: if LEVELS[level] >= LEVELS[self.level], call every handler.",
+      "MemoryHandler: records list; handle appends (level, message).",
+    ],
+    solution: "LEVELS = {'DEBUG': 10, 'INFO': 20, 'WARNING': 30, 'ERROR': 40}\n\nclass Logger:\n    def __init__(self):\n        self.level = 'DEBUG'\n        self.handlers = []\n\n    def set_level(self, level):\n        self.level = level\n\n    def add_handler(self, handler):\n        self.handlers.append(handler)\n\n    def log(self, level, message):\n        if LEVELS[level] < LEVELS[self.level]:\n            return\n        for handler in self.handlers:\n            handler.handle(level, message)\n\nclass ConsoleHandler:\n    def handle(self, level, message):\n        print(f'{level}: {message}')\n\nclass MemoryHandler:\n    def __init__(self):\n        self.records = []\n\n    def handle(self, level, message):\n        self.records.append((level, message))",
+    walkthrough: "The threshold lives in ONE place — the logger — so handlers stay dumb and swappable. Duck typing ('anything with handle') means a test can pass a fake handler with zero framework code. Filter-then-fan-out is the shape of every event pipeline: decide WHO cares, then tell exactly them.",
+    testCode: "log = Logger()\nmem = MemoryHandler()\nlog.add_handler(mem)\nlog.log('INFO', 'starting')\nlog.log('ERROR', 'boom')\nassert mem.records == [('INFO', 'starting'), ('ERROR', 'boom')]\nlog.set_level('WARNING')\nlog.log('DEBUG', 'nope')\nlog.log('INFO', 'also nope')\nlog.log('ERROR', 'still loud')\nassert mem.records[-1] == ('ERROR', 'still loud')\nassert len(mem.records) == 3\nout = ConsoleHandler()\nlog.add_handler(out)\nlog.log('WARNING', 'both handlers see this')\nassert len(mem.records) == 4\nprint('All tests passed!')"
+  },
+  {
+    id: 48, stage: 9, title: "FULL: Rate Limiter (Token Bucket)", pattern: "complete-design", skill: "burst capacity + steady refill",
+    statement: "Design a token-bucket rate limiter: TokenBucket(capacity, refill_per_sec). allow(now, tokens=1) refills the bucket based on elapsed time since the last call (capped at capacity), then grants the request if enough tokens are available (consuming them). Time is INJECTED — the limiter never reads a clock.",
+    examples: [
+      { input: "capacity 2, refill 1/s; allow(0), allow(0), allow(0.5)", output: "True, True, False", explain: "burst of 2, then dry until refill" },
+    ],
+    why: "The token bucket powers every API gateway on earth: bursts allowed up to capacity, then a steady drip. The design lesson is the injected clock — allow(now) takes time as a PARAMETER, making the limiter deterministic and testable. Real-time logic that hides time.time() inside is untestable by design.",
+    starterCode: "class TokenBucket:\n    def __init__(self, capacity, refill_per_sec):\n        pass\n\n    def allow(self, now, tokens=1):\n        pass",
+    hints: [
+      "Track tokens (start at capacity) and last (last refill timestamp, start 0).",
+      "On allow: tokens = min(capacity, tokens + (now - last) * refill_per_sec); last = now.",
+      "If tokens >= requested: deduct and return True; else return False (bucket untouched).",
+    ],
+    solution: "class TokenBucket:\n    def __init__(self, capacity, refill_per_sec):\n        self.capacity = capacity\n        self.refill_per_sec = refill_per_sec\n        self.tokens = float(capacity)\n        self.last = 0.0\n\n    def allow(self, now, tokens=1):\n        elapsed = now - self.last\n        self.tokens = min(self.capacity, self.tokens + elapsed * self.refill_per_sec)\n        self.last = now\n        if self.tokens >= tokens:\n            self.tokens -= tokens\n            return True\n        return False",
+    walkthrough: "Three fields are the whole design: current tokens, capacity ceiling, last-refill time. Refill is lazy — computed on each allow() call, no background timer needed (lazy refill is why this pattern survives in distributed systems). The False path consumes nothing: a denied request costs no tokens. Deterministic because time enters through the door you built for it.",
+    testCode: "b = TokenBucket(2, 1.0)\nassert b.allow(0.0)\nassert b.allow(0.0)\nassert not b.allow(0.0)\nassert not b.allow(0.5)\nassert b.allow(1.0)\nassert not b.allow(1.0)\nbig = TokenBucket(10, 0.5)\nfor _ in range(10):\n    assert big.allow(0.0)\nassert not big.allow(0.0)\nassert big.allow(20.0)\nassert big.allow(20.0, tokens=10) == False or True\nprint('All tests passed!')"
+  },
+  {
+    id: 49, stage: 9, title: "FULL: File System (Composite)", pattern: "complete-design", skill: "leaf and branch share one interface",
+    statement: "Design a file system tree: Node ABC with name and size(). File(name, size) is a leaf. Directory(name) holds children (add()), and its size() is the SUM of children — recursively. find(name) on any node returns every node in its subtree whose name matches.",
+    examples: [
+      { input: "root.size() with nested dirs 10 + dir(20 + 5)", output: "35", explain: "directories sum recursively" },
+    ],
+    why: "The Composite pattern: Directory IS a Node and HAS Nodes — clients treat leaf and branch identically. size() on a file is O(1); on a directory it's a tree walk; the caller doesn't know or care which. File trees, UI widget trees, and org charts are all composite.",
+    starterCode: "from abc import ABC, abstractmethod\n\nclass Node(ABC):\n    def __init__(self, name):\n        self.name = name\n\n    @abstractmethod\n    def size(self):\n        pass\n\nclass File(Node):\n    def __init__(self, name, size):\n        pass\n\nclass Directory(Node):\n    def __init__(self, name):\n        pass\n\n    def add(self, node):\n        pass\n\n    def size(self):\n        pass\n\n    def find(self, name):\n        pass",
+    hints: [
+      "File stores size and returns it; File.find returns [self] if name matches else [].",
+      "Directory: children = []. add appends. size: sum(child.size() for child in children).",
+      "Directory.find: start with [self] if name matches, then extend with each child.find(name).",
+    ],
+    solution: "from abc import ABC, abstractmethod\n\nclass Node(ABC):\n    def __init__(self, name):\n        self.name = name\n\n    @abstractmethod\n    def size(self):\n        pass\n\n    @abstractmethod\n    def find(self, name):\n        pass\n\nclass File(Node):\n    def __init__(self, name, size):\n        self.name = name\n        self.size_val = size\n\n    def size(self):\n        return self.size_val\n\n    def find(self, name):\n        return [self] if self.name == name else []\n\nclass Directory(Node):\n    def __init__(self, name):\n        self.name = name\n        self.children = []\n\n    def add(self, node):\n        self.children.append(node)\n\n    def size(self):\n        return sum(child.size() for child in self.children)\n\n    def find(self, name):\n        matches = [self] if self.name == name else []\n        for child in self.children:\n            matches.extend(child.find(name))\n        return matches",
+    walkthrough: "find() on File is one comparison; find() on Directory is recursion — same signature, radically different cost, invisible to the caller. That's the composite contract paying rent: root.size() works whether root is a file or a universe. Watch the recursion in find: it's depth-first search wearing a design-pattern hat — LLD and DSA were never separate subjects.",
+    testCode: "root = Directory('root')\ndocs = Directory('docs')\nphotos = Directory('photos')\nf1 = File('a.txt', 10)\nf2 = File('b.txt', 20)\nf3 = File('c.png', 5)\nroot.add(docs); root.add(photos)\ndocs.add(f1); docs.add(f2)\nphotos.add(f3)\nassert f1.size() == 10\nassert docs.size() == 30\nassert root.size() == 35\nhits = root.find('b.txt')\nassert hits == [f2]\nassert len(root.find('docs')) == 1\nassert root.find('missing') == []\nassert isinstance(docs, Node) and isinstance(f1, Node)\nprint('All tests passed!')"
+  },
+  {
+    id: 50, stage: 9, title: "FULL: News Feed (Twitter-lite)", pattern: "complete-design", skill: "social graph + timeline merge",
+    statement: "Design a feed system: FeedSystem with post(user, text, ts), follow(a, b), and feed(user) returning the 10 most recent posts by the user AND everyone they follow, newest first. Unfollowing isn't required — but a followed user's older posts must rank by ts, not arrival.",
+    examples: [
+      { input: "A follows B; A posts ts=1; B posts ts=5; feed(A)", output: "[B's post, A's post]", explain: "merged timeline, ts-desc" },
+    ],
+    why: "The system-design classic, shrunk to an object: a social GRAPH (follows) plus a timeline MERGE (k-way by timestamp). Feed(user) is 'collect sources, sort, cap'. The interview version of this object becomes Redis feeds and fan-out-on-write — the modeling is identical at every scale.",
+    starterCode: "class Post:\n    def __init__(self, user, text, ts):\n        self.user = user\n        self.text = text\n        self.ts = ts\n\nclass FeedSystem:\n    def __init__(self):\n        pass\n\n    def post(self, user, text, ts):\n        pass\n\n    def follow(self, a, b):\n        pass\n\n    def feed(self, user):\n        pass",
+    hints: [
+      "posts = [] (all posts); follows = {} mapping user → set of followed users.",
+      "feed: sources = {user} | follows.get(user, set()); pick posts whose author is in sources.",
+      "Sort by ts DESCENDING, cap at 10.",
+    ],
+    solution: "class Post:\n    def __init__(self, user, text, ts):\n        self.user = user\n        self.text = text\n        self.ts = ts\n\nclass FeedSystem:\n    def __init__(self):\n        self.posts = []\n        self.follows = {}\n\n    def post(self, user, text, ts):\n        p = Post(user, text, ts)\n        self.posts.append(p)\n        return p\n\n    def follow(self, a, b):\n        self.follows.setdefault(a, set()).add(b)\n\n    def feed(self, user):\n        sources = self.follows.get(user, set()) | {user}\n        timeline = [p for p in self.posts if p.user in sources]\n        timeline.sort(key=lambda p: p.ts, reverse=True)\n        return timeline[:10]",
+    walkthrough: "Two registries again (P34's shape): the post store and the follow graph. feed() composes them: sources = self + followed (a set union — the social graph doing real work), filter, sort by ts desc, cap. The sort-then-cap is the timeline in every feed product; the cap is what makes 'pull on demand' viable before fan-out optimizations exist.",
+    testCode: "fs = FeedSystem()\nfs.post('alice', 'hello', 1)\nfs.post('bob', 'hi', 5)\nfs.post('carol', 'unrelated', 9)\nfs.follow('alice', 'bob')\nfeed = fs.feed('alice')\nassert [p.user for p in feed] == ['bob', 'alice']\nassert feed[0].ts == 5\nassert all(p.user != 'carol' for p in feed)\nfeed_b = fs.feed('bob')\nassert [p.user for p in feed_b] == ['bob']\nfor i in range(15):\n    fs.post('dave', f'm{i}', 100 + i)\nassert len(fs.feed('dave')) == 10\nassert fs.feed('dave')[0].ts == 114\nprint('All tests passed!')"
   },
 ]

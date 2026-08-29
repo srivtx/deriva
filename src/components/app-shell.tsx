@@ -82,7 +82,7 @@ const MORE_GROUPS: MoreGroup[] = [
     links: [
       { label: "AI/ML Systems", href: "/ai-ml", desc: "labs + 180 questions" },
       { label: "System Design", href: "/design", desc: "HLD" },
-      { label: "Low-Level Design", href: "/lld", desc: "LLD" },
+      { label: "LLD Ladder", href: "/lld", desc: "50 design problems" },
       { label: "Expedition", href: "/expedition", desc: "retrieval" },
       { label: "Game Mode", href: "/games", desc: "play" },
     ],
@@ -115,7 +115,9 @@ function Breadcrumbs() {
   } else if (pathname === "/design") {
     parts.push({ label: "System Design", href: "/design" })
   } else if (pathname === "/lld") {
-    parts.push({ label: "LLD", href: "/lld" })
+    parts.push({ label: "LLD Ladder", href: "/lld" })
+  } else if (pathname === "/lld/practice") {
+    parts.push({ label: "LLD Workbench", href: "/lld/practice" })
   } else if (pathname === "/one") {
     parts.push({ label: "0NE Ladder", href: "/one" })
   } else if (pathname === "/res") {
@@ -353,8 +355,8 @@ export default function AppShell() {
       document.removeEventListener("keydown", onKey)
     }
   }, [moreOpen])
-  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/one" ? "0NE Ladder" : pathname === "/res" ? "RES Brainstorm" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "Low-Level Design" : pathname === "/settings" ? "Settings" : pathname === "/focus" ? "Focus Dial" : pathname === "/glyph" ? "Glyph Studio" : pathname === "/ghost" ? "Ghost" : pathname === "/osc" ? "OSC-1" : pathname === "/rig" ? "RIG" : "Deriva"
-  const moreActive = pathname === "/design" || pathname === "/lld" || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/one" || pathname === "/res" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/complexity" || pathname === "/notebook" || pathname === "/toolkit" || pathname === "/playground" || pathname === "/releases"
+  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/one" ? "0NE Ladder" : pathname === "/res" ? "RES Brainstorm" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "LLD Ladder" : pathname.startsWith("/lld/practice") ? "LLD Workbench" : pathname === "/settings" ? "Settings" : pathname === "/focus" ? "Focus Dial" : pathname === "/glyph" ? "Glyph Studio" : pathname === "/ghost" ? "Ghost" : pathname === "/osc" ? "OSC-1" : pathname === "/rig" ? "RIG" : "Deriva"
+  const moreActive = pathname === "/design" || pathname.startsWith("/lld") || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/one" || pathname === "/res" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/complexity" || pathname === "/notebook" || pathname === "/toolkit" || pathname === "/playground" || pathname === "/releases"
   const navSlots = preferences.navSlots.length ? preferences.navSlots : ["home", "learn", "patterns", "observe"]
   const slotItems = navSlots.map(id => NAV_ITEM_MAP[id]).filter(Boolean)
   const iconPack = currentIconPack()
