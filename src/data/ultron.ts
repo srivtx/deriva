@@ -63,6 +63,10 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   // ══ STAGE 0 — The Substrate ══
   {
     id: 1, stage: 0, title: "First Array", pattern: "array-literal", skill: "declare data as an ndarray",
+    diagram: `   [[2, 4,  6],        ◍ ◍ ◍   ← row 0
+    [8, 10, 12]]       ◍ ◍ ◍   ← row 1
+
+   shape (2, 3) = 2 rows x 3 cols · axis 0 walks down, axis 1 across`,
     statement: "Create a 2×3 NumPy array holding the readings [[2, 4, 6], [8, 10, 12]] and assign it to a. Then assign its row count to rows and column count to cols. All ML data — features, labels, weights — lives in objects like this one.",
     examples: [
       { input: "[[2, 4, 6], [8, 10, 12]]", output: "shape (2, 3)", explain: "2 rows of 3 readings each" },
@@ -104,6 +108,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 3, stage: 0, title: "Center the Readings", pattern: "broadcasting", skill: "one axis stretches against another",
+    diagram: `   sensor 0:  ◍─◍─◍─◍  → subtract mean₀ →  ·──·──·──·   mean 0
+   sensor 1:  ◍─◍─◍─◍  → subtract mean₁ →  ·──·──·──·   mean 0
+   sensor 2:  ◍─◍─◍─◍  → subtract mean₂ →  ·──·──·──·   mean 0
+
+   each row loses only its own offset — block minus row means`,
     statement: "The (3, 4) array block holds 3 sensors × 4 readings. Subtract each sensor's own mean from that sensor's readings, producing centered — every row ends up with mean 0. Do it with broadcasting in one expression, no loops.",
     examples: [
       { input: "row [2, 4, 6, 8] (mean 5)", output: "row [-3, -1, 1, 3]", explain: "each row loses its own mean" },
@@ -121,6 +130,12 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 4, stage: 0, title: "Kill the Loop", pattern: "vectorization", skill: "collapse an axis, not a for-loop",
+    diagram: `   (4, 5) block of students x tests
+
+   sum(axis=1) ▶▶  one number PER ROW   → (4,)  per-student totals
+   mean(everything)  →  ONE number      →  ()   class average
+
+   the axis is the direction you squeeze flat`,
     statement: "scores is (4, 5): 4 students × 5 tests. Compute per-student totals (length 4) and the class-wide average (one number) — with axis-based reductions, no Python loops. Assign totals and avg.",
     examples: [
       { input: "row [10, 20, 30, 40, 50]", output: "total 150", explain: "axis=1 walks across columns" },
@@ -138,6 +153,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 5, stage: 0, title: "The Yes/No Filter", pattern: "boolean-mask", skill: "ask a question of every element",
+    diagram: `   temps:   12   21   15   19  ...
+   mask:     0    1    0    1  ...   ← temps ≥ 18 (the yes/no)
+   temps[mask] →  21, 19, ...
+
+   same order, same length — the mask is a stencil that keeps the yes`,
     statement: "temps holds 12 readings. Build hot = the boolean array marking readings ≥ 18, and hot_values = only the readings that are hot, in order. Boolean masks are how ML filters data, selects misclassified examples, and builds train/test splits.",
     examples: [
       { input: "temps = [10, 18, 19, 3]", output: "hot = [F, T, T, F]; hot_values = [18, 19]", explain: "the comparison IS the mask" },
@@ -157,6 +177,12 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   // ══ STAGE 1 — The Line ══
   {
     id: 6, stage: 1, title: "Predict With a Line", pattern: "hypothesis", skill: "a model is a formula with knobs",
+    diagram: `        y
+        │        ● ●
+        │     ●       preds = w·x + b = 3x + 2
+        │   ●     ╱   for every x in the batch at once
+        │ ●   ╱
+        └──────────── x`,
     statement: "x is a batch of inputs. A linear model with slope w and intercept b predicts y_hat = w·x + b. With w = 3, b = 2, compute preds for all of x — vectorized, no loops. This one line IS the entire model; everything after it just picks better w and b.",
     examples: [
       { input: "x = [1, 2, 3], w = 3, b = 2", output: "preds = [5, 8, 11]", explain: "3·1+2, 3·2+2, 3·3+2" },
@@ -191,6 +217,12 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 8, stage: 1, title: "Feel the Slope", pattern: "analytic-gradient", skill: "differentiate the error",
+    diagram: `   L(w, b) is a surface; at your current (w, b):
+
+     dL/dw = 2(ŷ − y₀)·x₀   ← tilt along w
+     dL/db = 2(ŷ − y₀)      ← tilt along b
+
+   two arrows for two knobs — the gradient is the felt slope`,
     statement: "For one data point (x₀, y₀) with prediction ŷ = w·x₀ + b and loss (ŷ − y₀)², derive dL/dw and dL/db by hand, then implement grad_w(x0, y0, w, b) and grad_b(x0, y0, w, b). Check them against a numeric slope (the (L(w+h) − L(w−h)) / 2h probe) inside the tests — your calculus must agree with the probe to 6 decimals.",
     examples: [
       { input: "x0=2, y0=10, w=3, b=2 → ŷ=8, err=−2", output: "dL/dw = 2·(−2)·2 = −8; dL/db = −4", explain: "chain rule: 2·err·∂ŷ/∂param" },
@@ -235,6 +267,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 10, stage: 1, title: "Solve It Exactly", pattern: "closed-form", skill: "one move instead of many steps",
+    diagram: `   Xb (n,2) = │ 1 ··· 1 │      (XbᵀXb)·w = Xbᵀy
+              │ x ··· x │        (2,2)     (2,)   (2,)
+
+   Xb.T @ Xb → (2,2) · Xb.T @ y → (2,) · w = np.linalg.solve(...)
+   linear algebra arrives in one move where descent walked`,
     statement: "Gradient descent crawled to (w, b) in 200 steps. Linear algebra gets there in one: build the design matrix Xb = column of ones ⊕ column of x (shape (n, 2)), then solve the normal equation w_vec = (XᵀX)⁻¹ Xᵀy with np.linalg.solve (build the 2×2 system, don't invert). Compare: w_vec[0] ≈ b, w_vec[1] ≈ w, and both ≈ (3, 2).",
     examples: [
       { input: "Xb: [1, x] per row", output: "w_vec solves Xb @ w_vec ≈ y exactly", explain: "least squares has an exact answer" },
@@ -272,6 +309,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 12, stage: 2, title: "Level the Field", pattern: "feature-scaling", skill: "standardize before you step",
+    diagram: `   beds:  1–4      Δbeds = 3    whisper
+   age:   1–50     Δage = 49    SHOUTS     price ~ w1·beds + w2·age
+
+   z-score both columns → mean 0 · std 1 → fair meters
+   (age is pure noise — only after leveling can GD see that)`,
     statement: "beds is 1–4 (bedrooms), age is 1–50 (house age, pure noise for price). Fitting price = w1·beds + w2·age + b by GD: the features live on wildly different scales, so their gradients disagree about the learning rate. Implement zscore(v) = (v − mean) / std, build scaled features, and run 400 steps of GD at lr=0.1 on the scaled problem. Report final loss as loss_scaled — the tests run the identical loop on raw features and watch it go nowhere.",
     examples: [
       { input: "v = [1, 2, 3]", output: "z = [-1.22, 0, 1.22]", explain: "mean 0, std 1 — every feature the same yardstick" },
@@ -289,6 +331,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 13, stage: 2, title: "One Batch at a Time", pattern: "mini-batch", skill: "trade exactness for speed",
+    diagram: `   24 points: [●●●●●●●●│●●●●●●●●│●●●●●●●●]
+                 batch 1    batch 2    batch 3
+
+   1 epoch = 3 mini-batch updates   (full-batch GD: 1 update, all 24)
+   shuffle each epoch — every batch sees a fresh mix`,
     statement: "Full-batch GD reads all 24 points for every step. Mini-batch GD splits the data into batches of 8 and takes one update per batch — 3 updates per epoch. Implement the inner loop over fixed (non-shuffled) batches: after 30 epochs, report loss_mb. The update math inside a batch is identical, just on a slice.",
     examples: [
       { input: "24 points, batch 8", output: "3 gradient steps per epoch", explain: "cheaper steps, noisier direction" },
@@ -329,6 +376,13 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 15, stage: 2, title: "The Held-Out Judge", pattern: "train-val-split", skill: "stop when the judge frowns",
+    diagram: `   loss
+    ▲   train ●●●●●●●●●●●●●●     keeps falling — forever
+    │        ╱
+    │    ●  val ○○○○●○○○○○○○      bottoms here, then rises
+    │   ╱       └── stop at the bottom of the UNSEEN curve
+    └───────────────────▶ steps
+   first 18 points train · last 6 never touched by training`,
     statement: "Fit the line on the first 18 points of line_world; keep the last 6 as validation (never trained on). For every step of 200, record train loss and val loss. Report best_w, best_b — the parameters at the step where val loss was LOWEST — and val_at_best. Training loss only ever falls; the val curve is the honest one.",
     examples: [
       { input: "train 18 pts, watch 6 held out", output: "best step ≈ when val bottoms out", explain: "early stopping by evidence" },
@@ -348,6 +402,14 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   // ══ STAGE 3 — The Bend ══
   {
     id: 16, stage: 3, title: "The Squash", pattern: "sigmoid", skill: "any number into (0, 1)",
+    diagram: `   a
+   1 ┤            ⎺⎺⎺●⎺⎺
+     │          ●
+   ½ ┤        ●          sigmoid(0) = 0.5 — the hinge
+     │      ●
+   0 ┤ ●⎺⎺
+     └─────────────────▶ z
+   gentle near 0 · saturates at both ends (never overflow)`,
     statement: "Implement sigmoid(z) = 1 / (1 + e^−z), numerically safe for very large |z| (subtract-in-exponent or branch on sign — never let e^1000 overflow). Verify: sigmoid(0) = 0.5, sigmoid(±1000) lands at 0 or 1 without warnings, sigmoid(−z) + sigmoid(z) = 1. This function turns any score into a probability.",
     examples: [
       { input: "z = 0", output: "0.5", explain: "perfectly undecided" },
@@ -427,6 +489,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 20, stage: 3, title: "The 95% Mirage", pattern: "imbalance", skill: "distrust accuracy on tilted data",
+    diagram: `   200 transactions:  ●●●●●●●●●●●●●●●●●●●●  ← 190 legit
+                       ◍◍◍                  ← 10 fraud, drowned
+
+   all-ham model:  accuracy 190/200 = 95%   ·   frauds caught: 0
+   accuracy lies when the classes are lopsided`,
     statement: "fraud_world: 200 transactions, only 10 fraudulent. fit_majority predicts 'not fraud' for everything (no learning at all). Report acc_majority (accuracy of that lazy model), and recall_fraud of the lazy model. Then implement balanced_error = mean of the two class errors (missed-fraud rate and false-fraud rate) — the honest score when classes tilt.",
     examples: [
       { input: "195 legit, 5 fraud, predict all legit", output: "accuracy 97.5%, recall 0%", explain: "impressive number, useless model" },
@@ -487,6 +554,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 23, stage: 4, title: "Tax the Wiggles", pattern: "l2-ridge", skill: "penalize size, not count",
+    diagram: `   degree 9:   ∿∿∿∿    wiggles hard to chase noise
+   + λ·‖w‖²:   each wiggle costs λ·w²   →  straightened
+
+   fit ⊕ λ·‖w‖²    buys stability, pays bias
+   (P = identity, 0 for the bias row — the offset is never taxed)`,
     statement: "Ridge regression on the degree-9 problem: minimize ‖V·w − y‖² + λ·‖w_no_bias‖². The penalty changes the normal equations to (VᵀV + λ·P)·w = Vᵀy where P is the identity with P[0,0] = 0 (never tax the intercept). With λ = 0.5, fit ridge_coef on the 9 training points; report ridge_test_mse and the weight norm before vs after. Same 9 points, same degree — different behavior.",
     examples: [
       { input: "λ = 0, degree 9", output: "huge weights, wild test predictions", explain: "the memorizing solution" },
@@ -505,6 +577,12 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 24, stage: 4, title: "Judge Four Ways", pattern: "cross-validation", skill: "average the judge's moods",
+    diagram: `   4-fold rotation — every point judged exactly once
+
+   k=1:  ▓▓▓░      k=2:  ▓▓░▓     train ▓ (18) · test ░ (6)
+   k=3:  ▓░▓▓      k=4:  ░▓▓▓
+
+   cv score = mean of the four unseen grades`,
     statement: "A single 12/12 split is one opinion. k-fold CV with k=4 on line_world (24 points): fold i (6 points each, in order) is held out; the model fits on the other 18 and grades the fold. Report fold_losses (length 4, in fold order) and cv_mean. One number per fold — the variance across folds is itself a measurement of how much your estimate depends on luck of the split.",
     examples: [
       { input: "24 points, k=4", output: "4 fold losses + their mean", explain: "every point is a test point exactly once" },
@@ -522,6 +600,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 25, stage: 4, title: "The Leaked Exam", pattern: "leakage", skill: "keep the judge blind",
+    diagram: `   honest:  fit scaler on TRAIN ──▶ apply to TEST
+   leaky:   fit scaler on TRAIN+TEST ─┬─▶ train has seen the exam
+                                      └─▶ the val score lies
+
+   the test rows whispered their answers into the scaling`,
     statement: "quad_world again, linear model (deliberately wrong-shaped). Honest pipeline: fit on the 9 train points, grade the 5 test points. Leaky pipeline: the test rows accidentally got duplicated into the training set (a joined table, a re-run notebook). Report honest_mse and leaky_mse — the leaky grade flatters the model because the exam questions were in the textbook.",
     examples: [
       { input: "honest: test rows never seen", output: "test_mse ≈ model bias, big", explain: "the true grade" },
@@ -542,6 +625,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   // ══ STAGE 5 — Neighbors & Clusters ══
   {
     id: 26, stage: 5, title: "The Nearest Point", pattern: "distance", skill: "closeness is a length",
+    diagram: `        ●        ●
+             ◍ q     dists = √(Δx² + Δy²) to all 8
+       ●            nearest = argmin(dists)
+             ●      its label (or value) is the answer
+        ●`,
     statement: "points is (8, 2); query q is one location. Compute dists = Euclidean distance from q to every point (one vectorized expression), nearest = the index of the closest, nearest_d = that distance. kNN, k-means, and embeddings all stand on this one move.",
     examples: [
       { input: "q = [0, 0], point [3, 4]", output: "distance 5", explain: "√(3² + 4²) — Pythagoras" },
@@ -559,6 +647,10 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 27, stage: 5, title: "Let the Neighbors Vote", pattern: "knn", skill: "the crowd answers",
+    diagram: `            ○          k = 5 ring around q:
+         ●      ○    neighbors:  ● ○ ○ ● ○
+            ◍        votes: 3 x ○  vs  2 x ●   →  ○ wins
+         ●      ●    tie → 0, the calm verdict`,
     statement: "points now carry labels: labels[i] ∈ {0, 1} (0 = benign, 1 = alert). Implement knn_predict(q, k): find the k nearest points, return the majority label (tie → 0, the calmer verdict). Report pred_1 for k=1, pred_3 for k=3, pred_5 for k=5 at the query q given. Watch the verdict change as the crowd grows — small k listens to individuals, large k listens to the neighborhood.",
     examples: [
       { input: "3 nearest labels [1, 1, 0]", output: "majority → 1", explain: "two votes beat one" },
@@ -599,6 +691,12 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 29, stage: 5, title: "Guess, Then Refine", pattern: "kmeans-step", skill: "alternate assign and average",
+    diagram: `   ●●●                      start (deliberately bad):
+                  c0=[0,5]   c1=[10,5]
+                         ●●●
+   assign ▶ each point to its nearest centroid
+   update ▶ each centroid to the mean of its captured points
+   one Lloyd step already drags both toward the truth`,
     statement: "cluster_world: 6 points in two obvious groups, and two initial centroids c0 = [0, 5], c1 = [10, 5] (deliberately bad — both sit between groups). Perform exactly ONE Lloyd iteration: assign each point to the nearer centroid (0 or 1), then move each centroid to the mean of its assigned points. Return labels (length 6) and new_c0, new_c1. Guessing badly is fine — refinement fixes it.",
     examples: [
       { input: "point [0,0] vs c0=[0,5], c1=[10,5]", output: "label 0 (distance 5 vs √125)", explain: "assign by nearer, nothing mystical" },
@@ -695,6 +793,13 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 34, stage: 6, title: "Grow a Stump", pattern: "decision-stump", skill: "compose questions into answers",
+    diagram: `           x ≤ 4.5?
+          ╱         ╲
+       yes            no
+   t: 0,0,1,0      t: 1,1,1,1
+   leaf = majority:  0             1
+
+   one question, two verdicts — a tree of depth 1`,
     statement: "Build a decision stump: split tree_world at the best threshold (Problem 33's machinery), make each leaf predict its side's majority label, then implement predict(xs) for new rows. Report stump_train_acc (on all 8 training rows) and preds_te for x_te = [2.5, 3.0, 4.5]. One noisy training row will be misclassified — the tree outvoted it. That is learning, not memorizing.",
     examples: [
       { input: "left leaf sees labels [0,0,1]", output: "leaf predicts 0", explain: "majority rules" },
@@ -713,6 +818,10 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 35, stage: 6, title: "The Forest Votes", pattern: "bagging", skill: "many weak judges, one verdict",
+    diagram: `   bootstrap 1 → stump A      row 5:   A says 1
+   bootstrap 2 → stump B               B says 1
+   bootstrap 3 → stump C               C says 0
+                              majority ▶ 1 — disagreement averaged out`,
     statement: "Bagging: fit a stump on each of three bootstrap resamples (row indices given — sampling WITH replacement, so some rows repeat and others vanish). Predict all 8 training rows with each stump, then take the majority vote per row (tie → 0). Report forest_preds, the per-stump accuracies accs (list of 3), and forest_acc. Individual stumps stumble on different rows; the vote cancels the stumbles.",
     examples: [
       { input: "stump votes on a row: [1, 0, 1]", output: "forest says 1", explain: "majority of three" },
@@ -733,6 +842,15 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   // ══ STAGE 7 — The Network ══
   {
     id: 36, stage: 7, title: "The Neuron Is the Line", pattern: "neuron", skill: "one weight vector, one squash",
+    diagram: `   x = [0.5, −1.0]
+          │
+          ▼
+   z = w·x + b = 2(0.5) + 1(−1.0) + 0.2 = 0.2
+          │
+          ▼
+   a = sigmoid(0.2) ≈ 0.55
+
+   a neuron IS a line with a bend on top`,
     statement: "A single neuron with weights w = [2.0, 1.0], bias b = 0.2 receives x = [0.5, −1.0]. Compute z = w·x + b, then a = sigmoid(z) (reuse the stable sigmoid). Assign z and a. Compare with Problem 16-18: a neuron IS logistic regression on one sample — nothing new was added except a name.",
     examples: [
       { input: "w·x = 2·0.5 + 1·(−1) = 0", output: "z = 0 + 0.2 = 0.2", explain: "dot product plus bias" },
@@ -772,6 +890,12 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 38, stage: 7, title: "Why the Bend Matters", pattern: "nonlinearity", skill: "linear stacks collapse",
+    diagram: `        ○ ●      corners [0,0] and [1,1] share label 0
+        ● ○      but every W1 column sums to 0 →
+                 hidden([0,0]) == hidden([1,1])   IDENTICAL
+
+   the net cannot tell the diagonal apart — no output layer can
+   repair a hidden layer that sees one point where there are two`,
     statement: "net_init is special: every column of W1 sums to zero, so the diagonal corners of the XOR square ([0,0] and [1,1], both labeled 0) produce IDENTICAL hidden activations — and so do [0,1] and [1,0]. Verify: h00 == h11 and h01 == h10 in H, and therefore out[0] == out[3] and out[1] == out[2], even though y4[0] ≠ y4[1]. Assign same_diag (bool) and same_off (bool). The net is structurally blind — no output layer can fix inputs it cannot distinguish.",
     examples: [
       { input: "[0,0] and [1,1]", output: "identical hidden row", explain: "W1 columns sum to 0 → x and x+[1,1] shift equally" },
@@ -790,6 +914,12 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 39, stage: 7, title: "Scores to Odds", pattern: "softmax", skill: "one vector, many probabilities",
+    diagram: `   one row of Z:  z = [2.0, 1.0, 0.1]
+                     ▼      ▼      ▼
+   exp, normalize → p = [0.66, 0.24, 0.10]    sums to 1
+
+   classes compete for every point — raising one lowers the rest
+   subtract the row max first: exp of huge numbers overflows`,
     statement: "Implement softmax(Z) row-wise: exponentiate, divide by the row sum — with the stability trick of subtracting each row's max first (exp of huge numbers overflows). Verify: rows sum to 1, softmax(Z + 1000) == softmax(Z), and argmax is preserved. Softmax is how networks answer 'which of K classes?' — the sigmoid's big sibling.",
     examples: [
       { input: "z = [2, 1, 0]", output: "≈ [0.665, 0.245, 0.090]", explain: "e² dominates, all rows sum to 1" },
@@ -808,6 +938,15 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 40, stage: 7, title: "Price the Truth", pattern: "cross-entropy-k", skill: "−log of the right answer",
+    diagram: `   −log(p_true)
+    ▲
+    │                     ●  p_true → 0  ⇒  penalty → ∞
+    │               ●
+    │         ●
+    │     ●
+    │ ●⎺⎺⎺⎺⎺⎺●   p_true = 1  ⇒  penalty 0
+    └──────────────────▶ p_true
+   confident AND wrong is priced exponentially`,
     statement: "Given probabilities P (rows sum to 1) and integer labels y, implement ce_loss(P, y) = −mean(log P[i, y[i]]). Evaluate on softmax(Z) with y = [0, 2, 1] and on a deliberately wrong confidence: ce_wrong for the row-0 distribution graded as if the truth were class 2 (its LEAST likely class). Confidently wrong must cost dearly.",
     examples: [
       { input: "p_true = 1.0", output: "loss = −log(1) = 0", explain: "certainty in the truth is free" },
@@ -852,6 +991,12 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 42, stage: 8, title: "Blame Every Knob", pattern: "backprop-vector", skill: "every gradient at once",
+    diagram: `   delta2 (4,1) ─▶ dW2 = Hᵀ@delta2  (4,1) ✓
+        │
+        ▼   delta1 = (delta2 @ W2ᵀ) ⊙ (1 − H²)
+   delta1 (4,4) ─▶ dW1 = Xᵀ@delta1   (2,4) ✓
+
+   every knob gets blamed — and the shapes verify the algebra`,
     statement: "Full backward pass for the (4,2)→(4,4)→(4,1) net on the XOR corners with MSE loss. Implement backward(X, y, W1, b1, W2, b2) returning (dW1, db1, dW2, db2): delta2 = 2·(out − y)/n; dW2 = Hᵀ@delta2; db2 = delta2.sum(0); delta1 = (delta2 @ W2.T)·(1 − H²); dW1 = Xᵀ@delta1; db1 = delta1.sum(0). The tests verify ALL 17 parameters against numeric gradients.",
     examples: [
       { input: "delta2 (4,1) = output blame", output: "dW2 = Hᵀ @ delta2 — reuse the forward's H", explain: "each weight's blame = upstream error × its input" },
@@ -871,6 +1016,12 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 43, stage: 8, title: "Train the Net", pattern: "training-loop", skill: "the loop, end to end",
+    diagram: `        ┌──────────────────────────────┐
+        ▼                              │
+   forward ──▶ loss ──▶ backward ──▶ step
+   (P37)      MSE      (P42)       lr 0.1
+
+   2000 turns of this wheel bend the space — XOR falls`,
     statement: "Assemble the full training loop on the XOR corners: forward (P37) → MSE loss → backward (P42) → step, for 2000 full-batch steps at lr = 0.1, starting from net_init. Report final_loss and net_acc = fraction of corners predicted correctly (pred = out > 0.5). The blind network of Problem 38 breaks its own symmetry and learns XOR — watch it happen from 4 lines of loop.",
     examples: [
       { input: "step 0", output: "loss ≈ 0.3, acc 0.5", explain: "the symmetric, blind start" },
@@ -889,6 +1040,10 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 44, stage: 8, title: "The Clean Gradient", pattern: "softmax-grad", skill: "prediction minus truth",
+    diagram: `    P (softmax)        onehot(y)       gradient
+   [0.7  0.2  0.1]  −  [0 0 1]    =   [0.7  0.2  −0.9] / n
+
+   prediction minus truth — push down the wrong, pull up the right`,
     statement: "Softmax + cross-entropy has the most elegant gradient in deep learning: dL/dZ = (P − onehot(y)) / n — literally prediction minus truth. Implement ce_grad(Z, y) returning this (P = softmax(Z), onehot built with fancy indexing). The tests verify every entry against numeric gradients of the CE loss. When a gradient is this clean, memorize it — you will re-derive it in every interview.",
     examples: [
       { input: "P row [0.7, 0.2, 0.1], truth 0", output: "row grad ∝ [−0.3, +0.2, +0.1]", explain: "winning class pushed up, losers pushed down" },
@@ -907,6 +1062,11 @@ export const PROBLEMS_ULTRON: UltronProblem[] = [
   },
   {
     id: 45, stage: 8, title: "Adam, Assembled", pattern: "adaptive-opt", skill: "a step per knob",
+    diagram: `   g ──▶ m = β1·m + (1−β1)·g     memory of the direction
+     ──▶ v = β2·v + (1−β2)·g²    meter of the turbulence
+
+   step = m / (√v + ε)           momentum ÷ per-knob scale
+   calm knobs stride · noisy knobs tiptoe`,
     statement: "Assemble Adam (no bias correction) on the exam_world logistic problem: per-parameter m = β1·m + (1−β1)·g (momentum), v = β2·v + (1−β2)·g² (per-knob gradient scale), w −= lr·m / (√v + ε). Train 150 steps with lr=0.05, β1=0.9, β2=0.999, ε=1e-8; report loss_adam. The tests run plain GD (lr=0.5, 150 steps) for comparison — same problem, same steps, and Adam must win.",
     examples: [
       { input: "plain GD", output: "one shared step size for every weight", explain: "the bias column and feature columns share a fate" },
