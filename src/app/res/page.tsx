@@ -125,6 +125,7 @@ export default function ResPage() {
             </div>
           </div>
           <span className="res-drill-meta">{drill.domain} &middot; {drill.difficulty} &middot; {drill.id}</span>
+          {drill.source && <p className="res-q-source">{drill.source}</p>}
           <p className="res-drill-setup">{drill.setup}</p>
           <h2 className="res-drill-q">&ldquo;{drill.question}&rdquo;</h2>
           <ol className="res-drill-steps">
@@ -223,6 +224,7 @@ export default function ResPage() {
                   <div className="res-q-body">
                     <p className="res-q-setup">{q.setup}</p>
                     <p className="res-q-prompt">&ldquo;{q.question}&rdquo;</p>
+                    {q.source && <p className="res-q-source">{q.source}</p>}
                     <div className="res-steps">
                       {STEP_ORDER.map(key => (
                         <div key={key} className="res-step">
