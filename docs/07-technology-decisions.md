@@ -225,3 +225,30 @@ files after every run.
 **Consequences:** no upload path exists — files stay on device. Engine
 download (~30 MB) happens once and is cached by the browser, not by us. If
 multithreaded speed is ever needed, adopt COOP/COEP deliberately first.
+
+## D16. Scripted pdb runs through the existing runScript bridge (PDB, 2026-08-30)
+
+**Decision:** the in-browser debugger is a scripted `pdb.Pdb` session executed by
+the **existing** `runScript` worker protocol — no new worker message type. The
+client builds a harness string: the learner's current editor code is re-exec'd via
+`compile(src, "<drill>", "exec")` (so `linecache` can serve source for `l`/`ll`),
+a `__ScriptedPdb(pdb.Pdb)` subclass reads the learner's command list from a
+`StringIO` stdin (`use_rawinput=False`) and sets a breakpoint on the drill's
+entry function (`b <name>` + `c`), and the captured `self.stdout` transcript is
+printed to the captured sandbox stdout. An `interaction` override resumes with
+`set_continue()` once the typed commands are exhausted, so a session can never
+stall or return a truncated value mid-flight; `bdb.BdbQuit` (not `pdb.BdbQuit`,
+which is not portable) is caught for `q`.
+
+**Context:** interactive stepping through Pyodide's stdin would require a new
+stateful worker protocol; the one-shot harness keeps the sandbox contract
+untouched. Presets in the data (`pdbLoad`) were tuned against the
+`b <func>` + `c` entry so they never print NameError (verified 41/41 in real
+Python; note Python 3.12+ inlines list comprehensions, which changes how `n`
+steps across them — presets stop before comprehension lines to stay
+version-robust).
+
+**Consequences:** debugger sessions cost one sandbox run each (60 s leash, same
+as drills); the harness embeds the learner's exact editor code, so what you debug
+is what you edit. If a future drill needs true interactivity, revisit with a
+deliberate worker-protocol D-record.

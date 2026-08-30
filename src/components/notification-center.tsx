@@ -9,7 +9,7 @@ function BellIcon() {
   return <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
 }
 
-const KIND_LABEL: Record<AppNotification["kind"], string> = { practice: "DSA practice", patterns: "Pattern Desk", design: "System design", lld: "Low-level design", db: "Database design", ultron: "AI/ML drills", quiz: "Pattern quiz", review: "Review queue" }
+const KIND_LABEL: Record<AppNotification["kind"], string> = { practice: "DSA practice", patterns: "Pattern Desk", design: "System design", lld: "Low-level design", db: "Database design", ultron: "AI/ML drills", pdb: "Debugging drills", quiz: "Pattern quiz", review: "Review queue" }
 
 export default function NotificationCenter() {
   const [open, setOpen] = useState(false)

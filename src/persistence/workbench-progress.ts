@@ -1,7 +1,7 @@
 // Resume state for the focused workbenches. The route owns rendering;
 // this module owns the durable current item and completion list.
 
-export type WorkbenchKind = "design" | "lld" | "db" | "ultron"
+export type WorkbenchKind = "design" | "lld" | "db" | "ultron" | "pdb"
 
 export interface WorkbenchProgress {
   currentId: number
@@ -13,6 +13,7 @@ const CONFIG: Record<WorkbenchKind, { key: string; legacyCompletedKey: string }>
   lld: { key: "deriva-lld-progress-v1", legacyCompletedKey: "deriva-lld-completed" },
   db: { key: "deriva-db-progress-v1", legacyCompletedKey: "deriva-db-completed" },
   ultron: { key: "deriva-ultron-progress-v1", legacyCompletedKey: "deriva-ultron-completed" },
+  pdb: { key: "deriva-pdb-progress-v1", legacyCompletedKey: "deriva-pdb-completed" },
 }
 
 function emptyProgress(): WorkbenchProgress {

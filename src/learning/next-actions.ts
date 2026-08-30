@@ -7,12 +7,13 @@ import { PROBLEMS_DESIGN } from "../data/system-design"
 import { PROBLEMS_LLD } from "../data/lld"
 import { PROBLEMS_DB } from "../data/db"
 import { PROBLEMS_ULTRON } from "../data/ultron"
+import { PROBLEMS_PDB } from "../data/pdb"
 import { loadPatternDeskProgress } from "../persistence/pattern-desk-progress"
 import { loadPatternMastery } from "../persistence/pattern-mastery"
 import { loadPracticeCompletion, loadPracticePositions, loadPracticeTopic } from "../persistence/practice-progress"
 import { loadWorkbenchProgress, type WorkbenchKind } from "../persistence/workbench-progress"
 
-export type NextActionKind = "practice" | "patterns" | "design" | "lld" | "db" | "ultron"
+export type NextActionKind = "practice" | "patterns" | "design" | "lld" | "db" | "ultron" | "pdb"
 
 export interface NextAction {
   id: NextActionKind
@@ -30,7 +31,7 @@ function workbenchAction(kind: WorkbenchKind, hrefBase: string, label: string, p
   const currentId = problems.some(problem => problem.id === saved.currentId) ? saved.currentId : problems[0].id
   const current = problems.find(problem => problem.id === currentId) || problems[0]
   const completed = saved.completed.filter(id => problems.some(problem => problem.id === id)).length
-  const kindLabel = kind === "design" ? "design" : kind === "db" ? "SQL" : kind === "ultron" ? "AI/ML" : "object design"
+  const kindLabel = kind === "design" ? "design" : kind === "db" ? "SQL" : kind === "ultron" ? "AI/ML" : kind === "pdb" ? "debugging" : "object design"
   return {
     id: kind,
     kind,
@@ -92,5 +93,6 @@ export function getNextActions(): NextAction[] {
     workbenchAction("lld", "/lld", "Resume LLD", PROBLEMS_LLD),
     workbenchAction("db", "/db", "Resume SQL", PROBLEMS_DB),
     workbenchAction("ultron", "/ultron", "Resume AI/ML", PROBLEMS_ULTRON),
+    workbenchAction("pdb", "/pdb", "Resume Debugging", PROBLEMS_PDB),
   ]
 }

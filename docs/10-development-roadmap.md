@@ -212,3 +212,25 @@ sqlite3 — lazy per-name package lock in the worker, 60s first-run leash,
 warmup flag — plus a promise-singleton loadPyodide (a warmup and a first Run
 arriving together previously spawned TWO Pyodide instances and the drill ran
 in the one without numpy).
+
+## PDB — the debugging ladder (shipped 2026-08-30)
+
+PDB (`/pdb`, app id `pdb`, glyph ⌖, amber gradient) is the test-driven debugging
+curriculum, calibrated to Anthropic-OA2-style debugging assessments: the learner
+receives a broken module plus a failing test suite, where the tests are the spec.
+41 drills across 11 linear stages (7 tiers), every problem teaching exactly one
+debugging move: reading the failure (stage 0), one-line lies (1), state
+inspection with pdb (2), NumPy shape law (3), the NaN swamp (4), dtype traps (5),
+identity/aliasing/state (6), recursion and control flow (7), cascading root
+causes (8), boolean masks (9), and a two-module gauntlet with 4 and 5 interacting
+unlabeled bugs (10). The workbench adds a **scripted pdb panel**: the learner's
+current editor code is re-exec'd under filename `<drill>` (linecache-seeded so
+`l`/`ll` show source), a breakpoint is set on the drill's entry function, and the
+learner's typed command list drives a real `pdb.Pdb` session inside the worker —
+transcripts show locals, stack walks, and the exact moment a value goes wrong.
+The shared check harness (`check`/`check_call`/`finish`) prints unittest-style
+PASS/FAIL verdicts with expected-vs-actual; completion requires the literal
+"All tests passed!". Every drill verified in real Python (starter red, solution
+green, 41/41), every debugger session verified (41/41), and the full loop —
+failing suite, fix, green suite, live pdb session — verified end-to-end through
+the real Pyodide worker via CDP (20/20).
