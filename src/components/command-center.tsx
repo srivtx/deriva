@@ -45,7 +45,7 @@ export default function CommandCenter({ open, onClose }: { open: boolean; onClos
       { id: "today", title: "Continue today's derivation", meta: "Learn · Stage 1–9", keywords: "lesson recursion derive", href: "/learn/trees/sum-1-to-n" },
       { id: "observatory", title: "Open Learning Observatory", meta: "Observe · your evidence", keywords: "progress mastery patterns systems", href: "/observatory" },
       { id: "one", title: "Open 0NE Ladder", meta: "Practice · 148 problems, zero to mastery", keywords: "one ladder dsa mastery complete linear greedy bits math strings dp design flow", href: "/one" },
-      { id: "pdb", title: "Open PDB Ladder", meta: "Practice · 41 debugging drills, red to green", keywords: "pdb debugging ladder bug fix tests traceback step through inspect pdb breakpoint", href: "/pdb" },
+      { id: "pdb", title: "Open PDB Ladder", meta: "Practice · 92 debugging drills, red to green", keywords: "pdb debugging ladder bug fix tests traceback step through inspect pdb breakpoint", href: "/pdb" },
       { id: "res", title: "Open RES Brainstorm", meta: "Research · open-ended interview prep", keywords: "res research brainstorm interview ai safety open ended thinking aloud drill", href: "/res" },
       { id: "icpc", title: "Open ICPC Ladder", meta: "Practice · 91 contest problems", keywords: "icpc contest ladder competitive programming", href: "/icpc" },
       { id: "lld", title: "Open LLD Ladder", meta: "Design · 55 problems, SOLID to concurrency", keywords: "lld low level design ladder oop solid patterns parking lot splitwise state machine concurrency thread lock", href: "/lld" },

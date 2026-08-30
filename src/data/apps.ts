@@ -43,7 +43,7 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "practice", name: "Drill", glyph: "▶", gradient: G.cobalt, desc: "Code practice by topic", category: "Practice", href: "/practice", status: "installed" },
   { id: "icpc", name: "ICPC", glyph: "⚑", gradient: G.green, desc: "91 contest problems", category: "Practice", href: "/icpc", status: "installed" },
   { id: "one", name: "0NE", glyph: "⊙", gradient: G.violet, desc: "148 problems, zero to mastery", category: "Practice", href: "/one", status: "installed" },
-  { id: "pdb", name: "PDB", glyph: "⌖", gradient: G.pdb, desc: "41 debugging drills, red to green", category: "Practice", href: "/pdb", status: "installed" },
+  { id: "pdb", name: "PDB", glyph: "⌖", gradient: G.pdb, desc: "92 debugging drills, red to green", category: "Practice", href: "/pdb", status: "installed" },
   { id: "atlas", name: "Atlas", glyph: "◎", gradient: G.sky, desc: "Watch algorithms move", category: "Practice", href: "/atlas", status: "installed" },
   { id: "cheatsheets", name: "Cheatsheets", glyph: "≡", gradient: G.gold, desc: "Contest templates", category: "Practice", href: "/cheatsheets", status: "installed" },
   // Build

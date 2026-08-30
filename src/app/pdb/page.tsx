@@ -14,11 +14,20 @@ const TIERS: { name: string; note: string; stages: number[] }[] = [
   { name: "V — The Cascade", note: "many reds, one root", stages: [8] },
   { name: "VI — The Mask", note: "booleans route everything", stages: [9] },
   { name: "VII — The Gauntlet", note: "unfamiliar code, several roots, one clock", stages: [10] },
+  { name: "VIII — The Text", note: "splits, slices, patterns", stages: [11, 12] },
+  { name: "IX — The Machine", note: "objects, iterators, exceptions", stages: [13, 14, 15] },
+  { name: "X — The Sprint", note: "correct but too slow", stages: [16] },
+  { name: "XI — The Classics", note: "boundaries and number traps", stages: [17, 18] },
+  { name: "XII — The Algorithm", note: "invariants, estimators, formulas", stages: [19, 20] },
+  { name: "XIII — The Contract", note: "structures and arrays under contract", stages: [21, 22] },
+  { name: "XIV — The Masked Root", note: "bugs that hide bugs", stages: [23] },
 ]
 
 const STAGE_GLYPH: Record<number, string> = {
   0: "!", 1: "?", 2: "◉", 3: "⊞", 4: "∅", 5: "≈",
   6: "⧉", 7: "↻", 8: "⁂", 9: "¬", 10: "⌖",
+  11: "§", 12: "*", 13: "⌂", 14: "∞", 15: "↯", 16: "⏱",
+  17: "⇉", 18: "±", 19: "∆", 20: "σ", 21: "⌸", 22: "⍉", 23: "◈",
 }
 
 export default function PdbLadderPage() {
@@ -48,9 +57,9 @@ export default function PdbLadderPage() {
           <p>
             The debugging ladder, strictly linear: every drill hands you a broken module and a failing
             test suite — the test is the spec, the traceback is the map, and the debugger is the
-            flashlight. You start by reading your first assert and end hunting five interacting root
-            causes in unfamiliar code, exactly like a real debugging assessment. A scripted pdb runs
-            real debugger commands against your code, in your browser.
+            flashlight. You start by reading your first assert and end hunting bugs that hide behind
+            other bugs in unfamiliar code, exactly like a real debugging assessment. A scripted pdb
+            runs real debugger commands against your code, in your browser.
           </p>
           <div className="icpc-hero-actions">
             <Link className="icpc-primary" href={`/pdb/practice?problem=${started ? currentId : 1}`}>

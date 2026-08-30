@@ -48,7 +48,7 @@ const MORE_GROUPS: MoreGroup[] = [
     label: "Practice",
     links: [
       { label: "0NE Ladder", href: "/one", desc: "148 problems, zero to mastery" },
-      { label: "PDB Ladder", href: "/pdb", desc: "41 debugging drills, red to green" },
+      { label: "PDB Ladder", href: "/pdb", desc: "92 debugging drills, red to green" },
       { label: "ICPC Ladder", href: "/icpc", desc: "91 contest problems" },
       { label: "Algorithm Atlas", href: "/atlas", desc: "watch algorithms move" },
       { label: "Cheatsheet Hub", href: "/cheatsheets", desc: "contest templates" },

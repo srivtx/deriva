@@ -234,3 +234,35 @@ PASS/FAIL verdicts with expected-vs-actual; completion requires the literal
 green, 41/41), every debugger session verified (41/41), and the full loop —
 failing suite, fix, green suite, live pdb session — verified end-to-end through
 the real Pyodide worker via CDP (20/20).
+
+### PDB expansion — 92 drills, 24 stages, 14 tiers (shipped 2026-08-30)
+
+The ladder grows from 41 to 92 drills with nine new stages in seven new tiers.
+Mid-ladder: The Broken Text (split semantics, slice boundaries, normalization,
+join-vs-accumulate), The Pattern (greedy quantifiers, anchors, escaping, findall
+group shapes), The Shared Shelf (shared class attributes, __eq__ without
+__hash__, return self, missing super), The Dry Well (exhausted generators, the
+accidental yield, zip truncation, mutate-while-iterating), The Swallowed Signal
+(bare excepts, wrong exception types, unreachable handlers, return-in-finally),
+The Slow March (four correct-but-TLE drills: brute pairs -> one-pass counter,
+list-scan dedupe -> set, naive fib -> iteration, brute subarray -> Kadane; the
+harness asserts a 3.0s budget on seeded large inputs so the bug is TIME, not
+value — sizes tuned so the brute force takes ~3s in CPython and ~5-10s in
+Pyodide, safely over budget and under the 60s leash), The Boundary (binary
+search half-open bounds, sliding-window shrink, pointer direction, fencepost
+ranges), and The Number Line (int() vs floor, banker's rounding, float
+equality, modular clock wrap). Advanced: The Algorithm's Heart (Bellman-Ford
+pass count, union-find's one-step find, the half-finished sift, memo keys that
+drop a parameter), The Statistician's Trap (Bessel's n-1, catastrophic
+cancellation in E[X^2]-E[X]^2, a sampler comparing r against the wrong
+accumulator, train/test leakage), The Contract (LRU recency on get, bracket
+matching, monotonic deque direction, shallow copy), The NumPy Depths (slice
+views vs fancy-index copies, forced int32 accumulation wrapping, searchsorted
+side, argsort tie stability), and the capstone tier The Masked Root: bugs that
+hide bugs — a swallowed exception concealing a typo concealing a wrong tax
+formula, a shared sort key breaking two consumers, and a five-root capstone
+composing one move from each post-gauntlet stage. Every drill verified in real
+Python (starter red, solution green, 92/92), every debugger session verified
+(87/87), and the expansion verified end-to-end through the real Pyodide worker
+via CDP, including a TLE drill exceeding its budget in the browser with the
+correct answer and a pdb transcript that prints 0.30000000000000004.
