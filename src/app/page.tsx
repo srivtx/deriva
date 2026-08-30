@@ -32,6 +32,7 @@ const G = {
   dark: "linear-gradient(135deg, #1E2922, #0F1512)",
   sky: "linear-gradient(135deg, #0891B2, #056680)",
   ultron: "linear-gradient(135deg, #6D28D9, #3B0E7E)",
+  pdb: "linear-gradient(135deg, #B45309, #7C2D12)",
 }
 
 const APP_SECTIONS = [
@@ -44,6 +45,7 @@ const APP_SECTIONS = [
   { label: "Practice", apps: [
     { id: "practice", href: "/practice", name: "Drill", glyph: "▶", gradient: G.cobalt },
     { id: "one", href: "/one", name: "0NE", glyph: "⊙", gradient: G.violet },
+    { id: "pdb", href: "/pdb", name: "PDB", glyph: "⌖", gradient: G.pdb },
     { id: "icpc", href: "/icpc", name: "ICPC", glyph: "⚑", gradient: G.green },
     { id: "atlas", href: "/atlas", name: "Atlas", glyph: "◎", gradient: G.sky },
     { id: "cheatsheets", href: "/cheatsheets", name: "Cheatsheets", glyph: "≡", gradient: G.gold },

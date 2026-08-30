@@ -48,6 +48,7 @@ const MORE_GROUPS: MoreGroup[] = [
     label: "Practice",
     links: [
       { label: "0NE Ladder", href: "/one", desc: "148 problems, zero to mastery" },
+      { label: "PDB Ladder", href: "/pdb", desc: "41 debugging drills, red to green" },
       { label: "ICPC Ladder", href: "/icpc", desc: "91 contest problems" },
       { label: "Algorithm Atlas", href: "/atlas", desc: "watch algorithms move" },
       { label: "Cheatsheet Hub", href: "/cheatsheets", desc: "contest templates" },
@@ -125,6 +126,10 @@ function Breadcrumbs() {
     parts.push({ label: "DB Ladder", href: "/db" })
   } else if (pathname === "/db/practice") {
     parts.push({ label: "DB Workbench", href: "/db/practice" })
+  } else if (pathname === "/pdb") {
+    parts.push({ label: "PDB Ladder", href: "/pdb" })
+  } else if (pathname === "/pdb/practice") {
+    parts.push({ label: "PDB Workbench", href: "/pdb/practice" })
   } else if (pathname === "/one") {
     parts.push({ label: "0NE Ladder", href: "/one" })
   } else if (pathname === "/res") {
@@ -243,7 +248,7 @@ function ProgressBadge({ className = "" }: { className?: string }) {
   )
 }
 
-  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/ultron", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig"]
+  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/pdb", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/ultron", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig"]
 
 export default function AppShell() {
   const pathname = usePathname()
@@ -366,8 +371,8 @@ export default function AppShell() {
       document.removeEventListener("keydown", onKey)
     }
   }, [moreOpen])
-  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/one" ? "0NE Ladder" : pathname === "/res" ? "RES Brainstorm" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "LLD Ladder" : pathname.startsWith("/lld/practice") ? "LLD Workbench" : pathname === "/db" ? "DB Ladder" : pathname.startsWith("/db/practice") ? "DB Workbench" : pathname === "/ultron" ? "Ultron Ladder" : pathname.startsWith("/ultron/practice") ? "Ultron Workbench" : pathname === "/settings" ? "Settings" : pathname === "/focus" ? "Focus Dial" : pathname === "/media" ? "Media Studio" : pathname === "/glyph" ? "Glyph Studio" : pathname === "/ghost" ? "Ghost" : pathname === "/osc" ? "OSC-1" : pathname === "/rig" ? "RIG" : "Deriva"
-  const moreActive = pathname === "/design" || pathname.startsWith("/lld") || pathname.startsWith("/db") || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/one" || pathname === "/res" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/complexity" || pathname === "/notebook" || pathname === "/toolkit" || pathname === "/playground" || pathname === "/releases"
+  const mobileTitle = pathname === "/icpc" ? "ICPC Ladder" : pathname === "/one" ? "0NE Ladder" : pathname === "/res" ? "RES Brainstorm" : pathname === "/daily" ? "Daily Challenge" : pathname === "/review" ? "Review Queue" : pathname === "/contest" ? "Contest Sim" : pathname === "/interview" ? "Mock Interview" : pathname === "/cheatsheets" ? "Cheatsheets" : pathname.startsWith("/atlas") ? "Algorithm Atlas" : pathname === "/complexity" ? "Complexity Lab" : pathname === "/notebook" ? "Notebook" : pathname === "/toolkit" ? "Life Toolkit" : pathname === "/playground" ? "Playground" : pathname === "/releases" ? "Releases" : pathname.startsWith("/learn/") ? "Guided Lesson" : pathname.startsWith("/ai-ml") ? "AI/ML Systems" : pathname.startsWith("/expedition") ? "Expedition" : pathname.startsWith("/games") ? "Game Mode" : pathname.startsWith("/patterns/quiz") ? "Pattern Quiz" : pathname.startsWith("/patterns") ? "Patterns" : pathname === "/practice" ? "Drill Mode" : pathname.startsWith("/topic/") ? "DSA Drill" : pathname === "/dashboard" ? "Progress Details" : pathname === "/observatory" ? "Observatory" : pathname === "/design" ? "System Design" : pathname === "/lld" ? "LLD Ladder" : pathname.startsWith("/lld/practice") ? "LLD Workbench" : pathname === "/db" ? "DB Ladder" : pathname.startsWith("/db/practice") ? "DB Workbench" : pathname === "/ultron" ? "Ultron Ladder" : pathname.startsWith("/ultron/practice") ? "Ultron Workbench" : pathname === "/pdb" ? "PDB Ladder" : pathname.startsWith("/pdb/practice") ? "PDB Workbench" : pathname === "/settings" ? "Settings" : pathname === "/focus" ? "Focus Dial" : pathname === "/media" ? "Media Studio" : pathname === "/glyph" ? "Glyph Studio" : pathname === "/ghost" ? "Ghost" : pathname === "/osc" ? "OSC-1" : pathname === "/rig" ? "RIG" : "Deriva"
+  const moreActive = pathname === "/design" || pathname.startsWith("/lld") || pathname.startsWith("/db") || pathname.startsWith("/expedition") || pathname.startsWith("/games") || pathname === "/settings" || pathname === "/icpc" || pathname === "/one" || pathname === "/pdb" || pathname === "/res" || pathname === "/daily" || pathname === "/review" || pathname === "/contest" || pathname === "/interview" || pathname === "/cheatsheets" || pathname.startsWith("/atlas") || pathname === "/complexity" || pathname === "/notebook" || pathname === "/toolkit" || pathname === "/playground" || pathname === "/releases"
   const navSlots = preferences.navSlots.length ? preferences.navSlots : ["home", "learn", "patterns", "observe"]
   const slotItems = navSlots.map(id => NAV_ITEM_MAP[id]).filter(Boolean)
   const iconPack = currentIconPack()
