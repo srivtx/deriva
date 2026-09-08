@@ -156,9 +156,24 @@ export default function KymaPlate({ initial, target, paramsRef, mini = false }: 
   const simRef = useRef({ m, n, mix, agitation, glow, shape })
   const audioRef = useRef<{ ctx: AudioContext; osc: OscillatorNode; gain: GainNode } | null>(null)
   const pourRef = useRef<{ x: number; y: number } | null>(null)
+  const visibleRef = useRef(true)
+  const [fs, setFs] = useState(false)
 
   simRef.current = { m, n, mix, agitation, glow, shape }
   if (paramsRef) { paramsRef.current.m = m; paramsRef.current.n = n; paramsRef.current.mix = mix }
+
+  const toggleFs = useCallback(() => {
+    const el = wrapRef.current
+    if (!el) return
+    if (!document.fullscreenElement) el.requestFullscreen?.().catch(() => {})
+    else document.exitFullscreen?.().catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const onFs = () => setFs(Boolean(document.fullscreenElement))
+    document.addEventListener("fullscreenchange", onFs)
+    return () => document.removeEventListener("fullscreenchange", onFs)
+  }, [])
 
   const circle = shape === "circle"
   const displayedFreq = circle
@@ -184,6 +199,7 @@ export default function KymaPlate({ initial, target, paramsRef, mini = false }: 
     gain.gain.value = 0.05
     osc.connect(gain); gain.connect(ctx.destination)
     osc.start()
+    ctx.resume().catch(() => {})
     audioRef.current = { ctx, osc, gain }
     setToneOn(true)
   }, [toneOn, displayedFreq])
@@ -248,7 +264,7 @@ export default function KymaPlate({ initial, target, paramsRef, mini = false }: 
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     let W = 0, H = 0
     const resize = () => {
-      const r = wrap.getBoundingClientRect()
+      const r = glCanvas.getBoundingClientRect()
       W = Math.max(1, Math.round(r.width))
       H = Math.max(1, Math.round(r.height))
       glCanvas.width = Math.round(W * dpr); glCanvas.height = Math.round(H * dpr)
@@ -257,7 +273,9 @@ export default function KymaPlate({ initial, target, paramsRef, mini = false }: 
     }
     resize()
     const ro = new ResizeObserver(resize)
-    ro.observe(wrap)
+    ro.observe(glCanvas)
+    const io = new IntersectionObserver(entries => { visibleRef.current = entries[0].isIntersecting }, { threshold: 0.02 })
+    io.observe(wrap)
 
     const fieldAt = (x: number, y: number, sm: number, sn: number, smix: number, circ: boolean) =>
       circ ? fieldCircle(x, y, Math.round(sm) % 7, Math.max(1, Math.min(5, Math.round(sn))))
@@ -270,7 +288,10 @@ export default function KymaPlate({ initial, target, paramsRef, mini = false }: 
     let raf = 0
     const frame = () => {
       if (destroyed) return
-      const s = simRef.current
+      raf = requestAnimationFrame(frame)
+      try {
+        if (!visibleRef.current) return
+        const s = simRef.current
       const circ = s.shape === "circle"
       const sm = circ ? Math.round(s.m) % 7 : s.m
       const sn = circ ? Math.max(1, Math.min(5, Math.round(s.n))) : s.n
@@ -318,7 +339,9 @@ export default function KymaPlate({ initial, target, paramsRef, mini = false }: 
           vx[j] = 0; vy[j] = 0
         }
       }
-      raf = requestAnimationFrame(frame)
+      } catch (e) {
+        console.error("KYMA plate frame:", e)
+      }
     }
     frame()
 
@@ -334,6 +357,7 @@ export default function KymaPlate({ initial, target, paramsRef, mini = false }: 
       destroyed = true
       cancelAnimationFrame(raf)
       ro.disconnect()
+      io.disconnect()
       sandCanvas.removeEventListener("kyma-scatter", onScatter as EventListener)
       sandCanvas.removeEventListener("pointerdown", onPour)
       sandCanvas.removeEventListener("pointermove", onPour)
@@ -355,7 +379,7 @@ export default function KymaPlate({ initial, target, paramsRef, mini = false }: 
 
   return (
     <div className="kyma-plate">
-      <div ref={wrapRef} className="kyma-canvas-wrap" style={{ aspectRatio: "1 / 1" }}>
+      <div ref={wrapRef} className={`kyma-canvas-wrap${fs ? " kyma-fs" : ""}`} style={{ aspectRatio: fs ? undefined : "1 / 1" }}>
         <canvas ref={glCanvasRef} className="kyma-canvas" aria-label="Chladni plate simulation" />
         <canvas ref={sandCanvasRef} className="kyma-canvas kyma-sand-canvas" aria-hidden="true" />
         {!mini && (
@@ -368,6 +392,11 @@ export default function KymaPlate({ initial, target, paramsRef, mini = false }: 
           <div className="kyma-hud">
             <span className="kyma-chip">match the green</span>
           </div>
+        )}
+        {!mini && (
+          <button type="button" className="kyma-fs-btn" onClick={toggleFs} aria-label={fs ? "Exit full screen" : "Full screen"}>
+            {fs ? "⤡ exit" : "⛶ full"}
+          </button>
         )}
       </div>
 

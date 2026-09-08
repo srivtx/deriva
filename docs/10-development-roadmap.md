@@ -336,3 +336,28 @@ now seeds five small colonies that visibly grow from the first seconds.
 Final CDP end-to-end on the production build: 19/19 — field structure on
 square and circle plates, atlas click steering, pause/step/resume, evolving
 dish chemistry, tone, and all twelve puzzles solved and persisted.
+
+### KYMA v2.1 — full-screen mode, idle-when-offscreen, and the interaction audit (same branch, 2026-09-08)
+
+A click-by-click audit of every control (pause/run/step rapid toggling, atlas
+steering, colormap and brush switching, shape toggling, tone, sand pouring,
+scroll-away behavior) surfaced three real defects, all fixed. The frame loops
+of both simulations now reschedule requestAnimationFrame FIRST and run their
+bodies inside try/catch, so a mid-frame exception can no longer silently kill
+a simulation; both sims observe an IntersectionObserver and idle completely
+when scrolled off the viewport (previously all six live canvases — the lab
+pair plus four puzzle minis — simulated at full rate forever, which is what
+made the page feel glitchy to click), and the puzzle mini dishes run at half
+speed. Full-screen mode: a ⛶ button on each lab canvas; in full-screen the
+canvas stays a centered square via min(100vw, 100vh) and the resize observer
+now measures the canvas itself so the GL viewport always matches the CSS box.
+The tone generator calls ctx.resume() so browsers that start the context
+suspended still sound. And the step counter told the truth at last: the
+update throttle compared against a watermark that Reseed never reset, so
+after a reseed the displayed count froze at its pre-reseed value (920 real
+steps, chip stuck at 1161) until the real count climbed past it — Pause also
+flushes the exact count now, and Step advances exactly one step with the
+chip updating immediately. Audit: 20/20 interactions verified headlessly
+including pause truly freezing the simulation, step = +1, resume advancing,
+atlas click syncing sliders, idle-when-scrolled-away and resume-when-visible;
+the full puzzle end-to-end remains green.

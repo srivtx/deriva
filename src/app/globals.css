@@ -3503,3 +3503,12 @@ code, pre { font-family: var(--font-mono); }
 .kyma-atlas-axis-y { grid-column: 2; grid-row: 2; align-self: start; }
 .kyma-atlas-note { grid-column: 2; grid-row: 3; margin: 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
 @media (max-width: 560px) { .kyma-atlas-row { grid-template-columns: 1fr; } .kyma-atlas { grid-column: 1; grid-row: auto; justify-self: center; } .kyma-atlas-axis-x, .kyma-atlas-axis-y, .kyma-atlas-note { grid-column: 1; grid-row: auto; } }
+
+/* KYMA fullscreen mode */
+.kyma-fs-btn { position: absolute; top: 10px; right: 10px; z-index: 6; font: 600 11px var(--font-mono, monospace); letter-spacing: .06em; color: #E8E6D8; background: rgb(10 14 12 / .62); border: 1px solid rgb(232 230 216 / .2); border-radius: 6px; padding: 4px 9px; cursor: pointer; backdrop-filter: blur(4px); transition: border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard); }
+.kyma-fs-btn:hover { border-color: rgb(242 217 160 / .5); color: #F2D9A0; }
+.kyma-canvas-wrap:fullscreen { background: #050807; display: grid; place-items: center; border: 0; border-radius: 0; box-shadow: none; }
+.kyma-canvas-wrap:fullscreen .kyma-canvas { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(100vw, 100vh); height: min(100vw, 100vh); }
+.kyma-canvas-wrap:fullscreen .kyma-hud, .kyma-canvas-wrap:fullscreen .kyma-fs-btn { position: fixed; }
+.kyma-canvas-wrap:fullscreen .kyma-hud { top: 18px; left: 18px; }
+.kyma-canvas-wrap:fullscreen .kyma-fs-btn { top: 18px; right: 18px; }

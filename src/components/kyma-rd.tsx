@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { KYMA_PRESETS } from "@/data/kyma"
 
 const SIM = 192
@@ -115,12 +115,27 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
   const [substance, setSubstance] = useState<"seed" | "clear">("seed")
   const [engine, setEngine] = useState<"webgl2" | "cpu" | "">("")
   const [steps, setSteps] = useState(0)
+  const [fs, setFs] = useState(false)
   const paramsRef = useRef({ F, k, speed, paused, palette, brush, substance })
   paramsRef.current = { F, k, speed, paused, palette, brush, substance }
   if (fkRef) { fkRef.current.F = F; fkRef.current.k = k }
   const reseedRef = useRef<() => void>(() => {})
   const stepOnceRef = useRef<() => void>(() => {})
   const stepsRef = useRef(0)
+  const visibleRef = useRef(true)
+
+  const toggleFs = useCallback(() => {
+    const el = wrapRef.current
+    if (!el) return
+    if (!document.fullscreenElement) el.requestFullscreen?.().catch(() => {})
+    else document.exitFullscreen?.().catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const onFs = () => setFs(Boolean(document.fullscreenElement))
+    document.addEventListener("fullscreenchange", onFs)
+    return () => document.removeEventListener("fullscreenchange", onFs)
+  }, [])
 
   const applyPreset = (p: { F: number; k: number }) => { setF(p.F); setK(p.k) }
 
@@ -202,13 +217,14 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
       const reseed = () => {
         uploadState(back, initialState())
         stepsRef.current = 0
+        lastStepsShown = 0
       }
       reseedRef.current = reseed
       cleanups.push(() => { gl.getExtension("WEBGL_lose_context")?.loseContext() })
 
       let W = 0, H = 0
       const resize = () => {
-        const r = wrap.getBoundingClientRect()
+        const r = canvas.getBoundingClientRect()
         W = Math.max(1, Math.round(r.width))
         H = Math.max(1, Math.round(r.height))
         canvas.width = Math.round(W * dpr)
@@ -216,8 +232,13 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
       }
       resize()
       const ro = new ResizeObserver(resize)
-      ro.observe(wrap)
-      cleanups.push(() => ro.disconnect())
+      ro.observe(canvas)
+      const io = new IntersectionObserver(entries => {
+        visibleRef.current = entries[0].isIntersecting
+        canvas.dataset.kymaVisible = String(entries[0].isIntersecting)
+      }, { threshold: 0.02 })
+      io.observe(wrap)
+      cleanups.push(() => { ro.disconnect(); io.disconnect() })
 
       const paint = (clientX: number, clientY: number) => {
         const rect = canvas.getBoundingClientRect()
@@ -258,10 +279,15 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
           gl.drawArrays(gl.TRIANGLES, 0, 3)
           const t = front; front = back; back = t
           const fb = fboFront; fboFront = fboBack; fboBack = fb
-          stepsRef.current++
+            stepsRef.current++
+          }
+          if (stepsRef.current % 60 === 0) setSteps(stepsRef.current)
         }
+      stepOnceRef.current = () => {
+        runSim(1)
+        lastStepsShown = stepsRef.current
+        setSteps(stepsRef.current)
       }
-      stepOnceRef.current = () => runSim(1)
 
       const render = () => {
         const { palette: pal } = paramsRef.current
@@ -278,14 +304,25 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
       let lastStepsShown = 0
       const frame = () => {
         if (destroyed) return
-        const { speed: sp, paused: ps } = paramsRef.current
-        if (!ps) runSim(sp)
-        render()
-        if (stepsRef.current - lastStepsShown >= 60) {
-          lastStepsShown = stepsRef.current
-          setSteps(stepsRef.current)
-        }
         raf = requestAnimationFrame(frame)
+        try {
+          const { speed: sp, paused: ps } = paramsRef.current
+          if (visibleRef.current) {
+          if (!ps) {
+            runSim(mini ? Math.min(sp, 4) : sp)
+            if (stepsRef.current - lastStepsShown >= 60) {
+              lastStepsShown = stepsRef.current
+              setSteps(stepsRef.current)
+            }
+          } else if (stepsRef.current !== lastStepsShown) {
+              lastStepsShown = stepsRef.current
+              setSteps(stepsRef.current)
+            }
+            render()
+          }
+        } catch (e) {
+          console.error("KYMA rd frame:", e)
+        }
       }
       frame()
     } else {
@@ -333,37 +370,44 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
       const dB = new Float32Array(CN * CN)
       let W = 0, H = 0
       const resize = () => {
-        const r = wrap.getBoundingClientRect()
+        const r = canvas.getBoundingClientRect()
         W = Math.max(1, Math.round(r.width)); H = Math.max(1, Math.round(r.height))
         canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr)
       }
       resize()
       const ro = new ResizeObserver(resize)
-      ro.observe(wrap)
+      ro.observe(canvas)
+      const io = new IntersectionObserver(entries => {
+        visibleRef.current = entries[0].isIntersecting
+        canvas.dataset.kymaVisible = String(entries[0].isIntersecting)
+      }, { threshold: 0.02 })
+      io.observe(wrap)
       const frame = () => {
         if (destroyed) return
-        const { F: f, k: kk, speed: sp, paused: ps } = paramsRef.current
-        if (!ps) {
-          for (let s = 0; s < Math.min(sp, 3); s++) {
-            lap(A, dA); lap(B, dB)
-            for (let i = 0; i < A.length; i++) {
-              const ab2 = A[i] * B[i] * B[i]
-              A[i] = Math.min(1, Math.max(0, A[i] + DT * (DA * dA[i] - ab2 + f * (1 - A[i]))))
-              B[i] = Math.min(1, Math.max(0, B[i] + DT * (DB * dB[i] + ab2 - (f + kk) * B[i])))
+        if (visibleRef.current) {
+          const { F: f, k: kk, speed: sp, paused: ps } = paramsRef.current
+          if (!ps) {
+            for (let s = 0; s < Math.min(sp, 3); s++) {
+              lap(A, dA); lap(B, dB)
+              for (let i = 0; i < A.length; i++) {
+                const ab2 = A[i] * B[i] * B[i]
+                A[i] = Math.min(1, Math.max(0, A[i] + DT * (DA * dA[i] - ab2 + f * (1 - A[i]))))
+                B[i] = Math.min(1, Math.max(0, B[i] + DT * (DB * dB[i] + ab2 - (f + kk) * B[i])))
+              }
+              stepsRef.current++
             }
-            stepsRef.current++
           }
+          for (let i = 0; i < B.length; i++) {
+            const [r, g, b] = palRGB(B[i])
+            img.data[i * 4] = Math.round(r * 255)
+            img.data[i * 4 + 1] = Math.round(g * 255)
+            img.data[i * 4 + 2] = Math.round(b * 255)
+            img.data[i * 4 + 3] = 255
+          }
+          offCtx.putImageData(img, 0, 0)
+          ctx2d.imageSmoothingEnabled = true
+          ctx2d.drawImage(off, 0, 0, canvas.width, canvas.height)
         }
-        for (let i = 0; i < B.length; i++) {
-          const [r, g, b] = palRGB(B[i])
-          img.data[i * 4] = Math.round(r * 255)
-          img.data[i * 4 + 1] = Math.round(g * 255)
-          img.data[i * 4 + 2] = Math.round(b * 255)
-          img.data[i * 4 + 3] = 255
-        }
-        offCtx.putImageData(img, 0, 0)
-        ctx2d.imageSmoothingEnabled = true
-        ctx2d.drawImage(off, 0, 0, canvas.width, canvas.height)
         raf = requestAnimationFrame(frame)
       }
       frame()
@@ -383,7 +427,7 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
 
   return (
     <div className="kyma-rd">
-      <div ref={wrapRef} className="kyma-canvas-wrap" style={{ aspectRatio: "1 / 1" }}>
+      <div ref={wrapRef} className={`kyma-canvas-wrap${fs ? " kyma-fs" : ""}`} style={{ aspectRatio: fs ? undefined : "1 / 1" }}>
         <canvas ref={canvasRef} className="kyma-canvas kyma-rd-canvas" aria-label="Gray-Scott reaction-diffusion simulation" />
         {!mini && (
           <div className="kyma-hud">
@@ -391,6 +435,11 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
             <span className="kyma-chip">{steps.toLocaleString()} steps</span>
             {paused && <span className="kyma-chip kyma-chip-warn">paused</span>}
           </div>
+        )}
+        {!mini && (
+          <button type="button" className="kyma-fs-btn" onClick={toggleFs} aria-label={fs ? "Exit full screen" : "Full screen"}>
+            {fs ? "⤡ exit" : "⛶ full"}
+          </button>
         )}
       </div>
 

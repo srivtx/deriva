@@ -302,3 +302,21 @@ exposing checkFramebufferStatus found it in one round. Rule of thumb: when a
 GPU pipeline produces uniform output with no errors, check framebuffer
 completeness before doubting the math — and verify completeness at setup
 time, not just extension availability.
+
+## D19. KYMA v2.1: rAF loops reschedule first, sims idle off-screen, and counters need their watermarks reset (KYMA, 2026-09-08)
+
+Three interaction-layer rules the audit forced into writing. (1) Any
+animation loop that reschedules requestAnimationFrame as its LAST statement
+dies silently on the first mid-frame exception — KYMA loops now reschedule
+first and wrap the body in try/catch with a console.error, so a bad frame
+costs one frame, not the simulation. (2) A page with six live simulations
+must idle the ones it cannot see: IntersectionObserver gates both sims'
+frame bodies, which is also the difference between a page that feels crisp
+to click and one that feels glitchy — main-thread saturation from invisible
+canvases reads to users as "buttons don't work". (3) Display throttles that
+compare a live value against a watermark must reset the watermark whenever
+the live value is reset: Reseed zeroed the step counter but not the throttle
+watermark, so the chip froze at its pre-reseed value and every Step press
+looked wrong until the real count clawed past it. Pause now flushes the
+exact count, Step sets it immediately, and the audit asserts the displayed
+counter matches reality after each transition.
