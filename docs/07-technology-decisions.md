@@ -278,3 +278,27 @@ actually dead. Every shipped F,k preset was verified by running the exact
 shipped algorithm in Python before entering the data file; two widely-quoted
 folk presets (spots 0.030/0.055, U-skate 0.062/0.0609) failed verification
 under this convention and were excluded rather than quoted on faith.
+
+## D18. KYMA v2: Bessel modes on a circular plate, a Python-computed F-k atlas, and the cost of a dropped framebuffer attachment (KYMA, 2026-09-08)
+
+Three lessons from turning KYMA's simulations into full-control instruments.
+(1) The circular Chladni plate uses genuine Bessel eigenmodes: the field is
+J_m(α_{m,n}·r)·cos(mθ), where α_{m,n} is the n-th zero of the order-m Bessel
+function — precomputed in Python (series + bisection) and embedded as a table
+in both the fragment shader and the JS particle integrator. GLSL ES 1.00 has
+no int overloads for clamp, so mode indices must be clamped in float before
+the int cast, or the shader fails to compile silently — every KYMA shader now
+logs COMPILE_STATUS failures. (2) The F–k atlas is computed, not drawn: a
+Python batch runs 3,136 Gray–Scott dishes simultaneously (numpy vectorized
+over the grid) across the feed-kill plane and colors each cell by mean B
+activity; the shipped PNG is therefore a picture of what the shipped
+algorithm actually does, and clicking it sets the live dish's chemistry.
+(3) The v2 rewrite silently dropped the two framebufferTexture2D calls that
+attach the ping-pong textures — both framebuffers stayed
+FRAMEBUFFER_INCOMPLETE_ATTACHMENT, every sim draw call succeeded into
+nothing, and the dish displayed a uniform background with zero GL errors,
+zero console errors, and a working step counter. A temporary debug hook
+exposing checkFramebufferStatus found it in one round. Rule of thumb: when a
+GPU pipeline produces uniform output with no errors, check framebuffer
+completeness before doubting the math — and verify completeness at setup
+time, not just extension availability.

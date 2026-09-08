@@ -301,3 +301,38 @@ build: 25/25 checks including wrong-answer feedback paths, slider-driven
 simulation grading, progress persistence across reload, and launcher
 registration on all surfaces (catalog, home, More menu, command palette,
 breadcrumbs, mode prefixes).
+
+### KYMA v2 — the lab becomes an instrument (same branch, 2026-09-08)
+
+The first KYMA read like a quiz with pictures; v2 turns both simulations into
+instruments you operate. The Chladni plate gains a circular mode — real Bessel
+eigenmodes J_m(α_{m,n}r)·cos(mθ) with a precomputed zero table (m 0..6, n 1..5,
+computed by series + bisection in Python and embedded in both the GLSL shader
+and the JS particle field), giving true mandala figures (Ring, Halo, Star,
+Daisy, Mandala, Rose presets); square presets (Twin, Weave, Lattice, Diagonal,
+Drapery, Filigree); a drive (agitation) slider that makes the sand boil or
+lock; a glow slider; click-to-pour sand; a Scatter button; HUD chips showing
+the mode badge and the live frequency. The Gray–Scott dish gains the F–k
+atlas — a PNG computed in Python by running the exact shipped algorithm
+across a 56×56 grid of chemistries (vectorized batch: 3,136 simultaneous
+32² dishes, scattered small-dot seeds, 500 iterations, colored by mean B
+activity) — click anywhere on it to steer the chemistry there, with preset
+dots marked; plus Seed/Clear brushes with a size slider, Pause/Run/Step
+controls with a step counter, four colormaps (Ember, Rose, Tide, Dune), and
+live HUD chips (F, k, step count, paused state). The lab layout becomes
+full-width instrument panels: big stage canvas plus a how-to rail, segmented
+toggle controls, custom-styled range sliders, and dark vignette frames.
+Verification again earned its keep: the GLSL clamp(int, int, int) overload
+does not exist in ESSL 1.00 (the plate field shader silently failed until
+compile-status logging surfaced it — fixed by clamping in float), and the v2
+rewrite had dropped the framebufferTexture2D attachment calls entirely, so
+both ping-pong framebuffers reported FRAMEBUFFER_INCOMPLETE_ATTACHMENT while
+every draw call silently succeeded into nothing — a debug hook exposing
+checkFramebufferStatus caught it. Gray–Scott seeding was recalibrated: a
+large square seed at coral parameters starves its own interior (the reaction
+consumes A faster than F can feed it, the middle collapses, and a faint
+frontier creeps outward — verified against Python step-by-step), so the dish
+now seeds five small colonies that visibly grow from the first seconds.
+Final CDP end-to-end on the production build: 19/19 — field structure on
+square and circle plates, atlas click steering, pause/step/resume, evolving
+dish chemistry, tone, and all twelve puzzles solved and persisted.

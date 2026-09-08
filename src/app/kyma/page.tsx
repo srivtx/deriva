@@ -122,41 +122,71 @@ export default function KymaPage() {
       </section>
 
       <section id="lab" className="kyma-lab">
-        <div className="kyma-lab-card">
+        <div className="kyma-lab-card kyma-lab-card-wide">
           <div className="kyma-lab-head">
-            <h2>The Chladni Plate</h2>
-            <span>1787 &middot; resonance &middot; cymatics</span>
+            <div>
+              <h2>The Chladni Plate</h2>
+              <span>1787 &middot; resonance &middot; cymatics &middot; square &amp; circular plates</span>
+            </div>
+            <span className="kyma-live-chip">live</span>
           </div>
-          <KymaPlate initial={{ m: 2, n: 2, mix: 0 }} />
-          <p className="kyma-lab-note">
-            Bow a plate at one of its resonant frequencies and it settles into a standing wave. Sand
-            is kicked off the fast regions and comes to rest on the <b>nodal lines</b> — the places
-            the plate never moves. Each frequency owns exactly one figure; slide m and n to walk the
-            mode ladder, blend the twin modes, and press <b>Play the tone</b> to hear the frequency
-            that draws what you see.
-          </p>
-          <div className="kyma-facts">
-            <span>Sand gathers where the plate is <b>still</b> — the figure is a zero-motion map.</span>
-            <span>Chladni&rsquo;s law for round plates: f &prop; (m + 2n)&sup2; — a ring costs two spokes.</span>
-            <span>Violin makers still tune plates by sprinkling sand and listening.</span>
+          <div className="kyma-lab-body">
+            <div className="kyma-lab-stage">
+              <KymaPlate initial={{ m: 3, n: 2, mix: 0 }} />
+            </div>
+            <div className="kyma-lab-rail">
+              <p className="kyma-lab-note">
+                Bow a plate at one of its resonant frequencies and it settles into a standing wave.
+                Sand is kicked off the fast regions and comes to rest on the <b>nodal lines</b> — the
+                places the plate never moves. Each frequency owns exactly one figure.
+              </p>
+              <ul className="kyma-how">
+                <li><b>Slide m / n</b> — walk the mode ladder and watch the figure snap.</li>
+                <li><b>Circle plate</b> — Bessel modes: nodal rings and spokes, true mandalas.</li>
+                <li><b>Drive</b> — crank it and the sand boils; calm it and lines lock.</li>
+                <li><b>Click the plate</b> — pour fresh sand where you like.</li>
+                <li><b>Play the tone</b> — hear the frequency that draws what you see.</li>
+              </ul>
+              <div className="kyma-facts">
+                <span>Sand gathers where the plate is <b>still</b> — the figure is a zero-motion map.</span>
+                <span>Chladni&rsquo;s law for round plates: f &prop; (m + 2n)&sup2; — a ring costs two spokes.</span>
+                <span>Violin makers still tune plates by sprinkling sand and listening.</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="kyma-lab-card">
+
+        <div className="kyma-lab-card kyma-lab-card-wide">
           <div className="kyma-lab-head">
-            <h2>The Turing Dish</h2>
-            <span>1952 &middot; Gray&ndash;Scott reaction&ndash;diffusion</span>
+            <div>
+              <h2>The Turing Dish</h2>
+              <span>1952 &middot; Gray&ndash;Scott reaction&ndash;diffusion &middot; live F&ndash;k atlas</span>
+            </div>
+            <span className="kyma-live-chip">live</span>
           </div>
-          <KymaRD initial={{ F: 0.0545, k: 0.062 }} />
-          <p className="kyma-lab-note">
-            Two chemicals: A is fed in, B makes more of itself by consuming A and is drained at rate
-            k. B&rsquo;s inhibitor-like spread fences off neighborhoods, so the uniform soup breaks
-            into cells, worms, coral or spirals — depending only on F and k. Drag on the dish to seed
-            new colonies. This is a real Gray&ndash;Scott integration on your GPU, frame by frame.
-          </p>
-          <div className="kyma-facts">
-            <span>Diffusion — the homogenizer — is the thing that paints. That was Turing&rsquo;s 1952 shock.</span>
-            <span>The prediction waited <b>38 years</b> for a laboratory confirmation (CIMA gel, 1990).</span>
-            <span>Zebrafish stripes, hair follicles and palate ridges run this same math.</span>
+          <div className="kyma-lab-body">
+            <div className="kyma-lab-stage">
+              <KymaRD initial={{ F: 0.0545, k: 0.062 }} />
+            </div>
+            <div className="kyma-lab-rail">
+              <p className="kyma-lab-note">
+                Two chemicals: A is fed in, B makes more of itself by consuming A and is drained at
+                rate k. B&rsquo;s inhibitor-like spread fences off neighborhoods, so the uniform soup
+                breaks into cells, worms, coral or spirals — depending only on F and k. This is a
+                real Gray&ndash;Scott integration on your GPU, frame by frame.
+              </p>
+              <ul className="kyma-how">
+                <li><b>Click the atlas</b> — steer the chemistry anywhere on the F&ndash;k plane.</li>
+                <li><b>Seed / Clear brush</b> — paint colonies or wipe them, any size.</li>
+                <li><b>Pause / Step</b> — freeze time and advance frame by frame.</li>
+                <li><b>Colormaps</b> — Ember, Rose, Tide, Dune — same chemistry, new light.</li>
+              </ul>
+              <div className="kyma-facts">
+                <span>Diffusion — the homogenizer — is the thing that paints. That was Turing&rsquo;s 1952 shock.</span>
+                <span>The prediction waited <b>38 years</b> for a laboratory confirmation (CIMA gel, 1990).</span>
+                <span>Zebrafish stripes, hair follicles and palate ridges run this same math.</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>

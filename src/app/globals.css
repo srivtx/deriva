@@ -3460,3 +3460,47 @@ code, pre { font-family: var(--font-mono); }
 .kyma-why { margin: 10px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-soft); border-top: 1px dashed var(--line); padding-top: 8px; }
 .kyma-sim-puzzle { display: flex; flex-direction: column; gap: 8px; }
 .kyma-sim-puzzle .kyma-plate, .kyma-sim-puzzle .kyma-rd { max-width: 420px; }
+
+/* ---------- KYMA v2 — immersive lab ---------- */
+.kyma-lab-card-wide { padding: 20px; }
+.kyma-live-chip { font: 700 10px var(--font-mono, monospace); letter-spacing: .14em; text-transform: uppercase; color: var(--viz-settled); border: 1px solid var(--success-line); border-radius: 999px; padding: 3px 10px; background: var(--success-soft); }
+.kyma-lab-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
+.kyma-lab-body { display: grid; grid-template-columns: minmax(0, 440px) 1fr; gap: 20px; align-items: start; }
+@media (max-width: 980px) { .kyma-lab-body { grid-template-columns: 1fr; } }
+.kyma-lab-stage { min-width: 0; }
+.kyma-lab-rail { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.kyma-how { list-style: none; margin: 0; padding: 12px 14px; border: 1px dashed var(--line); border-radius: var(--radius); display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--ink-soft); }
+.kyma-how b { color: var(--ink); }
+.kyma-canvas-wrap { position: relative; width: 100%; border-radius: calc(var(--radius) + 2px); overflow: hidden; background: var(--kyma-plate); border: 1px solid var(--line); box-shadow: inset 0 0 60px rgb(0 0 0 / .45), var(--shadow-raised); }
+.kyma-sand-canvas { cursor: crosshair; }
+.kyma-rd-canvas { cursor: crosshair; }
+.kyma-hud { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none; }
+.kyma-chip { font: 600 11px var(--font-mono, monospace); letter-spacing: .04em; color: #E8E6D8; background: rgb(10 14 12 / .62); border: 1px solid rgb(232 230 216 / .14); border-radius: 6px; padding: 3px 8px; backdrop-filter: blur(4px); }
+.kyma-chip-freq { color: #F2D9A0; border-color: rgb(242 217 160 / .25); }
+.kyma-chip-warn { color: #F2B8A0; border-color: rgb(242 184 160 / .3); }
+.kyma-seg-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.kyma-seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--paper); }
+.kyma-seg button { border: 0; background: transparent; padding: 7px 14px; font: inherit; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-right: 1px solid var(--line); transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard); }
+.kyma-seg button:last-child { border-right: 0; }
+.kyma-seg button:hover { color: var(--ink); }
+.kyma-seg button.on { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+.kyma-presets-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.kyma-ctl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 20px; margin-top: 14px; }
+@media (max-width: 560px) { .kyma-ctl-grid { grid-template-columns: 1fr; } }
+.kyma-ctl { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--ink-soft); }
+.kyma-ctl b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.kyma-ctl input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; cursor: pointer; }
+.kyma-ctl input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--line); }
+.kyma-ctl input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper-raised); box-shadow: 0 1px 4px rgb(0 0 0 / .25); }
+.kyma-ctl input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line); }
+.kyma-ctl input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper-raised); }
+.kyma-atlas-row { position: relative; display: grid; grid-template-columns: 150px 1fr; gap: 4px 14px; margin-top: 14px; align-items: center; }
+.kyma-atlas { grid-column: 1; grid-row: 1 / 4; position: relative; width: 150px; aspect-ratio: 1; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); cursor: pointer; }
+.kyma-atlas img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.kyma-atlas-marker { position: absolute; width: 12px; height: 12px; border: 2px solid #FFFFFF; border-radius: 50%; box-shadow: 0 0 0 2px rgb(0 0 0 / .55), 0 0 10px rgb(255 255 255 / .5); transform: translate(-50%, -50%); pointer-events: none; }
+.kyma-atlas-dot { position: absolute; width: 7px; height: 7px; background: #FFFFFF; border-radius: 50%; transform: translate(-50%, -50%); opacity: .75; pointer-events: none; }
+.kyma-atlas-axis { font: 600 10px var(--font-mono, monospace); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+.kyma-atlas-axis-x { grid-column: 2; grid-row: 1; align-self: end; }
+.kyma-atlas-axis-y { grid-column: 2; grid-row: 2; align-self: start; }
+.kyma-atlas-note { grid-column: 2; grid-row: 3; margin: 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
+@media (max-width: 560px) { .kyma-atlas-row { grid-template-columns: 1fr; } .kyma-atlas { grid-column: 1; grid-row: auto; justify-self: center; } .kyma-atlas-axis-x, .kyma-atlas-axis-y, .kyma-atlas-note { grid-column: 1; grid-row: auto; } }

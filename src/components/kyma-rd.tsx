@@ -31,17 +31,31 @@ void main(){
   gl_FragColor = vec4(clamp(A + ${DT.toFixed(1)} * dA, 0.0, 1.0), clamp(B + ${DT.toFixed(1)} * dB, 0.0, 1.0), 0.0, 1.0);
 }`
 
+// palettes: [background, mid, high] per colormap
+const PALETTES: [number[], number[], number[]][] = [
+  [[0.055, 0.075, 0.07], [0.36, 0.32, 0.55], [0.85, 0.78, 0.55]],
+  [[0.05, 0.07, 0.075], [0.55, 0.30, 0.42], [0.98, 0.90, 0.72]],
+  [[0.04, 0.06, 0.08], [0.20, 0.52, 0.62], [0.88, 0.96, 0.90]],
+  [[0.07, 0.05, 0.04], [0.72, 0.42, 0.16], [0.99, 0.86, 0.60]],
+]
+
 const DRAW_FRAG = `
 precision highp float;
 uniform sampler2D state;
 uniform vec2 view;
+uniform int pal;
 void main(){
   vec2 c = texture2D(state, gl_FragCoord.xy / view).rg;
   float v = smoothstep(0.12, 0.5, c.g);
   float edge = smoothstep(0.02, 0.14, c.g) * (1.0 - smoothstep(0.35, 0.75, c.g));
-  vec3 col = vec3(0.055, 0.075, 0.07);
-  col = mix(col, vec3(0.36, 0.32, 0.55), edge);
-  col = mix(col, vec3(0.85, 0.78, 0.55), v);
+  vec3 bg; vec3 mid; vec3 hi;
+  if (pal == 0) { bg = vec3(0.055, 0.075, 0.07); mid = vec3(0.36, 0.32, 0.55); hi = vec3(0.85, 0.78, 0.55); }
+  else if (pal == 1) { bg = vec3(0.05, 0.07, 0.075); mid = vec3(0.55, 0.30, 0.42); hi = vec3(0.98, 0.90, 0.72); }
+  else if (pal == 2) { bg = vec3(0.04, 0.06, 0.08); mid = vec3(0.20, 0.52, 0.62); hi = vec3(0.88, 0.96, 0.90); }
+  else { bg = vec3(0.07, 0.05, 0.04); mid = vec3(0.72, 0.42, 0.16); hi = vec3(0.99, 0.86, 0.60); }
+  vec3 col = bg;
+  col = mix(col, mid, edge);
+  col = mix(col, hi, v);
   gl_FragColor = vec4(col, 1.0);
 }`
 
@@ -51,16 +65,17 @@ interface Props {
   mini?: boolean
 }
 
+const SEED_DOTS: [number, number][] = [[60, 60], [60, 132], [132, 60], [132, 132], [96, 96]]
+
 function initialState(): Float32Array {
   const data = new Float32Array(SIM * SIM * 4)
   for (let i = 0; i < SIM * SIM; i++) data[i * 4] = 1
-  const c = SIM >> 1
-  const r = SIM >> 3
-  for (let y = c - r; y < c + r; y++)
-    for (let x = c - r; x < c + r; x++) {
-      const i = (y * SIM + x) * 4
-      data[i] = 0.5; data[i + 1] = 0.25
-    }
+  for (const [y, x] of SEED_DOTS)
+    for (let dy = -2; dy <= 2; dy++)
+      for (let dx = -2; dx <= 2; dx++) {
+        const i = ((y + dy) * SIM + (x + dx)) * 4
+        data[i] = 0.4; data[i + 1] = 0.9
+      }
   return data
 }
 
@@ -86,19 +101,36 @@ function asHalfPixels(data: Float32Array): Uint16Array {
   return out
 }
 
+const PALETTE_NAMES = ["Ember", "Rose", "Tide", "Dune"]
+
 export default function KymaRD({ initial, fkRef, mini = false }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [F, setF] = useState(initial?.F ?? 0.0545)
   const [k, setK] = useState(initial?.k ?? 0.062)
   const [speed, setSpeed] = useState(8)
+  const [paused, setPaused] = useState(false)
+  const [palette, setPalette] = useState(0)
+  const [brush, setBrush] = useState(4)
+  const [substance, setSubstance] = useState<"seed" | "clear">("seed")
   const [engine, setEngine] = useState<"webgl2" | "cpu" | "">("")
-  const paramsRef = useRef({ F, k, speed })
-  paramsRef.current = { F, k, speed }
+  const [steps, setSteps] = useState(0)
+  const paramsRef = useRef({ F, k, speed, paused, palette, brush, substance })
+  paramsRef.current = { F, k, speed, paused, palette, brush, substance }
   if (fkRef) { fkRef.current.F = F; fkRef.current.k = k }
   const reseedRef = useRef<() => void>(() => {})
+  const stepOnceRef = useRef<() => void>(() => {})
+  const stepsRef = useRef(0)
 
   const applyPreset = (p: { F: number; k: number }) => { setF(p.F); setK(p.k) }
+
+  const clickAtlas = (ev: React.MouseEvent<HTMLDivElement>) => {
+    const rect = ev.currentTarget.getBoundingClientRect()
+    const fx = (ev.clientX - rect.left) / rect.width
+    const fy = (ev.clientY - rect.top) / rect.height
+    setF(+(0.01 + fx * 0.08).toFixed(4))
+    setK(+(0.075 - fy * 0.045).toFixed(4))
+  }
 
   useEffect(() => {
     const wrap = wrapRef.current
@@ -169,6 +201,7 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
 
       const reseed = () => {
         uploadState(back, initialState())
+        stepsRef.current = 0
       }
       reseedRef.current = reseed
       cleanups.push(() => { gl.getExtension("WEBGL_lose_context")?.loseContext() })
@@ -190,21 +223,28 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
         const rect = canvas.getBoundingClientRect()
         const tx = Math.floor(((clientX - rect.left) / rect.width) * SIM)
         const ty = Math.floor((1 - (clientY - rect.top) / rect.height) * SIM)
-        const rad = 3
+        const { brush: br, substance: sub } = paramsRef.current
+        const rad = Math.max(2, Math.round(br))
         const x0 = Math.max(0, Math.min(SIM - rad * 2, tx - rad))
         const y0 = Math.max(0, Math.min(SIM - rad * 2, ty - rad))
         const patch = new Float32Array(rad * 2 * rad * 2 * 4)
-        for (let i = 0; i < patch.length; i += 4) { patch[i] = 0.5; patch[i + 1] = 0.9 }
+        for (let i = 0; i < patch.length; i += 4) {
+          if (sub === "seed") { patch[i] = 0.5; patch[i + 1] = 0.9 }
+          else { patch[i] = 1.0; patch[i + 1] = 0.0 }
+        }
         gl.bindTexture(gl.TEXTURE_2D, front)
         gl.texSubImage2D(gl.TEXTURE_2D, 0, x0, y0, rad * 2, rad * 2, gl.RGBA, gl.HALF_FLOAT, asHalfPixels(patch))
       }
       const onPointer = (ev: PointerEvent) => { if (ev.buttons > 0) paint(ev.clientX, ev.clientY) }
       canvas.addEventListener("pointermove", onPointer)
       canvas.addEventListener("pointerdown", onPointer)
+      cleanups.push(() => {
+        canvas.removeEventListener("pointermove", onPointer)
+        canvas.removeEventListener("pointerdown", onPointer)
+      })
 
-      const frame = () => {
-        if (destroyed) return
-        const { F: f, k: kk, speed: sp } = paramsRef.current
+      const runSim = (sp: number) => {
+        const { F: f, k: kk } = paramsRef.current
         gl.useProgram(simProg); bindQuad(simProg)
         gl.uniform1i(gl.getUniformLocation(simProg, "state"), 0)
         gl.uniform2f(gl.getUniformLocation(simProg, "texel"), 1 / SIM, 1 / SIM)
@@ -218,14 +258,33 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
           gl.drawArrays(gl.TRIANGLES, 0, 3)
           const t = front; front = back; back = t
           const fb = fboFront; fboFront = fboBack; fboBack = fb
+          stepsRef.current++
         }
+      }
+      stepOnceRef.current = () => runSim(1)
+
+      const render = () => {
+        const { palette: pal } = paramsRef.current
         gl.useProgram(drawProg); bindQuad(drawProg)
         gl.uniform1i(gl.getUniformLocation(drawProg, "state"), 0)
         gl.uniform2f(gl.getUniformLocation(drawProg, "view"), canvas.width, canvas.height)
+        gl.uniform1i(gl.getUniformLocation(drawProg, "pal"), pal)
         gl.bindFramebuffer(gl.FRAMEBUFFER, null)
         gl.viewport(0, 0, canvas.width, canvas.height)
         gl.bindTexture(gl.TEXTURE_2D, front)
         gl.drawArrays(gl.TRIANGLES, 0, 3)
+      }
+
+      let lastStepsShown = 0
+      const frame = () => {
+        if (destroyed) return
+        const { speed: sp, paused: ps } = paramsRef.current
+        if (!ps) runSim(sp)
+        render()
+        if (stepsRef.current - lastStepsShown >= 60) {
+          lastStepsShown = stepsRef.current
+          setSteps(stepsRef.current)
+        }
         raf = requestAnimationFrame(frame)
       }
       frame()
@@ -238,14 +297,27 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
       const B = new Float32Array(CN * CN)
       const reseedCPU = () => {
         A.fill(1); B.fill(0)
-        const c = CN >> 1, r = CN >> 3
-        for (let y = c - r; y < c + r; y++)
-          for (let x = c - r; x < c + r; x++) { A[y * CN + x] = 0.5; B[y * CN + x] = 0.25 }
+        stepsRef.current = 0
+        for (const [y0, x0] of SEED_DOTS.map(([y, x]) => [y >> 1, x >> 1] as [number, number]))
+          for (let dy = -2; dy <= 2; dy++)
+            for (let dx = -2; dx <= 2; dx++) {
+              const i = (y0 + dy) * CN + (x0 + dx)
+              A[i] = 0.4; B[i] = 0.9
+            }
       }
+      reseedRef.current = reseedCPU
       const off = document.createElement("canvas")
       off.width = CN; off.height = CN
       const offCtx = off.getContext("2d")!
       const img = offCtx.createImageData(CN, CN)
+      const palRGB = (v: number): [number, number, number] => {
+        const [bg, mid, hi] = PALETTES[paramsRef.current.palette] as [[number, number, number], [number, number, number], [number, number, number]]
+        const t = v < 0.12 ? 0 : v > 0.5 ? 1 : (v - 0.12) / 0.38
+        const e = v < 0.02 ? 0 : v < 0.14 ? (v - 0.02) / 0.12 : v > 0.75 ? 0 : v > 0.35 ? (0.75 - v) / 0.4 : 1
+        const mixv = (a: number[], b: number[], u: number) => a.map((x, i) => x + (b[i] - x) * u) as number[]
+        const c1 = mixv(bg, mid, e), c2 = mixv(c1, hi, t)
+        return [c2[0], c2[1], c2[2]]
+      }
       const lap = (Z: Float32Array, out: Float32Array) => {
         for (let y = 0; y < CN; y++) {
           const yn = ((y + 1) % CN) * CN, yp = ((y - 1 + CN) % CN) * CN, y0 = y * CN
@@ -270,22 +342,23 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
       ro.observe(wrap)
       const frame = () => {
         if (destroyed) return
-        const { F: f, k: kk, speed: sp } = paramsRef.current
-        for (let s = 0; s < Math.min(sp, 3); s++) {
-          lap(A, dA); lap(B, dB)
-          for (let i = 0; i < A.length; i++) {
-            const ab2 = A[i] * B[i] * B[i]
-            A[i] = Math.min(1, Math.max(0, A[i] + DT * (DA * dA[i] - ab2 + f * (1 - A[i]))))
-            B[i] = Math.min(1, Math.max(0, B[i] + DT * (DB * dB[i] + ab2 - (f + kk) * B[i])))
+        const { F: f, k: kk, speed: sp, paused: ps } = paramsRef.current
+        if (!ps) {
+          for (let s = 0; s < Math.min(sp, 3); s++) {
+            lap(A, dA); lap(B, dB)
+            for (let i = 0; i < A.length; i++) {
+              const ab2 = A[i] * B[i] * B[i]
+              A[i] = Math.min(1, Math.max(0, A[i] + DT * (DA * dA[i] - ab2 + f * (1 - A[i]))))
+              B[i] = Math.min(1, Math.max(0, B[i] + DT * (DB * dB[i] + ab2 - (f + kk) * B[i])))
+            }
+            stepsRef.current++
           }
         }
         for (let i = 0; i < B.length; i++) {
-          const v = B[i]
-          const t = v < 0.12 ? 0 : v > 0.5 ? 1 : (v - 0.12) / 0.38
-          const e = v < 0.02 ? 0 : v < 0.14 ? (v - 0.02) / 0.12 : v > 0.75 ? 0 : v > 0.35 ? (0.75 - v) / 0.4 : 1
-          img.data[i * 4] = Math.round((0.055 + e * 0.31 * 0.85 + t * 0.79) * 255)
-          img.data[i * 4 + 1] = Math.round((0.075 + e * 0.32 * 0.75 + t * 0.70) * 255)
-          img.data[i * 4 + 2] = Math.round((0.07 + e * 0.55 * 0.55 + t * 0.48) * 255)
+          const [r, g, b] = palRGB(B[i])
+          img.data[i * 4] = Math.round(r * 255)
+          img.data[i * 4 + 1] = Math.round(g * 255)
+          img.data[i * 4 + 2] = Math.round(b * 255)
           img.data[i * 4 + 3] = 255
         }
         offCtx.putImageData(img, 0, 0)
@@ -303,32 +376,55 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
     }
   }, [mini])
 
+  const atlasPos = {
+    left: `${((F - 0.01) / 0.08) * 100}%`,
+    top: `${(1 - (k - 0.03) / 0.045) * 100}%`,
+  }
+
   return (
     <div className="kyma-rd">
       <div ref={wrapRef} className="kyma-canvas-wrap" style={{ aspectRatio: "1 / 1" }}>
         <canvas ref={canvasRef} className="kyma-canvas kyma-rd-canvas" aria-label="Gray-Scott reaction-diffusion simulation" />
-      </div>
-      <div className="kyma-ctl-grid">
-        <label className="kyma-ctl">
-          <span>feed F <b>{F.toFixed(4)}</b></span>
-          <input type="range" min={0.01} max={0.09} step={0.0005} value={F}
-            onChange={e => setF(Number(e.target.value))} />
-        </label>
-        <label className="kyma-ctl">
-          <span>kill k <b>{k.toFixed(4)}</b></span>
-          <input type="range" min={0.03} max={0.075} step={0.0005} value={k}
-            onChange={e => setK(Number(e.target.value))} />
-        </label>
         {!mini && (
-          <label className="kyma-ctl">
-            <span>speed <b>{speed}&times;</b></span>
-            <input type="range" min={1} max={16} step={1} value={speed}
-              onChange={e => setSpeed(Number(e.target.value))} />
-          </label>
+          <div className="kyma-hud">
+            <span className="kyma-chip">F {F.toFixed(4)} · k {k.toFixed(4)}</span>
+            <span className="kyma-chip">{steps.toLocaleString()} steps</span>
+            {paused && <span className="kyma-chip kyma-chip-warn">paused</span>}
+          </div>
         )}
       </div>
+
       {!mini && (
-          <div className="kyma-rd-foot">
+        <>
+          <div className="kyma-atlas-row">
+            <div className="kyma-atlas" onClick={clickAtlas} title="Click the map to set the chemistry"
+              role="button" tabIndex={0} aria-label="Feed-kill parameter atlas">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/kyma/atlas.png" alt="Gray-Scott pattern atlas: alive regions of the feed-kill plane" draggable={false} />
+              <span className="kyma-atlas-marker" style={atlasPos} />
+              {KYMA_PRESETS.map(p => (
+                <span key={p.name} className="kyma-atlas-dot" title={p.name}
+                  style={{ left: `${((p.F - 0.01) / 0.08) * 100}%`, top: `${(1 - (p.k - 0.03) / 0.045) * 100}%` }} />
+              ))}
+            </div>
+            <span className="kyma-atlas-axis kyma-atlas-axis-x">feed F &rarr;</span>
+            <span className="kyma-atlas-axis kyma-atlas-axis-y">kill k &uarr;</span>
+            <p className="kyma-atlas-note">The atlas: bright regions are chemistries where a pattern survives (computed on a coarse grid — your live dish is the ground truth). Click anywhere to steer there. Dots mark the presets.</p>
+          </div>
+
+          <div className="kyma-seg-row">
+            <div className="kyma-seg">
+              <button type="button" className={substance === "seed" ? "on" : ""} onClick={() => setSubstance("seed")}>Seed</button>
+              <button type="button" className={substance === "clear" ? "on" : ""} onClick={() => setSubstance("clear")}>Clear</button>
+            </div>
+            <div className="kyma-seg">
+              <button type="button" className={!paused ? "on" : ""} onClick={() => setPaused(false)}>&#9654; Run</button>
+              <button type="button" className={paused ? "on" : ""} onClick={() => setPaused(true)}>&#10073;&#10073; Pause</button>
+              <button type="button" onClick={() => stepOnceRef.current()}>Step</button>
+            </div>
+          </div>
+
+          <div className="kyma-presets-row">
             <div className="kyma-presets">
               {KYMA_PRESETS.map(p => (
                 <button key={p.name} type="button" className="btn btn-sm" onClick={() => applyPreset(p)}
@@ -336,8 +432,53 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
               ))}
               <button type="button" className="btn btn-sm" onClick={() => reseedRef.current()}>Reseed</button>
             </div>
-            <span className="kyma-engine">{engine === "cpu" ? "CPU fallback" : "GPU · drag on the dish to seed cells"}</span>
+            <div className="kyma-presets">
+              {PALETTE_NAMES.map((nm, i) => (
+                <button key={nm} type="button" className={`btn btn-sm${palette === i ? " btn-accent" : ""}`}
+                  onClick={() => setPalette(i)}>{nm}</button>
+              ))}
+            </div>
           </div>
+
+          <div className="kyma-ctl-grid">
+            <label className="kyma-ctl">
+              <span>feed F <b>{F.toFixed(4)}</b></span>
+              <input type="range" min={0.01} max={0.09} step={0.0005} value={F}
+                onChange={e => setF(Number(e.target.value))} />
+            </label>
+            <label className="kyma-ctl">
+              <span>kill k <b>{k.toFixed(4)}</b></span>
+              <input type="range" min={0.03} max={0.075} step={0.0005} value={k}
+                onChange={e => setK(Number(e.target.value))} />
+            </label>
+            <label className="kyma-ctl">
+              <span>brush <b>{brush}</b></span>
+              <input type="range" min={2} max={14} step={1} value={brush}
+                onChange={e => setBrush(Number(e.target.value))} />
+            </label>
+            <label className="kyma-ctl">
+              <span>speed <b>{speed}&times;</b></span>
+              <input type="range" min={1} max={16} step={1} value={speed}
+                onChange={e => setSpeed(Number(e.target.value))} />
+            </label>
+          </div>
+          <span className="kyma-engine">{engine === "cpu" ? "CPU fallback engine" : "GPU engine · drag on the dish to paint"}</span>
+        </>
+      )}
+
+      {mini && (
+        <div className="kyma-ctl-grid">
+          <label className="kyma-ctl">
+            <span>feed F <b>{F.toFixed(4)}</b></span>
+            <input type="range" min={0.01} max={0.09} step={0.0005} value={F}
+              onChange={e => setF(Number(e.target.value))} />
+          </label>
+          <label className="kyma-ctl">
+            <span>kill k <b>{k.toFixed(4)}</b></span>
+            <input type="range" min={0.03} max={0.075} step={0.0005} value={k}
+              onChange={e => setK(Number(e.target.value))} />
+          </label>
+        </div>
       )}
     </div>
   )
