@@ -3420,8 +3420,7 @@ code, pre { font-family: var(--font-mono); }
   --kyma-plate: #0E120F;
 }
 
-.kyma-lab { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 940px) { .kyma-lab { grid-template-columns: 1fr; } }
+.kyma-lab { display: flex; flex-direction: column; gap: 20px; }
 .kyma-lab-card { padding: 18px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); background: var(--paper-raised); box-shadow: var(--shadow-raised); }
 .kyma-lab-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 12px; }
 .kyma-lab-head h2 { margin: 0; font-size: 20px; }
@@ -3465,7 +3464,7 @@ code, pre { font-family: var(--font-mono); }
 .kyma-lab-card-wide { padding: 20px; }
 .kyma-live-chip { font: 700 10px var(--font-mono, monospace); letter-spacing: .14em; text-transform: uppercase; color: var(--viz-settled); border: 1px solid var(--success-line); border-radius: 999px; padding: 3px 10px; background: var(--success-soft); }
 .kyma-lab-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
-.kyma-lab-body { display: grid; grid-template-columns: minmax(0, 440px) 1fr; gap: 20px; align-items: start; }
+.kyma-lab-body { display: grid; grid-template-columns: minmax(0, 480px) minmax(280px, 1fr); gap: 22px; align-items: start; }
 @media (max-width: 980px) { .kyma-lab-body { grid-template-columns: 1fr; } }
 .kyma-lab-stage { min-width: 0; }
 .kyma-lab-rail { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
