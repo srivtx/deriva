@@ -252,3 +252,29 @@ version-robust).
 as drills); the harness embeds the learner's exact editor code, so what you debug
 is what you edit. If a future drill needs true interactivity, revisit with a
 deliberate worker-protocol D-record.
+
+## D17. KYMA's simulations are raw WebGL/WebGL2 with a CPU fallback and physics graded in Python first (KYMA, 2026-09-08)
+
+KYMA needs two live pattern-forming systems. Both run as fullscreen-quad
+shaders with no 3D library: the Chladni plate is a stateless eigenmode field
+shader (three trig calls per pixel) plus 3000 JS-side sand particles that
+descend the analytic gradient of |f|² with |f|-proportional jitter —
+particles lock onto nodal lines because both the drift force and the jitter
+scale with distance from the zero set, and the ratio is tuned so drift wins
+~4:1 near a line. The Gray–Scott dish is a ping-pong pair of RGBA16F
+framebuffers (EXT_color_buffer_float, NEAREST filtering, 9-point laplacian,
+Karl Sims convention DA=1.0/DB=0.5/dt=1.0) with a 128² CPU fallback through
+the same math when float framebuffers are unavailable, so the app degrades
+instead of dying on SwiftShader or old GPUs. Three decisions worth
+remembering: (1) shader constants interpolated from TypeScript must be
+formatted with toFixed — String(1.0) is "1" and int×float fails to compile
+in ESSL 1.00, silently, unless COMPILE_STATUS is checked (it now is, with
+console.error on failure); (2) HALF_FLOAT uploads take fp16 bit patterns,
+not truncated Uint16 values — a proper float16 encoder wraps all CPU→GPU
+state transfers; (3) Gray–Scott's background state is A=1, B=0 — a Float32
+array defaults to zero everywhere, and with A=0 the seed's reaction term
+A·B² never exceeds the drain (F+k)·B, so a dish that looks initialized is
+actually dead. Every shipped F,k preset was verified by running the exact
+shipped algorithm in Python before entering the data file; two widely-quoted
+folk presets (spots 0.030/0.055, U-skate 0.062/0.0609) failed verification
+under this convention and were excluded rather than quoted on faith.

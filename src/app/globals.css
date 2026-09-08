@@ -3414,3 +3414,49 @@ code, pre { font-family: var(--font-mono); }
 .osc-face-chip[data-face="moss"].on { background: #2F8F5B; border-color: #2F8F5B; color: #F2F4EC; }
 .osc-face-chip[data-face="ember"].on { background: #E8710A; border-color: #E8710A; color: #fff; }
 .osc-face-chip[data-face="ultra"].on { background: #6C5CE7; border-color: #6C5CE7; color: #fff; }
+
+/* ---------- KYMA — pattern formation lab ---------- */
+:root {
+  --kyma-plate: #0E120F;
+}
+
+.kyma-lab { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 940px) { .kyma-lab { grid-template-columns: 1fr; } }
+.kyma-lab-card { padding: 18px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); background: var(--paper-raised); box-shadow: var(--shadow-raised); }
+.kyma-lab-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+.kyma-lab-head h2 { margin: 0; font-size: 20px; }
+.kyma-lab-head span { color: var(--ink-soft); font-size: 13px; }
+.kyma-canvas-wrap { position: relative; width: 100%; border-radius: var(--radius); overflow: hidden; background: var(--kyma-plate); border: 1px solid var(--line); }
+.kyma-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.kyma-ctl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin-top: 12px; }
+@media (max-width: 560px) { .kyma-ctl-grid { grid-template-columns: 1fr; } }
+.kyma-ctl { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-soft); }
+.kyma-ctl b { color: var(--ink); }
+.kyma-plate-foot, .kyma-rd-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 8px; flex-wrap: wrap; }
+.kyma-freq { font-size: 14px; color: var(--ink); }
+.kyma-freq small { color: var(--ink-soft); }
+.kyma-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.kyma-engine { font-size: 12px; color: var(--ink-soft); }
+.kyma-lab-note { font-size: 14px; line-height: 1.55; margin: 12px 0 8px; }
+.kyma-facts { display: flex; flex-direction: column; gap: 4px; border-top: 1px dashed var(--line); padding-top: 8px; font-size: 13px; color: var(--ink-soft); }
+.kyma-puzzle-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.kyma-puzzle { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: var(--paper); }
+.kyma-puzzle.done { border-color: var(--success-line); }
+.kyma-puzzle-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.kyma-puzzle-head h3 { margin: 0; font-size: 16px; }
+.kyma-prompt { margin: 0 0 10px; font-size: 14px; line-height: 1.55; }
+.kyma-options { display: flex; flex-direction: column; gap: 6px; }
+.kyma-option { text-align: left; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); cursor: pointer; font-size: 14px; color: var(--ink); font-family: inherit; transition: border-color var(--dur-fast) var(--ease-standard); }
+.kyma-option:hover { border-color: var(--accent); }
+.kyma-option.picked { border-color: var(--viz-active); background: var(--accent-soft); }
+.kyma-option.right { border-color: var(--success-line); background: var(--success-soft); }
+.kyma-option.wrong { border-color: var(--viz-pruned); }
+.kyma-numrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.kyma-num { width: 140px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink); font: inherit; }
+.kyma-check { margin-top: 8px; align-self: flex-start; }
+.kyma-verdict { font-size: 13px; margin-top: 8px; }
+.kyma-verdict.yes { color: var(--viz-settled); }
+.kyma-verdict.no { color: var(--viz-pruned); }
+.kyma-why { margin: 10px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-soft); border-top: 1px dashed var(--line); padding-top: 8px; }
+.kyma-sim-puzzle { display: flex; flex-direction: column; gap: 8px; }
+.kyma-sim-puzzle .kyma-plate, .kyma-sim-puzzle .kyma-rd { max-width: 420px; }
