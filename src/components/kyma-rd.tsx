@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { KYMA_PRESETS } from "@/data/kyma"
 
-const SIM = 192
+const SIM = 256
 const DA = 1.0
 const DB = 0.5
 const DT = 1.0
@@ -65,17 +65,20 @@ interface Props {
   mini?: boolean
 }
 
-const SEED_DOTS: [number, number][] = [[60, 60], [60, 132], [132, 60], [132, 132], [96, 96]]
+const SEED_DOTS_NORM: [number, number][] = [[0.3125, 0.3125], [0.3125, 0.6875], [0.6875, 0.3125], [0.6875, 0.6875], [0.5, 0.5]]
 
 function initialState(): Float32Array {
   const data = new Float32Array(SIM * SIM * 4)
   for (let i = 0; i < SIM * SIM; i++) data[i * 4] = 1
-  for (const [y, x] of SEED_DOTS)
-    for (let dy = -2; dy <= 2; dy++)
-      for (let dx = -2; dx <= 2; dx++) {
+  const rad = Math.max(2, Math.round(SIM / 64))
+  for (const [ny, nx] of SEED_DOTS_NORM) {
+    const y = Math.round(ny * SIM), x = Math.round(nx * SIM)
+    for (let dy = -rad; dy <= rad; dy++)
+      for (let dx = -rad; dx <= rad; dx++) {
         const i = ((y + dy) * SIM + (x + dx)) * 4
         data[i] = 0.4; data[i + 1] = 0.9
       }
+  }
   return data
 }
 
@@ -196,8 +199,8 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
       let fboBack = gl.createFramebuffer()!
       const setupTex = (tex: WebGLTexture) => {
         gl.bindTexture(gl.TEXTURE_2D, tex)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, SIM, SIM, 0, gl.RGBA, gl.HALF_FLOAT, null)
@@ -335,12 +338,15 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
       const reseedCPU = () => {
         A.fill(1); B.fill(0)
         stepsRef.current = 0
-        for (const [y0, x0] of SEED_DOTS.map(([y, x]) => [y >> 1, x >> 1] as [number, number]))
-          for (let dy = -2; dy <= 2; dy++)
-            for (let dx = -2; dx <= 2; dx++) {
+        for (const [ny, nx] of SEED_DOTS_NORM) {
+          const y0 = Math.round(ny * CN), x0 = Math.round(nx * CN)
+          const r = Math.max(2, Math.round(CN / 64))
+          for (let dy = -r; dy <= r; dy++)
+            for (let dx = -r; dx <= r; dx++) {
               const i = (y0 + dy) * CN + (x0 + dx)
               A[i] = 0.4; B[i] = 0.9
             }
+        }
       }
       reseedRef.current = reseedCPU
       const off = document.createElement("canvas")
@@ -512,6 +518,7 @@ export default function KymaRD({ initial, fkRef, mini = false }: Props) {
             </label>
           </div>
           <span className="kyma-engine">{engine === "cpu" ? "CPU fallback engine" : "GPU engine · drag on the dish to paint"}</span>
+          <p className="kyma-hint">F = how much food drops in each tick · k = how fast the pattern drains away · their balance picks the pattern — the atlas is the map of that balance · brush paints (Seed) or wipes (Clear) colonies</p>
         </>
       )}
 

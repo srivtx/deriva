@@ -361,3 +361,19 @@ chip updating immediately. Audit: 20/20 interactions verified headlessly
 including pause truly freezing the simulation, step = +1, resume advancing,
 atlas click syncing sliders, idle-when-scrolled-away and resume-when-visible;
 the full puzzle end-to-end remains green.
+
+### KYMA v2.2 — onboarding tour, plain-language hints, smooth dish (same branch, 2026-09-08)
+
+The lab assumed too much; now it explains itself. A four-step guided tour
+opens automatically on first visit (portal to document.body — the app shell
+wraps content in a transformed ancestor, so position:fixed centers against
+the page, not the viewport, unless the overlay is portaled): what the lab is,
+the Chladni plate, the Turing dish, and the puzzle ladder, each with a Show
+me button that scrolls to and glow-highlights the target; a "What is this?"
+button in the hero replays it. A Watch / Operate / Solve strip sits between
+hero and lab, and each machine's controls carry a plain-language hint line
+(m, n = wave-bands across/along; F = food per tick, k = drain rate). The
+dish's blocky upscale is gone: the sim grid went 192² → 256² and the display
+samples with LINEAR filtering — safe because every simulation read lands
+exactly on a texel center, so the chemistry is unchanged while the picture
+smooths. End-to-end and the 20-check interaction audit remain green.

@@ -3512,3 +3512,19 @@ code, pre { font-family: var(--font-mono); }
 .kyma-canvas-wrap:fullscreen .kyma-hud, .kyma-canvas-wrap:fullscreen .kyma-fs-btn { position: fixed; }
 .kyma-canvas-wrap:fullscreen .kyma-hud { top: 18px; left: 18px; }
 .kyma-canvas-wrap:fullscreen .kyma-fs-btn { top: 18px; right: 18px; }
+
+/* KYMA onboarding tour + how-to strip + hints */
+.kyma-howto { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 860px) { .kyma-howto { grid-template-columns: 1fr; } }
+.kyma-howto-card { padding: 14px 16px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--paper-raised); display: flex; flex-direction: column; gap: 6px; }
+.kyma-howto-card b { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.kyma-howto-card span { font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); }
+.kyma-hint { margin: 10px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-soft); border-top: 1px dashed var(--line); padding-top: 8px; }
+.kyma-tour-backdrop { position: fixed; inset: 0; background: rgb(8 12 10 / .55); backdrop-filter: blur(3px); z-index: 80; display: grid; place-items: center; padding: 20px; }
+.kyma-tour-card { width: min(500px, 100%); background: var(--paper-raised); border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); box-shadow: var(--shadow-raised); padding: 22px 24px; display: flex; flex-direction: column; gap: 10px; }
+.kyma-tour-step { font: 700 11px var(--font-mono, monospace); letter-spacing: .14em; color: var(--accent); text-transform: uppercase; }
+.kyma-tour-card h3 { margin: 0; font-size: 20px; }
+.kyma-tour-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink); }
+.kyma-tour-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; flex-wrap: wrap; }
+.kyma-tour-glow { outline: 2px solid var(--accent); outline-offset: 3px; animation: kyma-glow 1.4s var(--ease-standard) infinite; }
+@keyframes kyma-glow { 0%, 100% { outline-color: var(--accent); } 50% { outline-color: var(--viz-pointer); } }

@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { STAGES_KYMA, PUZZLES_KYMA } from "@/data/kyma"
 import KymaPlate from "@/components/kyma-plate"
 import KymaRD from "@/components/kyma-rd"
@@ -13,6 +14,29 @@ const TIERS: { name: string; note: string; stages: number[] }[] = [
 ]
 
 const STORE_KEY = "kyma-progress-v1"
+const TOUR_KEY = "kyma-tour-v1"
+
+const TOUR_STEPS: { title: string; body: string; target?: "plate" | "dish" | "puzzles" }[] = [
+  {
+    title: "You just opened a physics lab",
+    body: "KYMA runs two real pattern-making machines in your browser: a vibrating Chladni plate and a Turing chemistry dish. Nothing here is a video — every pattern is computed live, and every control changes the physics. This tour takes 60 seconds.",
+  },
+  {
+    title: "Machine 1 — the Chladni plate",
+    body: "The plate hums at one frequency. Sand is thrown off the fast-moving regions and settles on the motionless lines — so the figure you see is a map of stillness. Slide m and n and the figure snaps to a new mode. Toggle the Circle plate for mandalas, crank Drive to boil the sand, and press Play the tone to hear the frequency you are looking at.",
+    target: "plate",
+  },
+  {
+    title: "Machine 2 — the Turing dish",
+    body: "A dish of two chemicals: one feeds the pattern, one drains it. Their balance (F and k) decides what grows — cells, worms, coral, spirals. Click anywhere on the F–k atlas to steer the chemistry, paint colonies with the brush, and use Pause/Step to freeze time and walk through it frame by frame.",
+    target: "dish",
+  },
+  {
+    title: "Then — 12 puzzles graded by the machines",
+    body: "The ladder at the bottom is scored by the physics itself: dial the plate until your sand matches the green target figure, set the chemistry until your dish grows coral or dividing cells. Wrong answers explain why. Progress saves on this device.",
+    target: "puzzles",
+  },
+]
 
 export default function KymaPage() {
   const [solved, setSolved] = useState<number[]>([])
@@ -23,6 +47,10 @@ export default function KymaPage() {
   const plateRefs = useRef<Record<number, { m: number; n: number; mix: number }>>({})
   const fkRefs = useRef<Record<number, { F: number; k: number }>>({})
   const numInputs = useRef<Record<number, string>>({})
+  const plateCardRef = useRef<HTMLDivElement>(null)
+  const dishCardRef = useRef<HTMLDivElement>(null)
+  const puzzleRef = useRef<HTMLDivElement>(null)
+  const [tour, setTour] = useState<number | null>(null)
 
   const pickOption = (id: number, i: number) => {
     picksRef.current[id] = i
@@ -43,9 +71,23 @@ export default function KymaPage() {
     try {
       const raw = localStorage.getItem(STORE_KEY)
       if (raw) setSolved(JSON.parse(raw).solved ?? [])
+      if (!localStorage.getItem(TOUR_KEY)) setTour(0)
     } catch { /* fresh device */ }
     setHydrated(true)
   }, [])
+
+  useEffect(() => {
+    if (tour === null) return
+    const target = TOUR_STEPS[tour]?.target
+    if (!target) return
+    const el = target === "plate" ? plateCardRef.current : target === "dish" ? dishCardRef.current : puzzleRef.current
+    el?.scrollIntoView({ behavior: "smooth", block: "center" })
+  }, [tour])
+
+  const closeTour = () => {
+    setTour(null)
+    try { localStorage.setItem(TOUR_KEY, "1") } catch { /* private mode */ }
+  }
 
   const markSolved = (id: number) => {
     setSolved(prev => {
@@ -100,18 +142,18 @@ export default function KymaPage() {
     <main className="icpc-page">
       <section className="icpc-hero">
         <div className="icpc-hero-copy">
-          <span className="icpc-kicker one-kicker">KYMA / 2 PHENOMENA &middot; {total} PUZZLES</span>
+          <span className="icpc-kicker one-kicker">KYMA / SHAKE A PLATE · GROW A REACTION · {total} PUZZLES</span>
           <h1>The wave draws. The sand remembers.</h1>
           <p>
-            Why does sand on a humming plate snap into mandalas? Why does heated fluid grow hexagons?
-            Why can diffusion — the great mixer — paint leopard spots? KYMA is the pattern-formation
-            lab: drive a real Chladni plate (with its tone), grow a Turing reaction in a live dish,
-            then test yourself with puzzles graded against the actual physics — dial the plate to
-            match a figure, set the chemistry to grow coral. Every figure you&rsquo;ll meet is one
-            instability away from uniform.
+            Why does sand on a humming plate snap into mandalas? Why can diffusion — the great
+            mixer — paint leopard spots? KYMA is a pattern lab with two live machines: a real
+            Chladni plate you shake and listen to, and a real Turing chemistry you feed and starve.
+            Operate both, then let them grade you: dial the plate to match a figure, set the
+            chemistry to grow coral. Every pattern is computed live — nothing is a video.
           </p>
           <div className="icpc-hero-actions">
             <Link className="icpc-primary" href="#lab">Open the lab <span aria-hidden="true">-&gt;</span></Link>
+            <button type="button" className="btn" onClick={() => setTour(0)}>What is this? <small style={{ opacity: 0.7 }}>(60-sec tour)</small></button>
             <span className="icpc-hero-meta">Sims run on your GPU. Progress saves locally.</span>
           </div>
         </div>
@@ -121,8 +163,23 @@ export default function KymaPage() {
         </div>
       </section>
 
+      <section className="kyma-howto">
+        <div className="kyma-howto-card">
+          <b>&copy; Watch</b>
+          <span>Every pattern is physics you can watch: resonance drawing on a real plate, real chemistry growing in a real dish. Nothing is prerecorded.</span>
+        </div>
+        <div className="kyma-howto-card">
+          <b>&#9881; Operate</b>
+          <span>Every control is live. Shake the plate harder, feed the dish more, click the atlas to steer the chemistry, pause time and step through it.</span>
+        </div>
+        <div className="kyma-howto-card">
+          <b>&#10003; Solve</b>
+          <span>Then the machines grade you: dial the plate until the sand matches a target, set the chemistry until the dish grows coral. 12 puzzles.</span>
+        </div>
+      </section>
+
       <section id="lab" className="kyma-lab">
-        <div className="kyma-lab-card kyma-lab-card-wide">
+        <div ref={plateCardRef} className={`kyma-lab-card kyma-lab-card-wide${tour !== null && TOUR_STEPS[tour]?.target === "plate" ? " kyma-tour-glow" : ""}`}>
           <div className="kyma-lab-head">
             <div>
               <h2>The Chladni Plate</h2>
@@ -156,7 +213,7 @@ export default function KymaPage() {
           </div>
         </div>
 
-        <div className="kyma-lab-card kyma-lab-card-wide">
+        <div ref={dishCardRef} className={`kyma-lab-card kyma-lab-card-wide${tour !== null && TOUR_STEPS[tour]?.target === "dish" ? " kyma-tour-glow" : ""}`}>
           <div className="kyma-lab-head">
             <div>
               <h2>The Turing Dish</h2>
@@ -191,6 +248,7 @@ export default function KymaPage() {
         </div>
       </section>
 
+      <div ref={puzzleRef} className={tour !== null && TOUR_STEPS[tour]?.target === "puzzles" ? "kyma-tour-glow" : ""}>
       {TIERS.map(tier => (
         <div key={tier.name}>
           <div className="one-tier">
@@ -288,6 +346,31 @@ export default function KymaPage() {
           })}
         </div>
       ))}
+      </div>
+
+      {tour !== null && typeof document !== "undefined" && createPortal(
+        <div className="kyma-tour-backdrop" onClick={closeTour}>
+          <div className="kyma-tour-card" onClick={e => e.stopPropagation()}>
+            <span className="kyma-tour-step">{tour + 1} / {TOUR_STEPS.length}</span>
+            <h3>{TOUR_STEPS[tour].title}</h3>
+            <p>{TOUR_STEPS[tour].body}</p>
+            <div className="kyma-tour-actions">
+              <button type="button" className="btn btn-sm" onClick={closeTour}>Skip tour</button>
+              {TOUR_STEPS[tour].target && (
+                <button type="button" className="btn btn-sm" onClick={() => {
+                  const t = TOUR_STEPS[tour].target
+                  const el = t === "plate" ? plateCardRef.current : t === "dish" ? dishCardRef.current : puzzleRef.current
+                  el?.scrollIntoView({ behavior: "smooth", block: "center" })
+                }}>Show me</button>
+              )}
+              <button type="button" className="btn btn-sm btn-accent" onClick={() => tour < TOUR_STEPS.length - 1 ? setTour(tour + 1) : closeTour()}>
+                {tour < TOUR_STEPS.length - 1 ? "Next" : "Start playing"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </main>
   )
 }

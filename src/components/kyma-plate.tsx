@@ -460,6 +460,7 @@ export default function KymaPlate({ initial, target, paramsRef, mini = false }: 
               {toneOn ? `Tone on — ${freq} Hz` : "Play the tone"}
             </button>
           </div>
+          <p className="kyma-hint">m, n = how many wave-bands fit across / along the plate (one frequency per figure) · twin blend mixes the two mirror-twin modes a square plate owns at the same pitch · drive = how hard the plate shakes · click the plate to pour sand</p>
         </>
       )}
 
