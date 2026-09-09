@@ -29,7 +29,10 @@ const RING_STEP = 0.6
 const RING_STAGGER = 0.3
 const RING_DUR = 0.55
 
-const BG: [number, number, number] = [0.043, 0.059, 0.102]
+const BG_CSS = "#0B0F1A"
+const SHAPE_CSS = "#F59E0B"
+const DOT_CSS = "rgba(148,163,184,0.35)"
+const RING_CSS = ["#38BDF8", "#A78BFA", "#34D399", "#F472B6"]
 const SHAPE_RGB: [number, number, number] = [0.961, 0.62, 0.043]
 const DOT_RGB: [number, number, number] = [0.58, 0.66, 0.82]
 const RING_RGB: [number, number, number][] = [
@@ -38,17 +41,22 @@ const RING_RGB: [number, number, number][] = [
   [0.204, 0.827, 0.6],
   [0.957, 0.447, 0.714],
 ]
+const BG: [number, number, number] = [0.043, 0.059, 0.102]
 
-const PRESETS: Record<GridKind, { name: string; cells: string[] }[]> = {
+type TileRec = { cx: number; cy: number; half: number; kind: number; r: number; g: number; b: number; css: string; alpha: number; glow: number; delay: number }
+type Sink = { gl: number[]; js: TileRec[] }
+const makeSink = (): Sink => ({ gl: [], js: [] })
+
+const PRESETS: Record<GridKind, { name: string; short: string; cells: string[] }[]> = {
   square: [
-    { name: "T tetromino", cells: ["0,0", "1,0", "2,0", "1,1"] },
-    { name: "L pentomino", cells: ["0,0", "0,1", "0,2", "0,3", "1,3"] },
-    { name: "P pentomino", cells: ["0,0", "1,0", "0,1", "1,1", "0,2"] },
-    { name: "Domino", cells: ["0,0", "1,0"] },
+    { name: "T tetromino", short: "T", cells: ["0,0", "1,0", "2,0", "1,1"] },
+    { name: "L pentomino", short: "L", cells: ["0,0", "0,1", "0,2", "0,3", "1,3"] },
+    { name: "P pentomino", short: "P", cells: ["0,0", "1,0", "0,1", "1,1", "0,2"] },
+    { name: "Domino", short: "DOMINO", cells: ["0,0", "1,0"] },
   ],
   hex: [
-    { name: "Dihex", cells: ["0,0", "1,0"] },
-    { name: "Hex blob 7", cells: ["0,0", "1,0", "0,1", "-1,1", "-1,0", "0,-1", "1,-1"] },
+    { name: "Dihex", short: "DIHEX", cells: ["0,0", "1,0"] },
+    { name: "Hex blob 7", short: "BLOB 7", cells: ["0,0", "1,0", "0,1", "-1,1", "-1,0", "0,-1", "1,-1"] },
   ],
 }
 
@@ -121,7 +129,7 @@ void main() {
   vGlow = aMeta.z;
   vPix = 2.0 * uScale / max(uRes.y, 1.0);
   vec2 c = (pos - uCenter) / uScale;
-  gl_Position = vec4(c.x, -c.y, 0.0, 1.0);
+  gl_Position = vec4(c.x * uRes.y / uRes.x, -c.y, 0.0, 1.0);
 }`
 
 const FRAG = `#version 300 es
@@ -176,14 +184,14 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
   const [tool, setTool] = useState<"draw" | "erase">(() => (paramsRef.current.tool === "erase" ? "erase" : "draw"))
   const [maxDepth, setMaxDepth] = useState(() => {
     const d = paramsRef.current.maxDepth
-    return d >= 1 && d <= 4 ? Math.round(d) : 3
+    return d >= 1 && d <= 5 ? Math.round(d) : 3
   })
   const [computing, setComputing] = useState(false)
   const [result, setResult] = useState<LabResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [orientCount, setOrientCount] = useState(0)
   const [copied, setCopied] = useState(false)
-  const [glOk, setGlOk] = useState(true)
+  const [renderer2d, setRenderer2d] = useState(false)
 
   const busyRef = useRef(false)
   const cacheRef = useRef(new Map<string, LabResult>())
@@ -232,7 +240,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
   adoptRef.current = p => {
     if ((p.grid === "square" || p.grid === "hex") && p.grid !== grid) setGrid(p.grid)
     if ((p.tool === "draw" || p.tool === "erase") && p.tool !== tool) setTool(p.tool)
-    if (typeof p.maxDepth === "number" && p.maxDepth >= 1 && p.maxDepth <= 4 && Math.round(p.maxDepth) !== maxDepth) setMaxDepth(Math.round(p.maxDepth))
+    if (typeof p.maxDepth === "number" && p.maxDepth >= 1 && p.maxDepth <= 5 && Math.round(p.maxDepth) !== maxDepth) setMaxDepth(Math.round(p.maxDepth))
     if (Array.isArray(p.cells)) {
       const next = sortCellKeys(p.cells)
       if (next.join("|") !== cells.join("|")) setCells(next)
@@ -310,6 +318,9 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
       sc.animEnd = now + RING_STEP * (result.coronas?.rings?.length ?? 0) + RING_STAGGER + RING_DUR + 0.1
     }
     const list = parseCells(cells)
+    const wrap = wrapRef.current
+    const rect = wrap?.getBoundingClientRect()
+    const aspect = rect && rect.height > 0 ? rect.width / rect.height : 4 / 3
     if (list.length === 0) {
       camTargetRef.current = { cx: 0, cy: 0, scale: 7 }
       return
@@ -323,14 +334,14 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
       if (wy > maxY) maxY = wy
     }
     const ringsShown = result !== null && currentKey !== null && result.key === currentKey && result.depthReached > 0
-    const pad = ringsShown ? 0.9 : maxDepth + 1
+    const pad = ringsShown ? 1.0 : maxDepth + 1.4
     minX -= pad
     maxX += pad
     minY -= pad
     maxY += pad
     const w = maxX - minX
     const h = maxY - minY
-    camTargetRef.current = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, scale: Math.max(2.5, Math.max(w, h) * 0.56 + 0.3) }
+    camTargetRef.current = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, scale: Math.max(2.2, Math.max(w / (2 * aspect), h / 2) + 0.4) }
   }, [grid, cells, maxDepth, result, currentKey])
 
   useEffect(() => {
@@ -340,53 +351,73 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
 
     let destroyed = false
     let raf = 0
-    const gl = canvas.getContext("webgl2", { antialias: true, preserveDrawingBuffer: true })
-    if (!gl) {
-      setGlOk(false)
-      return
-    }
+    let mode: "webgl" | "2d" = "webgl"
+    const gl = canvas.getContext("webgl2", { preserveDrawingBuffer: true }) ?? canvas.getContext("webgl2")
+    if (!gl) mode = "2d"
+    setRenderer2d(mode === "2d")
+    const ctx2d = mode === "2d" ? canvas.getContext("2d") : null
+    if (mode === "2d" && !ctx2d) mode = "webgl"
 
-    const compile = (type: number, src: string) => {
-      const sh = gl.createShader(type)!
-      gl.shaderSource(sh, src)
-      gl.compileShader(sh)
-      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) console.error("CORONA shader:", gl.getShaderInfoLog(sh))
-      return sh
+    const sinks = {
+      staticSink: makeSink(),
+      ringSink: makeSink(),
     }
-    const prog = gl.createProgram()!
-    gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT))
-    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG))
-    gl.linkProgram(prog)
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) console.error("CORONA link:", gl.getProgramInfoLog(prog))
-    gl.useProgram(prog)
-
-    const STRIDE = 13 * 4
-    const staticBuf = gl.createBuffer()!
-    const ringBuf = gl.createBuffer()!
     let staticCount = 0
     let ringCount = 0
-    const aPos = gl.getAttribLocation(prog, "aPos")
-    const aLocal = gl.getAttribLocation(prog, "aLocal")
-    const aCenter = gl.getAttribLocation(prog, "aCenter")
-    const aColor = gl.getAttribLocation(prog, "aColor")
-    const aMeta = gl.getAttribLocation(prog, "aMeta")
-    gl.enableVertexAttribArray(aPos)
-    gl.enableVertexAttribArray(aLocal)
-    gl.enableVertexAttribArray(aCenter)
-    gl.enableVertexAttribArray(aColor)
-    gl.enableVertexAttribArray(aMeta)
-    const uCenter = gl.getUniformLocation(prog, "uCenter")
-    const uScale = gl.getUniformLocation(prog, "uScale")
-    const uRes = gl.getUniformLocation(prog, "uRes")
-    const uNow = gl.getUniformLocation(prog, "uNow")
-    const uT0 = gl.getUniformLocation(prog, "uT0")
-    const uDur = gl.getUniformLocation(prog, "uDur")
 
-    gl.enable(gl.BLEND)
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+    let prog: WebGLProgram | null = null
+    let staticBuf: WebGLBuffer | null = null
+    let ringBuf: WebGLBuffer | null = null
+    let uCenter: WebGLUniformLocation | null = null
+    let uScale: WebGLUniformLocation | null = null
+    let uRes: WebGLUniformLocation | null = null
+    let uNow: WebGLUniformLocation | null = null
+    let uT0: WebGLUniformLocation | null = null
+    let uDur: WebGLUniformLocation | null = null
+    let attrs: { aPos: number; aLocal: number; aCenter: number; aColor: number; aMeta: number } | null = null
+    const STRIDE = 13 * 4
+
+    if (gl && mode === "webgl") {
+      try {
+        const compile = (type: number, src: string) => {
+          const sh = gl.createShader(type)!
+          gl.shaderSource(sh, src)
+          gl.compileShader(sh)
+          if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) console.error("CORONA shader:", gl.getShaderInfoLog(sh))
+          return sh
+        }
+        prog = gl.createProgram()!
+        gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT))
+        gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG))
+        gl.linkProgram(prog)
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) console.error("CORONA link:", gl.getProgramInfoLog(prog))
+        gl.useProgram(prog)
+        staticBuf = gl.createBuffer()!
+        ringBuf = gl.createBuffer()!
+        const aPos = gl.getAttribLocation(prog, "aPos")
+        const aLocal = gl.getAttribLocation(prog, "aLocal")
+        const aCenter = gl.getAttribLocation(prog, "aCenter")
+        const aColor = gl.getAttribLocation(prog, "aColor")
+        const aMeta = gl.getAttribLocation(prog, "aMeta")
+        attrs = { aPos, aLocal, aCenter, aColor, aMeta }
+        for (const loc of [aPos, aLocal, aCenter, aColor, aMeta]) gl.enableVertexAttribArray(loc)
+        uCenter = gl.getUniformLocation(prog, "uCenter")
+        uScale = gl.getUniformLocation(prog, "uScale")
+        uRes = gl.getUniformLocation(prog, "uRes")
+        uNow = gl.getUniformLocation(prog, "uNow")
+        uT0 = gl.getUniformLocation(prog, "uT0")
+        uDur = gl.getUniformLocation(prog, "uDur")
+        gl.enable(gl.BLEND)
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+      } catch (e) {
+        console.error("CORONA webgl init:", e)
+        mode = "webgl"
+      }
+    }
 
     const cam = { cx: 0, cy: 0, scale: 7, init: false }
     let needDraw = true
+    let aspect = 4 / 3
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     const resize = () => {
@@ -395,31 +426,19 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
       const h = Math.max(1, Math.round(r.height))
       canvas.width = Math.round(w * dpr)
       canvas.height = Math.round(h * dpr)
+      if (h > 0) aspect = w / h
       needDraw = true
     }
 
-    const upload = (buf: WebGLBuffer, arr: number[]) => {
-      gl.bindBuffer(gl.ARRAY_BUFFER, buf)
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.DYNAMIC_DRAW)
-    }
-    const drawBuf = (buf: WebGLBuffer, count: number) => {
-      if (count === 0) return
-      gl.bindBuffer(gl.ARRAY_BUFFER, buf)
-      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, STRIDE, 0)
-      gl.vertexAttribPointer(aLocal, 2, gl.FLOAT, false, STRIDE, 8)
-      gl.vertexAttribPointer(aCenter, 2, gl.FLOAT, false, STRIDE, 16)
-      gl.vertexAttribPointer(aColor, 4, gl.FLOAT, false, STRIDE, 24)
-      gl.vertexAttribPointer(aMeta, 3, gl.FLOAT, false, STRIDE, 40)
-      gl.drawArrays(gl.TRIANGLES, 0, count)
-    }
-    const pushQuad = (arr: number[], cx: number, cy: number, half: number, kind: number, rgb: [number, number, number], alpha: number, glow: number, delay: number) => {
+    const pushQuad = (sink: Sink, cx: number, cy: number, half: number, kind: number, rgb: [number, number, number], css: string, alpha: number, glow: number, delay: number) => {
       const pts: [number, number][] = [[-half, -half], [half, -half], [half, half], [-half, -half], [half, half], [-half, half]]
-      for (const [dx, dy] of pts) arr.push(cx + dx, cy + dy, dx, dy, cx, cy, rgb[0], rgb[1], rgb[2], alpha, kind, delay, glow)
+      for (const [dx, dy] of pts) sink.gl.push(cx + dx, cy + dy, dx, dy, cx, cy, rgb[0], rgb[1], rgb[2], alpha, kind, delay, glow)
+      sink.js.push({ cx, cy, half, kind, r: rgb[0], g: rgb[1], b: rgb[2], css, alpha, glow, delay })
     }
 
     const buildStatic = () => {
       const sc = sceneRef.current
-      const arr: number[] = []
+      const sink = makeSink()
       const list = parseCells(sc.cells)
       if (list.length > 0) {
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
@@ -437,7 +456,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
           const step = (qx1 - qx0) * (qy1 - qy0) > 3600 ? 2 : 1
           for (let gx = qx0; gx <= qx1; gx += step)
             for (let gy = qy0; gy <= qy1; gy += step)
-              pushQuad(arr, gx, gy, 0.12, 0, DOT_RGB, 0.16, 0, -1000)
+              pushQuad(sink, gx, gy, 0.12, 0, DOT_RGB, DOT_CSS, 0.16, 0, -1000)
         } else {
           const c0 = hexCellAt(x0, y0)
           const c1 = hexCellAt(x1, y1)
@@ -448,23 +467,27 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
             for (let r = r0; r <= r1; r += step) {
               const [wx, wy] = cellCenter("hex", q, r)
               if (wx < x0 - 0.5 || wx > x1 + 0.5 || wy < y0 - 0.5 || wy > y1 + 0.5) continue
-              pushQuad(arr, wx, wy, 0.12, 0, DOT_RGB, 0.16, 0, -1000)
+              pushQuad(sink, wx, wy, 0.12, 0, DOT_RGB, DOT_CSS, 0.16, 0, -1000)
             }
         }
         const half = sc.grid === "hex" ? 1.05 : 0.95
         const kind = sc.grid === "hex" ? 2 : 1
         for (const c of list) {
           const [wx, wy] = cellCenter(sc.grid, c.x, c.y)
-          pushQuad(arr, wx, wy, half, kind, SHAPE_RGB, 1, 0.32, -1000)
+          pushQuad(sink, wx, wy, half, kind, SHAPE_RGB, SHAPE_CSS, 1, 0.32, -1000)
         }
       }
-      upload(staticBuf, arr)
-      staticCount = arr.length / 13
+      sinks.staticSink = sink
+      staticCount = sink.gl.length / 13
+      if (gl && staticBuf) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, staticBuf)
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sink.gl), gl.DYNAMIC_DRAW)
+      }
     }
 
     const buildRings = () => {
       const sc = sceneRef.current
-      const arr: number[] = []
+      const sink = makeSink()
       const r = sc.result
       if (r && r.coronas && sc.currentKey !== null && r.key === sc.currentKey && r.depthReached > 0) {
         const list = parseCells(sc.cells)
@@ -488,6 +511,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
         const kind = sc.grid === "hex" ? 2 : 1
         for (let ri = 0; ri < rings.length; ri++) {
           const color = RING_RGB[ri % RING_RGB.length]
+          const css = RING_CSS[ri % RING_CSS.length]
           const glow = ri === rings.length - 1 ? 0.5 : 0.16
           const seen = new Set<string>()
           for (const p of rings[ri]) {
@@ -500,14 +524,62 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
               seen.add(k)
               const [wx, wy] = cellCenter(sc.grid, x, y)
               const dist = Math.min(1, Math.max(0, Math.hypot(wx - cx, wy - cy) / (radius + 0.5)))
-              pushQuad(arr, wx, wy, half, kind, color, 0.92, glow, ri * RING_STEP + dist * RING_STAGGER)
+              pushQuad(sink, wx, wy, half, kind, color, css, 0.92, glow, ri * RING_STEP + dist * RING_STAGGER)
             }
           }
           for (const k of seen) used.add(k)
         }
       }
-      upload(ringBuf, arr)
-      ringCount = arr.length / 13
+      sinks.ringSink = sink
+      ringCount = sink.gl.length / 13
+      if (gl && ringBuf) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, ringBuf)
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sink.gl), gl.DYNAMIC_DRAW)
+      }
+    }
+
+    const draw2d = (now: number, animating: boolean, t0: number) => {
+      const c = ctx2d
+      if (!c) return
+      const W = canvas.width / dpr
+      const H = canvas.height / dpr
+      c.setTransform(dpr, 0, 0, dpr, 0, 0)
+      c.fillStyle = BG_CSS
+      c.fillRect(0, 0, W, H)
+      const S = (H / 2) / cam.scale
+      const toX = (wx: number) => W / 2 + (wx - cam.cx) * S
+      const toY = (wy: number) => H / 2 - (wy - cam.cy) * S
+      const dur = RING_DUR
+      const paint = (tiles: TileRec[], order: "under" | "over") => {
+        for (const t of tiles) {
+          const p = t.delay < -100 ? 1 : Math.min(1, Math.max(0, (now - t0 - t.delay) / dur))
+          if (p <= 0) continue
+          const e = 1 - Math.pow(1 - p, 3)
+          const k = 0.5 + 0.5 * e
+          const a = t.alpha * e
+          if (a <= 0.002) continue
+          const x = toX(t.cx)
+          const y = toY(t.cy)
+          const sz = t.half * S * k
+          if (x < -sz || x > W + sz || y < -sz || y > H + sz) continue
+          if (t.glow > 0.2) {
+            c.save()
+            c.shadowColor = t.css
+            c.shadowBlur = t.glow * 18
+            c.fillStyle = t.css
+            c.globalAlpha = a * 0.9
+            fillTile(c, t.kind, x, y, sz)
+            c.restore()
+          }
+          c.globalAlpha = a
+          c.fillStyle = t.css
+          fillTile(c, t.kind, x, y, sz)
+        }
+        void order
+      }
+      paint(sinks.ringSink.js, "under")
+      paint(sinks.staticSink.js, "over")
+      c.globalAlpha = 1
     }
 
     const ro = new ResizeObserver(resize)
@@ -517,6 +589,13 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
       if (es[0].isIntersecting) needDraw = true
     }, { threshold: 0.02 })
     io.observe(wrap)
+
+    const onLost = (ev: Event) => {
+      ev.preventDefault()
+      needDraw = false
+      console.error("CORONA webgl context lost — rendering paused")
+    }
+    canvas.addEventListener("webglcontextlost", onLost)
 
     const paramsSeen = { grid: "", cells: "", tool: "", maxDepth: -1 }
     const adoptExternal = () => {
@@ -535,7 +614,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
       const r = canvas.getBoundingClientRect()
       const nx = ((clientX - r.left) / r.width) * 2 - 1
       const ny = ((clientY - r.top) / r.height) * 2 - 1
-      return [cam.cx + nx * cam.scale, cam.cy - ny * cam.scale]
+      return [cam.cx + nx * cam.scale * aspect, cam.cy - ny * cam.scale]
     }
     const strokeErase = { current: false }
     const lastPaint = { current: "" }
@@ -606,17 +685,33 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
         cam.cy = ny
         cam.scale = ns
         if (!needDraw && !animating && !moved) return
-        gl.viewport(0, 0, canvas.width, canvas.height)
-        gl.clearColor(BG[0], BG[1], BG[2], 1)
-        gl.clear(gl.COLOR_BUFFER_BIT)
-        gl.uniform2f(uCenter, cam.cx, cam.cy)
-        gl.uniform1f(uScale, cam.scale)
-        gl.uniform2f(uRes, canvas.width, canvas.height)
-        gl.uniform1f(uNow, now)
-        gl.uniform1f(uT0, animating ? sc.animStart : -1e9)
-        gl.uniform1f(uDur, RING_DUR)
-        drawBuf(ringBuf, ringCount)
-        drawBuf(staticBuf, staticCount)
+        if (mode === "webgl" && gl && prog) {
+          gl.viewport(0, 0, canvas.width, canvas.height)
+          gl.clearColor(BG[0], BG[1], BG[2], 1)
+          gl.clear(gl.COLOR_BUFFER_BIT)
+          gl.uniform2f(uCenter, cam.cx, cam.cy)
+          gl.uniform1f(uScale, cam.scale)
+          gl.uniform2f(uRes, canvas.width, canvas.height)
+          gl.uniform1f(uNow, now)
+          gl.uniform1f(uT0, animating ? sc.animStart : -1e9)
+          gl.uniform1f(uDur, RING_DUR)
+          if (attrs) {
+            const drawBuf = (buf: WebGLBuffer | null, count: number) => {
+              if (!buf || count === 0) return
+              gl!.bindBuffer(gl!.ARRAY_BUFFER, buf)
+              gl!.vertexAttribPointer(attrs!.aPos, 2, gl!.FLOAT, false, STRIDE, 0)
+              gl!.vertexAttribPointer(attrs!.aLocal, 2, gl!.FLOAT, false, STRIDE, 8)
+              gl!.vertexAttribPointer(attrs!.aCenter, 2, gl!.FLOAT, false, STRIDE, 16)
+              gl!.vertexAttribPointer(attrs!.aColor, 4, gl!.FLOAT, false, STRIDE, 24)
+              gl!.vertexAttribPointer(attrs!.aMeta, 3, gl!.FLOAT, false, STRIDE, 40)
+              gl!.drawArrays(gl!.TRIANGLES, 0, count)
+            }
+            drawBuf(ringBuf, ringCount)
+            drawBuf(staticBuf, staticCount)
+          }
+        } else if (mode === "2d" && ctx2d) {
+          draw2d(now, animating, animating ? sc.animStart : 1e12)
+        }
         needDraw = false
       } catch (e) {
         console.error("CORONA frame:", e)
@@ -635,7 +730,8 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
       canvas.removeEventListener("pointerup", onUp)
       canvas.removeEventListener("pointercancel", onUp)
       canvas.removeEventListener("contextmenu", onCtx)
-      gl.getExtension("WEBGL_lose_context")?.loseContext()
+      canvas.removeEventListener("webglcontextlost", onLost)
+      if (mode === "webgl") gl?.getExtension("WEBGL_lose_context")?.loseContext()
     }
   }, [paramsRef])
 
@@ -676,9 +772,10 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
   const tilerLabel = shownResult === null ? "—" : shownResult.tiler === null ? "?" : shownResult.tiler ? (shownResult.witnessOk === false ? "YES?" : "YES ✓") : "NO"
   const coronaLabel = shownResult !== null ? `${shownResult.depthReached}/${maxDepth}` : "—"
   const tilerChipClass = shownResult === null || shownResult.tiler === null ? "" : shownResult.tiler ? " kyma-chip-freq" : " kyma-chip-warn"
+  const heavyShape = shownResult !== null && shownResult.runtimeMs > 200
 
   const hint = (() => {
-    if (cs.length === 0) return "Drag on the grid to draw a polyform — right-click or the Erase tool removes cells. Analyze rings it with copies of itself."
+    if (cs.length === 0) return "Drag on the grid to draw a polyform — right-click or Erase removes cells. Analyze rings it with copies of itself."
     if (error !== null) return `The engine failed on this shape: ${error}`
     if (computing) return "Computing coronas…"
     if (shownResult === null) return "Shape changed — the coronas will re-ring it in a moment."
@@ -686,65 +783,100 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
     if (shownResult.tiler) return `It tiles the plane — tilers can be ringed forever, so coronas run the full ${maxDepth}.`
     if (shownResult.depthReached === 0) return "No tiling found — every copy collides. Now: how many rings can it take?"
     if (shownResult.depthReached >= maxDepth) return `Rings ${shownResult.depthReached}/${maxDepth} with no jam yet — push max depth higher to keep testing.`
-    return `Candidate non-tiler — the packing jams after ${shownResult.depthReached} ring${shownResult.depthReached === 1 ? "" : "s"}. That is its Heesch number.`
+    return `Candidate non-tiler — the packing jams after ${shownResult.depthReached} ring${shownResult.depthReached === 1 ? "" : "s"}. That is its Heesch number.${heavyShape ? " (heavy shape — analysis capped safely)" : ""}`
   })()
 
   return (
-    <div className="corona-instrument">
-      <div ref={wrapRef} className="kyma-canvas-wrap" style={{ aspectRatio: "1 / 1", maxWidth: 640 }}>
-        <canvas ref={canvasRef} className="kyma-canvas corona-canvas" style={{ cursor: "crosshair" }} aria-label="Corona lab canvas: draw a polyform and watch coronas ring it" />
-        <div className="kyma-hud">
-          <span className="kyma-chip">CELLS {cs.length}</span>
-          <span className="kyma-chip">ORIENT {cs.length > 0 ? orientCount : 0}</span>
-          <span className={`kyma-chip${tilerChipClass}`}>TILER {tilerLabel}</span>
-          <span className="kyma-chip">CORONAS {coronaLabel}</span>
-          <span className="kyma-chip">ENGINE v{ENGINE_VERSION}</span>
-          {computing && <span className="kyma-chip kyma-chip-warn">computing…</span>}
-          {!glOk && <span className="kyma-chip kyma-chip-warn">WebGL2 unavailable</span>}
+    <>
+      <div className="corona-lab-head">
+        <div>
+          <div className="corona-lab-title">The Corona Board</div>
+          <div className="corona-lab-sub">1960s · Heesch&apos;s problem · square &amp; hex · live tiling engine</div>
+        </div>
+        <span className="corona-chip">ENGINE {ENGINE_VERSION}{renderer2d ? " · 2D" : ""}</span>
+      </div>
+      <div className="corona-lab-body">
+        <div ref={wrapRef} className="corona-stage">
+          <canvas ref={canvasRef} className="corona-canvas" style={{ cursor: "crosshair" }} aria-label="Corona lab canvas: draw a polyform and watch coronas ring it" />
+          <div className="corona-hud">
+            <span className="kyma-chip">CELLS {cs.length}</span>
+            <span className="kyma-chip">ORIENT {cs.length > 0 ? orientCount : 0}</span>
+            <span className={`kyma-chip${tilerChipClass}`}>TILER {tilerLabel}</span>
+            <span className="kyma-chip">CORONAS {coronaLabel}</span>
+            {computing && <span className="kyma-chip kyma-chip-warn">computing…</span>}
+          </div>
+        </div>
+        <div className="corona-rail">
+          <div className="corona-rail-group">
+            <div className="corona-rail-label">Lattice</div>
+            <div className="corona-seg">
+              <button type="button" className={grid === "square" ? "corona-seg-btn corona-seg-on" : "corona-seg-btn"} onClick={() => switchGrid("square")}>Square</button>
+              <button type="button" className={grid === "hex" ? "corona-seg-btn corona-seg-on" : "corona-seg-btn"} onClick={() => switchGrid("hex")}>Hex</button>
+            </div>
+          </div>
+          <div className="corona-rail-group">
+            <div className="corona-rail-label">Tool</div>
+            <div className="corona-seg">
+              <button type="button" className={tool === "draw" ? "corona-seg-btn corona-seg-on" : "corona-seg-btn"} onClick={() => setTool("draw")}>Draw</button>
+              <button type="button" className={tool === "erase" ? "corona-seg-btn corona-seg-on" : "corona-seg-btn"} onClick={() => setTool("erase")}>Erase</button>
+            </div>
+          </div>
+          <div className="corona-rail-group">
+            <div className="corona-rail-label">Corona depth</div>
+            <div className="corona-chiprow">
+              {[1, 2, 3, 4, 5].map(d => (
+                <button key={d} type="button" className={maxDepth === d ? "corona-depth-btn corona-seg-on" : "corona-depth-btn"} onClick={() => setMaxDepth(d)}>{d}</button>
+              ))}
+            </div>
+          </div>
+          <div className="corona-rail-group">
+            <div className="corona-rail-label">Presets</div>
+            <div className="corona-chiprow">
+              {PRESETS[grid].map(p => (
+                <button key={p.name} type="button" className="corona-preset-btn" onClick={() => applyPreset(p.name)}>{p.short}</button>
+              ))}
+            </div>
+          </div>
+          <div className="corona-rail-group">
+            <button type="button" className="corona-analyze" disabled={computing} onClick={() => runAnalyzeRef.current()}>{computing ? "Analyzing…" : "Analyze"}</button>
+            <button type="button" className="corona-cert" onClick={clearAll}>Clear</button>
+          </div>
+          {shownResult !== null && shownResult.depthReached >= 1 && (
+            <div className="corona-rail-group">
+              <button type="button" className="corona-cert" onClick={copyCert}>{copied ? "Copied ✓" : "Copy certificate"}</button>
+              <span className="corona-witness-line">{shownResult.runtimeMs.toFixed(1)} ms · {shownResult.witnessOk === true ? "witness verified" : shownResult.witnessOk === false ? `witness rejected: ${shownResult.witnessError ?? "mismatch"}` : "coronas certified"}</span>
+            </div>
+          )}
+          <p className="corona-hint">{hint}</p>
         </div>
       </div>
-
-      <div className="kyma-rail">
-        <div className="kyma-seg-row">
-          <div className="kyma-seg">
-            <button type="button" className={grid === "square" ? "on" : ""} onClick={() => switchGrid("square")}>Square</button>
-            <button type="button" className={grid === "hex" ? "on" : ""} onClick={() => switchGrid("hex")}>Hex</button>
-          </div>
-          <div className="kyma-seg">
-            <button type="button" className={tool === "draw" ? "on" : ""} onClick={() => setTool("draw")}>Draw</button>
-            <button type="button" className={tool === "erase" ? "on" : ""} onClick={() => setTool("erase")}>Erase</button>
-          </div>
-        </div>
-
-        <div className="kyma-seg-row">
-          <div className="kyma-seg">
-            {[1, 2, 3, 4].map(d => (
-              <button key={d} type="button" className={maxDepth === d ? "on" : ""} onClick={() => setMaxDepth(d)}>{d}</button>
-            ))}
-          </div>
-          <span className="kyma-engine">max corona depth</span>
-        </div>
-
-        <div className="kyma-presets-row">
-          <div className="kyma-presets">
-            <button type="button" className="btn btn-sm btn-accent" disabled={computing} onClick={() => runAnalyzeRef.current()}>Analyze</button>
-            <button type="button" className="btn btn-sm" onClick={clearAll}>Clear</button>
-            <select className="btn btn-sm corona-select" value="" aria-label="Load a preset shape" onChange={e => applyPreset(e.currentTarget.value)}>
-              <option value="">Presets…</option>
-              {PRESETS[grid].map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {shownResult !== null && shownResult.depthReached >= 1 && (
-          <div className="kyma-presets-row">
-            <button type="button" className="btn btn-sm" onClick={copyCert}>{copied ? "Copied ✓" : "Copy certificate"}</button>
-            <span className="kyma-engine">{shownResult.runtimeMs.toFixed(1)} ms · {shownResult.witnessOk === true ? "witness verified" : shownResult.witnessOk === false ? `witness rejected: ${shownResult.witnessError ?? "mismatch"}` : "coronas certified"}</span>
-          </div>
-        )}
-
-        <p className="kyma-hint">{hint}</p>
-      </div>
-    </div>
+    </>
   )
+}
+
+function fillTile(c: CanvasRenderingContext2D, kind: number, x: number, y: number, sz: number) {
+  if (kind === 0) {
+    c.beginPath()
+    c.arc(x, y, Math.max(1.2, sz * 0.42), 0, Math.PI * 2)
+    c.fill()
+    return
+  }
+  if (kind === 1) {
+    const b = sz * 0.463
+    const r = Math.min(sz * 0.105, b)
+    c.beginPath()
+    c.roundRect(x - b, y - b, b * 2, b * 2, r)
+    c.fill()
+    return
+  }
+  c.beginPath()
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 3) * i
+    const px = x + sz * 0.438 * Math.cos(a)
+    const py = y + sz * 0.438 * Math.sin(a)
+    if (i === 0) c.moveTo(px, py)
+    else c.lineTo(px, py)
+  }
+  c.closePath()
+  c.fill()
 }

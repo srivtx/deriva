@@ -97,6 +97,12 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "soon-voice", name: "Voice Memos", glyph: "◠", gradient: G.pink, desc: "Record & replay", category: "Life", status: "soon" },
 ]
 
+export const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/pdb", "/kyma", "/corona", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/ultron", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig"]
+
+export function matchesAppModePrefix(href: string): boolean {
+  return APP_MODE_PREFIXES.some(prefix => href === prefix || href.startsWith(prefix + "/") || href.startsWith(prefix + "?"))
+}
+
 export function appsByCategory(): Record<string, AppMeta[]> {
   const groups: Record<string, AppMeta[]> = {}
   for (const app of APP_CATALOG) {

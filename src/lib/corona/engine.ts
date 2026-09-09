@@ -14,7 +14,7 @@ export type CoronaResult = {
   runtimeMs: number
 }
 
-export const ENGINE_VERSION = "corona-engine 0.1.0"
+export const ENGINE_VERSION = "corona-engine 0.2.0"
 
 const SQ_DIRS: Cell[] = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }]
 const HEX_DIRS: Cell[] = [
@@ -177,7 +177,7 @@ function diameterOf(grid: GridKind, uset: Set<number>, ucells: Cell[]): number {
   return max
 }
 
-function dlxSolve(numCols: number, rowCells: number[][], visitCap: number): { rows: number[] | null; overflow: boolean } {
+function dlxSolve(numCols: number, rowCells: number[][], budget: { v: number; cap: number }, maxSolutions: number): { sols: number[][]; overflow: boolean } {
   let total = 0
   for (const r of rowCells) total += r.length
   const cap = numCols + 1 + total
@@ -248,15 +248,18 @@ function dlxSolve(numCols: number, rowCells: number[][], visitCap: number): { ro
     R[L[c]] = c
     L[R[c]] = c
   }
-  let visits = 0
-  let overflow = false
+  const sols: number[][] = []
   const stack: number[] = []
+  let overflow = false
   const search = (): boolean => {
-    if (R[0] === 0) return true
-    visits++
-    if (visits > visitCap) {
+    if (R[0] === 0) {
+      sols.push(stack.slice())
+      return sols.length >= maxSolutions
+    }
+    budget.v++
+    if (budget.v > budget.cap) {
       overflow = true
-      return false
+      return true
     }
     let c = 0
     let min = 0x7fffffff
@@ -269,19 +272,22 @@ function dlxSolve(numCols: number, rowCells: number[][], visitCap: number): { ro
     }
     if (min === 0) return false
     cover(c)
-    for (let r = D[c]; r !== c && !overflow; r = D[r]) {
+    for (let r = D[c]; r !== c; r = D[r]) {
       stack.push(RW[r])
       for (let j = R[r]; j !== r; j = R[j]) cover(C[j])
-      if (search()) return true
+      const stop = search()
       for (let j = L[r]; j !== r; j = L[j]) uncover(C[j])
       stack.pop()
+      if (stop) {
+        uncover(c)
+        return true
+      }
     }
     uncover(c)
     return false
   }
-  const found = search()
-  if (overflow) return { rows: null, overflow: true }
-  return { rows: found ? stack.slice() : null, overflow: false }
+  search()
+  return { sols, overflow }
 }
 
 function indexRegion(region: Cell[]): Map<number, number> {
@@ -343,10 +349,10 @@ function solveCover(region: Cell[], orientations: Orientation[]): { placements: 
     if (!ok) return { placements: null, overflow: false }
     rowCells.push(idxs)
   }
-  const res = dlxSolve(region.length, rowCells, VISIT_CAP)
+  const res = dlxSolve(region.length, rowCells, { v: 0, cap: VISIT_CAP }, 1)
   if (res.overflow) return { placements: null, overflow: true }
-  if (!res.rows) return { placements: null, overflow: false }
-  return { placements: res.rows.map(i => rows[i]), overflow: false }
+  if (res.sols.length === 0) return { placements: null, overflow: false }
+  return { placements: res.sols[0].map(i => rows[i]), overflow: false }
 }
 
 function squareRegion(s: number): Cell[] {
@@ -407,29 +413,114 @@ function tilerRegions(grid: GridKind, n: number): RegionCand[] {
   return out
 }
 
-function coronaSearch(grid: GridKind, orients: Orientation[], base: Cell[], maxDepth: number): Placement[][] {
-  const uset = new Set<number>()
+function solveCoronaAll(region: Cell[], mandatory: Set<number>, orientations: Orientation[], maxSolutions: number, budget: { v: number; cap: number }, rng?: () => number): { chains: Placement[][] | null; overflow: boolean } {
+  const index = indexRegion(region)
+  const realRows: Placement[] = []
+  const rowCells: number[][] = []
+  for (const p of placementsInRegion(region, orientations)) {
+    const cs = placementCells(p, orientations)
+    let touches = false
+    for (const c of cs) {
+      if (mandatory.has(ckey(c.x, c.y))) {
+        touches = true
+        break
+      }
+    }
+    if (!touches) continue
+    const idxs: number[] = []
+    for (const c of cs) {
+      const i = index.get(ckey(c.x, c.y))
+      if (i === undefined) {
+        touches = false
+        break
+      }
+      idxs.push(i)
+    }
+    if (!touches) continue
+    realRows.push(p)
+    rowCells.push(idxs)
+  }
+  if (realRows.length === 0 || realRows.length > ROW_CAP) return { chains: null, overflow: false }
+  if (rng) {
+    for (let i = rowCells.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1))
+      const t = rowCells[i]
+      rowCells[i] = rowCells[j]
+      rowCells[j] = t
+      const tp = realRows[i]
+      realRows[i] = realRows[j]
+      realRows[j] = tp
+    }
+  }
+  for (const c of region) {
+    if (mandatory.has(ckey(c.x, c.y))) continue
+    rowCells.push([index.get(ckey(c.x, c.y))!])
+  }
+  const res = dlxSolve(region.length, rowCells, budget, maxSolutions)
+  if (res.sols.length === 0) return { chains: null, overflow: res.overflow }
+  const chains: Placement[][] = []
+  for (const rows of res.sols) {
+    const placements: Placement[] = []
+    for (const ri of rows) {
+      if (ri < realRows.length) placements.push(realRows[ri])
+    }
+    chains.push(placements)
+  }
+  return { chains, overflow: res.overflow }
+}
+
+function coronaSearch(grid: GridKind, orients: Orientation[], base: Cell[], maxDepth: number, baseDiam: number): Placement[][] {
+  const budget = { v: 0, cap: VISIT_CAP }
+  const best: Placement[][] = []
+  for (let round = 0; round < 8; round++) {
+    if (budget.v > budget.cap) break
+    const rng = mulberry32(1000 + round * 7919)
+    const attempt = coronaAttempt(grid, orients, base, maxDepth, baseDiam, rng, budget)
+    if (attempt.length > best.length) {
+      best.length = 0
+      for (const r of attempt) best.push(r)
+    }
+    if (best.length >= maxDepth) break
+  }
+  return best
+}
+
+function coronaAttempt(grid: GridKind, orients: Orientation[], base: Cell[], maxDepth: number, baseDiam: number, rng: () => number, budget: { v: number; cap: number }): Placement[][] {
+  const acc: Placement[][] = []
+  let uset = new Set<number>()
   for (const c of base) uset.add(ckey(c.x, c.y))
-  const ucells = base.slice()
-  const rings: Placement[][] = []
+  let ucells = base.slice()
   for (let k = 1; k <= maxDepth; k++) {
-    const d = diameterOf(grid, uset, ucells)
-    const region = regionAround(grid, ucells, d + 1)
+    if (budget.v > budget.cap) break
+    const region = regionAround(grid, ucells, baseDiam + 2)
     if (region.length === 0) break
-    const solved = solveCover(region, orients)
-    if (solved.overflow || !solved.placements) break
-    rings.push(solved.placements)
-    for (const p of solved.placements) {
+    const mandatory = new Set<number>()
+    for (const c of ucells) {
+      for (const nb of cellNeighbors(grid, c)) {
+        const kk = ckey(nb.x, nb.y)
+        if (!uset.has(kk)) mandatory.add(kk)
+      }
+    }
+    const sols = solveCoronaAll(region, mandatory, orients, 1, budget, rng)
+    if (sols.overflow) break
+    if (!sols.chains || sols.chains.length === 0) break
+    const chain = sols.chains[0]
+    acc.push(chain)
+    const nuset = new Set(uset)
+    const nucells = ucells.slice()
+    for (const p of chain) {
       for (const c of placementCells(p, orients)) {
-        const k2 = ckey(c.x, c.y)
-        if (!uset.has(k2)) {
-          uset.add(k2)
-          ucells.push(c)
+        const kk = ckey(c.x, c.y)
+        if (!nuset.has(kk)) {
+          nuset.add(kk)
+          nucells.push(c)
         }
       }
     }
+    uset = nuset
+    ucells = nucells
   }
-  return rings
+  return acc
 }
 
 export function analyze(grid: GridKind, cells: Cell[], maxDepth?: number): CoronaResult {
@@ -460,7 +551,7 @@ export function analyze(grid: GridKind, cells: Cell[], maxDepth?: number): Coron
       tiler = tilingWitness ? true : overflowed ? null : false
     }
   }
-  const rings = n > 0 && depthCap > 0 ? coronaSearch(grid, orients, norm, depthCap) : []
+  const rings = n > 0 && depthCap > 0 ? coronaSearch(grid, orients, norm, depthCap, diameterOf(grid, new Set(norm.map(c => ckey(c.x, c.y))), norm)) : []
   return {
     grid,
     cells: norm,
@@ -482,27 +573,36 @@ export function verifyWitness(grid: GridKind, cells: Cell[], coronas: { depth: n
   const uset = new Set<number>()
   for (const c of norm) uset.add(ckey(c.x, c.y))
   const ucells = norm.slice()
+  const baseDiam = diameterOf(grid, uset, ucells)
   for (let k = 0; k < coronas.rings.length; k++) {
-    const d = diameterOf(grid, uset, ucells)
-    const region = regionAround(grid, ucells, d + 1)
+    const region = regionAround(grid, ucells, baseDiam + 2)
     if (region.length === 0) return err("ring " + (k + 1) + ": empty region")
     const rset = new Set<number>()
     for (const c of region) rset.add(ckey(c.x, c.y))
-    const cover = new Map<number, number>()
+    const mandatory = new Set<number>()
+    for (const c of ucells) {
+      for (const nb of cellNeighbors(grid, c)) {
+        const kk = ckey(nb.x, nb.y)
+        if (!uset.has(kk)) mandatory.add(kk)
+      }
+    }
+    const cover = new Set<number>()
     for (const p of coronas.rings[k]) {
       if (!orients[p.orient]) return err("ring " + (k + 1) + ": unknown orientation id " + p.orient)
+      let touches = false
       for (const c of placementCells(p, orients)) {
         const kk = ckey(c.x, c.y)
         if (!rset.has(kk)) return err("ring " + (k + 1) + ": placement cell outside region")
         if (uset.has(kk)) return err("ring " + (k + 1) + ": placement overlaps previous union")
-        cover.set(kk, (cover.get(kk) ?? 0) + 1)
+        if (cover.has(kk)) return err("ring " + (k + 1) + ": cell covered twice")
+        if (mandatory.has(kk)) touches = true
+        cover.add(kk)
       }
+      if (!touches) return err("ring " + (k + 1) + ": copy does not touch the patch")
     }
-    for (const c of region) {
-      const cnt = cover.get(ckey(c.x, c.y)) ?? 0
-      if (cnt !== 1) return err("ring " + (k + 1) + ": region cell covered " + cnt + " times")
+    for (const kk of mandatory) {
+      if (!cover.has(kk)) return err("ring " + (k + 1) + ": touching cell uncovered")
     }
-    if (cover.size !== region.length) return err("ring " + (k + 1) + ": covered cells outside region")
     for (const p of coronas.rings[k]) {
       for (const c of placementCells(p, orients)) {
         const kk = ckey(c.x, c.y)

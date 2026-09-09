@@ -87,9 +87,13 @@ const domino = makeTiler("square")
 const dominoRes = analyze("square", domino, 4)
 check("square domino is tiler", dominoRes.tiler === true, `region=${dominoRes.tilingWitness?.regionNote}, placements=${dominoRes.tilingWitness?.placements.length}, runtime=${perf(dominoRes.runtimeMs)}`)
 if (dominoRes.tilingWitness) {
-  const err = replayTiling("square", domino, dominoRes.tilingWitness, regionSquare(24))
-  check("domino witness covers 24x24 exactly", err === null, err ?? `${dominoRes.tilingWitness.placements.length} placements x 2 = 576`)
-} else check("domino witness covers 24x24 exactly", false, "no witness")
+  const note = dominoRes.tilingWitness.regionNote
+  const sizeMatch = note.match(/(\d+)x(\d+)/)
+  const w = sizeMatch ? Number(sizeMatch[1]) : 0
+  const h = sizeMatch ? Number(sizeMatch[2]) : 0
+  const err = w > 0 ? replayTiling("square", domino, dominoRes.tilingWitness, regionSquare(Math.max(w, h))) : "unknown witness region: " + note
+  check("domino witness covers its region exactly", err === null, err ?? `${dominoRes.tilingWitness.placements.length} placements · region=${note}`)
+} else check("domino witness covers its region exactly", false, "no witness")
 console.log(`  domino corona depthReached=${dominoRes.depthReached} (informational)`)
 
 const hexTiler = makeTiler("hex")

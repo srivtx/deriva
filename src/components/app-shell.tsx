@@ -13,6 +13,7 @@ import FloatingOsc from "./floating-osc"
 import AppIcon from "./app-icon"
 import NavSlotIcon from "./nav-slot-icon"
 import { NAV_ITEM_MAP } from "@/data/nav-items"
+import { matchesAppModePrefix } from "@/data/apps"
 import { currentIconPack } from "@/data/icon-packs"
 import { clearContentAnimations } from "@/lib/app-transition"
 import { installRecoveryGuards } from "@/lib/recovery"
@@ -254,12 +255,10 @@ function ProgressBadge({ className = "" }: { className?: string }) {
   )
 }
 
-  const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/pdb", "/kyma", "/corona", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/ultron", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig"]
-
 export default function AppShell() {
   const pathname = usePathname()
   const router = useRouter()
-  const isAppMode = APP_MODE_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(prefix + "/"))
+  const isAppMode = matchesAppModePrefix(pathname)
   useEffect(() => {
     document.body.classList.toggle("app-mode-active", isAppMode)
     return () => document.body.classList.remove("app-mode-active")
@@ -430,7 +429,7 @@ export default function AppShell() {
                   <div key={group.label} className="more-group" role="group" aria-label={group.label}>
                     <span className="more-group-label">{group.label}</span>
                     {group.links.map(link => (
-                      <Link key={link.href} href={link.href} role="menuitem" onClick={() => setMoreOpen(false)}>
+                      <Link key={link.href} href={link.href} role="menuitem" target={matchesAppModePrefix(link.href) ? "_blank" : undefined} rel={matchesAppModePrefix(link.href) ? "noreferrer noopener" : undefined} onClick={() => setMoreOpen(false)}>
                         <strong>{link.label}</strong>
                         <small>{link.desc}</small>
                       </Link>
@@ -472,7 +471,7 @@ export default function AppShell() {
                   <span className="mobile-more-group-label">{group.label}</span>
                   <div className="mobile-more-group-links">
                     {group.links.map(link => (
-                      <Link key={link.href} href={link.href} onClick={() => setMoreOpen(false)}>
+                      <Link key={link.href} href={link.href} target={matchesAppModePrefix(link.href) ? "_blank" : undefined} rel={matchesAppModePrefix(link.href) ? "noreferrer noopener" : undefined} onClick={() => setMoreOpen(false)}>
                         <span className="mobile-more-link-label">{link.label}</span>
                         <span className="mobile-more-link-desc">{link.desc}</span>
                       </Link>

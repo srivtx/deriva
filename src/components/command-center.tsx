@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { TOPIC_LIST } from "@/data"
 import { PATTERN_DIRECTORY } from "@/data/patterns"
+import { matchesAppModePrefix } from "@/data/apps"
 import { systemScenarios } from "@/curriculum/topics/ai-ml/systems"
 import { applyPreferences, loadPreferences, savePreferences } from "@/persistence/preferences"
 
@@ -22,6 +23,13 @@ const PRESETS = [
   { id: "field-notes", title: "Use Field Notes atmosphere", values: { theme: "moss" as const, accent: "mint" as const, type: "humanist" as const, density: "calm" as const, shape: "soft" as const, texture: "grid" as const } },
   { id: "night-lab", title: "Use Night Lab atmosphere", values: { theme: "violet" as const, accent: "violet" as const, type: "technical" as const, density: "focused" as const, shape: "precise" as const, texture: "grid" as const } },
 ]
+
+const EVERYDAY_NAV_PREFIXES = ["/learn", "/topic", "/practice?", "/patterns", "/settings"]
+
+function opensAppInNewTab(href: string): boolean {
+  if (EVERYDAY_NAV_PREFIXES.some(prefix => href.startsWith(prefix))) return false
+  return matchesAppModePrefix(href)
+}
 
 export default function CommandCenter({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter()
@@ -110,7 +118,10 @@ export default function CommandCenter({ open, onClose }: { open: boolean; onClos
 
   const select = (command: Command) => {
     if (command.action) command.action()
-    if (command.href) router.push(command.href)
+    if (command.href) {
+      if (opensAppInNewTab(command.href)) window.open(command.href, "_blank", "noopener")
+      else router.push(command.href)
+    }
     onClose()
   }
 
