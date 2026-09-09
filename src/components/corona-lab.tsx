@@ -50,6 +50,7 @@ const makeSink = (): Sink => ({ gl: [], js: [] })
 const PRESETS: Record<GridKind, { name: string; short: string; cells: string[] }[]> = {
   square: [
     { name: "T tetromino", short: "T", cells: ["0,0", "1,0", "2,0", "1,1"] },
+    { name: "S tetromino", short: "S", cells: ["1,0", "2,0", "0,1", "1,1"] },
     { name: "L pentomino", short: "L", cells: ["0,0", "0,1", "0,2", "0,3", "1,3"] },
     { name: "P pentomino", short: "P", cells: ["0,0", "1,0", "0,1", "1,1", "0,2"] },
     { name: "Domino", short: "DOMINO", cells: ["0,0", "1,0"] },
