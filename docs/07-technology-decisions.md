@@ -252,3 +252,71 @@ version-robust).
 as drills); the harness embeds the learner's exact editor code, so what you debug
 is what you edit. If a future drill needs true interactivity, revisit with a
 deliberate worker-protocol D-record.
+
+## D17. KYMA's simulations are raw WebGL/WebGL2 with a CPU fallback and physics graded in Python first (KYMA, 2026-09-08)
+
+KYMA needs two live pattern-forming systems. Both run as fullscreen-quad
+shaders with no 3D library: the Chladni plate is a stateless eigenmode field
+shader (three trig calls per pixel) plus 3000 JS-side sand particles that
+descend the analytic gradient of |f|² with |f|-proportional jitter —
+particles lock onto nodal lines because both the drift force and the jitter
+scale with distance from the zero set, and the ratio is tuned so drift wins
+~4:1 near a line. The Gray–Scott dish is a ping-pong pair of RGBA16F
+framebuffers (EXT_color_buffer_float, NEAREST filtering, 9-point laplacian,
+Karl Sims convention DA=1.0/DB=0.5/dt=1.0) with a 128² CPU fallback through
+the same math when float framebuffers are unavailable, so the app degrades
+instead of dying on SwiftShader or old GPUs. Three decisions worth
+remembering: (1) shader constants interpolated from TypeScript must be
+formatted with toFixed — String(1.0) is "1" and int×float fails to compile
+in ESSL 1.00, silently, unless COMPILE_STATUS is checked (it now is, with
+console.error on failure); (2) HALF_FLOAT uploads take fp16 bit patterns,
+not truncated Uint16 values — a proper float16 encoder wraps all CPU→GPU
+state transfers; (3) Gray–Scott's background state is A=1, B=0 — a Float32
+array defaults to zero everywhere, and with A=0 the seed's reaction term
+A·B² never exceeds the drain (F+k)·B, so a dish that looks initialized is
+actually dead. Every shipped F,k preset was verified by running the exact
+shipped algorithm in Python before entering the data file; two widely-quoted
+folk presets (spots 0.030/0.055, U-skate 0.062/0.0609) failed verification
+under this convention and were excluded rather than quoted on faith.
+
+## D18. KYMA v2: Bessel modes on a circular plate, a Python-computed F-k atlas, and the cost of a dropped framebuffer attachment (KYMA, 2026-09-08)
+
+Three lessons from turning KYMA's simulations into full-control instruments.
+(1) The circular Chladni plate uses genuine Bessel eigenmodes: the field is
+J_m(α_{m,n}·r)·cos(mθ), where α_{m,n} is the n-th zero of the order-m Bessel
+function — precomputed in Python (series + bisection) and embedded as a table
+in both the fragment shader and the JS particle integrator. GLSL ES 1.00 has
+no int overloads for clamp, so mode indices must be clamped in float before
+the int cast, or the shader fails to compile silently — every KYMA shader now
+logs COMPILE_STATUS failures. (2) The F–k atlas is computed, not drawn: a
+Python batch runs 3,136 Gray–Scott dishes simultaneously (numpy vectorized
+over the grid) across the feed-kill plane and colors each cell by mean B
+activity; the shipped PNG is therefore a picture of what the shipped
+algorithm actually does, and clicking it sets the live dish's chemistry.
+(3) The v2 rewrite silently dropped the two framebufferTexture2D calls that
+attach the ping-pong textures — both framebuffers stayed
+FRAMEBUFFER_INCOMPLETE_ATTACHMENT, every sim draw call succeeded into
+nothing, and the dish displayed a uniform background with zero GL errors,
+zero console errors, and a working step counter. A temporary debug hook
+exposing checkFramebufferStatus found it in one round. Rule of thumb: when a
+GPU pipeline produces uniform output with no errors, check framebuffer
+completeness before doubting the math — and verify completeness at setup
+time, not just extension availability.
+
+## D19. KYMA v2.1: rAF loops reschedule first, sims idle off-screen, and counters need their watermarks reset (KYMA, 2026-09-08)
+
+Three interaction-layer rules the audit forced into writing. (1) Any
+animation loop that reschedules requestAnimationFrame as its LAST statement
+dies silently on the first mid-frame exception — KYMA loops now reschedule
+first and wrap the body in try/catch with a console.error, so a bad frame
+costs one frame, not the simulation. (2) A page with six live simulations
+must idle the ones it cannot see: IntersectionObserver gates both sims'
+frame bodies, which is also the difference between a page that feels crisp
+to click and one that feels glitchy — main-thread saturation from invisible
+canvases reads to users as "buttons don't work". (3) Display throttles that
+compare a live value against a watermark must reset the watermark whenever
+the live value is reset: Reseed zeroed the step counter but not the throttle
+watermark, so the chip froze at its pre-reseed value and every Step press
+looked wrong until the real count clawed past it. Pause now flushes the
+exact count, Step sets it immediately, and the audit asserts the displayed
+counter matches reality after each transition.

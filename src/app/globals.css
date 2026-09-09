@@ -3414,3 +3414,117 @@ code, pre { font-family: var(--font-mono); }
 .osc-face-chip[data-face="moss"].on { background: #2F8F5B; border-color: #2F8F5B; color: #F2F4EC; }
 .osc-face-chip[data-face="ember"].on { background: #E8710A; border-color: #E8710A; color: #fff; }
 .osc-face-chip[data-face="ultra"].on { background: #6C5CE7; border-color: #6C5CE7; color: #fff; }
+
+/* ---------- KYMA — pattern formation lab ---------- */
+:root {
+  --kyma-plate: #0E120F;
+}
+
+.kyma-lab { display: flex; flex-direction: column; gap: 20px; }
+.kyma-lab-card { padding: 18px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); background: var(--paper-raised); box-shadow: var(--shadow-raised); }
+.kyma-lab-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+.kyma-lab-head h2 { margin: 0; font-size: 20px; }
+.kyma-lab-head span { color: var(--ink-soft); font-size: 13px; }
+.kyma-canvas-wrap { position: relative; width: 100%; border-radius: var(--radius); overflow: hidden; background: var(--kyma-plate); border: 1px solid var(--line); }
+.kyma-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.kyma-ctl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin-top: 12px; }
+@media (max-width: 560px) { .kyma-ctl-grid { grid-template-columns: 1fr; } }
+.kyma-ctl { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-soft); }
+.kyma-ctl b { color: var(--ink); }
+.kyma-plate-foot, .kyma-rd-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 8px; flex-wrap: wrap; }
+.kyma-freq { font-size: 14px; color: var(--ink); }
+.kyma-freq small { color: var(--ink-soft); }
+.kyma-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.kyma-engine { font-size: 12px; color: var(--ink-soft); }
+.kyma-lab-note { font-size: 14px; line-height: 1.55; margin: 12px 0 8px; }
+.kyma-facts { display: flex; flex-direction: column; gap: 4px; border-top: 1px dashed var(--line); padding-top: 8px; font-size: 13px; color: var(--ink-soft); }
+.kyma-puzzle-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.kyma-puzzle { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: var(--paper); }
+.kyma-puzzle.done { border-color: var(--success-line); }
+.kyma-puzzle-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.kyma-puzzle-head h3 { margin: 0; font-size: 16px; }
+.kyma-prompt { margin: 0 0 10px; font-size: 14px; line-height: 1.55; }
+.kyma-options { display: flex; flex-direction: column; gap: 6px; }
+.kyma-option { text-align: left; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); cursor: pointer; font-size: 14px; color: var(--ink); font-family: inherit; transition: border-color var(--dur-fast) var(--ease-standard); }
+.kyma-option:hover { border-color: var(--accent); }
+.kyma-option.picked { border-color: var(--viz-active); background: var(--accent-soft); }
+.kyma-option.right { border-color: var(--success-line); background: var(--success-soft); }
+.kyma-option.wrong { border-color: var(--viz-pruned); }
+.kyma-numrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.kyma-num { width: 140px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink); font: inherit; }
+.kyma-check { margin-top: 8px; align-self: flex-start; }
+.kyma-verdict { font-size: 13px; margin-top: 8px; }
+.kyma-verdict.yes { color: var(--viz-settled); }
+.kyma-verdict.no { color: var(--viz-pruned); }
+.kyma-why { margin: 10px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-soft); border-top: 1px dashed var(--line); padding-top: 8px; }
+.kyma-sim-puzzle { display: flex; flex-direction: column; gap: 8px; }
+.kyma-sim-puzzle .kyma-plate, .kyma-sim-puzzle .kyma-rd { max-width: 420px; }
+
+/* ---------- KYMA v2 — immersive lab ---------- */
+.kyma-lab-card-wide { padding: 20px; }
+.kyma-live-chip { font: 700 10px var(--font-mono, monospace); letter-spacing: .14em; text-transform: uppercase; color: var(--viz-settled); border: 1px solid var(--success-line); border-radius: 999px; padding: 3px 10px; background: var(--success-soft); }
+.kyma-lab-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
+.kyma-lab-body { display: grid; grid-template-columns: minmax(0, 480px) minmax(280px, 1fr); gap: 22px; align-items: start; }
+@media (max-width: 980px) { .kyma-lab-body { grid-template-columns: 1fr; } }
+.kyma-lab-stage { min-width: 0; }
+.kyma-lab-rail { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.kyma-how { list-style: none; margin: 0; padding: 12px 14px; border: 1px dashed var(--line); border-radius: var(--radius); display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--ink-soft); }
+.kyma-how b { color: var(--ink); }
+.kyma-canvas-wrap { position: relative; width: 100%; border-radius: calc(var(--radius) + 2px); overflow: hidden; background: var(--kyma-plate); border: 1px solid var(--line); box-shadow: inset 0 0 60px rgb(0 0 0 / .45), var(--shadow-raised); }
+.kyma-sand-canvas { cursor: crosshair; }
+.kyma-rd-canvas { cursor: crosshair; }
+.kyma-hud { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none; }
+.kyma-chip { font: 600 11px var(--font-mono, monospace); letter-spacing: .04em; color: #E8E6D8; background: rgb(10 14 12 / .62); border: 1px solid rgb(232 230 216 / .14); border-radius: 6px; padding: 3px 8px; backdrop-filter: blur(4px); }
+.kyma-chip-freq { color: #F2D9A0; border-color: rgb(242 217 160 / .25); }
+.kyma-chip-warn { color: #F2B8A0; border-color: rgb(242 184 160 / .3); }
+.kyma-seg-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.kyma-seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--paper); }
+.kyma-seg button { border: 0; background: transparent; padding: 7px 14px; font: inherit; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-right: 1px solid var(--line); transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard); }
+.kyma-seg button:last-child { border-right: 0; }
+.kyma-seg button:hover { color: var(--ink); }
+.kyma-seg button.on { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+.kyma-presets-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.kyma-ctl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 20px; margin-top: 14px; }
+@media (max-width: 560px) { .kyma-ctl-grid { grid-template-columns: 1fr; } }
+.kyma-ctl { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--ink-soft); }
+.kyma-ctl b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.kyma-ctl input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; cursor: pointer; }
+.kyma-ctl input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--line); }
+.kyma-ctl input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper-raised); box-shadow: 0 1px 4px rgb(0 0 0 / .25); }
+.kyma-ctl input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line); }
+.kyma-ctl input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper-raised); }
+.kyma-atlas-row { position: relative; display: grid; grid-template-columns: 150px 1fr; gap: 4px 14px; margin-top: 14px; align-items: center; }
+.kyma-atlas { grid-column: 1; grid-row: 1 / 4; position: relative; width: 150px; aspect-ratio: 1; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); cursor: pointer; }
+.kyma-atlas img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.kyma-atlas-marker { position: absolute; width: 12px; height: 12px; border: 2px solid #FFFFFF; border-radius: 50%; box-shadow: 0 0 0 2px rgb(0 0 0 / .55), 0 0 10px rgb(255 255 255 / .5); transform: translate(-50%, -50%); pointer-events: none; }
+.kyma-atlas-dot { position: absolute; width: 7px; height: 7px; background: #FFFFFF; border-radius: 50%; transform: translate(-50%, -50%); opacity: .75; pointer-events: none; }
+.kyma-atlas-axis { font: 600 10px var(--font-mono, monospace); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+.kyma-atlas-axis-x { grid-column: 2; grid-row: 1; align-self: end; }
+.kyma-atlas-axis-y { grid-column: 2; grid-row: 2; align-self: start; }
+.kyma-atlas-note { grid-column: 2; grid-row: 3; margin: 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
+@media (max-width: 560px) { .kyma-atlas-row { grid-template-columns: 1fr; } .kyma-atlas { grid-column: 1; grid-row: auto; justify-self: center; } .kyma-atlas-axis-x, .kyma-atlas-axis-y, .kyma-atlas-note { grid-column: 1; grid-row: auto; } }
+
+/* KYMA fullscreen mode */
+.kyma-fs-btn { position: absolute; top: 10px; right: 10px; z-index: 6; font: 600 11px var(--font-mono, monospace); letter-spacing: .06em; color: #E8E6D8; background: rgb(10 14 12 / .62); border: 1px solid rgb(232 230 216 / .2); border-radius: 6px; padding: 4px 9px; cursor: pointer; backdrop-filter: blur(4px); transition: border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard); }
+.kyma-fs-btn:hover { border-color: rgb(242 217 160 / .5); color: #F2D9A0; }
+.kyma-canvas-wrap:fullscreen { background: #050807; display: grid; place-items: center; border: 0; border-radius: 0; box-shadow: none; }
+.kyma-canvas-wrap:fullscreen .kyma-canvas { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(100vw, 100vh); height: min(100vw, 100vh); }
+.kyma-canvas-wrap:fullscreen .kyma-hud, .kyma-canvas-wrap:fullscreen .kyma-fs-btn { position: fixed; }
+.kyma-canvas-wrap:fullscreen .kyma-hud { top: 18px; left: 18px; }
+.kyma-canvas-wrap:fullscreen .kyma-fs-btn { top: 18px; right: 18px; }
+
+/* KYMA onboarding tour + how-to strip + hints */
+.kyma-howto { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 860px) { .kyma-howto { grid-template-columns: 1fr; } }
+.kyma-howto-card { padding: 14px 16px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--paper-raised); display: flex; flex-direction: column; gap: 6px; }
+.kyma-howto-card b { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.kyma-howto-card span { font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); }
+.kyma-hint { margin: 10px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-soft); border-top: 1px dashed var(--line); padding-top: 8px; }
+.kyma-tour-backdrop { position: fixed; inset: 0; background: rgb(8 12 10 / .55); backdrop-filter: blur(3px); z-index: 80; display: grid; place-items: center; padding: 20px; }
+.kyma-tour-card { width: min(500px, 100%); background: var(--paper-raised); border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); box-shadow: var(--shadow-raised); padding: 22px 24px; display: flex; flex-direction: column; gap: 10px; }
+.kyma-tour-step { font: 700 11px var(--font-mono, monospace); letter-spacing: .14em; color: var(--accent); text-transform: uppercase; }
+.kyma-tour-card h3 { margin: 0; font-size: 20px; }
+.kyma-tour-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink); }
+.kyma-tour-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; flex-wrap: wrap; }
+.kyma-tour-glow { outline: 2px solid var(--accent); outline-offset: 3px; animation: kyma-glow 1.4s var(--ease-standard) infinite; }
+@keyframes kyma-glow { 0%, 100% { outline-color: var(--accent); } 50% { outline-color: var(--viz-pointer); } }

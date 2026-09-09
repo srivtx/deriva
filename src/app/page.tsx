@@ -33,6 +33,7 @@ const G = {
   sky: "linear-gradient(135deg, #0891B2, #056680)",
   ultron: "linear-gradient(135deg, #6D28D9, #3B0E7E)",
   pdb: "linear-gradient(135deg, #B45309, #7C2D12)",
+  kyma: "linear-gradient(135deg, #0F766E, #3B0764)",
 }
 
 const APP_SECTIONS = [
@@ -82,6 +83,7 @@ const APP_SECTIONS = [
     { id: "lld", href: "/lld", name: "LLD", glyph: "◇", gradient: G.teal },
     { id: "db", href: "/db", name: "DB", glyph: "⌗", gradient: "linear-gradient(135deg, #1F6F8B, #123F52)" },
     { id: "ultron", href: "/ultron", name: "Ultron", glyph: "⊛", gradient: G.ultron },
+    { id: "kyma", href: "/kyma", name: "KYMA", glyph: "❋", gradient: G.kyma },
     { id: "expedition", href: "/expedition", name: "Expedition", glyph: "△", gradient: G.ember },
     { id: "res", href: "/res", name: "RES", glyph: "∴", gradient: "linear-gradient(135deg, #A0305A, #6E1F3E)" },
     { id: "games", href: "/games", name: "Games", glyph: "◆", gradient: G.pink },

@@ -266,3 +266,114 @@ Python (starter red, solution green, 92/92), every debugger session verified
 (87/87), and the expansion verified end-to-end through the real Pyodide worker
 via CDP, including a TLE drill exceeding its budget in the browser with the
 correct answer and a pdb transcript that prints 0.30000000000000004.
+
+### KYMA — the pattern-formation lab (built 2026-09-08, branch `app-fluid-patterns`)
+
+A new Explore app teaching how fluids and vibrating matter make patterns — why
+sand on a humming plate snaps into mandalas, why diffusion paints leopard
+spots. Two live simulations, both raw WebGL with no new dependencies: a Chladni
+plate (eigenmode field shader f = a·cos(πmx)cos(πny) + (1−a)·cos(πnx)cos(πmy),
+nodal lines where |f| ≈ 0, plus ~3000 sand particles doing gradient descent on
+|f|² with |f|-scaled jitter, a twin-mode blend slider, and a Web Audio tone at
+c·√(m²+n²) so the figure can be heard) and a Gray–Scott reaction–diffusion
+dish (ping-pong RGBA16F framebuffers at 192², 9-point laplacian, DA=1.0,
+DB=0.5, dt=1.0, Karl Sims convention, feed/kill sliders, paint-to-seed, CPU
+fallback when float framebuffers are unavailable). Twelve puzzles in two tiers
+(The Still Plate; The Turing Zoo) across four stages, graded against real
+physics: multiple choice and numeric recall (Chladni's law (m+2n)², the
+3-4-5 mode rung, Turing's 38-year wait), plus simulation puzzles — dial the
+plate until the sand matches a green target figure (graded on m, n and the
+twin blend) and dial F, k until the dish grows the described texture (graded
+against verified presets: coral 0.0545/0.062, mitosis 0.0367/0.0649 — both
+verified by running the exact shipped algorithm in Python before shipping;
+two folk presets that failed verification were dropped). Verification caught
+four real bugs: GLSL template interpolation of the number 1.0 emitted `1`
+(int×float is illegal in ESSL 1.00 — shader silently failed to compile until
+compile-status checks surfaced it), `textureSize()` used in an ESSL 1.00
+shader, a missing texImage2D storage allocation making the seed upload fail
+silently (INVALID_OPERATION, ignored), and a forgotten A=1 background in the
+initial state (Float32Array starts at zero; the seed could never cross the
+growth threshold A·B > F+k without it — the dish stayed uniform while every
+GL call succeeded). Gray–Scott growth pace was calibrated against Python
+(coverage 1.9% → 7.8% over 1800 steps at 192²) so defaults feel alive
+without faking the physics. End-to-end verified via CDP on the production
+build: 25/25 checks including wrong-answer feedback paths, slider-driven
+simulation grading, progress persistence across reload, and launcher
+registration on all surfaces (catalog, home, More menu, command palette,
+breadcrumbs, mode prefixes).
+
+### KYMA v2 — the lab becomes an instrument (same branch, 2026-09-08)
+
+The first KYMA read like a quiz with pictures; v2 turns both simulations into
+instruments you operate. The Chladni plate gains a circular mode — real Bessel
+eigenmodes J_m(α_{m,n}r)·cos(mθ) with a precomputed zero table (m 0..6, n 1..5,
+computed by series + bisection in Python and embedded in both the GLSL shader
+and the JS particle field), giving true mandala figures (Ring, Halo, Star,
+Daisy, Mandala, Rose presets); square presets (Twin, Weave, Lattice, Diagonal,
+Drapery, Filigree); a drive (agitation) slider that makes the sand boil or
+lock; a glow slider; click-to-pour sand; a Scatter button; HUD chips showing
+the mode badge and the live frequency. The Gray–Scott dish gains the F–k
+atlas — a PNG computed in Python by running the exact shipped algorithm
+across a 56×56 grid of chemistries (vectorized batch: 3,136 simultaneous
+32² dishes, scattered small-dot seeds, 500 iterations, colored by mean B
+activity) — click anywhere on it to steer the chemistry there, with preset
+dots marked; plus Seed/Clear brushes with a size slider, Pause/Run/Step
+controls with a step counter, four colormaps (Ember, Rose, Tide, Dune), and
+live HUD chips (F, k, step count, paused state). The lab layout becomes
+full-width instrument panels: big stage canvas plus a how-to rail, segmented
+toggle controls, custom-styled range sliders, and dark vignette frames.
+Verification again earned its keep: the GLSL clamp(int, int, int) overload
+does not exist in ESSL 1.00 (the plate field shader silently failed until
+compile-status logging surfaced it — fixed by clamping in float), and the v2
+rewrite had dropped the framebufferTexture2D attachment calls entirely, so
+both ping-pong framebuffers reported FRAMEBUFFER_INCOMPLETE_ATTACHMENT while
+every draw call silently succeeded into nothing — a debug hook exposing
+checkFramebufferStatus caught it. Gray–Scott seeding was recalibrated: a
+large square seed at coral parameters starves its own interior (the reaction
+consumes A faster than F can feed it, the middle collapses, and a faint
+frontier creeps outward — verified against Python step-by-step), so the dish
+now seeds five small colonies that visibly grow from the first seconds.
+Final CDP end-to-end on the production build: 19/19 — field structure on
+square and circle plates, atlas click steering, pause/step/resume, evolving
+dish chemistry, tone, and all twelve puzzles solved and persisted.
+
+### KYMA v2.1 — full-screen mode, idle-when-offscreen, and the interaction audit (same branch, 2026-09-08)
+
+A click-by-click audit of every control (pause/run/step rapid toggling, atlas
+steering, colormap and brush switching, shape toggling, tone, sand pouring,
+scroll-away behavior) surfaced three real defects, all fixed. The frame loops
+of both simulations now reschedule requestAnimationFrame FIRST and run their
+bodies inside try/catch, so a mid-frame exception can no longer silently kill
+a simulation; both sims observe an IntersectionObserver and idle completely
+when scrolled off the viewport (previously all six live canvases — the lab
+pair plus four puzzle minis — simulated at full rate forever, which is what
+made the page feel glitchy to click), and the puzzle mini dishes run at half
+speed. Full-screen mode: a ⛶ button on each lab canvas; in full-screen the
+canvas stays a centered square via min(100vw, 100vh) and the resize observer
+now measures the canvas itself so the GL viewport always matches the CSS box.
+The tone generator calls ctx.resume() so browsers that start the context
+suspended still sound. And the step counter told the truth at last: the
+update throttle compared against a watermark that Reseed never reset, so
+after a reseed the displayed count froze at its pre-reseed value (920 real
+steps, chip stuck at 1161) until the real count climbed past it — Pause also
+flushes the exact count now, and Step advances exactly one step with the
+chip updating immediately. Audit: 20/20 interactions verified headlessly
+including pause truly freezing the simulation, step = +1, resume advancing,
+atlas click syncing sliders, idle-when-scrolled-away and resume-when-visible;
+the full puzzle end-to-end remains green.
+
+### KYMA v2.2 — onboarding tour, plain-language hints, smooth dish (same branch, 2026-09-08)
+
+The lab assumed too much; now it explains itself. A four-step guided tour
+opens automatically on first visit (portal to document.body — the app shell
+wraps content in a transformed ancestor, so position:fixed centers against
+the page, not the viewport, unless the overlay is portaled): what the lab is,
+the Chladni plate, the Turing dish, and the puzzle ladder, each with a Show
+me button that scrolls to and glow-highlights the target; a "What is this?"
+button in the hero replays it. A Watch / Operate / Solve strip sits between
+hero and lab, and each machine's controls carry a plain-language hint line
+(m, n = wave-bands across/along; F = food per tick, k = drain rate). The
+dish's blocky upscale is gone: the sim grid went 192² → 256² and the display
+samples with LINEAR filtering — safe because every simulation read lands
+exactly on a texel center, so the chemistry is unchanged while the picture
+smooths. End-to-end and the 20-check interaction audit remain green.

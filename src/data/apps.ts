@@ -31,6 +31,7 @@ const G = {
   lake: "linear-gradient(135deg, #1F6F8B, #123F52)",
   ultron: "linear-gradient(135deg, #6D28D9, #3B0E7E)",
   pdb: "linear-gradient(135deg, #B45309, #7C2D12)",
+  kyma: "linear-gradient(135deg, #0F766E, #3B0764)",
 }
 
 export const APP_CATALOG: AppMeta[] = [
@@ -69,6 +70,7 @@ export const APP_CATALOG: AppMeta[] = [
     { id: "lld", name: "LLD", glyph: "◇", gradient: G.teal, desc: "55 design problems, SOLID to concurrency", category: "Explore", href: "/lld", status: "installed" },
     { id: "db", name: "DB", glyph: "⌗", gradient: G.lake, desc: "50 problems, SELECT to transactions", category: "Explore", href: "/db", status: "installed" },
     { id: "ultron", name: "Ultron", glyph: "⊛", gradient: G.ultron, desc: "60 AI/ML drills, loss to backprop", category: "Explore", href: "/ultron", status: "installed" },
+    { id: "kyma", name: "KYMA", glyph: "❋", gradient: G.kyma, desc: "Pattern-formation lab — waves, sand and Turing chemistry", category: "Explore", href: "/kyma", status: "installed" },
   { id: "expedition", name: "Expedition", glyph: "△", gradient: G.ember, desc: "Retrieve & transfer ideas", category: "Explore", href: "/expedition", status: "installed" },
   { id: "res", name: "RES", glyph: "∴", gradient: G.wine, desc: "Research brainstorm trainer", category: "Explore", href: "/res", status: "installed" },
   { id: "games", name: "Games", glyph: "◆", gradient: G.pink, desc: "Practice through play", category: "Explore", href: "/games", status: "installed" },
