@@ -116,3 +116,69 @@ export function visibleDelta(fullSoFar: string, alreadyEmitted: string): string 
   }
   return ""
 }
+
+/* ── v18 tutor-loop additions ────────────────────────────────────────────── */
+
+/** Byte-exact ChatML renderer — the same bytes apply_chat_template produces
+ *  for both families (verified byte-for-byte in Node against the official
+ *  templates, incl. Qwen3's enable_thinking:false tail; see
+ *  scripts/tutor_loop_mirror.js). The GPU continuation path needs it because
+ *  mid-turn continuation ("finish the sentence you were cut off on") cannot
+ *  be expressed through the messages array — the template would close the
+ *  partial assistant turn and open a new one. LFM2's template renders the
+ *  BOS itself, so it is part of the string; Qwen3 has no BOS. */
+export function buildExactChatML(
+  messages: PromptMessage[],
+  assistantSuffix?: string,
+  family?: "lfm2" | "qwen3",
+): string {
+  let s = family === "lfm2" ? "<|startoftext|>" : ""
+  for (const m of messages) s += `<|im_start|>${m.role}\n${m.content}<|im_end|>\n`
+  return s + `<|im_start|>assistant\n${assistantSuffix ?? ""}`
+}
+
+/** Rough token estimate used before a tokenizer is available (engine cold).
+ *  ~3.6 chars/token holds well for English + code on these vocabularies. */
+export function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 3.6)
+}
+
+export interface HistoryPlan {
+  /** the suffix of `history` to keep */
+  keep: PromptMessage[]
+  /** how many leading messages were dropped */
+  dropped: number
+  /** honest note appended to the system prompt when trimming happened */
+  note: string
+}
+
+/** Token-aware context windowing. The blind `slice(-8)` of v15–v17 could
+ *  still blow the 2048-token context with long turns — and llama.cpp
+ *  truncates from the LEFT, silently eating the system prompt first (the
+ *  same "weird reply" class as the v17 turbo bug). This keeps the LATEST
+ *  turns that fit `budgetTokens`, never drops below the last `minKeep`
+ *  messages, and reports exactly what was dropped. */
+export function planHistory(
+  history: PromptMessage[],
+  counts: number[],
+  budgetTokens: number,
+  minKeep = 4,
+): HistoryPlan {
+  const n = Math.min(history.length, counts.length)
+  let total = 0
+  for (let i = 0; i < n; i++) total += Math.max(1, counts[i])
+  if (total <= budgetTokens || n <= minKeep) {
+    return { keep: history.slice(0, n), dropped: 0, note: "" }
+  }
+  let start = 0
+  let sum = total
+  while (start < n - minKeep && sum > budgetTokens) {
+    sum -= Math.max(1, counts[start])
+    start += 1
+  }
+  return {
+    keep: history.slice(start),
+    dropped: start,
+    note: " (Older turns were trimmed to fit the context.)",
+  }
+}

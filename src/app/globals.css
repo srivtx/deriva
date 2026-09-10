@@ -3891,3 +3891,65 @@ code, pre { font-family: var(--font-mono); }
   .ghost-gpu-fetch-bar > span.indet { animation: none !important; width: 26% !important; opacity: 0.6; }
 }
 /* v17 indet reuses the v16 ghost-indet keyframes (translateX sweep) */
+
+/* ── Ghost v18 · tutor loop — regenerate, edit, continue, share ──────────
+   The reply stops being a dead end. Small affordances ride on the
+   messages themselves: edit under the last question, retry + copy under
+   the last answer, a continue chip when the answer was cut at the token
+   cap, and an editing banner above the composer that says exactly what
+   send is about to do. Motion reuses the v16 spring tokens — the v18
+   additions only add entrances and micro-presses, nothing that loops. */
+.ghost-msg-actions { display: inline-flex; align-items: center; gap: 10px; margin-top: 2px; }
+
+.ghost-msg-edit {
+  appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+  width: 30px; height: 26px; display: grid; place-items: center;
+  border-radius: 9px; cursor: pointer; opacity: 0.62; padding: 0;
+  transition: opacity 0.14s ease, color 0.14s ease, background 0.14s ease, transform 0.14s var(--g-ease-micro);
+}
+.ghost-msg-edit:hover { opacity: 1; color: var(--accent); background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.ghost-msg-edit:active { transform: scale(0.88); }
+.ghost-msg-edit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; opacity: 1; }
+.from-user .ghost-msg-edit { margin-top: -2px; }
+
+.ghost-continue-chip {
+  appearance: none; display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--paper-raised));
+  color: var(--ink); font: 600 10.5px/1 var(--font-mono, ui-monospace, Menlo, monospace);
+  letter-spacing: 0.12em; padding: 8px 13px; border-radius: 999px; cursor: pointer;
+  margin-top: 4px; align-self: flex-start;
+  animation: ghost-rise-in 0.26s var(--g-ease-out) both;
+  transition: transform 0.16s var(--g-ease-micro), border-color 0.16s ease;
+}
+.ghost-continue-chip svg { color: var(--accent); }
+.ghost-continue-chip:hover { border-color: var(--accent); }
+.ghost-continue-chip:active { transform: scale(0.93); }
+.ghost-continue-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.ghost-editing {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 12px; padding: 7px 8px 7px 12px; margin-bottom: 10px;
+  color: var(--ink-soft); font: 500 12px/1.35 var(--font-ui);
+  animation: ghost-rise-in 0.24s var(--g-ease-out) both;
+}
+.ghost-editing > svg:first-child { color: var(--accent); flex: none; }
+.ghost-editing > span { flex: 1; min-width: 0; }
+.ghost-editing button {
+  appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+  width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px;
+  cursor: pointer; padding: 0;
+  transition: color 0.13s ease, background 0.13s ease;
+}
+.ghost-editing button:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.ghost-editing button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* share-button check morph — the same language as the copy check (v16) */
+.ghost-pop { animation: ghost-copy-pop 0.34s var(--g-ease-micro) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ghost-continue-chip, .ghost-editing { animation: none !important; }
+  .ghost-msg-edit, .ghost-continue-chip { transition: none; }
+  .ghost-pop { animation: none !important; }
+}

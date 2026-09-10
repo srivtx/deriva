@@ -13,7 +13,10 @@ import {
   setBackendPref,
   type GhostModel,
   type DownloadProgress,
+  type ChatResult,
+  type ChatOpts,
 } from "@/lib/ghost/engine"
+import { planHistory, estimateTokens } from "@/lib/ghost/text"
 
 interface ChatMessage {
   role: "user" | "assistant"
@@ -53,6 +56,13 @@ const SUGGESTIONS = [
   "Nudge me: detect a cycle in a linked list",
   "When is a hash map the wrong choice?",
 ]
+
+/** history window budget in tokens — system + history + one reply (+ one
+ *  continuation segment) must fit the 2048-token context with headroom */
+const HISTORY_TOKEN_BUDGET = 1024
+/** manual Continue clicks per answer — bounded so a looping model cannot
+ *  trap the session in an endless reply */
+const MAX_MANUAL_CONTINUES = 3
 
 /* ── Markdown-lite renderer (no deps, no innerHTML) ─────────────────────
    Bold, italic, inline code, fenced code blocks, bullet / numbered lists,
@@ -377,6 +387,17 @@ export default function GhostPage() {
   const [busyElapsed, setBusyElapsed] = useState(0)
   const [liveTps, setLiveTps] = useState<number | null>(null)
   const [gpuFetch, setGpuFetch] = useState(false)
+  // v18 tutor-loop state
+  /** index of the user message being edited (null = normal compose) */
+  const [editing, setEditing] = useState<number | null>(null)
+  /** consecutive regenerations of the current reply → temperature ladder */
+  const [regenCount, setRegenCount] = useState(0)
+  /** manual Continue clicks used for the current reply */
+  const [contCount, setContCount] = useState(0)
+  /** the last reply ended cap-dead even after auto-continue → offer Continue */
+  const [capped, setCapped] = useState(false)
+  /** share button morphed to a check (copied to clipboard) */
+  const [sharedOk, setSharedOk] = useState(false)
   const busyRef = useRef(false)
   // active-session id mirror: persistence reads this so it never sees a
   // stale closure — the root cause of duplicated history rows (v16 fix)
@@ -414,6 +435,15 @@ export default function GhostPage() {
 
   useEffect(() => {
     setPref(backendPref())
+  }, [])
+
+  // Field-debug handle (v18): the engine singleton + model picker on
+  // window, so a field report can be triaged from the console —
+  // __ghost.engine.diagnostics(), __ghost.getSelectedModel(), and the
+  // countTokens probe used by the E2E suite.
+  useEffect(() => {
+    const w = window as unknown as { __ghost?: unknown }
+    w.__ghost = { engine: ghostEngine, getSelectedModel }
   }, [])
 
   useEffect(() => {
@@ -648,27 +678,13 @@ export default function GhostPage() {
     return () => clearInterval(id)
   }, [busy])
 
-  const send = useCallback(async (raw?: string) => {
-    const text = (raw ?? input).trim()
-    if (!text || busyRef.current) return
-    busyRef.current = true
-    setBusy(true)
-    busyStartRef.current = performance.now()
-    livePieceCount.current = 0
-    lastTpsEmit.current = 0
-    setBusyElapsed(0)
-    setLiveTps(null)
-    stick.current = true
-    setFollow(true)
-    setInput("")
-    setError(null)
-    haptic(8)
-
-    const history = [...messages, { role: "user" as const, content: text }]
-    setMessages(history)
-    persistSession(history, text)
-
-    let streamedText = ""
+  /* ── v18 tutor loop: ONE streaming harness for every turn runner ────────
+     send / regenerate / continueMore all stream into the LAST assistant
+     message. makeStream() owns the 90ms flush cadence and the live tok/s
+     chip; `base` seeds it with text that is already on screen (manual
+     continuation) so new deltas append instead of restarting. */
+  const makeStream = (base = "") => {
+    let streamedText = base
     let flushTimer: ReturnType<typeof setTimeout> | null = null
     const flushNow = () => {
       flushTimer = null
@@ -681,59 +697,109 @@ export default function GhostPage() {
         return next
       })
     }
-    const askGhost = (extra?: string) =>
-      ghostEngine.chat(
-        model,
-        [
-          { role: "system", content: systemFor(history) + (extra ? " " + extra : "") },
-          ...history.slice(-8),
-        ],
-        GHOST_MAX_TOKENS,
-        piece => {
-          streamedText += piece
-          livePieceCount.current += 1
-          const now = performance.now()
-          if (now - lastTpsEmit.current > 250) {
-            lastTpsEmit.current = now
-            const secs = Math.max((now - busyStartRef.current) / 1000, 0.001)
-            setLiveTps(livePieceCount.current / secs)
-          }
-          if (!flushTimer) flushTimer = setTimeout(flushNow, 90)
-        },
-      )
-    try {
-      await ghostEngine.load(model, undefined, loadDl)
-      const result = await askGhost()
-
-      // Echo guard: tiny models sometimes regurgitate their previous reply
-      // verbatim. Detect substantial duplication and retry once with a nudge.
-      const words = (s: string) =>
-        s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 2)
-      const prevAssistant = [...history].reverse().find(m => m.role === "assistant")
-      if (prevAssistant && result.text.trim()) {
-        const a = new Set(words(prevAssistant.content))
-        const b = words(result.text)
-        const overlap = b.length ? b.filter(w => a.has(w)).length / Math.max(b.length, 1) : 0
-        if (overlap > 0.7 || result.text.trim() === prevAssistant.content.trim()) {
-          streamedText = ""
-          flushNow()
-          const retry = await askGhost("Reply with new information the previous reply missed.")
-          Object.assign(result, retry)
-        }
+    const push = (piece: string) => {
+      streamedText += piece
+      livePieceCount.current += 1
+      const now = performance.now()
+      if (now - lastTpsEmit.current > 250) {
+        lastTpsEmit.current = now
+        const secs = Math.max((now - busyStartRef.current) / 1000, 0.001)
+        setLiveTps(livePieceCount.current / secs)
       }
-      if (flushTimer) { clearTimeout(flushTimer); flushNow() }
-      setTps(result.tps)
+      if (!flushTimer) flushTimer = setTimeout(flushNow, 90)
+    }
+    const reset = () => {
+      streamedText = ""
+      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
+      flushNow()
+    }
+    const settle = (finalText: string) => {
+      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
+      const content = finalText || streamedText || "(silence)"
       setMessages(prev => {
         const next = prev.slice()
         const last = next[next.length - 1]
-        if (last?.role === "assistant") {
-          next[next.length - 1] = { role: "assistant", content: result.text || streamedText || "(silence)" }
-        } else {
-          next.push({ role: "assistant", content: result.text || streamedText || "(silence)" })
-        }
+        if (last?.role === "assistant") next[next.length - 1] = { role: "assistant", content }
+        else next.push({ role: "assistant", content })
         persistSession(next)
         return next
       })
+    }
+    return { push, reset, settle, text: () => streamedText }
+  }
+
+  /* Token-aware context windowing (v18) replaces the blind slice(-8): the
+     budget covers history only, the system prompt always rides along, and
+     dropped turns are disclosed to the model so it knows context is missing.
+     Exact counts when a tokenizer is loaded; ~3.6 chars/token otherwise. */
+  const buildEngineMessages = async (history: ChatMessage[], extra?: string) => {
+    const counts = await Promise.all(history.map(async m => {
+      const n = await ghostEngine.countTokens(model, m.content)
+      return n > 0 ? n : estimateTokens(m.content)
+    }))
+    const plan = planHistory(history, counts, HISTORY_TOKEN_BUDGET)
+    return [
+      { role: "system", content: systemFor(history) + (extra ? " " + extra : "") + plan.note },
+      ...plan.keep,
+    ]
+  }
+
+  const runTurn = useCallback(async (
+    history: ChatMessage[],
+    kind: "send" | "regen" | "continue",
+    chatOpts?: ChatOpts,
+  ) => {
+    if (busyRef.current) return
+    busyRef.current = true
+    setBusy(true)
+    busyStartRef.current = performance.now()
+    livePieceCount.current = 0
+    lastTpsEmit.current = 0
+    setBusyElapsed(0)
+    setLiveTps(null)
+    stick.current = true
+    setFollow(true)
+    setError(null)
+    haptic(8)
+    const lastMsg = messages[messages.length - 1]
+    const stream = makeStream(kind === "continue" && lastMsg?.role === "assistant" ? lastMsg.content : "")
+
+    try {
+      await ghostEngine.load(model, undefined, loadDl)
+      let result: ChatResult
+      if (kind === "continue") {
+        result = await ghostEngine.continueChat(model, stream.push)
+      } else {
+        result = await ghostEngine.chat(model, await buildEngineMessages(history), GHOST_MAX_TOKENS, stream.push, chatOpts)
+
+        // Echo guard (fresh sends only): tiny models sometimes regurgitate
+        // their previous reply verbatim. Detect substantial duplication and
+        // retry once with a nudge.
+        const words = (s: string) =>
+          s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 2)
+        const prevAssistant = [...history].reverse().find(m => m.role === "assistant")
+        if (prevAssistant && result.text.trim()) {
+          const a = new Set(words(prevAssistant.content))
+          const b = words(result.text)
+          const overlap = b.length ? b.filter(w => a.has(w)).length / Math.max(b.length, 1) : 0
+          if (overlap > 0.7 || result.text.trim() === prevAssistant.content.trim()) {
+            stream.reset()
+            const retry = await ghostEngine.chat(model, await buildEngineMessages(history, "Reply with new information the previous reply missed."), GHOST_MAX_TOKENS, stream.push, chatOpts)
+            result = retry
+          }
+        }
+      }
+
+      // Cap-death: seamlessly continue once with the (warm) engine — the
+      // user just sees the answer keep going. If the model STILL bursts,
+      // surface an honest Continue affordance instead of looping forever.
+      if (result.finishReason === "length" && result.text.trim() && kind !== "continue") {
+        const cont = await ghostEngine.continueChat(model, stream.push)
+        if (cont.text.trim()) result = cont
+      }
+      stream.settle(result.text)
+      setTps(result.tps)
+      setCapped(result.finishReason === "length")
     } catch (err) {
       const message = String((err as Error)?.message || err)
       const rawMsg = message.toLowerCase()
@@ -752,19 +818,10 @@ export default function GhostPage() {
         try {
           await ghostEngine.eject()
           await ghostEngine.load(model, undefined, loadDl)
-          const retry = await askGhost()
-          if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
-          flushNow()
-          streamedText = retry.text
+          const retry = await ghostEngine.chat(model, await buildEngineMessages(history), GHOST_MAX_TOKENS, stream.push, chatOpts)
+          stream.settle(retry.text)
           setTps(retry.tps)
-          setMessages(prev => {
-            const next = prev.slice()
-            const last = next[next.length - 1]
-            if (last?.role === "assistant") next[next.length - 1] = { role: "assistant", content: retry.text || "(silence)" }
-            else next.push({ role: "assistant", content: retry.text || "(silence)" })
-            persistSession(next)
-            return next
-          })
+          setCapped(retry.finishReason === "length")
           return
         } catch (retryErr) {
           setError("The brain ran out of memory — try a shorter question or the smaller brain.")
@@ -777,7 +834,7 @@ export default function GhostPage() {
       } else {
         setError(message)
       }
-      if (!streamedText) {
+      if (!stream.text()) {
         setMessages(prev => {
           const next = prev.filter((m, i) => !(i === prev.length - 1 && m.role === "assistant"))
           persistSession(next)
@@ -791,7 +848,111 @@ export default function GhostPage() {
       setLiveTps(null)
       setGpuFetch(false)
     }
-  }, [input, messages, persistSession, model, deleteByUrl, startGet, loadDl])
+  }, [messages, model, persistSession, refreshStorage, startGet, loadDl])
+
+  const send = useCallback(async (raw?: string) => {
+    const text = (raw ?? input).trim()
+    if (!text || busyRef.current) return
+    haptic(8)
+    setInput("")
+    setRegenCount(0)
+    setContCount(0)
+    setCapped(false)
+    if (editing != null) {
+      // editing an earlier question: truncate from that message and re-run
+      // the turn from the corrected text — no wasted answers, no dead turns
+      const idx = Math.max(0, Math.min(editing, messages.length - 1))
+      const history = [...messages.slice(0, idx), { role: "user" as const, content: text }]
+      setEditing(null)
+      setMessages(history)
+      persistSession(history)
+      await runTurn(history, "send")
+      return
+    }
+    const history = [...messages, { role: "user" as const, content: text }]
+    setMessages(history)
+    persistSession(history, text)
+    await runTurn(history, "send")
+  }, [input, messages, editing, persistSession, runTurn])
+
+  /** Re-roll the last reply. The sampler varies on two levers — temperature
+   *  climbs +0.2 per attempt and repetition-penalty tightens — because
+   *  wllama re-seeds its sampler chain from the fixed context seed on every
+   *  call: same prompt + same sampling can replay the identical reply
+   *  verbatim (confirmed by probe). The ladder makes that vanishingly
+   *  unlikely while keeping the early re-rolls close to the model's
+   *  intended profile. */
+  const regenerate = useCallback(async () => {
+    if (busyRef.current || messages.length === 0) return
+    if (messages[messages.length - 1]?.role !== "assistant") return
+    const hist = messages.slice(0, -1)
+    const attempt = regenCount + 1
+    setRegenCount(c => c + 1)
+    setContCount(0)
+    setCapped(false)
+    setMessages(hist)
+    persistSession(hist)
+    await runTurn(hist, "regen", {
+      temperature: model.temp + Math.min(0.2 * attempt, 0.45),
+      penaltyRepeat: 1.15 + Math.min(0.08 * attempt, 0.3),
+      useCache: false,
+    })
+  }, [messages, regenCount, model, persistSession, runTurn])
+
+  /** Manual Continue: one more segment onto the capped reply. */
+  const continueMore = useCallback(async () => {
+    if (busyRef.current || contCount >= MAX_MANUAL_CONTINUES) return
+    if (messages[messages.length - 1]?.role !== "assistant") return
+    setContCount(c => c + 1)
+    setCapped(false)
+    await runTurn(messages, "continue")
+  }, [contCount, messages, runTurn])
+
+  /** Load the LAST user question into the composer for editing. */
+  const editLast = useCallback(() => {
+    if (busyRef.current) return
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        setEditing(i)
+        setInput(messages[i].content)
+        haptic(6)
+        taRef.current?.focus()
+        return
+      }
+    }
+  }, [messages])
+
+  const cancelEdit = useCallback(() => {
+    setEditing(null)
+    setInput("")
+    taRef.current?.focus()
+  }, [])
+
+  /** Share the chat as markdown: Web Share API when present, clipboard +
+   *  honest feedback otherwise. A dismissed share sheet is not an error. */
+  const shareChat = useCallback(async () => {
+    if (messages.length === 0) return
+    haptic(6)
+    const title = sessions.find(s => s.id === activeIdRef.current)?.title ?? "Ghost chat"
+    const md = [`# Ghost · ${title}`, ""]
+      .concat(messages.map(m => `${m.role === "user" ? "**You:**" : "**Ghost:**"} ${m.content}`))
+      .join("\n\n")
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text: md })
+        return
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return // user dismissed
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(md)
+      setSharedOk(true)
+      setTimeout(() => setSharedOk(false), 1600)
+    } catch {
+      setError("Sharing unavailable — the clipboard was refused.")
+    }
+  }, [messages, sessions])
 
   const stop = useCallback(() => {
     haptic(12)
@@ -807,6 +968,10 @@ export default function GhostPage() {
     setMessages([])
     setActiveId(null)
     activeIdRef.current = null
+    setEditing(null)
+    setRegenCount(0)
+    setContCount(0)
+    setCapped(false)
     setSheetOpen(false)
     setSheetClosing(false)
     try { localStorage.removeItem(ACTIVE_KEY) } catch {}
@@ -825,6 +990,10 @@ export default function GhostPage() {
     setMessages([])
     setActiveId(null)
     activeIdRef.current = null
+    setEditing(null)
+    setRegenCount(0)
+    setContCount(0)
+    setCapped(false)
     stick.current = true
     setFollow(true)
     setHistoryOpen(false)
@@ -840,6 +1009,10 @@ export default function GhostPage() {
     setMessages(found.messages)
     setActiveId(id)
     activeIdRef.current = id
+    setEditing(null)
+    setRegenCount(0)
+    setContCount(0)
+    setCapped(false)
     try { localStorage.setItem(ACTIVE_KEY, id) } catch {}
     stick.current = true
     setFollow(true)
@@ -1061,6 +1234,13 @@ export default function GhostPage() {
               </div>
             </div>
             <span className="ghost-chatbar-actions">
+              <button type="button" className="ghost-iconbtn" aria-label="Share chat" title="Share" disabled={messages.length === 0} onClick={shareChat}>
+                {sharedOk ? (
+                  <svg className="ghost-pop" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10.5l4.5 4.5L16 6" /></svg>
+                ) : (
+                  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="15.5" cy="4.5" r="2.2" /><circle cx="4.5" cy="10" r="2.2" /><circle cx="15.5" cy="15.5" r="2.2" /><path d="M6.5 9l7-3.7M6.5 11l7 3.7" /></svg>
+                )}
+              </button>
               <button type="button" className="ghost-iconbtn" aria-label="History" disabled={busy} onClick={openHistory}>
                 <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M10 4a6 6 0 1 0 6 6H10V4z"/><path d="M10 4a6 6 0 0 1 6 6"/><path d="M10 10l4-4"/></svg>
               </button>
@@ -1087,11 +1267,23 @@ export default function GhostPage() {
                 ))}
               </div>
             )}
-            {messages.map((m, i) => {
+            {(() => {
+              let lastUserIdx = -1
+              for (let i = messages.length - 1; i >= 0; i--) {
+                if (messages[i].role === "user") { lastUserIdx = i; break }
+              }
+              return messages.map((m, i) => {
               const streaming = busy && i === messages.length - 1 && m.role === "assistant"
+              const isLastUser = m.role === "user" && i === lastUserIdx
+              const isLastReply = m.role === "assistant" && i === messages.length - 1
               return m.role === "user" ? (
                 <div key={i} className="ghost-msg from-user">
                   <div className="ghost-msg-body"><p>{m.content}</p></div>
+                  {!busy && isLastUser && (
+                    <button type="button" className="ghost-msg-edit" aria-label="Edit question" title="Edit question" onClick={editLast}>
+                      <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M13.5 3.5l3 3L7 16l-4 1 1-4z" /><path d="M12 5l3 3" /></svg>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div key={i} className="ghost-msg from-ghost">
@@ -1101,12 +1293,26 @@ export default function GhostPage() {
                       <span className="ghost-stream-tps">{liveTps.toFixed(1)} tok/s</span>
                     )}
                   </div>
-                  {!busy && m.content.length > 24 && (
-                    <CopyBtn text={m.content} />
+                  <span className="ghost-msg-actions">
+                    {!busy && m.content.length > 24 && (
+                      <CopyBtn text={m.content} />
+                    )}
+                    {!busy && isLastReply && (
+                      <button type="button" className="ghost-msg-edit" aria-label="Regenerate reply" title="Try again — a different take" onClick={regenerate}>
+                        <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M16 10a6 6 0 1 1-1.76-4.24" /><path d="M16 2.6v3.4h-3.4" /></svg>
+                      </button>
+                    )}
+                  </span>
+                  {capped && !busy && isLastReply && contCount < MAX_MANUAL_CONTINUES && (
+                    <button type="button" className="ghost-continue-chip" onClick={continueMore}>
+                      <svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 4v11M5 10l5 5 5-5" /></svg>
+                      continue
+                    </button>
                   )}
                 </div>
               )
-            })}
+              })
+            })()}
             {busy && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="ghost-thinking-chip" aria-live="polite">
                 <span className="ghost-dots"><i /><i /><i /></span>
@@ -1141,6 +1347,15 @@ export default function GhostPage() {
 
           <footer className="ghost-composer">
             {error && <p className="ghost-error">{error}</p>}
+            {editing != null && (
+              <div className="ghost-editing" role="status">
+                <svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16l-4 1 1-4z" /><path d="M12 5l3 3" /></svg>
+                <span>editing your question — send re-runs from there</span>
+                <button type="button" aria-label="Cancel edit" onClick={cancelEdit}>
+                  <svg viewBox="0 0 20 20" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
+                </button>
+              </div>
+            )}
             <form onSubmit={event => { event.preventDefault(); void send() }} className="ghost-inputrow">
               <textarea
                 ref={taRef}
@@ -1149,12 +1364,16 @@ export default function GhostPage() {
                 value={input}
                 onChange={event => setInput(event.target.value)}
                 onKeyDown={event => {
+                  if (event.key === "Escape" && editing != null) {
+                    event.preventDefault()
+                    cancelEdit()
+                  }
                   if (event.key === "Enter" && !event.shiftKey && enterSends.current) {
                     event.preventDefault()
                     void send()
                   }
                 }}
-                placeholder="ask ghost…"
+                placeholder={editing != null ? "edit your question…" : "ask ghost…"}
                 disabled={busy}
               />
               <button

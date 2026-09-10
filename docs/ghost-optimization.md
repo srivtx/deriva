@@ -1,9 +1,80 @@
 # Ghost — Optimization Research Notes
 
-Branch: `ghost/faster-smarter`
+Branch: `ghost/faster-smarter` (v14–v17) · `ghost/tutor-loop` (v18)
 Scope: why Ghost was slow, what the facts are, what changed, and what the
 next levers are. Everything below was verified against the vendored runtime
 (`public/ghost/vendor/wllama`) and the HuggingFace file API unless noted.
+
+## 0b. v18 — the tutor loop (branch `ghost/tutor-loop`)
+
+The chat was fire-and-forget: dead-end answers, typo'd questions wasting a
+whole turn, replies hard-cut at the 288-token cap with no continuation, and
+a blind `history.slice(-8)` that could still blow the 2048-token context
+(llama.cpp truncates from the LEFT — it silently eats the system prompt
+first: the same "weird reply" class as the v17 turbo bug). This pass adds
+the missing turn lifecycle. All facts below were verified by Node mirror
+experiments (`scripts/tutor_loop_mirror.js`) and browser E2E
+(`scripts/tutor_e2e.js`, 27/27).
+
+### R9 · wllama replays verbatim unless sampling moves — regenerate needs two levers
+wllama seeds its sampler chain from the context seed (randomized ONCE at
+loadModel: `seed: config.seed || Math.floor(Math.random() * 1e5)`) and
+`createCompletionImpl` re-runs `samplingInit(config)` on EVERY call. Probe
+result (same prompt, CPU): base temperature twice → **byte-identical
+reply**; temperature +0.15 → diverges; +0.45 → diverges more. So
+regenerate climbs a two-lever ladder — temperature +0.2/attempt (capped
++0.45) AND repetition penalty 1.15→1.23…1.45 — plus a cold re-prefill
+(`useCache:false`) for clean sampler state. A single small temp bump is not
+reliable (E2E once observed an identical 123-char replay at temp 0.6).
+
+### R10 · Cap-death continuation is exact-ChatML on GPU, warm-cache on CPU
+`transformers.js` has no `continue_final_message` (checked the 4.2.0
+pipeline source), so mid-turn continuation cannot be expressed through the
+messages array. The GPU path feeds the pipeline an exact ChatML STRING:
+`buildExactChatML()` (new in text.ts) renders **byte-identical** to
+`apply_chat_template` for both families — verified in Node (LFM2 306 B,
+Qwen3 310 B, including the `enable_thinking:false` tail) — with
+`add_special_tokens:false` so the LFM2 tokenizer does not double the
+`<|startoftext|>` BOS that is already inside the string. The CPU path
+appends the partial raw text to the previous prompt string and lets
+wllama's KV prefix matching reprocess only the junction. Merged replies
+verified seamless in-browser: a 10-token forced cap continued into a
+coherent 848-char 12-point checklist stopping at a real `<|im_end|>`.
+
+### R11 · The empty-suffix decode guard
+wllama hands llama.cpp the NON-CACHED suffix as its decode batch
+(`computeNonCachedTokens` → `decode(tokens)`). When a prompt is already
+fully cached (regenerate after rollback, or a continuation whose junction
+re-tokenizes identically) that batch is empty — undefined behavior at best.
+`cpuGenerate` probes `tokenize()` + `getCachedTokens()` first and falls
+back to a cold re-prefill when the suffix would be empty. Wllama has its
+own inner fallback too ("Failed to rollback KV cache, clearing it instead"
+in dev.log at exact-cache-length boundaries) — correctness holds either
+way; the guard just avoids the slow path.
+
+### R12 · Token-aware context windowing replaces slice(-8)
+`planHistory()` (text.ts, unit-tested) keeps the LATEST turns that fit a
+1024-token history budget, never drops below the last 4 messages, and
+discloses trimming to the model via a system-prompt note. Counts come from
+`engine.countTokens()` — exact via `wllama.tokenize()` (CPU) or
+`tokenizer.encode()` (GPU, `add_special_tokens:false`) — falling back to
+~3.6 chars/token when no tokenizer is loaded. Also recorded:
+`TextStreamer.callback_function` fires per decoded WORD, not per token;
+exact GPU counts need `token_callback_function` (the v18 finish-reason
+detector uses it — CPU counts onNewToken, which is already exact).
+
+### Also in v18
+- **finishReason** (`stop|length|aborted`) on every chat result; "length"
+  auto-continues once seamlessly, then offers an honest Continue chip
+  (bounded at 3 manual clicks).
+- **Edit-last-question** re-runs from the corrected turn; **share/export**
+  via Web Share API with clipboard + check-morph fallback.
+- **PWA**: already covered app-wide by `manifest.webmanifest` + icons +
+  apple-web-app metadata (verified) — Ghost inherits installability; no
+  duplicate manifest was added.
+- **`window.__ghost`** field-debug handle (engine + model picker) for
+  console triage of future field reports.
+- Chat optics: GPU t/s now uses exact token counts (was word-callbacks).
 
 ## 0a. v17 — the turbo pass (field-report triage #2)
 
