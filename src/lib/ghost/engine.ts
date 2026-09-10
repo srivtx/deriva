@@ -6,6 +6,36 @@
 // Library loads browser-natively from /ghost/vendor/wllama (same-origin,
 // precached by the SW) — fully offline once installed.
 //
+// ── ghost/tutor-loop v18 — the tutor loop ────────────────────────────
+// The chat used to be fire-and-forget: dead-end answers (no regenerate),
+// typo'd questions wasting a whole turn (no edit), replies hard-cut at the
+// 288-token cap with no warning and no continuation, and a blind
+// history.slice(-8) that could still blow the 2048-token context (llama.cpp
+// truncates from the LEFT — it silently eats the system prompt first, the
+// same "weird reply" class as the v17 turbo bug). This pass:
+// · FINISH REASON: chat() now reports stop|length|aborted. "length" =
+//   cap-death, detected exactly (CPU: onNewToken count === nPredict; GPU:
+//   per-token counting via the streamer's token_callback_function — the
+//   text callback only fires per decoded WORD and undercounts, verified in
+//   scripts/tutor_loop_mirror.js).
+// · CONTINUE: continueChat() re-runs generation with the partial answer as
+//   the prompt tail — MID-turn, not a new turn. CPU: wllama's KV prefix
+//   matching means only the junction re-processes. GPU: an exact ChatML
+//   string (buildExactChatML — byte-identical to apply_chat_template,
+//   verified) with add_special_tokens:false so lfm2's BOS is not doubled.
+// · EMPTY-SUFFIX GUARD: wllama hands llama.cpp the NON-CACHED suffix as its
+//   decode batch; when a prompt is already fully cached (regenerate after
+//   rollback, or a continuation whose junction re-tokenizes identically)
+//   that batch would be empty. The guard probes tokenize()+getCachedTokens()
+//   and falls back to a cold re-prefill — slower, always correct.
+// · REGENERATE: chat() accepts {temperature, useCache} opts — regenerate
+//   re-rolls with a temperature ladder (wllama re-seeds its sampler chain
+//   from the fixed context seed on every call, so same prompt + same temp
+//   could replay the identical reply) and a clean cold re-prefill.
+// · TOKEN BUDGETING: countTokens() gives exact counts from whichever
+//   tokenizer is loaded (wllama.tokenize / pipeline.tokenizer.encode);
+//   the page pairs it with planHistory() in text.ts instead of slice(-8).
+//
 // ── ghost/faster-smarter v17 — the turbo pass ─────────────────────────
 // Field report from v16 (preview-site): "switched to turbo, it says it
 // downloads its own copy, but no progress shows, and replies come out as
@@ -62,7 +92,7 @@
 //   monotonic progress (throttled ~3/s) with speed + ETA. The turbo path
 //   aggregates transformers.js per-file events via its progress_total.
 
-import { buildPrompt, cleanFinal, visibleDelta, QWEN3_NO_THINK_SUFFIX } from "./text"
+import { buildPrompt, buildExactChatML, cleanFinal, cleanVisible, visibleDelta, QWEN3_NO_THINK_SUFFIX } from "./text"
 
 export interface GhostModel {
   id: string
@@ -128,6 +158,31 @@ export const DEFAULT_MODEL_ID = "lfm2.5-350m"
 /** max tokens per reply — 288 keeps the tutor terse but lets answers breathe */
 export const GHOST_MAX_TOKENS = 288
 
+/** why a generation ended — "length" means cap-death (the answer was cut
+ *  mid-sentence): the page auto-continues once with a warm cache, then
+ *  offers a Continue affordance if the model is STILL bursting. */
+export type FinishReason = "stop" | "length" | "aborted"
+
+export interface ChatResult {
+  text: string
+  tps: number
+  finishReason: FinishReason
+}
+
+export interface ChatOpts {
+  /** sampling temperature override — regenerate re-rolls looser so the
+   *  answer actually differs (wllama re-seeds its sampler chain from the
+   *  context seed on every call, so an identical prompt + identical
+   *  temperature could replay the same reply verbatim). */
+  temperature?: number
+  /** repetition-penalty override (CPU path) — the second variation lever
+   *  for regenerate, confirmed by probe: same prompt + same temp replays
+   *  verbatim, temp or penalty shifts break the replay */
+  penaltyRepeat?: number
+  /** false → cold re-prefill, no KV reuse (regenerate wants clean state) */
+  useCache?: boolean
+}
+
 /** honest progress events for model downloads */
 export interface DownloadProgress {
   /** connect → fetch → verify → store → done (turbo: connect → fetch → done) */
@@ -172,6 +227,10 @@ interface WllamaInstance {
   getEOS(): number
   lookupToken(piece: string): Promise<number>
   getNumThreads(): number
+  /** count tokens exactly (special tokens as literal text) */
+  tokenize(text: string, special?: boolean): Promise<number[]>
+  /** the full KV sequence (prompt + generated) — for the empty-suffix guard */
+  getCachedTokens(): Promise<number[]>
   createCompletion(
     prompt: string,
     options: {
@@ -461,6 +520,16 @@ class GhostEngine {
   private gpuFailed = false
   /** live GPU generation stopper — stop() interrupts it mid-generation */
   private gpuStop: { interrupt(): void } | null = null
+  /** the last completed turn, for continueChat()/cap-death continuation */
+  private lastTurn: {
+    backend: "cpu" | "gpu"
+    modelId: string
+    messages: { role: string; content: string }[]
+    /** CPU: the exact prompt string used · GPU: the exact ChatML render */
+    promptStr: string
+    /** raw generated text (pre-cleaning; no control tokens at cap-death) */
+    rawText: string
+  } | null = null
   /** diagnostics for the gauge */
   lastThreads = 0
   lastFlashAttn = false
@@ -907,7 +976,8 @@ class GhostEngine {
     messages: { role: string; content: string }[],
     maxTokens: number,
     onToken?: (piece: string) => void,
-  ): Promise<{ text: string; tps: number }> {
+    opts?: ChatOpts,
+  ): Promise<ChatResult> {
     const started = performance.now()
     const cap = Math.min(maxTokens || GHOST_MAX_TOKENS, GHOST_MAX_TOKENS)
 
@@ -929,76 +999,15 @@ class GhostEngine {
         // echoing the system prompt ("Under 50 words.") and hallucinating
         // whole multi-turn transcripts. Verified by experiment: official
         // template answers cleanly and stops at <|im_end|>.
-        const pipe = this.pipes.get(model.id) as {
-          (input: string | { role: string; content: string }[], opts?: Record<string, unknown>): Promise<unknown>
-          tokenizer: unknown
+        const out = await this.gpuGenerate(model, messages ?? [], cap, onToken, started, opts, { currentText: "", emitted: "" })
+        this.lastTurn = {
+          backend: "gpu",
+          modelId: model.id,
+          messages: messages ?? [],
+          promptStr: buildExactChatML(messages ?? [], model.assistantSuffix, model.family),
+          rawText: out.raw,
         }
-        this.stopDetached = false
-        let tokens = 0
-        let currentText = ""
-        let emitted = ""
-        let turnEnded = false
-        const T = await tf()
-        const stopper = new T.InterruptableStoppingCriteria()
-        this.gpuStop = stopper
-        // raw pieces (skip_special_tokens: false): the downstream cleaner
-        // strips control tokens for display anyway, and the raw text lets
-        // us SEE the turn-end marker and interrupt generation at the
-        // boundary — a stop guarantee independent of the repo's
-        // generation_config eos ids.
-        const streamer = new T.TextStreamer(pipe.tokenizer, {
-          skip_prompt: true,
-          skip_special_tokens: false,
-          callback_function: (piece: string) => {
-            tokens += 1
-            currentText += piece
-            if (!turnEnded && GPU_TURN_END_RE.test(currentText)) {
-              turnEnded = true
-              stopper.interrupt()
-            }
-            if (this.stopDetached) return
-            // full-text cleaning (v15): piece-wise cleaning could not hide
-            // a think block spanning several pieces.
-            const delta = visibleDelta(currentText, emitted)
-            if (delta) {
-              emitted += delta
-              onToken?.(delta)
-            }
-          },
-        })
-        const generateOpts: Record<string, unknown> = {
-          max_new_tokens: cap,
-          do_sample: true,
-          temperature: model.temp,
-          top_p: model.topP,
-          repetition_penalty: 1.1,
-          streamer,
-          stopping_criteria: stopper,
-        }
-        if (model.family === "qwen3") {
-          // Qwen3 non-thinking contract on the GPU path too: the template
-          // appends the empty think block only when the flag is passed.
-          generateOpts.tokenizer_encode_kwargs = { enable_thinking: false }
-        }
-        const run = (async () => {
-          await pipe(messages ?? [], generateOpts)
-          return cleanFinal(currentText)
-        })()
-        let timer: ReturnType<typeof setTimeout> | undefined
-        const timeout = new Promise<never>((_, reject) => {
-          timer = setTimeout(() => {
-            try { stopper.interrupt() } catch {}
-            reject(new Error("Ghost timed out — try again."))
-          }, 120000)
-        })
-        try {
-          const text = await Promise.race([run, timeout])
-          const seconds = (performance.now() - started) / 1000
-          return { text, tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
-        } finally {
-          if (timer) clearTimeout(timer)
-          if (this.gpuStop === stopper) this.gpuStop = null
-        }
+        return { text: out.text, tps: out.tps, finishReason: out.finishReason }
       } catch (err) {
         // First GPU generation failed → demote and rerun on CPU below.
         this.gpuFailed = true
@@ -1011,6 +1020,126 @@ class GhostEngine {
     // ── CPU path: ONE hand-built ChatML prompt (wllama adds the BOS and
     // tolerates the format — verified E2E in v15) ──
     const promptStr = buildPrompt(messages ?? [], model.assistantSuffix)
+    const out = await this.cpuGenerate(model, promptStr, cap, onToken, started, opts)
+    this.lastTurn = {
+      backend: "cpu",
+      modelId: model.id,
+      messages: messages ?? [],
+      promptStr,
+      rawText: out.raw,
+    }
+    return { text: out.text, tps: out.tps, finishReason: out.finishReason }
+  }
+
+  /** GPU generation core, shared by chat() and continueChat(). `input` is
+   *  the messages ARRAY (official chat template) or an exact ChatML STRING
+   *  (mid-turn continuation — the messages form cannot leave the last
+   *  assistant turn open). `state` carries the raw/emitted accumulators so
+   *  a continuation can resume mid-stream without re-emitting text the
+   *  user already watched. Token counting uses token_callback_function
+   *  (fires per token); callback_function fires per decoded WORD, which
+   *  undercounts (verified in scripts/tutor_loop_mirror.js). */
+  private async gpuGenerate(
+    model: GhostModel,
+    input: { role: string; content: string }[] | string,
+    cap: number,
+    onToken: ((piece: string) => void) | undefined,
+    started: number,
+    opts: ChatOpts | undefined,
+    state: { currentText: string; emitted: string },
+  ): Promise<ChatResult & { raw: string }> {
+    const pipe = this.pipes.get(model.id) as {
+      (input: string | { role: string; content: string }[], opts?: Record<string, unknown>): Promise<unknown>
+      tokenizer: unknown
+    }
+    this.stopDetached = false
+    let genTokens = 0
+    let turnEnded = false
+    const T = await tf()
+    const stopper = new T.InterruptableStoppingCriteria()
+    this.gpuStop = stopper
+    // raw pieces (skip_special_tokens: false): the downstream cleaner
+    // strips control tokens for display anyway, and the raw text lets
+    // us SEE the turn-end marker and interrupt generation at the
+    // boundary — a stop guarantee independent of the repo's
+    // generation_config eos ids.
+    const streamer = new T.TextStreamer(pipe.tokenizer, {
+      skip_prompt: true,
+      skip_special_tokens: false,
+      token_callback_function: () => { genTokens += 1 },
+      callback_function: (piece: string) => {
+        state.currentText += piece
+        if (!turnEnded && GPU_TURN_END_RE.test(state.currentText)) {
+          turnEnded = true
+          stopper.interrupt()
+        }
+        if (this.stopDetached) return
+        // full-text cleaning (v15): piece-wise cleaning could not hide
+        // a think block spanning several pieces.
+        const delta = visibleDelta(state.currentText, state.emitted)
+        if (delta) {
+          state.emitted += delta
+          onToken?.(delta)
+        }
+      },
+    })
+    const generateOpts: Record<string, unknown> = {
+      max_new_tokens: cap,
+      do_sample: true,
+      temperature: opts?.temperature ?? model.temp,
+      top_p: model.topP,
+      repetition_penalty: 1.1,
+      streamer,
+      stopping_criteria: stopper,
+    }
+    if (typeof input === "string") {
+      // Continuation: the BOS (lfm2) is already inside the string — the
+      // pipeline would add a second one for string inputs otherwise
+      // (verified: lfm2 tokenizer add_bos_token). No chat templating runs
+      // for strings, so the Qwen3 think contract is baked into the string.
+      generateOpts.add_special_tokens = false
+    } else if (model.family === "qwen3") {
+      // Qwen3 non-thinking contract on the GPU path too: the template
+      // appends the empty think block only when the flag is passed.
+      generateOpts.tokenizer_encode_kwargs = { enable_thinking: false }
+    }
+    const run = (async () => {
+      await pipe(input, generateOpts)
+      const finishReason: FinishReason = turnEnded
+        ? "stop"
+        : this.stopDetached ? "aborted" : genTokens >= cap ? "length" : "stop"
+      const seconds = (performance.now() - started) / 1000
+      return {
+        text: cleanFinal(state.currentText),
+        tps: seconds > 0 ? Math.max(genTokens, 1) / seconds : 0,
+        finishReason,
+        raw: state.currentText,
+      }
+    })()
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        try { stopper.interrupt() } catch {}
+        reject(new Error("Ghost timed out — try again."))
+      }, 120000)
+    })
+    try {
+      return await Promise.race([run, timeout])
+    } finally {
+      if (timer) clearTimeout(timer)
+      if (this.gpuStop === stopper) this.gpuStop = null
+    }
+  }
+
+  /** CPU generation core, shared by chat() and continueChat(). */
+  private async cpuGenerate(
+    model: GhostModel,
+    promptStr: string,
+    cap: number,
+    onToken: ((piece: string) => void) | undefined,
+    started: number,
+    opts: ChatOpts | undefined,
+  ): Promise<ChatResult & { raw: string }> {
     await this.ensureLoaded(model.url)
     const wllama = this.instance!
 
@@ -1037,17 +1166,33 @@ class GhostEngine {
       let currentText = ""
       let emitted = ""
       try {
+        // Warm-cache guard: if EVERY token of this prompt already sits in
+        // the KV cache (regenerate after a rollback, or a continuation
+        // whose junction re-tokenizes identically), the non-cached suffix
+        // would be empty and wllama would hand llama.cpp an empty decode
+        // batch. Detect it and re-prefill cold — slower, always correct.
+        let useCache = opts?.useCache ?? true
+        if (useCache) {
+          try {
+            const toks = await wllama.tokenize(promptStr, true)
+            const cached = await wllama.getCachedTokens()
+            let nKeep = 0
+            const lim = Math.min(toks.length, cached.length)
+            while (nKeep < lim && toks[nKeep] === cached[nKeep]) nKeep += 1
+            if (toks.length - nKeep <= 0) useCache = false
+          } catch { /* probe failed — keep the cache path */ }
+        }
         const text = await wllama.createCompletion(promptStr, {
           nPredict: cap,
           // ⚡ THE fix: reuse the KV cache across turns. Without this,
           // wllama kvClear()s and re-prefills the entire conversation
           // every single message — the main source of dead time on phones.
-          useCache: true,
+          useCache,
           sampling: {
-            temp: model.temp,
+            temp: opts?.temperature ?? model.temp,
             top_p: model.topP,
             min_p: model.minP,
-            penalty_repeat: 1.15,
+            penalty_repeat: opts?.penaltyRepeat ?? 1.15,
             penalty_last_n: 64,
           },
           stopTokens: this.stopTokenIds!,
@@ -1067,14 +1212,15 @@ class GhostEngine {
         })
         const finalText = cleanFinal(typeof text === "string" && text ? text : currentText)
         const seconds = (performance.now() - started) / 1000
-        return { text: finalText, tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
+        const finishReason: FinishReason = abort.signal.aborted ? "aborted" : tokens >= cap ? "length" : "stop"
+        return { text: finalText, tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0, finishReason, raw: currentText }
       } catch (err) {
         const name = (err as Error)?.name || ""
         const msg = String((err as Error)?.message || err)
         if (abort.signal.aborted || /abort/i.test(name) || /abort/i.test(msg)) {
           // User pressed stop — hand back whatever was generated so far.
           const seconds = (performance.now() - started) / 1000
-          return { text: cleanFinal(currentText), tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
+          return { text: cleanFinal(currentText), tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0, finishReason: "aborted" as const, raw: currentText }
         }
         throw err
       } finally {
@@ -1099,6 +1245,65 @@ class GhostEngine {
     } finally {
       if (timer) clearTimeout(timer)
     }
+  }
+
+  /** Continue a cap-death reply: re-run generation with the partial answer
+   *  as the prompt tail — MID-turn, not a new turn. CPU reuses the warm KV
+   *  cache (only the junction re-processes, via wllama's prefix matching);
+   *  GPU re-prefills an exact ChatML string (transformers.js has no
+   *  messages-array continuation — verified approach, see
+   *  scripts/tutor_loop_mirror.js). Returns the MERGED answer text. */
+  async continueChat(model: GhostModel, onToken?: (piece: string) => void): Promise<ChatResult> {
+    const last = this.lastTurn
+    if (!last || last.modelId !== model.id || !last.rawText.trim()) {
+      throw new Error("Nothing to continue.")
+    }
+    const started = performance.now()
+    const cap = GHOST_MAX_TOKENS
+
+    if (last.backend === "gpu" && (await this.useGpu()) && this.pipes.has(model.id)) {
+      try {
+        const contPrompt = last.promptStr + last.rawText
+        const state = { currentText: last.rawText, emitted: cleanVisible(last.rawText) }
+        const out = await this.gpuGenerate(model, contPrompt, cap, onToken, started, undefined, state)
+        this.lastTurn = { ...last, rawText: out.raw }
+        return { text: out.text, tps: out.tps, finishReason: out.finishReason }
+      } catch (err) {
+        this.gpuFailed = true
+        setBackendPref("cpu")
+        console.warn("[ghost] WebGPU continuation failed — demoted to CPU:", err)
+      }
+    }
+
+    // CPU continuation — the KV cache holds prompt + generated tokens, so
+    // the junction re-process is (almost always) zero tokens.
+    const contPrompt = last.promptStr + last.rawText
+    const out = await this.cpuGenerate(model, contPrompt, cap, onToken, started, undefined)
+    const raw = last.rawText + out.raw
+    this.lastTurn = { ...last, rawText: raw }
+    return { text: cleanFinal(raw), tps: out.tps, finishReason: out.finishReason }
+  }
+
+  /** Exact token count for context budgeting, when a tokenizer is loaded.
+   *  Returns -1 when none is available — callers fall back to
+   *  estimateTokens() in text.ts. */
+  async countTokens(model: GhostModel, text: string): Promise<number> {
+    try {
+      if ((await this.useGpu()) && this.pipes.has(model.id)) {
+        const pipe = this.pipes.get(model.id) as {
+          tokenizer: { encode(text: string, opts?: { add_special_tokens?: boolean }): number[] }
+        }
+        const ids = pipe.tokenizer.encode(text, { add_special_tokens: false })
+        if (Array.isArray(ids) && ids.length > 0) return ids.length
+      }
+    } catch {}
+    if (this.instance && this.loadedUrl === model.url) {
+      try {
+        const ids = await this.instance.tokenize(text, true)
+        if (Array.isArray(ids)) return ids.length
+      } catch {}
+    }
+    return -1
   }
 
   // Stop: aborts generation via signal — v2 unwinds cleanly and rolls back
