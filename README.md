@@ -50,15 +50,24 @@ request IDs, hard timeouts, and abort signals.
 
 ## Ghost — an AI tutor that lives in your phone
 
-Ghost runs a quantized SmolLM2 model (101 MB or 258 MB) entirely in the browser
-through multithreaded WASM inference. One opt-in download into private OPFS
-storage; from then on it works with the network off, permanently.
+Ghost runs a quantized edge-native model — LFM 2.5 350M (219 MB, default) or
+Qwen 3 0.6B (378 MB) — entirely in the browser through multithreaded WASM
+inference, with an automatic WebGPU path when the device has a real adapter.
+One opt-in download into private OPFS storage; from then on it works with the
+network off, permanently.
 
 - Socratic by design: hints and guiding questions first, direct answers on demand
 - Streaming responses, live tokens-per-second gauge, persistent conversation sessions
+- KV cache is reused across turns — only the new tokens are evaluated per message
+- Flash attention + q8_0 KV cache quantization when the runtime supports it (silent fallback)
+- Engine picks its own lane: WebGPU when an adapter answers, CPU otherwise, demotes itself on GPU failure
 - Model lifecycle you control: install, switch, eject, delete — every deletion verified at the byte level
 - Storage integrity gate verifies GGUF headers before load; damaged files self-repair by re-download
 - A 120-second generation timeout makes an infinite hang impossible
+- Markdown-lite rendering: bold, lists, and fenced code blocks with copy buttons
+
+See `docs/ghost-optimization.md` for the full research notes — why it was slow,
+what changed, and what the next levers are.
 
 ## Studio
 

@@ -1,13 +1,16 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import {
   ghostEngine,
   ghostWasReady,
   GHOST_MODELS,
   GHOST_LEGACY_URLS,
+  GHOST_MAX_TOKENS,
   getSelectedModel,
   setSelectedModel,
+  backendPref,
+  setBackendPref,
   type GhostModel,
 } from "@/lib/ghost/engine"
 
@@ -16,8 +19,8 @@ interface ChatMessage {
   content: string
 }
 
-const SYS_SOCRATIC = "You are Ghost, a DSA tutor. Reply with one short hint or question, under 50 words."
-const SYS_ANSWER = "Answer the user directly in a few short sentences."
+const SYS_SOCRATIC = "You are Ghost, a DSA tutor. Reply with one short hint or question, under 50 words. Use plain text; code only in fenced blocks."
+const SYS_ANSWER = "Answer the user directly in a few short sentences. Use plain text; code only in fenced blocks."
 // Deterministic mode: the FIRST verb of the latest user message decides.
 // Starts with answer/solve/compute/calculate/evaluate -> direct answer.
 // Everything else -> Socratic hint. No mid-sentence keyword flakiness.
@@ -40,11 +43,131 @@ function markEverDownloaded(id: string) {
   } catch {}
 }
 
+function haptic(ms = 10) {
+  try { navigator.vibrate?.(ms) } catch {}
+}
+
 const SUGGESTIONS = [
   "Why does binary search need a sorted array?",
   "Nudge me: detect a cycle in a linked list",
   "When is a hash map the wrong choice?",
 ]
+
+/* ── Markdown-lite renderer (no deps, no innerHTML) ─────────────────────
+   Bold, italic, inline code, fenced code blocks, bullet / numbered lists,
+   headings. Enough for a tutor's replies — everything else stays plain. */
+
+function renderInline(text: string, keyBase: string): ReactNode[] {
+  const nodes: ReactNode[] = []
+  const re = /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`\n]+`)/g
+  let last = 0
+  let m: RegExpExecArray | null
+  let i = 0
+  while ((m = re.exec(text))) {
+    if (m.index > last) nodes.push(text.slice(last, m.index))
+    const tok = m[0]
+    if (tok.startsWith("**")) nodes.push(<strong key={`${keyBase}-b${i}`}>{tok.slice(2, -2)}</strong>)
+    else if (tok.startsWith("`")) nodes.push(<code key={`${keyBase}-c${i}`} className="ghost-md-code">{tok.slice(1, -1)}</code>)
+    else nodes.push(<em key={`${keyBase}-i${i}`}>{tok.slice(1, -1)}</em>)
+    last = m.index + tok.length
+    i++
+  }
+  if (last < text.length) nodes.push(text.slice(last))
+  return nodes
+}
+
+function CopyBtn({ text, className }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      haptic(6)
+      setTimeout(() => setCopied(false), 1400)
+    } catch {}
+  }, [text])
+  return (
+    <button type="button" className={className ?? "ghost-copy"} onClick={copy} aria-label="Copy">
+      {copied ? "copied" : "copy"}
+    </button>
+  )
+}
+
+function CodeBlock({ code }: { code: string }) {
+  return (
+    <div className="ghost-codeblock">
+      <div className="ghost-codeblock-bar">
+        <span>code</span>
+        <CopyBtn text={code} className="ghost-code-copy" />
+      </div>
+      <pre><code>{code}</code></pre>
+    </div>
+  )
+}
+
+function Markdown({ text }: { text: string }) {
+  const blocks: ReactNode[] = []
+  const parts = text.split(/```/)
+
+  parts.forEach((part, pi) => {
+    // odd indexes are fenced code
+    if (pi % 2 === 1) {
+      let code = part
+      if (code.startsWith("\n")) code = code.slice(1)
+      // strip a language hint line like `python\n` right after the fence
+      const nl = code.indexOf("\n")
+      const firstLine = nl >= 0 ? code.slice(0, nl).trim() : code.trim()
+      if (firstLine && /^[a-z+#]{1,12}$/i.test(firstLine) && firstLine.length <= 10) {
+        code = code.slice(nl + 1)
+      }
+      if (code.endsWith("\n")) code = code.slice(0, -1)
+      blocks.push(<CodeBlock key={`cb${pi}`} code={code} />)
+      return
+    }
+    // prose: paragraphs, lists, headings
+    const lines = part.split("\n")
+    let list: { ordered: boolean; items: string[] } | null = null
+    const flushList = (key: string) => {
+      if (!list) return
+      const L = list
+      blocks.push(
+        L.ordered ? (
+          <ol key={key} className="ghost-md-ol">{L.items.map((it, ii) => <li key={ii}>{renderInline(it, `${key}-${ii}`)}</li>)}</ol>
+        ) : (
+          <ul key={key} className="ghost-md-ul">{L.items.map((it, ii) => <li key={ii}>{renderInline(it, `${key}-${ii}`)}</li>)}</ul>
+        ),
+      )
+      list = null
+    }
+    lines.forEach((raw, li) => {
+      const line = raw.trimEnd()
+      const key = `p${pi}-l${li}`
+      const bullet = /^[-*•]\s+(.*)$/.exec(line)
+      const numbered = /^(\d{1,3})[.)]\s+(.*)$/.exec(line)
+      if (bullet) {
+        if (!list || list.ordered) { flushList(`${key}-pre`); list = { ordered: false, items: [] } }
+        list.items.push(bullet[1])
+        return
+      }
+      if (numbered) {
+        if (!list || !list.ordered) { flushList(`${key}-pre`); list = { ordered: true, items: [] } }
+        list.items.push(numbered[2])
+        return
+      }
+      flushList(`${key}-flush`)
+      if (!line.trim()) return
+      const heading = /^(#{1,4})\s+(.*)$/.exec(line)
+      if (heading) {
+        blocks.push(<p key={key} className="ghost-md-h">{renderInline(heading[2], key)}</p>)
+        return
+      }
+      blocks.push(<p key={key} className="ghost-md-p">{renderInline(line, key)}</p>)
+    })
+    flushList(`p${pi}-end`)
+  })
+
+  return <div className="ghost-md">{blocks}</div>
+}
 
 function GhostFace({ size = 96, thinking = false }: { size?: number; thinking?: boolean }) {
   return (
@@ -104,15 +227,25 @@ export default function GhostPage() {
   const [error, setError] = useState<string | null>(null)
   const [pendingGet, setPendingGet] = useState<GhostModel | null>(null)
   const [caps, setCaps] = useState<{ webgpu: boolean; storageQuotaMb: number | null } | null>(null)
+  const [diag, setDiag] = useState<{ backend: string; threads: number; flashAttn: boolean; kvQuant: boolean } | null>(null)
+  const [pref, setPref] = useState<"auto" | "gpu" | "cpu">("auto")
   const busyRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const taRef = useRef<HTMLTextAreaElement | null>(null)
   const [follow, setFollow] = useState(true)
   const stick = useRef(true)          // source of truth, no re-render churn
   const suppressing = useRef(false)   // ignore scroll events we caused
+  // Enter sends on pointer-fine (desktop); newline on touch keyboards
+  const enterSends = useRef(true)
 
   const sizeOf = useCallback((url: string) => storage.find(s => s.url === url)?.sizeMb ?? 0, [storage])
   const isCached = useCallback((url: string) => storage.some(s => s.url === url), [storage])
   const totalMb = storage.reduce((sum, s) => sum + s.sizeMb, 0)
+
+  useEffect(() => {
+    const fine = typeof window !== "undefined" ? window.matchMedia?.("(pointer: fine)")?.matches : undefined
+    enterSends.current = fine ?? true
+  }, [])
 
   useEffect(() => () => { if (busyRef.current) void ghostEngine.stop() }, [])
 
@@ -126,6 +259,10 @@ export default function GhostPage() {
     const prev = document.title
     document.title = "Ghost · Deriva"
     return () => { document.title = prev }
+  }, [])
+
+  useEffect(() => {
+    setPref(backendPref())
   }, [])
 
   useEffect(() => {
@@ -183,6 +320,14 @@ export default function GhostPage() {
     el.scrollTop = el.scrollHeight
     requestAnimationFrame(() => { suppressing.current = false })
   }, [messages])
+
+  // auto-grow composer
+  useEffect(() => {
+    const ta = taRef.current
+    if (!ta) return
+    ta.style.height = "auto"
+    ta.style.height = `${Math.min(ta.scrollHeight, 132)}px`
+  }, [input])
 
   const onMessagesScroll = useCallback(() => {
     if (suppressing.current) return
@@ -287,6 +432,7 @@ export default function GhostPage() {
       setPhase("loading")
       await ghostEngine.load(m)
       setPhase("ready")
+      void ghostEngine.diagnostics().then(d => { if (d) setDiag({ backend: d.backend, threads: d.threads, flashAttn: d.flashAttn, kvQuant: d.kvQuant }) }).catch(() => {})
       setMessages(prev => {
         if (prev.length > 0) return prev
         return [{ role: "assistant", content: `I live here now — ${m.name}, on your device, no cloud involved. Ask anything; I nudge, you derive.` }]
@@ -307,6 +453,7 @@ export default function GhostPage() {
       try {
         await ghostEngine.load(model)
         setPhase("ready")
+        void ghostEngine.diagnostics().then(d => { if (d) setDiag({ backend: d.backend, threads: d.threads, flashAttn: d.flashAttn, kvQuant: d.kvQuant }) }).catch(() => {})
       } catch (err) {
         const msg = String((err as Error)?.message || "")
         if (msg.includes("MODEL_CORRUPT")) {
@@ -332,6 +479,7 @@ export default function GhostPage() {
     setFollow(true)
     setInput("")
     setError(null)
+    haptic(8)
 
     const history = [...messages, { role: "user" as const, content: text }]
     setMessages(history)
@@ -350,21 +498,21 @@ export default function GhostPage() {
         return next
       })
     }
+    const askGhost = (extra?: string) =>
+      ghostEngine.chat(
+        model,
+        [
+          { role: "system", content: systemFor(history) + (extra ? " " + extra : "") },
+          ...history.slice(-8),
+        ],
+        GHOST_MAX_TOKENS,
+        piece => {
+          streamedText += piece
+          if (!flushTimer) flushTimer = setTimeout(flushNow, 90)
+        },
+      )
     try {
       await ghostEngine.load(model)
-      const askGhost = (extra?: string) =>
-        ghostEngine.chat(
-          model,
-          [
-            { role: "system", content: systemFor(history) + (extra ? " " + extra : "") },
-            ...history.slice(-8),
-          ],
-          220,
-          piece => {
-            streamedText += piece
-            if (!flushTimer) flushTimer = setTimeout(flushNow, 90)
-          },
-        )
       const result = await askGhost()
 
       // Echo guard: tiny models sometimes regurgitate their previous reply
@@ -398,19 +546,47 @@ export default function GhostPage() {
       })
     } catch (err) {
       const message = String((err as Error)?.message || err)
-      const raw = message.toLowerCase()
-      if (message.includes("MODEL_CORRUPT") || /typed array|out of memory|invalid length/.test(raw)) {
+      const rawMsg = message.toLowerCase()
+      if (message.includes("MODEL_CORRUPT")) {
         busyRef.current = false
         setBusy(false)
         setError(null)
-        await deleteByUrl(model.url).catch(() => {})
         await refreshStorage()
         await startGet(model)
         return
       }
-      if (/kv_cache|context/.test(raw)) setError("Ghost's memory filled — start a new chat to reset it.")
-      else if (raw.includes("abort") || raw.includes("timed out")) setError(message)
-      else setError(message)
+      if (/typed array|out of memory|invalid length/.test(rawMsg)) {
+        // Memory pressure: the runtime died, the FILE is fine (it passed the
+        // integrity gate). Recycle the runtime, reload from the cached blob
+        // and retry the generation ONCE — no re-download.
+        try {
+          await ghostEngine.eject()
+          await ghostEngine.load(model)
+          const retry = await askGhost()
+          if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
+          flushNow()
+          streamedText = retry.text
+          setTps(retry.tps)
+          setMessages(prev => {
+            const next = prev.slice()
+            const last = next[next.length - 1]
+            if (last?.role === "assistant") next[next.length - 1] = { role: "assistant", content: retry.text || "(silence)" }
+            else next.push({ role: "assistant", content: retry.text || "(silence)" })
+            persistSession(next)
+            return next
+          })
+          return
+        } catch (retryErr) {
+          setError("The brain ran out of memory — try a shorter question or the smaller brain.")
+          console.warn("[ghost] OOM retry failed:", retryErr)
+        }
+      } else if (/kv_cache|context/.test(rawMsg)) {
+        setError("Ghost's memory filled — start a new chat to reset it.")
+      } else if (rawMsg.includes("abort") || rawMsg.includes("timed out")) {
+        setError(message)
+      } else {
+        setError(message)
+      }
       if (!streamedText) {
         setMessages(prev => {
           const next = prev.filter((m, i) => !(i === prev.length - 1 && m.role === "assistant"))
@@ -425,6 +601,7 @@ export default function GhostPage() {
   }, [input, messages, persistSession, model, deleteByUrl, startGet])
 
   const stop = useCallback(() => {
+    haptic(12)
     ghostEngine.stop()
   }, [])
 
@@ -509,7 +686,18 @@ export default function GhostPage() {
     setAction(null)
   }, [action, refreshStorage])
 
+  const chooseBackend = useCallback((p: "auto" | "gpu" | "cpu") => {
+    setBackendPref(p)
+    setPref(p)
+    setSheetOpen(false)
+    // backend swaps need a clean runtime — reload is the honest reset
+    window.location.reload()
+  }, [])
+
   const legacyLeftovers = storage.filter(s => GHOST_LEGACY_URLS.includes(s.url))
+  const backendLabel = diag
+    ? diag.backend === "webgpu" ? "GPU" : `CPU · ${diag.threads}t`
+    : pref === "gpu" ? "GPU" : pref === "cpu" ? "CPU" : "auto"
 
   return (
     <div className="ghost-app">
@@ -601,52 +789,94 @@ export default function GhostPage() {
       {phase === "ready" && (
         <>
           <div className="ghost-chatbar">
-              <span className="ghost-chatbar-title">{sessions.find(s => s.id === activeId)?.title ?? "new conversation"}</span>
-              <span className="ghost-chatbar-actions">
-                <button type="button" className="ghost-minibtn" disabled={busy} onClick={() => setHistoryOpen(true)}>HISTORY</button>
-                <button type="button" className="ghost-minibtn accent" disabled={busy} onClick={newChat}>＋ NEW</button>
-                <button type="button" className="ghost-gear-inline" aria-label="Ghost settings" onClick={() => setSheetOpen(true)}>⚙</button>
-              </span>
+            <div className="ghost-chatbar-id">
+              <GhostFace size={26} />
+              <div className="ghost-chatbar-titles">
+                <span className="ghost-chatbar-title">Ghost</span>
+                <span className="ghost-chatbar-sub">
+                  {model.name}{diag ? ` · ${backendLabel}${diag.backend === "cpu" && diag.kvQuant ? " · kv q8" : ""}` : ""}
+                </span>
+              </div>
             </div>
+            <span className="ghost-chatbar-actions">
+              <button type="button" className="ghost-iconbtn" aria-label="History" disabled={busy} onClick={() => setHistoryOpen(true)}>
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M10 4a6 6 0 1 0 6 6H10V4z"/><path d="M10 4a6 6 0 0 1 6 6"/><path d="M10 10l4-4"/></svg>
+              </button>
+              <button type="button" className="ghost-iconbtn" aria-label="New chat" disabled={busy} onClick={newChat}>
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M10 4v12M4 10h12"/></svg>
+              </button>
+              <button type="button" className="ghost-iconbtn" aria-label="Ghost settings" onClick={() => setSheetOpen(true)}>
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4"/></svg>
+              </button>
+            </span>
+          </div>
           <div className="ghost-messages" ref={scrollRef} onScroll={onMessagesScroll}>
             {busy && (
-              <div className="ghost-thinking-chip"><GhostFace size={18} thinking /> thinking…{tps != null && tps > 0 ? ` ${tps.toFixed(1)} tok/s` : ""}</div>
+              <div className="ghost-thinking-chip" aria-live="polite">
+                <span className="ghost-dots"><i /><i /><i /></span>
+                thinking{tps != null && tps > 0 ? <span className="ghost-tps">{tps.toFixed(1)} tok/s</span> : null}
+              </div>
             )}
-            {messages.length === 0 && (
+            {messages.length === 0 && !busy && (
               <div className="ghost-empty">
-                <p>Ping the void.</p>
+                <GhostFace size={54} />
+                <p className="ghost-empty-hi">Ask ghost anything.</p>
+                <p className="ghost-empty-sub">Hints and nudges first — real answers on demand. Runs offline.</p>
                 {SUGGESTIONS.map(s => (
                   <button key={s} type="button" className="ghost-chip" onClick={() => send(s)}>{s}</button>
                 ))}
               </div>
             )}
             {messages.map((m, i) => (
-              <div key={i} className={`ghost-msg ${m.role === "user" ? "from-user" : "from-ghost"}`}>
-                {m.role === "assistant" && <GhostFace size={22} />}
-                <div className="ghost-msg-body">
-                  <p>{m.content}{busy && i === messages.length - 1 && m.role === "assistant" && <span className="ghost-cursor" />}</p>
+              m.role === "user" ? (
+                <div key={i} className="ghost-msg from-user">
+                  <div className="ghost-msg-body"><p>{m.content}</p></div>
                 </div>
-              </div>
+              ) : (
+                <div key={i} className="ghost-msg from-ghost">
+                  <div className="ghost-msg-body">
+                    <Markdown text={m.content} />
+                    {busy && i === messages.length - 1 && <span className="ghost-cursor" />}
+                  </div>
+                  {!busy && m.content.length > 24 && (
+                    <CopyBtn text={m.content} />
+                  )}
+                </div>
+              )
             ))}
           </div>
 
           {!follow && (
-            <button type="button" className="ghost-jump" onClick={jumpToLatest}>↓ latest</button>
+            <button type="button" className="ghost-jump" onClick={jumpToLatest}>
+              <svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 4v11M5 10l5 5 5-5"/></svg> latest
+            </button>
           )}
           <footer className="ghost-composer">
             {error && <p className="ghost-error">{error}</p>}
             <form onSubmit={event => { event.preventDefault(); void send() }} className="ghost-inputrow">
-              <input
+              <textarea
+                ref={taRef}
                 className="ghost-input"
+                rows={1}
                 value={input}
                 onChange={event => setInput(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === "Enter" && !event.shiftKey && enterSends.current) {
+                    event.preventDefault()
+                    void send()
+                  }
+                }}
                 placeholder="ask ghost…"
                 disabled={busy}
               />
               {busy ? (
-                <button type="button" className="ghost-send stop" onClick={stop} aria-label="Stop">■</button>
+                <button type="button" className="ghost-send stop" onClick={stop} aria-label="Stop">
+                  <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor"><rect x="4" y="4" width="12" height="12" rx="2.5"/></svg>
+                </button>
               ) : (
-                <button type="submit" className="ghost-send" disabled={!input.trim()} aria-label="Send">↑</button>
+                <button type="submit" className="ghost-send" disabled={!input.trim()} aria-label="Send">
+                  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M10 16V4M5 9l5-5 5 5"/></svg>
+                </button>
               )}
             </form>
           </footer>
@@ -658,6 +888,28 @@ export default function GhostPage() {
           <div className="ghost-sheet" onClick={event => event.stopPropagation()}>
             <span className="ghost-sheet-handle" />
             <p className="ghost-sheet-title">GHOST SETTINGS</p>
+
+            <div className="ghost-backend-row">
+              <div className="ghost-brain-info">
+                <span className="ghost-brain-name">Engine</span>
+                <span className="ghost-brain-meta">{caps?.webgpu ? "WebGPU available on this device" : "CPU only on this device"}</span>
+              </div>
+              <div className="ghost-backend-choices" role="radiogroup" aria-label="Backend">
+                {(["auto", "gpu", "cpu"] as const).map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    role="radio"
+                    aria-checked={pref === p}
+                    className={`ghost-backend-btn${pref === p ? " active" : ""}`}
+                    disabled={p === "gpu" && !caps?.webgpu}
+                    onClick={() => chooseBackend(p)}
+                  >
+                    {p.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {GHOST_MODELS.map(m => {
               const cached = isCached(m.url)
@@ -691,7 +943,11 @@ export default function GhostPage() {
             })}
 
             {legacyLeftovers.map(l => {
-              const name = l.url.includes("qwen") ? "Qwen 2.5 0.5B (leftover)" : "old model"
+              const name = l.url.includes("qwen2.5")
+                ? "Qwen 2.5 0.5B (leftover)"
+                : l.url.includes("SmolLM2")
+                  ? "SmolLM 2 (leftover)"
+                  : "old model"
               return (
                 <div key={l.url} className="ghost-brain-row legacy">
                   <div className="ghost-brain-info">

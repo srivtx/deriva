@@ -5,6 +5,18 @@
 // for WASM inference, so our old wrapper was a pure boot-failure liability.
 // Library loads browser-natively from /ghost/vendor/wllama (same-origin,
 // precached by the SW) — fully offline once installed.
+//
+// ── ghost/faster-smarter pass ─────────────────────────────────────────
+// · New brains: LFM2.5-350M (edge-native hybrid, new default) and
+//   Qwen3-0.6B (strongest small reasoner). SmolLM2 moved to legacy.
+// · KV cache is now REUSED across turns (useCache: true) — previously every
+//   turn cleared the cache and re-prefilled the whole conversation.
+// · Flash attention + q8_0 KV cache when the runtime supports it (with a
+//   silent fallback ladder — no user-visible failure).
+// · Explicit thread pinning (2–6), n_batch 512.
+// · WebGPU backend is now AUTO when an adapter exists (it was unreachable
+//   dead code: no UI ever set the opt-in flag), with CPU demotion on failure.
+// · Per-model sampling incl. min_p (better tails on tiny models).
 
 export interface GhostModel {
   id: string
@@ -13,37 +25,69 @@ export interface GhostModel {
   url: string
   sizeMb: number
   blurb: string
+  /** prompt family — decides template suffix + stop tokens */
+  family: "lfm2" | "qwen3"
+  /** sampling profile */
+  temp: number
+  topP: number
+  minP: number
+  /** appended after `<|im_start|>assistant\n` — Qwen3 non-thinking contract */
+  assistantSuffix?: string
+  /** ONNX repo for the WebGPU path */
+  gpuRepo?: string
 }
 
 export const GHOST_MODELS: GhostModel[] = [
   {
-    id: "smollm2-135m",
-    label: "NANO · 101 MB",
-    name: "SmolLM2 135M",
-    url: "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf",
-    sizeMb: 101,
-    blurb: "default · fast on any phone",
+    id: "lfm2.5-350m",
+    label: "NANO · 219 MB",
+    name: "LFM 2.5 350M",
+    url: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
+    sizeMb: 219,
+    blurb: "default · edge-native hybrid — fastest brain per byte",
+    family: "lfm2",
+    temp: 0.45,
+    topP: 0.9,
+    minP: 0.05,
+    gpuRepo: "onnx-community/LFM2.5-350M-ONNX",
   },
   {
-    id: "smollm2-360m",
-    label: "LITE · 258 MB",
-    name: "SmolLM2 360M",
-    url: "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf",
-    sizeMb: 258,
-    blurb: "deeper reasoning · still quick",
+    id: "qwen3-0.6b",
+    label: "LITE · 378 MB",
+    name: "Qwen 3 0.6B",
+    url: "https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf",
+    sizeMb: 378,
+    blurb: "deeper reasoning · the strongest small brain",
+    family: "qwen3",
+    temp: 0.7,
+    topP: 0.8,
+    minP: 0.05,
+    // Empty think-block: Qwen3's official non-thinking recipe. Skips the
+    //  wall and answers directly — half the latency, same accuracy.
+    assistantSuffix: "\n\n",
+    gpuRepo: "onnx-community/Qwen3-0.6B-ONNX",
   },
 ]
 
 export const GHOST_LEGACY_URLS = [
   "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+  "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf",
+  "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf",
 ]
 
-export const DEFAULT_MODEL_ID = "smollm2-135m"
+export const DEFAULT_MODEL_ID = "lfm2.5-350m"
+
+/** max tokens per reply — 288 keeps the tutor terse but lets answers breathe */
+export const GHOST_MAX_TOKENS = 288
 
 export function getSelectedModel(): GhostModel {
   try {
     const id = localStorage.getItem("deriva-ghost-model")
-    return GHOST_MODELS.find(m => m.id === id) ?? GHOST_MODELS.find(m => m.id === DEFAULT_MODEL_ID)!
+    const found = GHOST_MODELS.find(m => m.id === id)
+    if (found) return found
+    // migrate: a stored SmolLM2/Qwen2.5 id no longer exists → default
+    if (id && !found) localStorage.setItem("deriva-ghost-model", DEFAULT_MODEL_ID)
+    return GHOST_MODELS.find(m => m.id === DEFAULT_MODEL_ID)!
   } catch {
     return GHOST_MODELS.find(m => m.id === DEFAULT_MODEL_ID)!
   }
@@ -65,7 +109,14 @@ interface WllamaInstance {
     options: {
       nPredict?: number
       useCache?: boolean
-      sampling?: { temp?: number; top_p?: number; penalty_repeat?: number }
+      sampling?: {
+        temp?: number
+        top_p?: number
+        top_k?: number
+        min_p?: number
+        penalty_repeat?: number
+        penalty_last_n?: number
+      }
       stopTokens?: number[]
       abortSignal?: AbortSignal
       onNewToken?: (token: number, piece: Uint8Array, currentText: string) => void
@@ -132,10 +183,9 @@ function store(): GhostStore {
 
 /* ---------- WebGPU backend (Transformers.js v4 + ONNX Runtime WebGPU) ---- */
 
-const GPU_MODEL_REPOS: Record<string, string> = {
-  "smollm2-135m": "onnx-community/SmolLM2-135M-Instruct-ONNX",
-  "smollm2-360m": "onnx-community/SmolLM2-360M-Instruct-ONNX",
-}
+const GPU_MODEL_REPOS: Record<string, string> = Object.fromEntries(
+  GHOST_MODELS.filter(m => m.gpuRepo).map(m => [m.id, m.gpuRepo!]),
+)
 
 interface TfLike {
   env: { backends: { onnx: { wasm: { wasmPaths: string } } }; allowLocalModels: boolean }
@@ -183,13 +233,26 @@ async function gpuBytes(modelId: string): Promise<number> {
   } catch { return 0 }
 }
 
-export function gpuOptIn(): boolean {
-  try { return localStorage.getItem("deriva-ghost-gpu") === "1" } catch { return false }
-}
-export function setGpuOptIn(on: boolean) {
+/* ---------- backend selection ───────────────────────────────────────────
+   "deriva-ghost-backend": "gpu" | "cpu" | unset → auto.
+   auto = WebGPU whenever an adapter answers; CPU demotion on hard failure.
+   Legacy "deriva-ghost-gpu"="1" (the old opt-in nothing ever set) → "gpu". */
+
+type BackendPref = "gpu" | "cpu" | "auto"
+const BACKEND_KEY = "deriva-ghost-backend"
+
+export function backendPref(): BackendPref {
   try {
-    if (on) localStorage.setItem("deriva-ghost-gpu", "1")
-    else localStorage.removeItem("deriva-ghost-gpu")
+    const v = localStorage.getItem(BACKEND_KEY)
+    if (v === "gpu" || v === "cpu") return v
+    if (localStorage.getItem("deriva-ghost-gpu") === "1") return "gpu"
+  } catch {}
+  return "auto"
+}
+export function setBackendPref(p: BackendPref) {
+  try {
+    if (p === "auto") localStorage.removeItem(BACKEND_KEY)
+    else localStorage.setItem(BACKEND_KEY, p)
   } catch {}
 }
 
@@ -228,8 +291,6 @@ function lib(): Promise<WllamaModule> {
   return modPromise
 }
 
-
-
 function baseName(url: string): string {
   try { return new URL(url).pathname.split("/").pop() || url } catch { return url }
 }
@@ -260,6 +321,13 @@ async function opfsSweep(fragment: string): Promise<void> {
   } catch {}
 }
 
+/** thread pinning: decode is memory-bandwidth bound — 2–6 workers is the
+ *  sweet spot on both big.LITTLE phones (8 logical cores) and desktops. */
+function pickThreads(): number {
+  const hc = navigator.hardwareConcurrency || 4
+  return Math.min(Math.max(hc, 2), 6)
+}
+
 class GhostEngine {
   private instance: WllamaInstance | null = null
   private loadedUrl: string | null = null
@@ -269,6 +337,11 @@ class GhostEngine {
   private stopTokenIds: number[] | null = null
   private stopIdsUrl: string | null = null
   private activeAbort: AbortController | null = null
+  private gpuFailed = false
+  /** diagnostics for the gauge */
+  lastThreads = 0
+  lastFlashAttn = false
+  lastKvQuant = false
 
   /* ---------- runtime ---------- */
 
@@ -292,10 +365,33 @@ class GhostEngine {
     if (!blob || blob.size <= 0) {
       throw new Error("MODEL_NOT_CACHED · download the brain first")
     }
-    this.instance = new m.Wllama(WLLAMA_PATHS)
-    this.loadedUrl = url
-    await this.instance.loadModel([blob], { n_ctx: 2048 })
-    try { this.lastThreads = this.instance.getNumThreads() } catch { this.lastThreads = 0 }
+    // Fallback ladder: flash-attn + q8_0 KV cache first (halves KV memory
+    // bandwidth), plain config if the wasm build refuses it. Silent — the
+    // user never sees a config error, only the speed.
+    // n_batch 256: chat prompts are short (useCache keeps them incremental),
+    // so a small ubatch halves the compute buffer with zero prefill cost.
+    const nThreads = pickThreads()
+    const attempts: Array<Record<string, unknown>> = [
+      { n_ctx: 2048, n_batch: 256, n_threads: nThreads, flash_attn: true, cache_type_k: "q8_0", cache_type_v: "q8_0" },
+      { n_ctx: 2048, n_batch: 256, n_threads: nThreads },
+    ]
+    let lastErr: unknown = null
+    for (const opts of attempts) {
+      try {
+        const inst = new m.Wllama(WLLAMA_PATHS)
+        await inst.loadModel([blob], opts)
+        this.instance = inst
+        this.loadedUrl = url
+        this.lastFlashAttn = !!opts.flash_attn
+        this.lastKvQuant = opts.cache_type_k === "q8_0"
+        try { this.lastThreads = inst.getNumThreads() } catch { this.lastThreads = 0 }
+        return
+      } catch (err) {
+        lastErr = err
+        try { await this.releaseRuntime() } catch {}
+      }
+    }
+    throw lastErr ?? new Error("MODEL_NOT_CACHED · download the brain first")
   }
 
   private async releaseRuntime(): Promise<void> {
@@ -316,7 +412,7 @@ class GhostEngine {
     let seenTotal = 0
     const pipe = (await T.pipeline("text-generation", repo, {
       device: "webgpu",
-      dtype: "q4f16",
+      dtype: "q4",
       progress_callback: (info: { status?: string; loaded?: number; total?: number }) => {
         if (info?.status === "progress") {
           const loaded = Number(info.loaded ?? 0)
@@ -334,26 +430,36 @@ class GhostEngine {
     return pipe
   }
 
-  async backend(): Promise<"webgpu" | "cpu"> {
-    return (await gpuAvailable()) && gpuOptIn() ? "webgpu" : "cpu"
+  /** auto: WebGPU whenever an adapter answers (unless the user forced CPU,
+   *  or a GPU attempt already failed this session). */
+  private async useGpu(): Promise<boolean> {
+    if (this.gpuFailed) return false
+    const pref = backendPref()
+    if (pref === "cpu") return false
+    return await gpuAvailable()
   }
 
-  private async useGpu(): Promise<boolean> {
-    return (await gpuAvailable()) && gpuOptIn()
+  async backend(): Promise<"webgpu" | "cpu"> {
+    return (await this.useGpu()) ? "webgpu" : "cpu"
   }
 
   /* ---------- storage queries ---------- */
 
-  lastThreads = 0
-
-  async diagnostics(): Promise<{ isolated: boolean; threads: number; resident: boolean; backend: "webgpu" | "cpu" }> {
+  async diagnostics(): Promise<{
+    isolated: boolean
+    threads: number
+    resident: boolean
+    backend: "webgpu" | "cpu"
+    flashAttn: boolean
+    kvQuant: boolean
+  }> {
     const isolated = typeof crossOriginIsolated !== "undefined" ? crossOriginIsolated : false
     const backend = (await this.useGpu()) ? "webgpu" as const : "cpu" as const
     if (this.instance && this.lastThreads > 0) {
-      return { isolated, threads: this.lastThreads, resident: true, backend }
+      return { isolated, threads: this.lastThreads, resident: true, backend, flashAttn: this.lastFlashAttn, kvQuant: this.lastKvQuant }
     }
-    const expected = Math.floor((navigator.hardwareConcurrency || 1) / 2)
-    return { isolated, threads: Math.max(expected, 1), resident: false, backend }
+    const expected = pickThreads()
+    return { isolated, threads: Math.max(expected, 1), resident: false, backend, flashAttn: false, kvQuant: false }
   }
 
   async probe(): Promise<{ webgpu: boolean; storageQuotaMb: number | null; cachedMb: number | null }> {
@@ -453,10 +559,29 @@ class GhostEngine {
   async load(model: GhostModel, onProgress?: (label: string) => void): Promise<void> {
     onProgress?.(`waking ${model.name}`)
     if (await this.useGpu()) {
-      await this.ensurePipeline(model.id)
-      return
+      try {
+        await this.ensurePipeline(model.id)
+        return
+      } catch (err) {
+        // GPU pipeline failed to build — demote for this device and fall
+        // through to CPU. Silent unless even CPU fails.
+        this.gpuFailed = true
+        setBackendPref("cpu")
+        console.warn("[ghost] WebGPU pipeline failed — demoted to CPU:", err)
+        onProgress?.("gpu refused · falling back to cpu")
+      }
     }
     await this.ensureLoaded(model.url)
+  }
+
+  /** strip special tokens + any reasoning wrapper the model may emit */
+  private cleanText(s: unknown): string {
+    let out = String(s ?? "")
+    out = out.replace(/<\|[a-z_]+\|>/g, "")
+    out = out.replace(/<think>[\s\S]*?<\/think>/gi, "")
+    out = out.replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
+    out = out.replace(/<\/?(?:think|thinking)>/gi, "")
+    return out
   }
 
   async chat(
@@ -466,50 +591,59 @@ class GhostEngine {
     onToken?: (piece: string) => void,
   ): Promise<{ text: string; tps: number }> {
     const started = performance.now()
-    const clean = (s: unknown) => String(s ?? "").replace(/<\|[a-z_]+\|>/g, "")
+    const clean = (s: unknown) => this.cleanText(s)
 
-    if (await this.useGpu()) {
-      const pipe = (await this.ensurePipeline(model.id)) as {
-        (messages: unknown, opts?: Record<string, unknown>): Promise<Array<{ generated_text: Array<{ role: string; content: string }> }>>
-        tokenizer: unknown
-      }
-      this.stopDetached = false
-      let tokens = 0
-      let currentText = ""
-      const T = await tf()
-      const streamer = new T.TextStreamer(pipe.tokenizer, {
-        skip_prompt: true,
-        skip_special_tokens: true,
-        callback_function: (piece: string) => {
-          tokens += 1
-          currentText += piece
-          if (!this.stopDetached && piece && !clean(piece).includes("[")) onToken?.(clean(piece))
-        },
-      })
-      const run = (async () => {
-        await pipe(
-          messages.map(m => ({ role: m.role, content: m.content })),
-          {
-            max_new_tokens: Math.min(maxTokens || 220, 220),
-            do_sample: true,
-            temperature: 0.35,
-            top_p: 0.9,
-            repetition_penalty: 1.1,
-            streamer,
-          },
-        )
-        return clean(currentText).trim()
-      })()
-      let timer: ReturnType<typeof setTimeout> | undefined
-      const timeout = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("Ghost timed out — try again.")), 120000)
-      })
+    let useGpu = await this.useGpu()
+    if (useGpu) {
       try {
-        const text = await Promise.race([run, timeout])
-        const seconds = (performance.now() - started) / 1000
-        return { text, tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
-      } finally {
-        if (timer) clearTimeout(timer)
+        const pipe = (await this.ensurePipeline(model.id)) as {
+          (messages: unknown, opts?: Record<string, unknown>): Promise<Array<{ generated_text: Array<{ role: string; content: string }> }>>
+          tokenizer: unknown
+        }
+        this.stopDetached = false
+        let tokens = 0
+        let currentText = ""
+        const T = await tf()
+        const streamer = new T.TextStreamer(pipe.tokenizer, {
+          skip_prompt: true,
+          skip_special_tokens: true,
+          callback_function: (piece: string) => {
+            tokens += 1
+            currentText += piece
+            if (!this.stopDetached && piece && !clean(piece).includes("[")) onToken?.(clean(piece))
+          },
+        })
+        const run = (async () => {
+          await pipe(
+            messages.map(m => ({ role: m.role, content: m.content })),
+            {
+              max_new_tokens: Math.min(maxTokens || GHOST_MAX_TOKENS, GHOST_MAX_TOKENS),
+              do_sample: true,
+              temperature: model.temp,
+              top_p: model.topP,
+              repetition_penalty: 1.1,
+              streamer,
+            },
+          )
+          return clean(currentText).trim()
+        })()
+        let timer: ReturnType<typeof setTimeout> | undefined
+        const timeout = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Ghost timed out — try again.")), 120000)
+        })
+        try {
+          const text = await Promise.race([run, timeout])
+          const seconds = (performance.now() - started) / 1000
+          return { text, tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
+        } finally {
+          if (timer) clearTimeout(timer)
+        }
+      } catch (err) {
+        // First GPU generation failed → demote and rerun on CPU below.
+        this.gpuFailed = true
+        setBackendPref("cpu")
+        console.warn("[ghost] WebGPU generation failed — demoted to CPU:", err)
+        useGpu = false
       }
     }
 
@@ -521,10 +655,12 @@ class GhostEngine {
       const ids = new Set<number>()
       const eos = wllama.getEOS()
       if (eos >= 0) ids.add(eos)
-      try {
-        const imStart = await wllama.lookupToken("<|im_start|>")
-        if (imStart >= 0) ids.add(imStart)
-      } catch {}
+      for (const piece of [...CHATML_STOP, "<|startoftext|>"]) {
+        try {
+          const id = await wllama.lookupToken(piece)
+          if (id >= 0) ids.add(id)
+        } catch {}
+      }
       this.stopTokenIds = [...ids]
       this.stopIdsUrl = model.url
     }
@@ -536,14 +672,24 @@ class GhostEngine {
       const msgs = messages ?? []
       const promptStr =
         msgs.map(m => `<|im_start|>${m.role}\n${m.content}<|im_end|>`).join("\n") +
-        "\n<|im_start|>assistant\n"
+        `\n<|im_start|>assistant\n${model.assistantSuffix ?? ""}`
       let tokens = 0
       let currentText = ""
       const decoder = new TextDecoder("utf-8")
       try {
         const text = await wllama.createCompletion(promptStr, {
-          nPredict: Math.min(maxTokens || 220, 220),
-          sampling: { temp: 0.6, top_p: 0.9, penalty_repeat: 1.15 },
+          nPredict: Math.min(maxTokens || GHOST_MAX_TOKENS, GHOST_MAX_TOKENS),
+          // ⚡ THE fix: reuse the KV cache across turns. Without this,
+          // wllama kvClear()s and re-prefills the entire conversation
+          // every single message — the main source of dead time on phones.
+          useCache: true,
+          sampling: {
+            temp: model.temp,
+            top_p: model.topP,
+            min_p: model.minP,
+            penalty_repeat: 1.15,
+            penalty_last_n: 64,
+          },
           stopTokens: this.stopTokenIds!,
           abortSignal: abort.signal,
           onNewToken: (_token, piece) => {
