@@ -77,6 +77,41 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
   return nodes
 }
 
+/* Stream reveal (v16): while a reply streams, words are wrapped in spans
+   keyed by char offset. Append-only streaming keeps offsets stable, so a
+   revealed word never re-animates — only appended words materialize. */
+function renderRevealWords(text: string, keyBase: string): ReactNode[] {
+  const nodes: ReactNode[] = []
+  const re = /\S+\s*/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) {
+    const tok = m[0]
+    const word = tok.trimEnd()
+    const trail = tok.slice(word.length)
+    if (word) nodes.push(<span key={`${keyBase}w${m.index}`} className="ghost-w">{word}</span>)
+    if (trail) nodes.push(trail)
+  }
+  return nodes
+}
+
+function renderInlineReveal(text: string, keyBase: string, caret: boolean): ReactNode[] {
+  const nodes: ReactNode[] = []
+  const re = /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`\n]+`)/g
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) {
+    if (m.index > last) nodes.push(...renderRevealWords(text.slice(last, m.index), `${keyBase}o${last}-`))
+    const tok = m[0]
+    if (tok.startsWith("**")) nodes.push(<strong key={`${keyBase}-b${m.index}`} className="ghost-w">{tok.slice(2, -2)}</strong>)
+    else if (tok.startsWith("`")) nodes.push(<code key={`${keyBase}-c${m.index}`} className="ghost-md-code ghost-w">{tok.slice(1, -1)}</code>)
+    else nodes.push(<em key={`${keyBase}-i${m.index}`} className="ghost-w">{tok.slice(1, -1)}</em>)
+    last = m.index + tok.length
+  }
+  if (last < text.length) nodes.push(...renderRevealWords(text.slice(last), `${keyBase}o${last}-`))
+  if (caret) nodes.push(<span key={`${keyBase}-caret`} className="ghost-cursor" aria-hidden="true" />)
+  return nodes
+}
+
 function CopyBtn({ text, className }: { text: string; className?: string }) {
   const [copied, setCopied] = useState(false)
   const copy = useCallback(async () => {
@@ -89,7 +124,12 @@ function CopyBtn({ text, className }: { text: string; className?: string }) {
   }, [text])
   return (
     <button type="button" className={className ?? "ghost-copy"} onClick={copy} aria-label="Copy">
-      {copied ? "copied" : "copy"}
+      {copied ? (
+        <span className="ghost-copy-ok">
+          <svg viewBox="0 0 20 20" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10.5l4 4 8-9" /></svg>
+          copied
+        </span>
+      ) : "copy"}
     </button>
   )
 }
@@ -106,9 +146,13 @@ function CodeBlock({ code }: { code: string }) {
   )
 }
 
-function Markdown({ text }: { text: string }) {
+function Markdown({ text, reveal = false, caret = false }: { text: string; reveal?: boolean; caret?: boolean }) {
   const blocks: ReactNode[] = []
   const parts = text.split(/```/)
+  // the last prose part carries the stream reveal; the caret rides the last
+  // paragraph, but only while the stream is NOT inside an open code fence
+  const lastProsePart = parts.length - 1 - (parts.length % 2 === 0 ? 1 : 0)
+  const caretHere = caret && parts.length % 2 === 1
 
   parts.forEach((part, pi) => {
     // odd indexes are fenced code
@@ -127,6 +171,8 @@ function Markdown({ text }: { text: string }) {
     }
     // prose: paragraphs, lists, headings
     const lines = part.split("\n")
+    let lastLineIdx = -1
+    lines.forEach((l, li) => { if (l.trim()) lastLineIdx = li })
     let list: { ordered: boolean; items: string[] } | null = null
     const flushList = (key: string) => {
       if (!list) return
@@ -162,12 +208,16 @@ function Markdown({ text }: { text: string }) {
         blocks.push(<p key={key} className="ghost-md-h">{renderInline(heading[2], key)}</p>)
         return
       }
+      if (reveal && pi === lastProsePart) {
+        blocks.push(<p key={key} className="ghost-md-p">{renderInlineReveal(line, key, caretHere && li === lastLineIdx)}</p>)
+        return
+      }
       blocks.push(<p key={key} className="ghost-md-p">{renderInline(line, key)}</p>)
     })
     flushList(`p${pi}-end`)
   })
 
-  return <div className="ghost-md">{blocks}</div>
+  return <div className={reveal ? "ghost-md streaming" : "ghost-md"}>{blocks}</div>
 }
 
 function GhostFace({ size = 96, thinking = false }: { size?: number; thinking?: boolean }) {
@@ -189,6 +239,98 @@ function GhostFace({ size = 96, thinking = false }: { size?: number; thinking?: 
 
 type StorageEntry = { url: string; sizeMb: number }
 interface GhostSession { id: string; title: string; updatedAt: number; messages: ChatMessage[] }
+
+/* ── Sheet (v16): spring entry, animated exit, drag-to-dismiss ──
+   Exit mirrors entry (accelerated). The head area is the drag zone:
+   pull down past 110 px or flick (>0.55 px/ms) to dismiss, else it
+   springs back. Escape closes; focus returns to the invoker. */
+function Sheet({
+  title,
+  closing,
+  onClosed,
+  onRequestClose,
+  children,
+}: {
+  title: string
+  closing: boolean
+  onClosed: () => void
+  onRequestClose: () => void
+  children: ReactNode
+}) {
+  const sheetRef = useRef<HTMLDivElement | null>(null)
+  const invokerRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    invokerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    return () => invokerRef.current?.focus?.()
+  }, [])
+
+  useEffect(() => {
+    if (closing) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onRequestClose() }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [closing, onRequestClose])
+
+  const onHeadPointerDown = useCallback((e: React.PointerEvent) => {
+    if (closing) return
+    if (e.pointerType === "mouse" && e.button !== 0) return
+    const sheet = sheetRef.current
+    if (!sheet) return
+    const startY = e.clientY
+    let y = startY
+    let lastT = performance.now()
+    let vy = 0
+    let dy = 0
+    try { sheet.setPointerCapture(e.pointerId) } catch {}
+    sheet.classList.add("dragging")
+    const move = (ev: PointerEvent) => {
+      dy = Math.max(0, ev.clientY - startY)
+      const now = performance.now()
+      if (now > lastT) vy = (ev.clientY - y) / (now - lastT)
+      y = ev.clientY
+      lastT = now
+      sheet.style.transform = `translateY(${dy}px)`
+    }
+    const finish = () => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", finish)
+      window.removeEventListener("pointercancel", finish)
+      sheet.classList.remove("dragging")
+      if (dy > 110 || vy > 0.55) {
+        sheet.style.transform = ""
+        onRequestClose()
+        return
+      }
+      sheet.classList.add("settle")
+      sheet.style.transform = ""
+      window.setTimeout(() => sheet.classList.remove("settle"), 360)
+    }
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", finish)
+    window.addEventListener("pointercancel", finish)
+  }, [closing, onRequestClose])
+
+  return (
+    <div className={`ghost-sheet-backdrop${closing ? " closing" : ""}`} onClick={() => !closing && onRequestClose()}>
+      <div
+        className={`ghost-sheet${closing ? " closing" : ""}`}
+        ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={event => event.stopPropagation()}
+        onAnimationEnd={event => { if (closing && event.animationName === "ghost-sheet-out") onClosed() }}
+      >
+        <div className="ghost-sheet-head" onPointerDown={onHeadPointerDown}>
+          <span className="ghost-sheet-handle" />
+          <p className="ghost-sheet-title">{title}</p>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
 
 const CHATS_KEY = "deriva-ghost-chats"
 const ACTIVE_KEY = "deriva-ghost-active"
@@ -216,12 +358,14 @@ export default function GhostPage() {
   const [model, setModel] = useState<GhostModel>(() => getSelectedModel())
   const [storage, setStorage] = useState<StorageEntry[]>([])
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetClosing, setSheetClosing] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyClosing, setHistoryClosing] = useState(false)
   const [action, setAction] = useState<string | null>(null)
   const [dl, setDl] = useState<DownloadProgress>({ phase: "connect", fraction: 0, loadedMb: 0, totalMb: 0, speedMbps: 0, etaSec: null })
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [sessions, setSessions] = useState<GhostSession[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [historyOpen, setHistoryOpen] = useState(false)
   const [input, setInput] = useState("")
   const [busy, setBusy] = useState(false)
   const [tps, setTps] = useState<number | null>(null)
@@ -233,6 +377,9 @@ export default function GhostPage() {
   const [busyElapsed, setBusyElapsed] = useState(0)
   const [liveTps, setLiveTps] = useState<number | null>(null)
   const busyRef = useRef(false)
+  // active-session id mirror: persistence reads this so it never sees a
+  // stale closure — the root cause of duplicated history rows (v16 fix)
+  const activeIdRef = useRef<string | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const taRef = useRef<HTMLTextAreaElement | null>(null)
   const [follow, setFollow] = useState(true)
@@ -288,7 +435,7 @@ export default function GhostPage() {
       const active = localStorage.getItem(ACTIVE_KEY)
       if (active) {
         const found = list.find(s => s.id === active)
-        if (found) { setActiveId(found.id); setMessages(found.messages) }
+        if (found) { setActiveId(found.id); activeIdRef.current = found.id; setMessages(found.messages) }
         else { localStorage.removeItem(ACTIVE_KEY) }
       }
     } catch {}
@@ -351,22 +498,33 @@ export default function GhostPage() {
     setFollow(true)
   }, [])
 
+  useEffect(() => { activeIdRef.current = activeId }, [activeId])
+
   const persistSession = useCallback((next: ChatMessage[], firstUserText?: string) => {
+    const currentId = activeIdRef.current
+    if (currentId) {
+      setSessions(prev => {
+        const list = prev.map(s => s.id === currentId ? { ...s, messages: next.slice(-60), updatedAt: Date.now() } : s)
+        saveSessions(list)
+        return list
+      })
+      return
+    }
+    if (next.length === 0) return
+    // id generated OUTSIDE the updater; insert is guarded, so double
+    // invocation (StrictMode or the completion path) is idempotent
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const title = (firstUserText || next[0]?.content || "conversation").slice(0, 44)
+    activeIdRef.current = id
+    try { localStorage.setItem(ACTIVE_KEY, id) } catch {}
     setSessions(prev => {
-      let list = [...prev]
-      if (activeId) {
-        list = list.map(s => s.id === activeId ? { ...s, messages: next.slice(-60), updatedAt: Date.now() } : s)
-      } else if (next.length > 0) {
-        const id = `${Date.now()}`
-        const title = (firstUserText || next[0]?.content || "conversation").slice(0, 44)
-        list = [{ id, title, updatedAt: Date.now(), messages: next.slice(-60) }, ...list]
-        setActiveId(id)
-        try { localStorage.setItem(ACTIVE_KEY, id) } catch {}
-      }
+      if (prev.some(s => s.id === id)) return prev
+      const list = [{ id, title, updatedAt: Date.now(), messages: next.slice(-60) }, ...prev]
       saveSessions(list)
       return list
     })
-  }, [activeId])
+    setActiveId(id)
+  }, [])
 
   const refreshStorage = useCallback(async () => {
     setStorage(await ghostEngine.scanStorage().catch(() => []))
@@ -374,6 +532,7 @@ export default function GhostPage() {
 
   const chooseModel = useCallback((next: GhostModel) => {
     if (action) return
+    haptic(4)
     setModel(next)
     setSelectedModel(next.id)
     setError(null)
@@ -402,10 +561,16 @@ export default function GhostPage() {
     }
   }, [action, refreshStorage, phase])
 
+  const openSheet = useCallback(() => { haptic(6); setSheetClosing(false); setSheetOpen(true) }, [])
+  const closeSheet = useCallback(() => { if (!action) setSheetClosing(true) }, [action])
+  const openHistory = useCallback(() => { haptic(6); setHistoryClosing(false); setHistoryOpen(true) }, [])
+  const closeHistory = useCallback(() => setHistoryClosing(true), [])
+
   const startGet = useCallback(async (m: GhostModel) => {
     if (action) return
     setPendingGet(m)
     setSheetOpen(false)
+    setSheetClosing(false)
     setError(null)
     setDl({ phase: "connect", fraction: 0, loadedMb: 0, totalMb: 0, speedMbps: 0, etaSec: null })
     setPhase("downloading")
@@ -620,58 +785,67 @@ export default function GhostPage() {
 
   const clearChat = useCallback(() => {
     setSessions(prev => {
-      const list = prev.filter(s => s.id !== activeId)
+      const list = prev.filter(s => s.id !== activeIdRef.current)
       saveSessions(list)
       return list
     })
     setMessages([])
     setActiveId(null)
+    activeIdRef.current = null
     setSheetOpen(false)
+    setSheetClosing(false)
     try { localStorage.removeItem(ACTIVE_KEY) } catch {}
     try { localStorage.removeItem("deriva-ghost-chat") } catch {}
-  }, [activeId])
+  }, [])
 
   const upsertCurrentBeforeSwitch = useCallback((list: GhostSession[]): GhostSession[] => {
-    if (!activeId || messages.length === 0) return list
-    return list.map(s => s.id === activeId ? { ...s, messages: messages.slice(-60), updatedAt: Date.now() } : s)
-  }, [activeId, messages])
+    const id = activeIdRef.current
+    if (!id || messages.length === 0) return list
+    return list.map(s => s.id === id ? { ...s, messages: messages.slice(-60), updatedAt: Date.now() } : s)
+  }, [messages])
 
   const newChat = useCallback(() => {
     if (busyRef.current) return
     setSessions(prev => { const l = upsertCurrentBeforeSwitch(prev); saveSessions(l); return l })
     setMessages([])
     setActiveId(null)
+    activeIdRef.current = null
     stick.current = true
     setFollow(true)
     setHistoryOpen(false)
+    setHistoryClosing(false)
     try { localStorage.removeItem(ACTIVE_KEY) } catch {}
   }, [upsertCurrentBeforeSwitch])
 
   const openSession = useCallback((id: string) => {
     if (busyRef.current) return
-    setSessions(prev => {
-      const l = upsertCurrentBeforeSwitch(prev); saveSessions(l)
-      const found = l.find(s => s.id === id)
-      if (found) { setMessages(found.messages); setActiveId(found.id); try { localStorage.setItem(ACTIVE_KEY, id) } catch {} }
-      stick.current = true
-      setFollow(true)
-      setHistoryOpen(false)
-      return l
-    })
-  }, [upsertCurrentBeforeSwitch])
+    const found = sessions.find(s => s.id === id)
+    if (!found) return
+    setSessions(prev => { const l = upsertCurrentBeforeSwitch(prev); saveSessions(l); return l })
+    setMessages(found.messages)
+    setActiveId(id)
+    activeIdRef.current = id
+    try { localStorage.setItem(ACTIVE_KEY, id) } catch {}
+    stick.current = true
+    setFollow(true)
+    setHistoryOpen(false)
+    setHistoryClosing(false)
+  }, [upsertCurrentBeforeSwitch, sessions])
 
   const deleteSession = useCallback((id: string) => {
     if (busyRef.current) return
     setSessions(prev => {
       const l = prev.filter(s => s.id !== id); saveSessions(l)
-      if (id === activeId) {
-        setMessages([]); setActiveId(null)
-        try { localStorage.removeItem(ACTIVE_KEY) } catch {}
-        try { localStorage.removeItem("deriva-ghost-chat") } catch {}
-      }
       return l
     })
-  }, [activeId])
+    if (id === activeIdRef.current) {
+      setMessages([])
+      setActiveId(null)
+      activeIdRef.current = null
+      try { localStorage.removeItem(ACTIVE_KEY) } catch {}
+      try { localStorage.removeItem("deriva-ghost-chat") } catch {}
+    }
+  }, [])
 
   const useModel = useCallback(async (m: GhostModel) => {
     if (action || m.id === model.id) return
@@ -695,6 +869,7 @@ export default function GhostPage() {
     await refreshStorage()
     setTps(null)
     setSheetOpen(false)
+    setSheetClosing(false)
     setPhase("intro")
     setAction(null)
   }, [action, refreshStorage])
@@ -703,6 +878,7 @@ export default function GhostPage() {
     setBackendPref(p)
     setPref(p)
     setSheetOpen(false)
+    setSheetClosing(false)
     // backend swaps need a clean runtime — reload is the honest reset
     window.location.reload()
   }, [])
@@ -771,7 +947,7 @@ export default function GhostPage() {
           </button>
 
           {totalMb > 0 && (
-            <button type="button" className="ghost-storage-link" onClick={() => setSheetOpen(true)}>
+            <button type="button" className="ghost-storage-link" onClick={openSheet}>
               MANAGE STORED BRAINS ({totalMb} MB) →
             </button>
           )}
@@ -786,7 +962,7 @@ export default function GhostPage() {
           <p className="ghost-hero-title">{(pendingGet ?? model).name}</p>
           <p className="ghost-tagline mono">{(pendingGet ?? model).sizeMb} MB · one-time</p>
           <div
-            className="ghost-progress"
+            className={`ghost-progress${dl.phase === "connect" || dl.phase === "verify" || dl.phase === "store" ? " indet" : ""}`}
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
@@ -835,13 +1011,13 @@ export default function GhostPage() {
               </div>
             </div>
             <span className="ghost-chatbar-actions">
-              <button type="button" className="ghost-iconbtn" aria-label="History" disabled={busy} onClick={() => setHistoryOpen(true)}>
+              <button type="button" className="ghost-iconbtn" aria-label="History" disabled={busy} onClick={openHistory}>
                 <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M10 4a6 6 0 1 0 6 6H10V4z"/><path d="M10 4a6 6 0 0 1 6 6"/><path d="M10 10l4-4"/></svg>
               </button>
               <button type="button" className="ghost-iconbtn" aria-label="New chat" disabled={busy} onClick={newChat}>
                 <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M10 4v12M4 10h12"/></svg>
               </button>
-              <button type="button" className="ghost-iconbtn" aria-label="Ghost settings" title="Settings" onClick={() => setSheetOpen(true)}>
+              <button type="button" className="ghost-iconbtn" aria-label="Ghost settings" title="Settings" onClick={openSheet}>
                 <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="10" cy="10" r="5.2" />
                   <circle cx="10" cy="10" r="1.8" />
@@ -851,17 +1027,6 @@ export default function GhostPage() {
             </span>
           </div>
           <div className="ghost-messages" ref={scrollRef} onScroll={onMessagesScroll}>
-            {busy && (
-              <div className="ghost-thinking-chip" aria-live="polite">
-                <span className="ghost-dots"><i /><i /><i /></span>
-                {liveTps != null && liveTps > 0 ? "streaming" : "thinking"}
-                {liveTps != null && liveTps > 0 ? (
-                  <span className="ghost-tps">{liveTps.toFixed(1)} tok/s</span>
-                ) : busyElapsed >= 0.4 ? (
-                  <span className="ghost-tps">{busyElapsed.toFixed(1)}s · first reply warms the engine</span>
-                ) : null}
-              </div>
-            )}
             {messages.length === 0 && !busy && (
               <div className="ghost-empty">
                 <GhostFace size={54} />
@@ -872,30 +1037,44 @@ export default function GhostPage() {
                 ))}
               </div>
             )}
-            {messages.map((m, i) => (
-              m.role === "user" ? (
+            {messages.map((m, i) => {
+              const streaming = busy && i === messages.length - 1 && m.role === "assistant"
+              return m.role === "user" ? (
                 <div key={i} className="ghost-msg from-user">
                   <div className="ghost-msg-body"><p>{m.content}</p></div>
                 </div>
               ) : (
                 <div key={i} className="ghost-msg from-ghost">
                   <div className="ghost-msg-body">
-                    <Markdown text={m.content} />
-                    {busy && i === messages.length - 1 && <span className="ghost-cursor" />}
+                    <Markdown text={m.content} reveal={streaming} caret={streaming} />
+                    {streaming && liveTps != null && liveTps > 0 && (
+                      <span className="ghost-stream-tps">{liveTps.toFixed(1)} tok/s</span>
+                    )}
                   </div>
                   {!busy && m.content.length > 24 && (
                     <CopyBtn text={m.content} />
                   )}
                 </div>
               )
-            ))}
+            })}
+            {busy && messages[messages.length - 1]?.role !== "assistant" && (
+              <div className="ghost-thinking-chip" aria-live="polite">
+                <span className="ghost-dots"><i /><i /><i /></span>
+                thinking
+                {busyElapsed >= 0.4 ? (
+                  <span className="ghost-tps">{busyElapsed.toFixed(1)}s · first reply warms the engine</span>
+                ) : null}
+              </div>
+            )}
+            {!follow && (
+              <div className="ghost-jump-wrap">
+                <button type="button" className="ghost-jump" onClick={jumpToLatest}>
+                  <svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 4v11M5 10l5 5 5-5"/></svg> latest
+                </button>
+              </div>
+            )}
           </div>
 
-          {!follow && (
-            <button type="button" className="ghost-jump" onClick={jumpToLatest}>
-              <svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 4v11M5 10l5 5 5-5"/></svg> latest
-            </button>
-          )}
           <footer className="ghost-composer">
             {error && <p className="ghost-error">{error}</p>}
             <form onSubmit={event => { event.preventDefault(); void send() }} className="ghost-inputrow">
@@ -914,26 +1093,33 @@ export default function GhostPage() {
                 placeholder="ask ghost…"
                 disabled={busy}
               />
-              {busy ? (
-                <button type="button" className="ghost-send stop" onClick={stop} aria-label="Stop">
-                  <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor"><rect x="4" y="4" width="12" height="12" rx="2.5"/></svg>
-                </button>
-              ) : (
-                <button type="submit" className="ghost-send" disabled={!input.trim()} aria-label="Send">
+              <button
+                type="submit"
+                className={`ghost-send${busy ? " stop" : ""}`}
+                data-mode={busy ? "stop" : "send"}
+                disabled={!busy && !input.trim()}
+                aria-label={busy ? "Stop" : "Send"}
+                onClick={event => { if (busy) { event.preventDefault(); stop() } }}
+              >
+                <span className="ghost-send-ico ico-send" aria-hidden="true">
                   <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M10 16V4M5 9l5-5 5 5"/></svg>
-                </button>
-              )}
+                </span>
+                <span className="ghost-send-ico ico-stop" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor"><rect x="4" y="4" width="12" height="12" rx="2.5"/></svg>
+                </span>
+              </button>
             </form>
           </footer>
         </>
       )}
 
       {sheetOpen && (
-        <div className="ghost-sheet-backdrop" onClick={() => !action && setSheetOpen(false)}>
-          <div className="ghost-sheet" onClick={event => event.stopPropagation()}>
-            <span className="ghost-sheet-handle" />
-            <p className="ghost-sheet-title">GHOST SETTINGS</p>
-
+        <Sheet
+          title="GHOST SETTINGS"
+          closing={sheetClosing}
+          onRequestClose={closeSheet}
+          onClosed={() => { setSheetOpen(false); setSheetClosing(false) }}
+        >
             <div className="ghost-backend-row">
               <div className="ghost-brain-info">
                 <span className="ghost-brain-name">Engine</span>
@@ -1018,15 +1204,16 @@ export default function GhostPage() {
               </span>
             </div>
             {error && <p className="ghost-error">{error}</p>}
-          </div>
-        </div>
+        </Sheet>
       )}
 
       {historyOpen && (
-        <div className="ghost-sheet-backdrop" onClick={() => setHistoryOpen(false)}>
-          <div className="ghost-sheet" onClick={event => event.stopPropagation()}>
-            <span className="ghost-sheet-handle" />
-            <p className="ghost-sheet-title">CONVERSATIONS</p>
+        <Sheet
+          title="CONVERSATIONS"
+          closing={historyClosing}
+          onRequestClose={closeHistory}
+          onClosed={() => { setHistoryOpen(false); setHistoryClosing(false) }}
+        >
             {sessions.length === 0 && <p className="ghost-note">No past conversations yet.</p>}
             {sessions.map(s => (
               <div key={s.id} className={`ghost-brain-row${s.id === activeId ? " active" : ""}`}>
@@ -1034,15 +1221,14 @@ export default function GhostPage() {
                   <span className="ghost-brain-name">{s.title}</span>
                   <span className="ghost-brain-meta">{relTime(s.updatedAt)} · {s.messages.length} messages</span>
                 </button>
-                <button type="button" className="ghost-minibtn danger" disabled={busy} onClick={() => { if (!busy) deleteSession(s.id) }}>✕</button>
+                <button type="button" className="ghost-minibtn danger" disabled={busy} aria-label="Delete conversation" onClick={() => { if (!busy) deleteSession(s.id) }}>✕</button>
               </div>
             ))}
             <div className="ghost-brains-foot">
               <span>{sessions.length} saved</span>
               <button type="button" className="ghost-minibtn accent" disabled={!!action || busy} onClick={newChat}>＋ START NEW</button>
             </div>
-          </div>
-        </div>
+        </Sheet>
       )}
     </div>
   )

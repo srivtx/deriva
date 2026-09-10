@@ -28,6 +28,10 @@ export const viewport: Viewport = {
   themeColor: "#2F8F5B",
   width: "device-width",
   initialScale: 1,
+  // Android: the on-screen keyboard resizes the layout (composer stays
+  // visible above it) instead of covering it. iOS Safari ignores this
+  // and already behaves this way via the visual viewport.
+  interactiveWidget: "resizes-content",
 }
 
 export default function RootLayout({
