@@ -213,17 +213,17 @@ export default function HomePage() {
             <em>{guidedDone ? "Earned — revisit or transfer next" : guidedProgress ? "Your next small move is ready" : "Derive before you code"}</em>
             <span className="os-widget-cta">{guidedDone ? "Revisit →" : "Continue →"}</span>
           </Link>
-          <Link href="/daily" target="_blank" rel="noreferrer noopener" className="os-widget">
+          <Link href="/daily" className="os-widget">
             <span className="os-widget-kicker">Daily</span>
             <strong>{dailyPickForDate(todayKey()).problem.title}</strong>
             <em>today&apos;s challenge</em>
           </Link>
-          <Link href="/review" target="_blank" rel="noreferrer noopener" className="os-widget">
+          <Link href="/review" className="os-widget">
             <span className="os-widget-kicker">Review</span>
             <strong>{hydrated ? (reviewDue > 0 ? `${reviewDue} due` : "Clear") : "…"}</strong>
             <em>spaced repetition</em>
           </Link>
-          <Link href="/toolkit?tool=tasks" target="_blank" rel="noreferrer noopener" className="os-widget">
+          <Link href="/toolkit?tool=tasks" className="os-widget">
             <span className="os-widget-kicker">Tasks</span>
             <strong>{hydrated ? `${openTasks} open` : "…"}</strong>
             <em>life toolkit</em>
@@ -278,13 +278,13 @@ export default function HomePage() {
         <details className="curriculum-explore">
           <summary><span>Explore the curriculum</span><small>AI/ML, DSA, HLD, LLD, games, and pattern tools</small></summary>
           <div className="explore-actions">
-            <Link href="/ai-ml" target="_blank" rel="noreferrer noopener" className="explore-link"><b>AI/ML Systems</b><span>Labs + 180 practice questions</span></Link>
+            <Link href="/ai-ml" className="explore-link"><b>AI/ML Systems</b><span>Labs + 180 practice questions</span></Link>
             <Link href="/patterns" className="explore-link"><b>Pattern Journal</b><span>Recognize the thinking moves</span></Link>
-            <Link href="/expedition" target="_blank" rel="noreferrer noopener" className="explore-link"><b>Expedition</b><span>Retrieve, break, and transfer an idea</span></Link>
-            <Link href="/games" target="_blank" rel="noreferrer noopener" className="explore-link"><b>Game Mode</b><span>Practice invariants through play</span></Link>
-            <Link href="/design" target="_blank" rel="noreferrer noopener" className="explore-link"><b>System Design</b><span>53 architecture problems</span></Link>
-            <Link href="/lld" target="_blank" rel="noreferrer noopener" className="explore-link"><b>Low-Level Design</b><span>55 object design problems, now with concurrency</span></Link>
-            <Link href="/db" target="_blank" rel="noreferrer noopener" className="explore-link"><b>Database & SQL</b><span>50 query problems on real SQLite</span></Link>
+            <Link href="/expedition" className="explore-link"><b>Expedition</b><span>Retrieve, break, and transfer an idea</span></Link>
+            <Link href="/games" className="explore-link"><b>Game Mode</b><span>Practice invariants through play</span></Link>
+            <Link href="/design" className="explore-link"><b>System Design</b><span>53 architecture problems</span></Link>
+            <Link href="/lld" className="explore-link"><b>Low-Level Design</b><span>55 object design problems, now with concurrency</span></Link>
+            <Link href="/db" className="explore-link"><b>Database & SQL</b><span>50 query problems on real SQLite</span></Link>
           </div>
           <h3>DSA Topics</h3>
           <div className="topic-grid">
@@ -298,7 +298,7 @@ export default function HomePage() {
           </div>
         </details>
 
-        <p className="os-footnote">Stuck is part of the lesson — <Link href="/learn/trees/sum-1-to-n">return to the derivation</Link> or <Link href={practiceHref}>hit code practice</Link> anytime. <Link href="/android" target="_blank" rel="noreferrer noopener">Get the Android app →</Link></p>
+        <p className="os-footnote">Stuck is part of the lesson — <Link href="/learn/trees/sum-1-to-n">return to the derivation</Link> or <Link href={practiceHref}>hit code practice</Link> anytime. <Link href="/android">Get the Android app →</Link></p>
       </main>
 
       <footer style={{ padding: "24px 48px", borderTop: "1px solid var(--line)", color: "var(--ink-soft)", fontSize: 12 }}>

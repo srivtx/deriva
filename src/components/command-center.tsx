@@ -26,10 +26,6 @@ const PRESETS = [
 
 const EVERYDAY_NAV_PREFIXES = ["/learn", "/topic", "/practice?", "/patterns", "/settings"]
 
-function opensAppInNewTab(href: string): boolean {
-  if (EVERYDAY_NAV_PREFIXES.some(prefix => href.startsWith(prefix))) return false
-  return matchesAppModePrefix(href)
-}
 
 export default function CommandCenter({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter()
@@ -119,8 +115,7 @@ export default function CommandCenter({ open, onClose }: { open: boolean; onClos
   const select = (command: Command) => {
     if (command.action) command.action()
     if (command.href) {
-      if (opensAppInNewTab(command.href)) window.open(command.href, "_blank", "noopener")
-      else router.push(command.href)
+      router.push(command.href)
     }
     onClose()
   }

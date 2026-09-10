@@ -2,9 +2,10 @@
 
 import { memo } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import type { AppTileDef } from "./app-tile-def"
 import PackIcon from "./pack-icon"
-import { playIconPress } from "@/lib/app-transition"
+import { navigateWithAppTransition, playIconPress } from "@/lib/app-transition"
 
 export type { AppTileDef }
 
@@ -15,13 +16,13 @@ type AppTileProps = {
 }
 
 function AppTile({ app, badge, dot }: AppTileProps) {
+  const router = useRouter()
+
   const open = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
     event.preventDefault()
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      playIconPress(event.currentTarget.querySelector(".app-tile-icon"))
-    }
-    window.open(app.href, "_blank", "noopener")
+    const icon = event.currentTarget.querySelector<HTMLSpanElement>(".app-tile-icon")
+    navigateWithAppTransition(() => router.push(app.href), icon)
   }
 
   return (
@@ -29,8 +30,6 @@ function AppTile({ app, badge, dot }: AppTileProps) {
       href={app.href}
       className="app-tile"
       title={app.name}
-      target="_blank"
-      rel="noreferrer noopener"
       onClick={open}
       onTouchStart={event => {
         playIconPress(event.currentTarget.querySelector(".app-tile-icon"))

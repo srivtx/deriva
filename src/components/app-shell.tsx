@@ -429,7 +429,7 @@ export default function AppShell() {
                   <div key={group.label} className="more-group" role="group" aria-label={group.label}>
                     <span className="more-group-label">{group.label}</span>
                     {group.links.map(link => (
-                      <Link key={link.href} href={link.href} role="menuitem" target={matchesAppModePrefix(link.href) ? "_blank" : undefined} rel={matchesAppModePrefix(link.href) ? "noreferrer noopener" : undefined} onClick={() => setMoreOpen(false)}>
+                      <Link key={link.href} href={link.href} role="menuitem" onClick={() => setMoreOpen(false)}>
                         <strong>{link.label}</strong>
                         <small>{link.desc}</small>
                       </Link>
@@ -471,7 +471,7 @@ export default function AppShell() {
                   <span className="mobile-more-group-label">{group.label}</span>
                   <div className="mobile-more-group-links">
                     {group.links.map(link => (
-                      <Link key={link.href} href={link.href} target={matchesAppModePrefix(link.href) ? "_blank" : undefined} rel={matchesAppModePrefix(link.href) ? "noreferrer noopener" : undefined} onClick={() => setMoreOpen(false)}>
+                      <Link key={link.href} href={link.href} onClick={() => setMoreOpen(false)}>
                         <span className="mobile-more-link-label">{link.label}</span>
                         <span className="mobile-more-link-desc">{link.desc}</span>
                       </Link>

@@ -69,7 +69,7 @@ export default function StorePage() {
                   <button type="button" className="store-soon" disabled>Coming soon</button>
                 ) : isInstalled ? (
                   <>
-                    {app.href && <Link className="super-primary" href={app.href} target="_blank" rel="noreferrer noopener">Open</Link>}
+                    {app.href && <Link className="super-primary" href={app.href}>Open</Link>}
                     <button type="button" className="store-uninstall" onClick={() => toggle(app)}>Uninstall</button>
                   </>
                 ) : (
