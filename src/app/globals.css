@@ -3032,7 +3032,8 @@ code, pre { font-family: var(--font-mono); }
 
 .ghost-msg { max-width: 88%; display: flex; flex-direction: column; gap: 5px; }
 .ghost-msg p { margin: 0; font-size: 14px; line-height: 1.62; white-space: pre-wrap; word-break: break-word; }
-.ghost-msg.from-user { align-self: flex-end; align-items: flex-end; background: var(--accent-soft); border-radius: 14px 14px 4px 14px; padding: 10px 13px; }
+/* v19: outer shell removed — the body carries the user bubble alone */
+.ghost-msg.from-user { align-self: flex-end; align-items: flex-end; }
 .ghost-msg.from-user p { color: var(--ink); }
 .ghost-msg.from-ghost p { color: var(--ink); }
 .ghost-cursor { display: inline-block; width: 8px; height: 14px; background: var(--accent); margin-left: 3px; vertical-align: -2px; animation: ghost-cursor-blink 0.9s steps(1) infinite; }
@@ -3645,9 +3646,9 @@ code, pre { font-family: var(--font-mono); }
 .ghost-codeblock pre { margin: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 12px 14px; }
 .ghost-codeblock pre code { font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 12.5px; line-height: 1.6; color: var(--ink); white-space: pre; }
 
-/* flat assistant message — bubble only for the user */
-.ghost-msg.from-ghost { align-items: flex-start; }
-.ghost-msg.from-ghost .ghost-msg-body { background: transparent !important; border: 0 !important; padding: 0 !important; border-radius: 0 !important; max-width: 100%; }
+/* assistant card — v19 gives the reply its bubble back (see the v19
+   block at the end for the full card spec + nested-code contrast) */
+.ghost-msg.from-ghost { align-items: flex-end; }
 .ghost-msg.from-ghost .ghost-msg-body p { font-size: 14.5px; }
 .ghost-msg.from-user .ghost-msg-body { background: var(--accent-soft); border-radius: 18px 18px 6px 18px; padding: 10px 14px; }
 .ghost-msg.from-user { max-width: 84% !important; }
@@ -3953,3 +3954,75 @@ code, pre { font-family: var(--font-mono); }
   .ghost-msg-edit, .ghost-continue-chip { transition: none; }
   .ghost-pop { animation: none !important; }
 }
+
+/* ── Ghost v19 · the reply gets its bubble back ───────────────
+   Field report: the model's replies rendered as naked text on the
+   page — no background, no shape — sitting next to the user's tidy
+   bubble. v14's flat experiment is retired. The assistant now speaks
+   from a proper card: raised paper, a hairline, a breath of shadow,
+   and a small tail corner toward its own side, mirroring the user's
+   tail. One shell per message. Nested code keeps its contrast inside
+   the card via ink-mixed fills that flip correctly across all themes
+   (ink is dark on light themes, light on dark ones — color-mix does
+   the direction work). The row chrome — edit, retry, copy, continue —
+   parks beside the bubble's baseline instead of floating mid-air. */
+
+/* assistant card — tail at the top-left, toward the ghost */
+.ghost-msg.from-ghost .ghost-msg-body {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 5px 18px 18px 18px;
+  padding: 12px 15px 11px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px rgba(0, 0, 0, 0.05);
+}
+
+/* typography parity: both voices read at the same size inside their shells */
+.ghost-msg.from-user .ghost-msg-body p { font-size: 14.5px; line-height: 1.65; }
+
+/* chrome parks at the bubble's baseline, both sides */
+.ghost-msg.from-ghost .ghost-msg-actions { margin: 0 0 3px; }
+.ghost-msg.from-ghost .ghost-continue-chip { align-self: flex-end; margin: 0 0 3px; }
+.from-user .ghost-msg-edit { margin-top: 0; margin-bottom: 3px; }
+
+/* streaming tps rides as a quiet footer inside the card */
+.ghost-msg.from-ghost .ghost-stream-tps { margin-top: 5px; align-self: flex-start; }
+
+/* nested code must still read as code inside the card — the v14 fills
+   (paper-raised on paper-raised) would vanish against the bubble */
+.ghost-msg.from-ghost .ghost-md-code {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  border-color: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+.ghost-msg.from-ghost .ghost-codeblock {
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper-raised));
+  border-color: color-mix(in srgb, var(--ink) 12%, var(--line));
+}
+.ghost-msg.from-ghost .ghost-codeblock-bar {
+  background: color-mix(in srgb, var(--ink) 6%, var(--paper-raised));
+  border-bottom-color: color-mix(in srgb, var(--ink) 12%, var(--line));
+}
+.ghost-msg.from-ghost .ghost-codeblock pre { padding: 11px 13px; }
+
+/* overflow affordance: code that scrolls sideways carries a right-edge
+   fade; CodeBlock lifts it once the reader reaches the end */
+.ghost-codeblock.scrolls-x pre {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+}
+
+/* short cards (a two-word answer) still keep a sane floor so the tail
+   corner reads as intent, not as a squashed shape */
+.ghost-msg.from-ghost .ghost-md { gap: 7px; }
+
+/* dark themes get no shadow glow — a hairline alone is cleaner there */
+:root[data-theme="ink"] .ghost-msg.from-ghost .ghost-msg-body,
+:root[data-theme="violet"] .ghost-msg.from-ghost .ghost-msg-body,
+:root[data-theme="carbon"] .ghost-msg.from-ghost .ghost-msg-body,
+:root[data-theme="nothing"] .ghost-msg.from-ghost .ghost-msg-body,
+:root[data-theme="nord"] .ghost-msg.from-ghost .ghost-msg-body,
+:root[data-theme="solarized"] .ghost-msg.from-ghost .ghost-msg-body,
+:root[data-theme="system"] .ghost-msg.from-ghost .ghost-msg-body,
+:root:not([data-theme]) .ghost-msg.from-ghost .ghost-msg-body {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+
