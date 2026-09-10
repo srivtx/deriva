@@ -3591,6 +3591,9 @@ code, pre { font-family: var(--font-mono); }
 .corona-analyze:hover { filter: brightness(1.08); }
 .corona-analyze:active { transform: translateY(1px); }
 .corona-hint { min-height: 60px; margin: 0; color: var(--ink-soft); font: 13px/1.55 var(--font-ui); }
+.corona-actions-row { display: flex; gap: 8px; align-items: center; }
+.corona-actions-row .corona-analyze { flex: 1; }
+.corona-witness-line { color: var(--ink-soft); font: 11px var(--font-mono, monospace); letter-spacing: .04em; }
 .corona-cert { display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 6px 12px; color: var(--ink-soft); font: 600 11px var(--font-mono, monospace); letter-spacing: .06em; text-decoration: none; cursor: pointer; transition: border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard); }
 .corona-cert:hover { border-color: var(--corona-amber); color: var(--corona-amber); }
 

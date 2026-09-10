@@ -1,9 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { analyze, orientationsOf, keyOf, verifyWitness, ENGINE_VERSION, type GridKind, type Cell } from "@/lib/corona/engine"
+import { analyze, orientationsOf, keyOf, verifyWitness, huntNonTiler, ENGINE_VERSION, type GridKind, type Cell } from "@/lib/corona/engine"
 
-export type CoronaParams = { grid: "square" | "hex"; cells: string[]; tool: "draw" | "erase"; maxDepth: number }
+export type CoronaParams = { grid: "square" | "hex"; cells: string[]; tool: "draw" | "erase" | "pan"; maxDepth: number }
 export type CoronaGrade = { ready: boolean; tiler: boolean | null; depthReached: number; cellCount: number; orientationCount: number; error?: string }
 
 type AnalyzeOut = ReturnType<typeof analyze>
@@ -102,6 +102,14 @@ function hexCellAt(wx: number, wy: number): [number, number] {
   return [x, z]
 }
 
+function readShareHash(): { grid: GridKind; cells: string[]; depth: number } | null {
+  if (typeof window === "undefined") return null
+  const m = window.location.hash.match(/#g=(s|h)&d=([1-5])(?:&c=([0-9;,\-]+))?/)
+  if (!m) return null
+  const cells = m[3] ? m[3].split(";").filter(isCellKey) : []
+  return { grid: m[1] === "h" ? "hex" : "square", cells, depth: Number(m[2]) }
+}
+
 const VERT = `#version 300 es
 uniform vec2 uCenter;
 uniform float uScale;
@@ -167,10 +175,11 @@ void main() {
 type SceneState = {
   grid: GridKind
   cells: string[]
-  tool: "draw" | "erase"
+  tool: "draw" | "erase" | "pan"
   maxDepth: number
   result: LabResult | null
   currentKey: string | null
+  ringDepth: number
   staticDirty: boolean
   ringsDirty: boolean
   animStart: number
@@ -180,11 +189,12 @@ type SceneState = {
 export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [grid, setGrid] = useState<GridKind>(() => (paramsRef.current.grid === "hex" ? "hex" : "square"))
-  const [cells, setCells] = useState<string[]>(() => sortCellKeys(paramsRef.current.cells ?? []))
-  const [tool, setTool] = useState<"draw" | "erase">(() => (paramsRef.current.tool === "erase" ? "erase" : "draw"))
+  const share = useRef(readShareHash())
+  const [grid, setGrid] = useState<GridKind>(() => (share.current ? share.current.grid : paramsRef.current.grid === "hex" ? "hex" : "square"))
+  const [cells, setCells] = useState<string[]>(() => sortCellKeys(share.current ? share.current.cells : paramsRef.current.cells ?? []))
+  const [tool, setTool] = useState<"draw" | "erase" | "pan">(() => (paramsRef.current.tool === "erase" ? "erase" : paramsRef.current.tool === "pan" ? "pan" : "draw"))
   const [maxDepth, setMaxDepth] = useState(() => {
-    const d = paramsRef.current.maxDepth
+    const d = share.current ? share.current.depth : paramsRef.current.maxDepth
     return d >= 1 && d <= 5 ? Math.round(d) : 3
   })
   const [computing, setComputing] = useState(false)
@@ -192,6 +202,8 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [orientCount, setOrientCount] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+  const [ringDepth, setRingDepth] = useState(0)
   const [renderer2d, setRenderer2d] = useState(false)
 
   const busyRef = useRef(false)
@@ -202,8 +214,10 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
   const visibleRef = useRef(true)
   const prevResultRef = useRef<LabResult | null>(null)
   const camTargetRef = useRef({ cx: 0, cy: 0, scale: 7 })
+  const userCamRef = useRef(false)
+  const sweepRef = useRef(true)
   const sceneRef = useRef<SceneState>({
-    grid, cells, tool, maxDepth, result, currentKey: null,
+    grid, cells, tool, maxDepth, result, currentKey: null, ringDepth: 0,
     staticDirty: true, ringsDirty: true, animStart: -1, animEnd: -1,
   })
 
@@ -221,6 +235,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
   s.maxDepth = maxDepth
   s.result = result
   s.currentKey = currentKey
+  s.ringDepth = ringDepth
 
   if (puzzleRef) {
     puzzleRef.current = {
@@ -240,7 +255,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
 
   adoptRef.current = p => {
     if ((p.grid === "square" || p.grid === "hex") && p.grid !== grid) setGrid(p.grid)
-    if ((p.tool === "draw" || p.tool === "erase") && p.tool !== tool) setTool(p.tool)
+    if ((p.tool === "draw" || p.tool === "erase" || p.tool === "pan") && p.tool !== tool) setTool(p.tool)
     if (typeof p.maxDepth === "number" && p.maxDepth >= 1 && p.maxDepth <= 5 && Math.round(p.maxDepth) !== maxDepth) setMaxDepth(Math.round(p.maxDepth))
     if (Array.isArray(p.cells)) {
       const next = sortCellKeys(p.cells)
@@ -309,15 +324,29 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
   }, [grid, cells, maxDepth])
 
   useEffect(() => {
+    const h = `#g=${grid === "hex" ? "h" : "s"}&d=${maxDepth}${cells.length > 0 ? `&c=${cells.join(";")}` : ""}`
+    if (typeof window !== "undefined" && window.location.hash !== h) window.history.replaceState(null, "", window.location.pathname + window.location.search + h)
+  }, [grid, cells, maxDepth])
+
+  useEffect(() => {
     const sc = sceneRef.current
     sc.staticDirty = true
     sc.ringsDirty = true
     if (result !== null && result !== prevResultRef.current) {
       prevResultRef.current = result
+      userCamRef.current = false
       const now = performance.now() / 1000
-      sc.animStart = now
-      sc.animEnd = now + RING_STEP * (result.coronas?.rings?.length ?? 0) + RING_STAGGER + RING_DUR + 0.1
+      if (sweepRef.current) {
+        sc.animStart = now
+        sc.animEnd = now + RING_STEP * (result.coronas?.rings?.length ?? 0) + RING_STAGGER + RING_DUR + 0.1
+      } else {
+        sc.animStart = -1e9
+        sc.animEnd = -1e9
+      }
+      sweepRef.current = false
     }
+    if (grid !== s.grid) userCamRef.current = false
+    if (cells.length === 0) userCamRef.current = false
     const list = parseCells(cells)
     const wrap = wrapRef.current
     const rect = wrap?.getBoundingClientRect()
@@ -344,6 +373,13 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
     const h = maxY - minY
     camTargetRef.current = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, scale: Math.max(2.2, Math.max(w / (2 * aspect), h / 2) + 0.4) }
   }, [grid, cells, maxDepth, result, currentKey])
+
+  const replayRings = useCallback(() => {
+    const sc = sceneRef.current
+    const now = performance.now() / 1000
+    sc.animStart = now
+    sc.animEnd = now + RING_STEP * (sc.result?.coronas?.rings?.length ?? 0) + RING_STAGGER + RING_DUR + 0.1
+  }, [])
 
   useEffect(() => {
     const wrap = wrapRef.current
@@ -412,13 +448,13 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
       } catch (e) {
         console.error("CORONA webgl init:", e)
-        mode = "webgl"
       }
     }
 
     const cam = { cx: 0, cy: 0, scale: 7, init: false }
     let needDraw = true
     let aspect = 4 / 3
+    let viewBounds = { x0: -8, x1: 8, y0: -8, y1: 8, built: false }
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     const resize = () => {
@@ -451,10 +487,17 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
           if (wy > maxY) maxY = wy
         }
         const pad = sc.maxDepth + 2.5
-        const x0 = minX - pad, x1 = maxX + pad, y0 = minY - pad, y1 = maxY + pad
+        let x0 = minX - pad, x1 = maxX + pad, y0 = minY - pad, y1 = maxY + pad
+        if (viewBounds.built) {
+          x0 = Math.min(x0, viewBounds.x0)
+          x1 = Math.max(x1, viewBounds.x1)
+          y0 = Math.min(y0, viewBounds.y0)
+          y1 = Math.max(y1, viewBounds.y1)
+        }
         if (sc.grid === "square") {
           const qx0 = Math.floor(x0), qx1 = Math.ceil(x1), qy0 = Math.floor(y0), qy1 = Math.ceil(y1)
-          const step = (qx1 - qx0) * (qy1 - qy0) > 3600 ? 2 : 1
+          const area = (qx1 - qx0) * (qy1 - qy0)
+          const step = area > 20000 ? 3 : area > 3600 ? 2 : 1
           for (let gx = qx0; gx <= qx1; gx += step)
             for (let gy = qy0; gy <= qy1; gy += step)
               pushQuad(sink, gx, gy, 0.12, 0, DOT_RGB, DOT_CSS, 0.16, 0, -1000)
@@ -463,7 +506,8 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
           const c1 = hexCellAt(x1, y1)
           const q0 = Math.min(c0[0], c1[0]) - 1, q1 = Math.max(c0[0], c1[0]) + 1
           const r0 = Math.min(c0[1], c1[1]) - 1, r1 = Math.max(c0[1], c1[1]) + 1
-          const step = (q1 - q0) * (r1 - r0) > 3600 ? 2 : 1
+          const area = (q1 - q0) * (r1 - r0)
+          const step = area > 20000 ? 3 : area > 3600 ? 2 : 1
           for (let q = q0; q <= q1; q += step)
             for (let r = r0; r <= r1; r += step) {
               const [wx, wy] = cellCenter("hex", q, r)
@@ -476,6 +520,31 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
         for (const c of list) {
           const [wx, wy] = cellCenter(sc.grid, c.x, c.y)
           pushQuad(sink, wx, wy, half, kind, SHAPE_RGB, SHAPE_CSS, 1, 0.32, -1000)
+        }
+      } else if (viewBounds.built) {
+        if (viewBounds.built) {
+          const x0 = viewBounds.x0, x1 = viewBounds.x1, y0 = viewBounds.y0, y1 = viewBounds.y1
+          if (sc.grid === "square") {
+            const qx0 = Math.floor(x0), qx1 = Math.ceil(x1), qy0 = Math.floor(y0), qy1 = Math.ceil(y1)
+            const area = (qx1 - qx0) * (qy1 - qy0)
+            const step = area > 20000 ? 3 : area > 3600 ? 2 : 1
+            for (let gx = qx0; gx <= qx1; gx += step)
+              for (let gy = qy0; gy <= qy1; gy += step)
+                pushQuad(sink, gx, gy, 0.12, 0, DOT_RGB, DOT_CSS, 0.16, 0, -1000)
+          } else {
+            const c0 = hexCellAt(x0, y0)
+            const c1 = hexCellAt(x1, y1)
+            const q0 = Math.min(c0[0], c1[0]) - 1, q1 = Math.max(c0[0], c1[0]) + 1
+            const r0 = Math.min(c0[1], c1[1]) - 1, r1 = Math.max(c0[1], c1[1]) + 1
+            const area = (q1 - q0) * (r1 - r0)
+            const step = area > 20000 ? 3 : area > 3600 ? 2 : 1
+            for (let q = q0; q <= q1; q += step)
+              for (let r = r0; r <= r1; r += step) {
+                const [wx, wy] = cellCenter("hex", q, r)
+                if (wx < x0 - 0.5 || wx > x1 + 0.5 || wy < y0 - 0.5 || wy > y1 + 0.5) continue
+                pushQuad(sink, wx, wy, 0.12, 0, DOT_RGB, DOT_CSS, 0.16, 0, -1000)
+              }
+          }
         }
       }
       sinks.staticSink = sink
@@ -493,6 +562,8 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
       if (r && r.coronas && sc.currentKey !== null && r.key === sc.currentKey && r.depthReached > 0) {
         const list = parseCells(sc.cells)
         const orients = r.orientations
+        const allRings = r.coronas.rings
+        const rings = sc.ringDepth > 0 ? allRings.slice(0, sc.ringDepth) : allRings
         let cx = 0, cy = 0
         for (const c of list) {
           const [wx, wy] = cellCenter(sc.grid, c.x, c.y)
@@ -507,7 +578,6 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
           radius = Math.max(radius, Math.hypot(wx - cx, wy - cy))
         }
         const used = new Set(sc.cells)
-        const rings = r.coronas.rings
         const half = sc.grid === "hex" ? 1.05 : 0.95
         const kind = sc.grid === "hex" ? 2 : 1
         for (let ri = 0; ri < rings.length; ri++) {
@@ -539,7 +609,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
       }
     }
 
-    const draw2d = (now: number, animating: boolean, t0: number) => {
+    const draw2d = (now: number, t0: number) => {
       const c = ctx2d
       if (!c) return
       const W = canvas.width / dpr
@@ -551,7 +621,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
       const toX = (wx: number) => W / 2 + (wx - cam.cx) * S
       const toY = (wy: number) => H / 2 - (wy - cam.cy) * S
       const dur = RING_DUR
-      const paint = (tiles: TileRec[], order: "under" | "over") => {
+      const paint = (tiles: TileRec[]) => {
         for (const t of tiles) {
           const p = t.delay < -100 ? 1 : Math.min(1, Math.max(0, (now - t0 - t.delay) / dur))
           if (p <= 0) continue
@@ -576,10 +646,9 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
           c.fillStyle = t.css
           fillTile(c, t.kind, x, y, sz)
         }
-        void order
       }
-      paint(sinks.ringSink.js, "under")
-      paint(sinks.staticSink.js, "over")
+      paint(sinks.ringSink.js)
+      paint(sinks.staticSink.js)
       c.globalAlpha = 1
     }
 
@@ -619,36 +688,91 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
     }
     const strokeErase = { current: false }
     const lastPaint = { current: "" }
-    const paintAt = (clientX: number, clientY: number, erase: boolean) => {
+    const lastPt = { x: 0, y: 0, valid: false }
+    const paintWorld = (wx: number, wy: number, erase: boolean) => {
       const sc = sceneRef.current
-      const [wx, wy] = worldAt(clientX, clientY)
       const c = sc.grid === "hex" ? hexCellAt(wx, wy) : [Math.round(wx), Math.round(wy)]
       const sig = `${c[0]},${c[1]}|${erase ? "e" : "d"}`
       if (sig === lastPaint.current) return
       lastPaint.current = sig
       paintRef.current(c[0], c[1], erase)
     }
+    const paintAt = (clientX: number, clientY: number, erase: boolean) => {
+      const [wx, wy] = worldAt(clientX, clientY)
+      if (lastPt.valid) {
+        const dx = wx - lastPt.x
+        const dy = wy - lastPt.y
+        const steps = Math.min(96, Math.max(1, Math.ceil(Math.hypot(dx, dy) * 2)))
+        for (let i = 1; i <= steps; i++) paintWorld(lastPt.x + dx * i / steps, lastPt.y + dy * i / steps, erase)
+      } else {
+        paintWorld(wx, wy, erase)
+      }
+      lastPt.x = wx
+      lastPt.y = wy
+      lastPt.valid = true
+    }
+    const panState = { active: false, px: 0, py: 0, cx: 0, cy: 0 }
     const onDown = (ev: PointerEvent) => {
+      if (ev.button === 1 || sceneRef.current.tool === "pan") {
+        ev.preventDefault()
+        panState.active = true
+        panState.px = ev.clientX
+        panState.py = ev.clientY
+        panState.cx = cam.cx
+        panState.cy = cam.cy
+        try { canvas.setPointerCapture(ev.pointerId) } catch {}
+        return
+      }
       if (ev.button !== 0 && ev.button !== 2) return
       ev.preventDefault()
       strokeErase.current = ev.button === 2 || sceneRef.current.tool === "erase"
       lastPaint.current = ""
+      lastPt.valid = false
       try { canvas.setPointerCapture(ev.pointerId) } catch {}
       paintAt(ev.clientX, ev.clientY, strokeErase.current)
     }
     const onMove = (ev: PointerEvent) => {
+      if (panState.active) {
+        if (ev.buttons === 0) return
+        const r = canvas.getBoundingClientRect()
+        cam.cx = panState.cx - ((ev.clientX - panState.px) / r.width) * 2 * cam.scale * aspect
+        cam.cy = panState.cy + ((ev.clientY - panState.py) / r.height) * 2 * cam.scale
+        userCamRef.current = true
+        camTargetRef.current = { cx: cam.cx, cy: cam.cy, scale: cam.scale }
+        needDraw = true
+        return
+      }
       if (ev.buttons === 0) return
       paintAt(ev.clientX, ev.clientY, strokeErase.current)
     }
     const onUp = (ev: PointerEvent) => {
+      panState.active = false
       lastPaint.current = ""
+      lastPt.valid = false
       try { canvas.releasePointerCapture(ev.pointerId) } catch {}
+    }
+    const onWheel = (ev: WheelEvent) => {
+      ev.preventDefault()
+      const r = canvas.getBoundingClientRect()
+      const nx = ((ev.clientX - r.left) / r.width) * 2 - 1
+      const ny = ((ev.clientY - r.top) / r.height) * 2 - 1
+      const wx = cam.cx + nx * cam.scale * aspect
+      const wy = cam.cy - ny * cam.scale
+      const k = Math.exp(ev.deltaY * 0.0012)
+      const ns = Math.min(90, Math.max(1.4, cam.scale * k))
+      cam.cx = wx - nx * ns * aspect
+      cam.cy = wy + ny * ns
+      cam.scale = ns
+      userCamRef.current = true
+      camTargetRef.current = { cx: cam.cx, cy: cam.cy, scale: ns }
+      needDraw = true
     }
     const onCtx = (ev: Event) => ev.preventDefault()
     canvas.addEventListener("pointerdown", onDown)
     canvas.addEventListener("pointermove", onMove)
     canvas.addEventListener("pointerup", onUp)
     canvas.addEventListener("pointercancel", onUp)
+    canvas.addEventListener("wheel", onWheel, { passive: false })
     canvas.addEventListener("contextmenu", onCtx)
 
     const frame = () => {
@@ -678,13 +802,33 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
         }
         const now = performance.now() / 1000
         const animating = now < sc.animEnd
-        const nx = cam.cx + (t.cx - cam.cx) * 0.1
-        const ny = cam.cy + (t.cy - cam.cy) * 0.1
-        const ns = cam.scale + (t.scale - cam.scale) * 0.1
-        const moved = Math.abs(nx - cam.cx) > 1e-4 || Math.abs(ny - cam.cy) > 1e-4 || Math.abs(ns - cam.scale) > 1e-4 * Math.max(cam.scale, 1)
-        cam.cx = nx
-        cam.cy = ny
-        cam.scale = ns
+        let moved = false
+        if (!userCamRef.current) {
+          const nx = cam.cx + (t.cx - cam.cx) * 0.1
+          const ny = cam.cy + (t.cy - cam.cy) * 0.1
+          const ns = cam.scale + (t.scale - cam.scale) * 0.1
+          moved = Math.abs(nx - cam.cx) > 1e-4 || Math.abs(ny - cam.cy) > 1e-4 || Math.abs(ns - cam.scale) > 1e-4 * Math.max(cam.scale, 1)
+          cam.cx = nx
+          cam.cy = ny
+          cam.scale = ns
+        }
+        const hw = cam.scale * aspect * 1.02 + 1
+        const hh = cam.scale * 1.02 + 1
+        const vx0 = cam.cx - hw, vx1 = cam.cx + hw, vy0 = cam.cy - hh, vy1 = cam.cy + hh
+        if (vx0 < viewBounds.x0 || vx1 > viewBounds.x1 || vy0 < viewBounds.y0 || vy1 > viewBounds.y1) {
+          viewBounds = { x0: vx0 - 3, x1: vx1 + 3, y0: vy0 - 3, y1: vy1 + 3, built: true }
+          sc.staticDirty = true
+        }
+        if (sc.staticDirty) {
+          buildStatic()
+          sc.staticDirty = false
+          needDraw = true
+        }
+        if (sc.ringsDirty) {
+          buildRings()
+          sc.ringsDirty = false
+          needDraw = true
+        }
         if (!needDraw && !animating && !moved) return
         if (mode === "webgl" && gl && prog) {
           gl.viewport(0, 0, canvas.width, canvas.height)
@@ -711,7 +855,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
             drawBuf(staticBuf, staticCount)
           }
         } else if (mode === "2d" && ctx2d) {
-          draw2d(now, animating, animating ? sc.animStart : 1e12)
+          draw2d(now, animating ? sc.animStart : 1e12)
         }
         needDraw = false
       } catch (e) {
@@ -730,6 +874,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
       canvas.removeEventListener("pointermove", onMove)
       canvas.removeEventListener("pointerup", onUp)
       canvas.removeEventListener("pointercancel", onUp)
+      canvas.removeEventListener("wheel", onWheel)
       canvas.removeEventListener("contextmenu", onCtx)
       canvas.removeEventListener("webglcontextlost", onLost)
       if (mode === "webgl") gl?.getExtension("WEBGL_lose_context")?.loseContext()
@@ -753,7 +898,18 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
   const applyPreset = (name: string) => {
     const p = PRESETS[grid].find(x => x.name === name)
     if (!p) return
+    sweepRef.current = true
     setCells(sortCellKeys(p.cells))
+    setResult(null)
+    setError(null)
+  }
+
+  const huntShape = () => {
+    const size = grid === "hex" ? 7 : 8
+    const found = huntNonTiler(grid, size, Math.floor(Math.random() * 1e6))
+    if (!found) return
+    sweepRef.current = true
+    setCells(sortCellKeys(found.map(c => `${c.x},${c.y}`)))
     setResult(null)
     setError(null)
   }
@@ -770,19 +926,30 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
     }
   }, [result, grid, cells, maxDepth])
 
+  const copyLink = useCallback(() => {
+    if (typeof window === "undefined") return
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        setLinkCopied(true)
+        window.setTimeout(() => setLinkCopied(false), 1500)
+      }).catch(() => {})
+    }
+  }, [])
+
   const tilerLabel = shownResult === null ? "—" : shownResult.tiler === null ? "?" : shownResult.tiler ? (shownResult.witnessOk === false ? "YES?" : "YES ✓") : "NO"
   const coronaLabel = shownResult !== null ? `${shownResult.depthReached}/${maxDepth}` : "—"
   const tilerChipClass = shownResult === null || shownResult.tiler === null ? "" : shownResult.tiler ? " kyma-chip-freq" : " kyma-chip-warn"
   const heavyShape = shownResult !== null && shownResult.runtimeMs > 200
+  const ringCountAll = shownResult?.coronas?.rings?.length ?? 0
 
   const hint = (() => {
-    if (cs.length === 0) return "Drag on the grid to draw a polyform — right-click or Erase removes cells. Analyze rings it with copies of itself."
+    if (cs.length === 0) return "Drag to draw · scroll to zoom · the Pan tool (or middle-drag) roams the infinite lattice. Analyze rings your shape with copies of itself."
     if (error !== null) return `The engine failed on this shape: ${error}`
     if (computing) return "Computing coronas…"
     if (shownResult === null) return "Shape changed — the coronas will re-ring it in a moment."
     if (shownResult.tiler === null) return "Inconclusive — no candidate region fits this cell count, or the search budget ran out. Try a different shape or depth."
-    if (shownResult.tiler) return `It tiles the plane — tilers can be ringed forever, so coronas run the full ${maxDepth}.`
-    if (shownResult.depthReached === 0) return "No tiling found — every copy collides. Now: how many rings can it take?"
+    if (shownResult.tiler) return `It tiles the plane — copies of it can repeat outward forever, so the coronas never stop.`
+    if (shownResult.depthReached === 0) return "No tiling found — every copy collides, and no ring closes either. A Heesch 0 shape."
     if (shownResult.depthReached >= maxDepth) return `Rings ${shownResult.depthReached}/${maxDepth} with no jam yet — push max depth higher to keep testing.`
     return `Candidate non-tiler — the packing jams after ${shownResult.depthReached} ring${shownResult.depthReached === 1 ? "" : "s"}. That is its Heesch number.${heavyShape ? " (heavy shape — analysis capped safely)" : ""}`
   })()
@@ -798,7 +965,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
       </div>
       <div className="corona-lab-body">
         <div ref={wrapRef} className="corona-stage">
-          <canvas ref={canvasRef} className="corona-canvas" style={{ cursor: "crosshair" }} aria-label="Corona lab canvas: draw a polyform and watch coronas ring it" />
+          <canvas ref={canvasRef} className="corona-canvas" style={{ cursor: tool === "pan" ? "grab" : "crosshair" }} aria-label="Corona lab canvas: draw a polyform and watch coronas ring it" />
           <div className="corona-hud">
             <span className="kyma-chip">CELLS {cs.length}</span>
             <span className="kyma-chip">ORIENT {cs.length > 0 ? orientCount : 0}</span>
@@ -820,6 +987,7 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
             <div className="corona-seg">
               <button type="button" className={tool === "draw" ? "corona-seg-btn corona-seg-on" : "corona-seg-btn"} onClick={() => setTool("draw")}>Draw</button>
               <button type="button" className={tool === "erase" ? "corona-seg-btn corona-seg-on" : "corona-seg-btn"} onClick={() => setTool("erase")}>Erase</button>
+              <button type="button" className={tool === "pan" ? "corona-seg-btn corona-seg-on" : "corona-seg-btn"} onClick={() => setTool("pan")}>Pan</button>
             </div>
           </div>
           <div className="corona-rail-group">
@@ -838,9 +1006,25 @@ export default function CoronaLab({ paramsRef, puzzleRef }: Props) {
               ))}
             </div>
           </div>
-          <div className="corona-rail-group">
-            <button type="button" className="corona-analyze" disabled={computing} onClick={() => runAnalyzeRef.current()}>{computing ? "Analyzing…" : "Analyze"}</button>
+          {ringCountAll > 0 && (
+            <div className="corona-rail-group">
+              <div className="corona-rail-label">Rings</div>
+              <div className="corona-chiprow">
+                <button type="button" className={ringDepth === 0 ? "corona-depth-btn corona-seg-on" : "corona-depth-btn"} onClick={() => setRingDepth(0)}>ALL</button>
+                {Array.from({ length: ringCountAll }, (_, i) => (
+                  <button key={i + 1} type="button" className={ringDepth === i + 1 ? "corona-depth-btn corona-seg-on" : "corona-depth-btn"} onClick={() => setRingDepth(i + 1)}>{i + 1}</button>
+                ))}
+                <button type="button" className="corona-preset-btn" onClick={replayRings}>Replay</button>
+              </div>
+            </div>
+          )}
+          <div className="corona-rail-group corona-actions-row">
+            <button type="button" className="corona-analyze" disabled={computing} onClick={() => { sweepRef.current = true; runAnalyzeRef.current() }}>{computing ? "Analyzing…" : "Analyze"}</button>
             <button type="button" className="corona-cert" onClick={clearAll}>Clear</button>
+          </div>
+          <div className="corona-rail-group corona-actions-row">
+            <button type="button" className="corona-cert" onClick={huntShape}>Hunt non-tiler</button>
+            <button type="button" className="corona-cert" onClick={copyLink}>{linkCopied ? "Link copied ✓" : "Copy link"}</button>
           </div>
           {shownResult !== null && shownResult.depthReached >= 1 && (
             <div className="corona-rail-group">
