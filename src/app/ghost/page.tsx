@@ -1,14 +1,18 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import {
   ghostEngine,
   ghostWasReady,
   GHOST_MODELS,
   GHOST_LEGACY_URLS,
+  GHOST_MAX_TOKENS,
   getSelectedModel,
   setSelectedModel,
+  backendPref,
+  setBackendPref,
   type GhostModel,
+  type DownloadProgress,
 } from "@/lib/ghost/engine"
 
 interface ChatMessage {
@@ -16,8 +20,8 @@ interface ChatMessage {
   content: string
 }
 
-const SYS_SOCRATIC = "You are Ghost, a DSA tutor. Reply with one short hint or question, under 50 words."
-const SYS_ANSWER = "Answer the user directly in a few short sentences."
+const SYS_SOCRATIC = "You are Ghost, a DSA tutor. Reply with one short hint or question, under 50 words. Use plain text; code only in fenced blocks."
+const SYS_ANSWER = "Answer the user directly in a few short sentences. Use plain text; code only in fenced blocks."
 // Deterministic mode: the FIRST verb of the latest user message decides.
 // Starts with answer/solve/compute/calculate/evaluate -> direct answer.
 // Everything else -> Socratic hint. No mid-sentence keyword flakiness.
@@ -40,11 +44,181 @@ function markEverDownloaded(id: string) {
   } catch {}
 }
 
+function haptic(ms = 10) {
+  try { navigator.vibrate?.(ms) } catch {}
+}
+
 const SUGGESTIONS = [
   "Why does binary search need a sorted array?",
   "Nudge me: detect a cycle in a linked list",
   "When is a hash map the wrong choice?",
 ]
+
+/* ── Markdown-lite renderer (no deps, no innerHTML) ─────────────────────
+   Bold, italic, inline code, fenced code blocks, bullet / numbered lists,
+   headings. Enough for a tutor's replies — everything else stays plain. */
+
+function renderInline(text: string, keyBase: string): ReactNode[] {
+  const nodes: ReactNode[] = []
+  const re = /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`\n]+`)/g
+  let last = 0
+  let m: RegExpExecArray | null
+  let i = 0
+  while ((m = re.exec(text))) {
+    if (m.index > last) nodes.push(text.slice(last, m.index))
+    const tok = m[0]
+    if (tok.startsWith("**")) nodes.push(<strong key={`${keyBase}-b${i}`}>{tok.slice(2, -2)}</strong>)
+    else if (tok.startsWith("`")) nodes.push(<code key={`${keyBase}-c${i}`} className="ghost-md-code">{tok.slice(1, -1)}</code>)
+    else nodes.push(<em key={`${keyBase}-i${i}`}>{tok.slice(1, -1)}</em>)
+    last = m.index + tok.length
+    i++
+  }
+  if (last < text.length) nodes.push(text.slice(last))
+  return nodes
+}
+
+/* Stream reveal (v16): while a reply streams, words are wrapped in spans
+   keyed by char offset. Append-only streaming keeps offsets stable, so a
+   revealed word never re-animates — only appended words materialize. */
+function renderRevealWords(text: string, keyBase: string): ReactNode[] {
+  const nodes: ReactNode[] = []
+  const re = /\S+\s*/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) {
+    const tok = m[0]
+    const word = tok.trimEnd()
+    const trail = tok.slice(word.length)
+    if (word) nodes.push(<span key={`${keyBase}w${m.index}`} className="ghost-w">{word}</span>)
+    if (trail) nodes.push(trail)
+  }
+  return nodes
+}
+
+function renderInlineReveal(text: string, keyBase: string, caret: boolean): ReactNode[] {
+  const nodes: ReactNode[] = []
+  const re = /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`\n]+`)/g
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) {
+    if (m.index > last) nodes.push(...renderRevealWords(text.slice(last, m.index), `${keyBase}o${last}-`))
+    const tok = m[0]
+    if (tok.startsWith("**")) nodes.push(<strong key={`${keyBase}-b${m.index}`} className="ghost-w">{tok.slice(2, -2)}</strong>)
+    else if (tok.startsWith("`")) nodes.push(<code key={`${keyBase}-c${m.index}`} className="ghost-md-code ghost-w">{tok.slice(1, -1)}</code>)
+    else nodes.push(<em key={`${keyBase}-i${m.index}`} className="ghost-w">{tok.slice(1, -1)}</em>)
+    last = m.index + tok.length
+  }
+  if (last < text.length) nodes.push(...renderRevealWords(text.slice(last), `${keyBase}o${last}-`))
+  if (caret) nodes.push(<span key={`${keyBase}-caret`} className="ghost-cursor" aria-hidden="true" />)
+  return nodes
+}
+
+function CopyBtn({ text, className }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      haptic(6)
+      setTimeout(() => setCopied(false), 1400)
+    } catch {}
+  }, [text])
+  return (
+    <button type="button" className={className ?? "ghost-copy"} onClick={copy} aria-label="Copy">
+      {copied ? (
+        <span className="ghost-copy-ok">
+          <svg viewBox="0 0 20 20" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10.5l4 4 8-9" /></svg>
+          copied
+        </span>
+      ) : "copy"}
+    </button>
+  )
+}
+
+function CodeBlock({ code }: { code: string }) {
+  return (
+    <div className="ghost-codeblock">
+      <div className="ghost-codeblock-bar">
+        <span>code</span>
+        <CopyBtn text={code} className="ghost-code-copy" />
+      </div>
+      <pre><code>{code}</code></pre>
+    </div>
+  )
+}
+
+function Markdown({ text, reveal = false, caret = false }: { text: string; reveal?: boolean; caret?: boolean }) {
+  const blocks: ReactNode[] = []
+  const parts = text.split(/```/)
+  // the last prose part carries the stream reveal; the caret rides the last
+  // paragraph, but only while the stream is NOT inside an open code fence
+  const lastProsePart = parts.length - 1 - (parts.length % 2 === 0 ? 1 : 0)
+  const caretHere = caret && parts.length % 2 === 1
+
+  parts.forEach((part, pi) => {
+    // odd indexes are fenced code
+    if (pi % 2 === 1) {
+      let code = part
+      if (code.startsWith("\n")) code = code.slice(1)
+      // strip a language hint line like `python\n` right after the fence
+      const nl = code.indexOf("\n")
+      const firstLine = nl >= 0 ? code.slice(0, nl).trim() : code.trim()
+      if (firstLine && /^[a-z+#]{1,12}$/i.test(firstLine) && firstLine.length <= 10) {
+        code = code.slice(nl + 1)
+      }
+      if (code.endsWith("\n")) code = code.slice(0, -1)
+      blocks.push(<CodeBlock key={`cb${pi}`} code={code} />)
+      return
+    }
+    // prose: paragraphs, lists, headings
+    const lines = part.split("\n")
+    let lastLineIdx = -1
+    lines.forEach((l, li) => { if (l.trim()) lastLineIdx = li })
+    let list: { ordered: boolean; items: string[] } | null = null
+    const flushList = (key: string) => {
+      if (!list) return
+      const L = list
+      blocks.push(
+        L.ordered ? (
+          <ol key={key} className="ghost-md-ol">{L.items.map((it, ii) => <li key={ii}>{renderInline(it, `${key}-${ii}`)}</li>)}</ol>
+        ) : (
+          <ul key={key} className="ghost-md-ul">{L.items.map((it, ii) => <li key={ii}>{renderInline(it, `${key}-${ii}`)}</li>)}</ul>
+        ),
+      )
+      list = null
+    }
+    lines.forEach((raw, li) => {
+      const line = raw.trimEnd()
+      const key = `p${pi}-l${li}`
+      const bullet = /^[-*•]\s+(.*)$/.exec(line)
+      const numbered = /^(\d{1,3})[.)]\s+(.*)$/.exec(line)
+      if (bullet) {
+        if (!list || list.ordered) { flushList(`${key}-pre`); list = { ordered: false, items: [] } }
+        list.items.push(bullet[1])
+        return
+      }
+      if (numbered) {
+        if (!list || !list.ordered) { flushList(`${key}-pre`); list = { ordered: true, items: [] } }
+        list.items.push(numbered[2])
+        return
+      }
+      flushList(`${key}-flush`)
+      if (!line.trim()) return
+      const heading = /^(#{1,4})\s+(.*)$/.exec(line)
+      if (heading) {
+        blocks.push(<p key={key} className="ghost-md-h">{renderInline(heading[2], key)}</p>)
+        return
+      }
+      if (reveal && pi === lastProsePart) {
+        blocks.push(<p key={key} className="ghost-md-p">{renderInlineReveal(line, key, caretHere && li === lastLineIdx)}</p>)
+        return
+      }
+      blocks.push(<p key={key} className="ghost-md-p">{renderInline(line, key)}</p>)
+    })
+    flushList(`p${pi}-end`)
+  })
+
+  return <div className={reveal ? "ghost-md streaming" : "ghost-md"}>{blocks}</div>
+}
 
 function GhostFace({ size = 96, thinking = false }: { size?: number; thinking?: boolean }) {
   return (
@@ -65,6 +239,98 @@ function GhostFace({ size = 96, thinking = false }: { size?: number; thinking?: 
 
 type StorageEntry = { url: string; sizeMb: number }
 interface GhostSession { id: string; title: string; updatedAt: number; messages: ChatMessage[] }
+
+/* ── Sheet (v16): spring entry, animated exit, drag-to-dismiss ──
+   Exit mirrors entry (accelerated). The head area is the drag zone:
+   pull down past 110 px or flick (>0.55 px/ms) to dismiss, else it
+   springs back. Escape closes; focus returns to the invoker. */
+function Sheet({
+  title,
+  closing,
+  onClosed,
+  onRequestClose,
+  children,
+}: {
+  title: string
+  closing: boolean
+  onClosed: () => void
+  onRequestClose: () => void
+  children: ReactNode
+}) {
+  const sheetRef = useRef<HTMLDivElement | null>(null)
+  const invokerRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    invokerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    return () => invokerRef.current?.focus?.()
+  }, [])
+
+  useEffect(() => {
+    if (closing) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onRequestClose() }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [closing, onRequestClose])
+
+  const onHeadPointerDown = useCallback((e: React.PointerEvent) => {
+    if (closing) return
+    if (e.pointerType === "mouse" && e.button !== 0) return
+    const sheet = sheetRef.current
+    if (!sheet) return
+    const startY = e.clientY
+    let y = startY
+    let lastT = performance.now()
+    let vy = 0
+    let dy = 0
+    try { sheet.setPointerCapture(e.pointerId) } catch {}
+    sheet.classList.add("dragging")
+    const move = (ev: PointerEvent) => {
+      dy = Math.max(0, ev.clientY - startY)
+      const now = performance.now()
+      if (now > lastT) vy = (ev.clientY - y) / (now - lastT)
+      y = ev.clientY
+      lastT = now
+      sheet.style.transform = `translateY(${dy}px)`
+    }
+    const finish = () => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", finish)
+      window.removeEventListener("pointercancel", finish)
+      sheet.classList.remove("dragging")
+      if (dy > 110 || vy > 0.55) {
+        sheet.style.transform = ""
+        onRequestClose()
+        return
+      }
+      sheet.classList.add("settle")
+      sheet.style.transform = ""
+      window.setTimeout(() => sheet.classList.remove("settle"), 360)
+    }
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", finish)
+    window.addEventListener("pointercancel", finish)
+  }, [closing, onRequestClose])
+
+  return (
+    <div className={`ghost-sheet-backdrop${closing ? " closing" : ""}`} onClick={() => !closing && onRequestClose()}>
+      <div
+        className={`ghost-sheet${closing ? " closing" : ""}`}
+        ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={event => event.stopPropagation()}
+        onAnimationEnd={event => { if (closing && event.animationName === "ghost-sheet-out") onClosed() }}
+      >
+        <div className="ghost-sheet-head" onPointerDown={onHeadPointerDown}>
+          <span className="ghost-sheet-handle" />
+          <p className="ghost-sheet-title">{title}</p>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
 
 const CHATS_KEY = "deriva-ghost-chats"
 const ACTIVE_KEY = "deriva-ghost-active"
@@ -92,27 +358,45 @@ export default function GhostPage() {
   const [model, setModel] = useState<GhostModel>(() => getSelectedModel())
   const [storage, setStorage] = useState<StorageEntry[]>([])
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetClosing, setSheetClosing] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyClosing, setHistoryClosing] = useState(false)
   const [action, setAction] = useState<string | null>(null)
-  const [getProgress, setGetProgress] = useState<{ url: string; fraction: number; loadedMb: number; totalMb: number }>({ url: "", fraction: 0, loadedMb: 0, totalMb: 0 })
+  const [dl, setDl] = useState<DownloadProgress>({ phase: "connect", fraction: 0, loadedMb: 0, totalMb: 0, speedMbps: 0, etaSec: null })
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [sessions, setSessions] = useState<GhostSession[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [historyOpen, setHistoryOpen] = useState(false)
   const [input, setInput] = useState("")
   const [busy, setBusy] = useState(false)
   const [tps, setTps] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pendingGet, setPendingGet] = useState<GhostModel | null>(null)
   const [caps, setCaps] = useState<{ webgpu: boolean; storageQuotaMb: number | null } | null>(null)
+  const [diag, setDiag] = useState<{ backend: string; threads: number; flashAttn: boolean; kvQuant: boolean } | null>(null)
+  const [pref, setPref] = useState<"cpu" | "gpu">("cpu")
+  const [busyElapsed, setBusyElapsed] = useState(0)
+  const [liveTps, setLiveTps] = useState<number | null>(null)
+  const [gpuFetch, setGpuFetch] = useState(false)
   const busyRef = useRef(false)
+  // active-session id mirror: persistence reads this so it never sees a
+  // stale closure — the root cause of duplicated history rows (v16 fix)
+  const activeIdRef = useRef<string | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const taRef = useRef<HTMLTextAreaElement | null>(null)
   const [follow, setFollow] = useState(true)
   const stick = useRef(true)          // source of truth, no re-render churn
   const suppressing = useRef(false)   // ignore scroll events we caused
+  // Enter sends on pointer-fine (desktop); newline on touch keyboards
+  const enterSends = useRef(true)
 
   const sizeOf = useCallback((url: string) => storage.find(s => s.url === url)?.sizeMb ?? 0, [storage])
   const isCached = useCallback((url: string) => storage.some(s => s.url === url), [storage])
   const totalMb = storage.reduce((sum, s) => sum + s.sizeMb, 0)
+
+  useEffect(() => {
+    const fine = typeof window !== "undefined" ? window.matchMedia?.("(pointer: fine)")?.matches : undefined
+    enterSends.current = fine ?? true
+  }, [])
 
   useEffect(() => () => { if (busyRef.current) void ghostEngine.stop() }, [])
 
@@ -126,6 +410,10 @@ export default function GhostPage() {
     const prev = document.title
     document.title = "Ghost · Deriva"
     return () => { document.title = prev }
+  }, [])
+
+  useEffect(() => {
+    setPref(backendPref())
   }, [])
 
   useEffect(() => {
@@ -148,7 +436,7 @@ export default function GhostPage() {
       const active = localStorage.getItem(ACTIVE_KEY)
       if (active) {
         const found = list.find(s => s.id === active)
-        if (found) { setActiveId(found.id); setMessages(found.messages) }
+        if (found) { setActiveId(found.id); activeIdRef.current = found.id; setMessages(found.messages) }
         else { localStorage.removeItem(ACTIVE_KEY) }
       }
     } catch {}
@@ -184,6 +472,14 @@ export default function GhostPage() {
     requestAnimationFrame(() => { suppressing.current = false })
   }, [messages])
 
+  // auto-grow composer
+  useEffect(() => {
+    const ta = taRef.current
+    if (!ta) return
+    ta.style.height = "auto"
+    ta.style.height = `${Math.min(ta.scrollHeight, 132)}px`
+  }, [input])
+
   const onMessagesScroll = useCallback(() => {
     if (suppressing.current) return
     const el = scrollRef.current
@@ -203,54 +499,58 @@ export default function GhostPage() {
     setFollow(true)
   }, [])
 
+  useEffect(() => { activeIdRef.current = activeId }, [activeId])
+
   const persistSession = useCallback((next: ChatMessage[], firstUserText?: string) => {
+    const currentId = activeIdRef.current
+    if (currentId) {
+      setSessions(prev => {
+        const list = prev.map(s => s.id === currentId ? { ...s, messages: next.slice(-60), updatedAt: Date.now() } : s)
+        saveSessions(list)
+        return list
+      })
+      return
+    }
+    if (next.length === 0) return
+    // id generated OUTSIDE the updater; insert is guarded, so double
+    // invocation (StrictMode or the completion path) is idempotent
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const title = (firstUserText || next[0]?.content || "conversation").slice(0, 44)
+    activeIdRef.current = id
+    try { localStorage.setItem(ACTIVE_KEY, id) } catch {}
     setSessions(prev => {
-      let list = [...prev]
-      if (activeId) {
-        list = list.map(s => s.id === activeId ? { ...s, messages: next.slice(-60), updatedAt: Date.now() } : s)
-      } else if (next.length > 0) {
-        const id = `${Date.now()}`
-        const title = (firstUserText || next[0]?.content || "conversation").slice(0, 44)
-        list = [{ id, title, updatedAt: Date.now(), messages: next.slice(-60) }, ...list]
-        setActiveId(id)
-        try { localStorage.setItem(ACTIVE_KEY, id) } catch {}
-      }
+      if (prev.some(s => s.id === id)) return prev
+      const list = [{ id, title, updatedAt: Date.now(), messages: next.slice(-60) }, ...prev]
       saveSessions(list)
       return list
     })
-  }, [activeId])
+    setActiveId(id)
+  }, [])
 
   const refreshStorage = useCallback(async () => {
     setStorage(await ghostEngine.scanStorage().catch(() => []))
   }, [])
 
+  // download-progress hook for LOAD-time turbo fetches: when the GPU
+  // weights are not cached, building the pipeline downloads them, and
+  // that must render (boot screen / in-chat strip) — never a silent stall.
+  const loadDl = useCallback((p: DownloadProgress) => {
+    setGpuFetch(p.phase !== "done")
+    setDl(p)
+  }, [])
+
   const chooseModel = useCallback((next: GhostModel) => {
     if (action) return
+    haptic(4)
     setModel(next)
     setSelectedModel(next.id)
     setError(null)
   }, [action])
 
-  const downloadModel = useCallback(async (m: GhostModel, after: () => void) => {
-    if (action) return
-    setAction(`get:${m.id}`)
-    setError(null)
-    try {
-      await ghostEngine.download(m, (_f, loaded, total) =>
-        setGetProgress({ url: m.url, fraction: total > 0 ? loaded / total : 0, loadedMb: Math.round(loaded / 1048576), totalMb: Math.round(total / 1048576) }),
-      )
-      await refreshStorage()
-      setSelectedModel(m.id)
-      setModel(m)
-      markEverDownloaded(m.id)
-      after()
-    } catch (err) {
-      setError(String((err as Error)?.message || err))
-    } finally {
-      setAction(null)
-      setGetProgress({ url: "", fraction: 0, loadedMb: 0, totalMb: 0 })
-    }
-  }, [action, refreshStorage])
+  const cancelDownload = useCallback(() => {
+    haptic(10)
+    ghostEngine.cancelDownload()
+  }, [])
 
   const deleteByUrl = useCallback(async (url: string) => {
     if (action) return
@@ -270,23 +570,30 @@ export default function GhostPage() {
     }
   }, [action, refreshStorage, phase])
 
+  const openSheet = useCallback(() => { haptic(6); setSheetClosing(false); setSheetOpen(true) }, [])
+  const closeSheet = useCallback(() => { if (!action) setSheetClosing(true) }, [action])
+  const openHistory = useCallback(() => { haptic(6); setHistoryClosing(false); setHistoryOpen(true) }, [])
+  const closeHistory = useCallback(() => setHistoryClosing(true), [])
+
   const startGet = useCallback(async (m: GhostModel) => {
     if (action) return
     setPendingGet(m)
     setSheetOpen(false)
+    setSheetClosing(false)
     setError(null)
+    setDl({ phase: "connect", fraction: 0, loadedMb: 0, totalMb: 0, speedMbps: 0, etaSec: null })
     setPhase("downloading")
     try {
-      await ghostEngine.download(m, (_f, loaded, total) =>
-        setGetProgress({ url: m.url, fraction: total > 0 ? loaded / total : 0, loadedMb: Math.round(loaded / 1048576), totalMb: Math.round(total / 1048576) }),
-      )
+      await ghostEngine.download(m, setDl)
       await refreshStorage()
       setSelectedModel(m.id)
       setModel(m)
       markEverDownloaded(m.id)
       setPhase("loading")
-      await ghostEngine.load(m)
+      await ghostEngine.load(m, undefined, loadDl)
+      setGpuFetch(false)
       setPhase("ready")
+      void ghostEngine.diagnostics().then(d => { if (d) setDiag({ backend: d.backend, threads: d.threads, flashAttn: d.flashAttn, kvQuant: d.kvQuant }) }).catch(() => {})
       setMessages(prev => {
         if (prev.length > 0) return prev
         return [{ role: "assistant", content: `I live here now — ${m.name}, on your device, no cloud involved. Ask anything; I nudge, you derive.` }]
@@ -297,16 +604,19 @@ export default function GhostPage() {
     } finally {
       setAction(null)
       setPendingGet(null)
-      setGetProgress({ url: "", fraction: 0, loadedMb: 0, totalMb: 0 })
+      setGpuFetch(false)
+      setDl({ phase: "connect", fraction: 0, loadedMb: 0, totalMb: 0, speedMbps: 0, etaSec: null })
     }
-  }, [action, refreshStorage])
+  }, [action, refreshStorage, loadDl])
 
   const startSummon = useCallback(async () => {
     if (isCached(model.url)) {
       setPhase("loading")
       try {
-        await ghostEngine.load(model)
+        await ghostEngine.load(model, undefined, loadDl)
+        setGpuFetch(false)
         setPhase("ready")
+        void ghostEngine.diagnostics().then(d => { if (d) setDiag({ backend: d.backend, threads: d.threads, flashAttn: d.flashAttn, kvQuant: d.kvQuant }) }).catch(() => {})
       } catch (err) {
         const msg = String((err as Error)?.message || "")
         if (msg.includes("MODEL_CORRUPT")) {
@@ -317,21 +627,42 @@ export default function GhostPage() {
         }
         setError(msg.includes("MODEL_NOT_CACHED") ? "Brain not on device yet — download it first." : msg)
         setPhase("intro")
+      } finally {
+        setGpuFetch(false)
       }
       return
     }
     await startGet(model)
-  }, [model, isCached, startGet, refreshStorage])
+  }, [model, isCached, startGet, refreshStorage, loadDl])
+
+  // live progress while the ghost thinks: elapsed seconds until the first
+  // token lands, then a live tok/s readout (pieces ≈ tokens)
+  const busyStartRef = useRef(0)
+  const livePieceCount = useRef(0)
+  const lastTpsEmit = useRef(0)
+  useEffect(() => {
+    if (!busy) return
+    const id = setInterval(() => {
+      if (busyStartRef.current) setBusyElapsed((performance.now() - busyStartRef.current) / 1000)
+    }, 200)
+    return () => clearInterval(id)
+  }, [busy])
 
   const send = useCallback(async (raw?: string) => {
     const text = (raw ?? input).trim()
     if (!text || busyRef.current) return
     busyRef.current = true
     setBusy(true)
+    busyStartRef.current = performance.now()
+    livePieceCount.current = 0
+    lastTpsEmit.current = 0
+    setBusyElapsed(0)
+    setLiveTps(null)
     stick.current = true
     setFollow(true)
     setInput("")
     setError(null)
+    haptic(8)
 
     const history = [...messages, { role: "user" as const, content: text }]
     setMessages(history)
@@ -350,21 +681,28 @@ export default function GhostPage() {
         return next
       })
     }
+    const askGhost = (extra?: string) =>
+      ghostEngine.chat(
+        model,
+        [
+          { role: "system", content: systemFor(history) + (extra ? " " + extra : "") },
+          ...history.slice(-8),
+        ],
+        GHOST_MAX_TOKENS,
+        piece => {
+          streamedText += piece
+          livePieceCount.current += 1
+          const now = performance.now()
+          if (now - lastTpsEmit.current > 250) {
+            lastTpsEmit.current = now
+            const secs = Math.max((now - busyStartRef.current) / 1000, 0.001)
+            setLiveTps(livePieceCount.current / secs)
+          }
+          if (!flushTimer) flushTimer = setTimeout(flushNow, 90)
+        },
+      )
     try {
-      await ghostEngine.load(model)
-      const askGhost = (extra?: string) =>
-        ghostEngine.chat(
-          model,
-          [
-            { role: "system", content: systemFor(history) + (extra ? " " + extra : "") },
-            ...history.slice(-8),
-          ],
-          220,
-          piece => {
-            streamedText += piece
-            if (!flushTimer) flushTimer = setTimeout(flushNow, 90)
-          },
-        )
+      await ghostEngine.load(model, undefined, loadDl)
       const result = await askGhost()
 
       // Echo guard: tiny models sometimes regurgitate their previous reply
@@ -398,19 +736,47 @@ export default function GhostPage() {
       })
     } catch (err) {
       const message = String((err as Error)?.message || err)
-      const raw = message.toLowerCase()
-      if (message.includes("MODEL_CORRUPT") || /typed array|out of memory|invalid length/.test(raw)) {
+      const rawMsg = message.toLowerCase()
+      if (message.includes("MODEL_CORRUPT")) {
         busyRef.current = false
         setBusy(false)
         setError(null)
-        await deleteByUrl(model.url).catch(() => {})
         await refreshStorage()
         await startGet(model)
         return
       }
-      if (/kv_cache|context/.test(raw)) setError("Ghost's memory filled — start a new chat to reset it.")
-      else if (raw.includes("abort") || raw.includes("timed out")) setError(message)
-      else setError(message)
+      if (/typed array|out of memory|invalid length/.test(rawMsg)) {
+        // Memory pressure: the runtime died, the FILE is fine (it passed the
+        // integrity gate). Recycle the runtime, reload from the cached blob
+        // and retry the generation ONCE — no re-download.
+        try {
+          await ghostEngine.eject()
+          await ghostEngine.load(model, undefined, loadDl)
+          const retry = await askGhost()
+          if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
+          flushNow()
+          streamedText = retry.text
+          setTps(retry.tps)
+          setMessages(prev => {
+            const next = prev.slice()
+            const last = next[next.length - 1]
+            if (last?.role === "assistant") next[next.length - 1] = { role: "assistant", content: retry.text || "(silence)" }
+            else next.push({ role: "assistant", content: retry.text || "(silence)" })
+            persistSession(next)
+            return next
+          })
+          return
+        } catch (retryErr) {
+          setError("The brain ran out of memory — try a shorter question or the smaller brain.")
+          console.warn("[ghost] OOM retry failed:", retryErr)
+        }
+      } else if (/kv_cache|context/.test(rawMsg)) {
+        setError("Ghost's memory filled — start a new chat to reset it.")
+      } else if (rawMsg.includes("abort") || rawMsg.includes("timed out")) {
+        setError(message)
+      } else {
+        setError(message)
+      }
       if (!streamedText) {
         setMessages(prev => {
           const next = prev.filter((m, i) => !(i === prev.length - 1 && m.role === "assistant"))
@@ -421,67 +787,80 @@ export default function GhostPage() {
     } finally {
       busyRef.current = false
       setBusy(false)
+      busyStartRef.current = 0
+      setLiveTps(null)
+      setGpuFetch(false)
     }
-  }, [input, messages, persistSession, model, deleteByUrl, startGet])
+  }, [input, messages, persistSession, model, deleteByUrl, startGet, loadDl])
 
   const stop = useCallback(() => {
+    haptic(12)
     ghostEngine.stop()
   }, [])
 
   const clearChat = useCallback(() => {
     setSessions(prev => {
-      const list = prev.filter(s => s.id !== activeId)
+      const list = prev.filter(s => s.id !== activeIdRef.current)
       saveSessions(list)
       return list
     })
     setMessages([])
     setActiveId(null)
+    activeIdRef.current = null
     setSheetOpen(false)
+    setSheetClosing(false)
     try { localStorage.removeItem(ACTIVE_KEY) } catch {}
     try { localStorage.removeItem("deriva-ghost-chat") } catch {}
-  }, [activeId])
+  }, [])
 
   const upsertCurrentBeforeSwitch = useCallback((list: GhostSession[]): GhostSession[] => {
-    if (!activeId || messages.length === 0) return list
-    return list.map(s => s.id === activeId ? { ...s, messages: messages.slice(-60), updatedAt: Date.now() } : s)
-  }, [activeId, messages])
+    const id = activeIdRef.current
+    if (!id || messages.length === 0) return list
+    return list.map(s => s.id === id ? { ...s, messages: messages.slice(-60), updatedAt: Date.now() } : s)
+  }, [messages])
 
   const newChat = useCallback(() => {
     if (busyRef.current) return
     setSessions(prev => { const l = upsertCurrentBeforeSwitch(prev); saveSessions(l); return l })
     setMessages([])
     setActiveId(null)
+    activeIdRef.current = null
     stick.current = true
     setFollow(true)
     setHistoryOpen(false)
+    setHistoryClosing(false)
     try { localStorage.removeItem(ACTIVE_KEY) } catch {}
   }, [upsertCurrentBeforeSwitch])
 
   const openSession = useCallback((id: string) => {
     if (busyRef.current) return
-    setSessions(prev => {
-      const l = upsertCurrentBeforeSwitch(prev); saveSessions(l)
-      const found = l.find(s => s.id === id)
-      if (found) { setMessages(found.messages); setActiveId(found.id); try { localStorage.setItem(ACTIVE_KEY, id) } catch {} }
-      stick.current = true
-      setFollow(true)
-      setHistoryOpen(false)
-      return l
-    })
-  }, [upsertCurrentBeforeSwitch])
+    const found = sessions.find(s => s.id === id)
+    if (!found) return
+    setSessions(prev => { const l = upsertCurrentBeforeSwitch(prev); saveSessions(l); return l })
+    setMessages(found.messages)
+    setActiveId(id)
+    activeIdRef.current = id
+    try { localStorage.setItem(ACTIVE_KEY, id) } catch {}
+    stick.current = true
+    setFollow(true)
+    setHistoryOpen(false)
+    setHistoryClosing(false)
+  }, [upsertCurrentBeforeSwitch, sessions])
 
   const deleteSession = useCallback((id: string) => {
     if (busyRef.current) return
     setSessions(prev => {
       const l = prev.filter(s => s.id !== id); saveSessions(l)
-      if (id === activeId) {
-        setMessages([]); setActiveId(null)
-        try { localStorage.removeItem(ACTIVE_KEY) } catch {}
-        try { localStorage.removeItem("deriva-ghost-chat") } catch {}
-      }
       return l
     })
-  }, [activeId])
+    if (id === activeIdRef.current) {
+      setMessages([])
+      setActiveId(null)
+      activeIdRef.current = null
+      try { localStorage.removeItem(ACTIVE_KEY) } catch {}
+      try { localStorage.removeItem("deriva-ghost-chat") } catch {}
+    }
+  }, [])
 
   const useModel = useCallback(async (m: GhostModel) => {
     if (action || m.id === model.id) return
@@ -489,14 +868,15 @@ export default function GhostPage() {
     setError(null)
     try {
       await ghostEngine.swapModel(m)
-      await ghostEngine.load(m)
+      await ghostEngine.load(m, undefined, loadDl)
       setModel(m)
     } catch (err) {
       setError(String((err as Error)?.message || err))
     } finally {
       setAction(null)
+      setGpuFetch(false)
     }
-  }, [action, model.id])
+  }, [action, model.id, loadDl])
 
   const clearEverything = useCallback(async () => {
     if (action) return
@@ -505,11 +885,24 @@ export default function GhostPage() {
     await refreshStorage()
     setTps(null)
     setSheetOpen(false)
+    setSheetClosing(false)
     setPhase("intro")
     setAction(null)
   }, [action, refreshStorage])
 
+  const chooseBackend = useCallback((p: "cpu" | "gpu") => {
+    setBackendPref(p)
+    setPref(p)
+    setSheetOpen(false)
+    setSheetClosing(false)
+    // backend swaps need a clean runtime — reload is the honest reset
+    window.location.reload()
+  }, [])
+
   const legacyLeftovers = storage.filter(s => GHOST_LEGACY_URLS.includes(s.url))
+  const backendLabel = diag
+    ? diag.backend === "webgpu" ? "TURBO · GPU" : `CPU · ${diag.threads}t`
+    : pref === "gpu" ? "TURBO · GPU" : "CPU"
 
   return (
     <div className="ghost-app">
@@ -570,7 +963,7 @@ export default function GhostPage() {
           </button>
 
           {totalMb > 0 && (
-            <button type="button" className="ghost-storage-link" onClick={() => setSheetOpen(true)}>
+            <button type="button" className="ghost-storage-link" onClick={openSheet}>
               MANAGE STORED BRAINS ({totalMb} MB) →
             </button>
           )}
@@ -583,100 +976,258 @@ export default function GhostPage() {
           <GhostFace size={88} thinking />
           <span className="ghost-kicker">MATERIALISING</span>
           <p className="ghost-hero-title">{(pendingGet ?? model).name}</p>
-          <p className="ghost-tagline mono">{(pendingGet ?? model).sizeMb} MB · one-time</p>
-          <div className="ghost-progress" role="progressbar" aria-valuenow={Math.round(getProgress.fraction * 100)}>
-            <div className="ghost-progress-fill" style={{ width: `${Math.max(2, getProgress.fraction * 100)}%` }} />
-          </div>
           <p className="ghost-tagline mono">
-            {Math.round(getProgress.fraction * 100)}%{getProgress.totalMb > 0 ? ` · ${getProgress.loadedMb} / ${getProgress.totalMb} MB` : ""}
+            {dl.phase === "fetch" && dl.totalMb > 0 ? Math.round(dl.totalMb) : (pendingGet ?? model).sizeMb} MB · one-time
+            {dl.cancellable === false ? " · GPU weights" : ""}
           </p>
+          <div
+            className={`ghost-progress${dl.phase === "connect" || dl.phase === "verify" || dl.phase === "store" ? " indet" : ""}`}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(dl.fraction * 100)}
+            aria-valuetext={`${Math.round(dl.loadedMb)} of ${Math.round(dl.totalMb)} MB`}
+          >
+            <div className="ghost-progress-fill" style={{ width: `${dl.fraction * 100}%` }} />
+          </div>
+          <p className="ghost-dl-meta mono">
+            {dl.phase === "connect" ? (dl.loadedMb > 0.05 ? `fetching engine parts · ${Math.round(dl.loadedMb)} MB` : "finding a clean copy…")
+              : dl.phase === "verify" ? "verifying…"
+              : dl.phase === "store" ? "filing into storage…"
+              : dl.phase === "done" ? "done"
+              : `${Math.round(dl.fraction * 100)}% · ${Math.round(dl.loadedMb)} / ${dl.totalMb > 0 ? Math.round(dl.totalMb) : "?"} MB`}
+          </p>
+          <p className="ghost-dl-sub mono">
+            {dl.resumedMb ? `resumed from ${Math.round(dl.resumedMb)} MB · ` : ""}
+            {dl.speedMbps > 0.05 ? `${dl.speedMbps.toFixed(1)} MB/s` : ""}
+            {dl.etaSec != null && dl.etaSec > 0 ? ` · ~${dl.etaSec}s left` : ""}
+            {dl.files ? ` · ${dl.files} files` : ""}
+          </p>
+          {(dl.phase === "connect" || dl.phase === "fetch") && dl.cancellable !== false && (
+            <button type="button" className="ghost-cancel" onClick={cancelDownload}>
+              <svg viewBox="0 0 20 20" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
+              CANCEL
+            </button>
+          )}
+          {(dl.phase === "connect" || dl.phase === "fetch") && dl.cancellable === false && (
+            <p className="ghost-note">GPU copy streams through the engine — keep this tab open.</p>
+          )}
           <p className="ghost-note">One-time download. After this, Ghost works in airplane mode.</p>
         </div>
       )}
 
       {phase === "loading" && (
-        <div className="ghost-center"><GhostFace size={72} thinking /><p className="ghost-tagline">waking ghost…</p></div>
+        <div className="ghost-center">
+          <GhostFace size={72} thinking />
+          <p className="ghost-tagline">{gpuFetch ? "fetching the GPU copy…" : "waking ghost…"}</p>
+          {gpuFetch && (
+            <>
+              <div
+                className={`ghost-progress${dl.phase === "connect" ? " indet" : ""}`}
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(dl.fraction * 100)}
+                aria-valuetext={`${Math.round(dl.loadedMb)} of ${Math.round(dl.totalMb)} MB`}
+              >
+                <div className="ghost-progress-fill" style={{ width: `${dl.fraction * 100}%` }} />
+              </div>
+              <p className="ghost-dl-meta mono">
+                {dl.phase === "connect"
+                  ? dl.loadedMb > 0.05 ? `engine parts · ${Math.round(dl.loadedMb)} MB` : "connecting…"
+                  : dl.phase === "verify" ? "compiling GPU engine…"
+                  : `${Math.round(dl.fraction * 100)}% · ${Math.round(dl.loadedMb)} / ${dl.totalMb > 0 ? Math.round(dl.totalMb) : "?"} MB`}
+              </p>
+              <p className="ghost-dl-sub mono">
+                {dl.speedMbps > 0.05 ? `${dl.speedMbps.toFixed(1)} MB/s` : ""}
+                {dl.etaSec != null && dl.etaSec > 0 ? ` · ~${dl.etaSec}s left` : ""}
+                {dl.files ? ` · ${dl.files} files` : ""}
+              </p>
+            </>
+          )}
+        </div>
       )}
 
       {phase === "ready" && (
         <>
           <div className="ghost-chatbar">
-              <span className="ghost-chatbar-title">{sessions.find(s => s.id === activeId)?.title ?? "new conversation"}</span>
-              <span className="ghost-chatbar-actions">
-                <button type="button" className="ghost-minibtn" disabled={busy} onClick={() => setHistoryOpen(true)}>HISTORY</button>
-                <button type="button" className="ghost-minibtn accent" disabled={busy} onClick={newChat}>＋ NEW</button>
-                <button type="button" className="ghost-gear-inline" aria-label="Ghost settings" onClick={() => setSheetOpen(true)}>⚙</button>
-              </span>
+            <div className="ghost-chatbar-id">
+              <GhostFace size={26} />
+              <div className="ghost-chatbar-titles">
+                <span className="ghost-chatbar-title">Ghost</span>
+                <span className="ghost-chatbar-sub">
+                  {model.name}{diag ? ` · ${backendLabel}${diag.backend === "cpu" && diag.kvQuant ? " · kv q8" : ""}` : ""}{!busy && tps != null && tps > 0 ? ` · ${tps.toFixed(0)} t/s` : ""}
+                </span>
+              </div>
             </div>
+            <span className="ghost-chatbar-actions">
+              <button type="button" className="ghost-iconbtn" aria-label="History" disabled={busy} onClick={openHistory}>
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M10 4a6 6 0 1 0 6 6H10V4z"/><path d="M10 4a6 6 0 0 1 6 6"/><path d="M10 10l4-4"/></svg>
+              </button>
+              <button type="button" className="ghost-iconbtn" aria-label="New chat" disabled={busy} onClick={newChat}>
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M10 4v12M4 10h12"/></svg>
+              </button>
+              <button type="button" className="ghost-iconbtn" aria-label="Ghost settings" title="Settings" onClick={openSheet}>
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <circle cx="10" cy="10" r="5.2" />
+                  <circle cx="10" cy="10" r="1.8" />
+                  <path d="M10 1.4v3.4M10 15.2v3.4M1.4 10h3.4M15.2 10h3.4M3.95 3.95l2.4 2.4M13.65 13.65l2.4 2.4M16.05 3.95l-2.4 2.4M6.35 13.65l-2.4 2.4" />
+                </svg>
+              </button>
+            </span>
+          </div>
           <div className="ghost-messages" ref={scrollRef} onScroll={onMessagesScroll}>
-            {busy && (
-              <div className="ghost-thinking-chip"><GhostFace size={18} thinking /> thinking…{tps != null && tps > 0 ? ` ${tps.toFixed(1)} tok/s` : ""}</div>
-            )}
-            {messages.length === 0 && (
+            {messages.length === 0 && !busy && (
               <div className="ghost-empty">
-                <p>Ping the void.</p>
+                <GhostFace size={54} />
+                <p className="ghost-empty-hi">Ask ghost anything.</p>
+                <p className="ghost-empty-sub">Hints and nudges first — real answers on demand. Runs offline.</p>
                 {SUGGESTIONS.map(s => (
                   <button key={s} type="button" className="ghost-chip" onClick={() => send(s)}>{s}</button>
                 ))}
               </div>
             )}
-            {messages.map((m, i) => (
-              <div key={i} className={`ghost-msg ${m.role === "user" ? "from-user" : "from-ghost"}`}>
-                {m.role === "assistant" && <GhostFace size={22} />}
-                <div className="ghost-msg-body">
-                  <p>{m.content}{busy && i === messages.length - 1 && m.role === "assistant" && <span className="ghost-cursor" />}</p>
+            {messages.map((m, i) => {
+              const streaming = busy && i === messages.length - 1 && m.role === "assistant"
+              return m.role === "user" ? (
+                <div key={i} className="ghost-msg from-user">
+                  <div className="ghost-msg-body"><p>{m.content}</p></div>
                 </div>
+              ) : (
+                <div key={i} className="ghost-msg from-ghost">
+                  <div className="ghost-msg-body">
+                    <Markdown text={m.content} reveal={streaming} caret={streaming} />
+                    {streaming && liveTps != null && liveTps > 0 && (
+                      <span className="ghost-stream-tps">{liveTps.toFixed(1)} tok/s</span>
+                    )}
+                  </div>
+                  {!busy && m.content.length > 24 && (
+                    <CopyBtn text={m.content} />
+                  )}
+                </div>
+              )
+            })}
+            {busy && messages[messages.length - 1]?.role !== "assistant" && (
+              <div className="ghost-thinking-chip" aria-live="polite">
+                <span className="ghost-dots"><i /><i /><i /></span>
+                thinking
+                {busyElapsed >= 0.4 ? (
+                  <span className="ghost-tps">{busyElapsed.toFixed(1)}s · first reply warms the engine</span>
+                ) : null}
               </div>
-            ))}
+            )}
+            {!follow && (
+              <div className="ghost-jump-wrap">
+                <button type="button" className="ghost-jump" onClick={jumpToLatest}>
+                  <svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 4v11M5 10l5 5 5-5"/></svg> latest
+                </button>
+              </div>
+            )}
           </div>
-
-          {!follow && (
-            <button type="button" className="ghost-jump" onClick={jumpToLatest}>↓ latest</button>
+          {gpuFetch && (
+            <div className="ghost-gpu-fetch" role="status" aria-label="Fetching GPU model copy">
+              <div className="ghost-gpu-fetch-bar">
+                <span className={dl.phase === "connect" ? "indet" : ""} style={{ width: `${Math.max(dl.phase === "fetch" ? 2 : 0, dl.fraction * 100)}%` }} />
+              </div>
+              <span className="mono">
+                {dl.phase === "connect"
+                  ? `GPU copy · ${Math.round(dl.loadedMb)} MB${dl.files ? ` · ${dl.files} files` : ""}`
+                  : dl.phase === "verify"
+                    ? "compiling GPU engine…"
+                    : `GPU copy · ${Math.round(dl.fraction * 100)}%${dl.etaSec != null && dl.etaSec > 0 ? ` · ~${dl.etaSec}s` : ""}`}
+              </span>
+            </div>
           )}
+
           <footer className="ghost-composer">
             {error && <p className="ghost-error">{error}</p>}
             <form onSubmit={event => { event.preventDefault(); void send() }} className="ghost-inputrow">
-              <input
+              <textarea
+                ref={taRef}
                 className="ghost-input"
+                rows={1}
                 value={input}
                 onChange={event => setInput(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === "Enter" && !event.shiftKey && enterSends.current) {
+                    event.preventDefault()
+                    void send()
+                  }
+                }}
                 placeholder="ask ghost…"
                 disabled={busy}
               />
-              {busy ? (
-                <button type="button" className="ghost-send stop" onClick={stop} aria-label="Stop">■</button>
-              ) : (
-                <button type="submit" className="ghost-send" disabled={!input.trim()} aria-label="Send">↑</button>
-              )}
+              <button
+                type="submit"
+                className={`ghost-send${busy ? " stop" : ""}`}
+                data-mode={busy ? "stop" : "send"}
+                disabled={!busy && !input.trim()}
+                aria-label={busy ? "Stop" : "Send"}
+                onClick={event => { if (busy) { event.preventDefault(); stop() } }}
+              >
+                <span className="ghost-send-ico ico-send" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M10 16V4M5 9l5-5 5 5"/></svg>
+                </span>
+                <span className="ghost-send-ico ico-stop" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor"><rect x="4" y="4" width="12" height="12" rx="2.5"/></svg>
+                </span>
+              </button>
             </form>
           </footer>
         </>
       )}
 
       {sheetOpen && (
-        <div className="ghost-sheet-backdrop" onClick={() => !action && setSheetOpen(false)}>
-          <div className="ghost-sheet" onClick={event => event.stopPropagation()}>
-            <span className="ghost-sheet-handle" />
-            <p className="ghost-sheet-title">GHOST SETTINGS</p>
+        <Sheet
+          title="GHOST SETTINGS"
+          closing={sheetClosing}
+          onRequestClose={closeSheet}
+          onClosed={() => { setSheetOpen(false); setSheetClosing(false) }}
+        >
+            <div className="ghost-backend-row">
+              <div className="ghost-brain-info">
+                <span className="ghost-brain-name">Engine</span>
+                <span className="ghost-brain-meta">
+                  {caps?.webgpu
+                    ? pref === "gpu" ? "turbo · downloads its own GPU copy · experimental" : "cpu · default · fastest everywhere"
+                    : "cpu · this device has no WebGPU"}
+                </span>
+              </div>
+              <div className="ghost-backend-choices" role="radiogroup" aria-label="Backend">
+                {(["cpu", "gpu"] as const).map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    role="radio"
+                    aria-checked={pref === p}
+                    className={`ghost-backend-btn${pref === p ? " active" : ""}`}
+                    disabled={p === "gpu" && !caps?.webgpu}
+                    onClick={() => chooseBackend(p)}
+                  >
+                    {p === "cpu" ? "CPU" : "TURBO"}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {GHOST_MODELS.map(m => {
               const cached = isCached(m.url)
               const resident = phase === "ready" && m.id === model.id
-              const working = action?.endsWith(`:${m.id}`) || (action === `get:${m.id}` && getProgress.url === m.url)
+              const working = action?.endsWith(`:${m.id}`)
               return (
                 <div key={m.id} className={`ghost-brain-row${resident ? " active" : ""}`}>
                   <div className="ghost-brain-info">
                     <span className="ghost-brain-name">{m.name}{resident ? " · RESIDENT" : ""}</span>
                     <span className="ghost-brain-meta">{cached ? `${sizeOf(m.url)} MB on device` : `${m.sizeMb} MB · not downloaded`}</span>
-                    {working && action === `get:${m.id}` && (
-                      <span className="ghost-brain-bar"><span style={{ width: `${Math.max(3, getProgress.fraction * 100)}%` }} /></span>
+                    {working && action === `get:${m.id}` && phase === "downloading" && (
+                      <span className="ghost-brain-bar"><span style={{ width: `${Math.max(3, dl.fraction * 100)}%` }} /></span>
                     )}
                   </div>
                   <div className="ghost-brain-actions">
                     {resident ? (
                       <span className="ghost-brain-state">in use</span>
                     ) : working ? (
-                      <span className="ghost-brain-state">{action?.startsWith("get") ? `${Math.round(getProgress.fraction * 100)}%` : "…"}</span>
+                      <span className="ghost-brain-state">{action?.startsWith("get") ? `${Math.round(dl.fraction * 100)}%` : "…"}</span>
                     ) : cached ? (
                       <>
                         <button type="button" className="ghost-minibtn" disabled={!!action} onClick={() => useModel(m)}>USE</button>
@@ -691,7 +1242,11 @@ export default function GhostPage() {
             })}
 
             {legacyLeftovers.map(l => {
-              const name = l.url.includes("qwen") ? "Qwen 2.5 0.5B (leftover)" : "old model"
+              const name = l.url.includes("qwen2.5")
+                ? "Qwen 2.5 0.5B (leftover)"
+                : l.url.includes("SmolLM2")
+                  ? "SmolLM 2 (leftover)"
+                  : "old model"
               return (
                 <div key={l.url} className="ghost-brain-row legacy">
                   <div className="ghost-brain-info">
@@ -713,15 +1268,16 @@ export default function GhostPage() {
               </span>
             </div>
             {error && <p className="ghost-error">{error}</p>}
-          </div>
-        </div>
+        </Sheet>
       )}
 
       {historyOpen && (
-        <div className="ghost-sheet-backdrop" onClick={() => setHistoryOpen(false)}>
-          <div className="ghost-sheet" onClick={event => event.stopPropagation()}>
-            <span className="ghost-sheet-handle" />
-            <p className="ghost-sheet-title">CONVERSATIONS</p>
+        <Sheet
+          title="CONVERSATIONS"
+          closing={historyClosing}
+          onRequestClose={closeHistory}
+          onClosed={() => { setHistoryOpen(false); setHistoryClosing(false) }}
+        >
             {sessions.length === 0 && <p className="ghost-note">No past conversations yet.</p>}
             {sessions.map(s => (
               <div key={s.id} className={`ghost-brain-row${s.id === activeId ? " active" : ""}`}>
@@ -729,15 +1285,14 @@ export default function GhostPage() {
                   <span className="ghost-brain-name">{s.title}</span>
                   <span className="ghost-brain-meta">{relTime(s.updatedAt)} · {s.messages.length} messages</span>
                 </button>
-                <button type="button" className="ghost-minibtn danger" disabled={busy} onClick={() => { if (!busy) deleteSession(s.id) }}>✕</button>
+                <button type="button" className="ghost-minibtn danger" disabled={busy} aria-label="Delete conversation" onClick={() => { if (!busy) deleteSession(s.id) }}>✕</button>
               </div>
             ))}
             <div className="ghost-brains-foot">
               <span>{sessions.length} saved</span>
               <button type="button" className="ghost-minibtn accent" disabled={!!action || busy} onClick={newChat}>＋ START NEW</button>
             </div>
-          </div>
-        </div>
+        </Sheet>
       )}
     </div>
   )

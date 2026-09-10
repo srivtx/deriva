@@ -2999,12 +2999,6 @@ code, pre { font-family: var(--font-mono); }
 .ghost-tagline.mono { font-family: var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.08em; }
 .ghost-note { margin: 0; max-width: 420px; color: var(--ink-soft); font-size: 12.5px; line-height: 1.55; }
 
-.ghost-spec { width: min(430px, 100%); border: 1px solid var(--line); background: var(--paper-raised); border-radius: var(--radius, 12px); overflow: hidden; margin-top: 6px; }
-.ghost-spec-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 9px 14px; font-size: 12.5px; border-bottom: 1px solid var(--line); }
-.ghost-spec-row:last-child { border-bottom: 0; }
-.ghost-spec-row span { font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 10px; letter-spacing: 0.18em; color: var(--ink-soft); }
-.ghost-spec-row strong { font-weight: 700; color: var(--ink); text-align: right; }
-
 .ghost-summon, .ghost-send { appearance: none; border: 0; cursor: pointer; background: var(--accent); color: var(--on-accent); font: 800 13px/1 var(--font-ui); letter-spacing: 0.22em; text-indent: 0.22em; padding: 15px 26px; border-radius: 999px; transition: transform 0.12s ease, filter 0.12s ease; }
 .ghost-summon:hover, .ghost-send:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
 .ghost-summon:active, .ghost-send:active:not(:disabled) { transform: translateY(0); }
@@ -3014,6 +3008,13 @@ code, pre { font-family: var(--font-mono); }
 
 .ghost-progress { width: min(430px, 100%); height: 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper-raised); overflow: hidden; }
 .ghost-progress-fill { height: 100%; background: repeating-linear-gradient(-45deg, var(--accent) 0 8px, color-mix(in srgb, var(--accent) 72%, transparent) 8px 16px); transition: width 0.25s ease; }
+
+/* download screen (v15): honest phases, speed, ETA, cancel */
+.ghost-dl-meta { margin: 10px 0 0; font-size: 11.5px; letter-spacing: 0.08em; color: var(--ink); font-weight: 700; }
+.ghost-dl-sub { margin: 3px 0 0; font-size: 10px; letter-spacing: 0.06em; color: var(--ink-soft); min-height: 13px; }
+.ghost-cancel { appearance: none; display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; border: 1px solid var(--line); background: var(--paper-raised); color: var(--ink-soft); font: 800 10px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.18em; text-indent: 0.18em; padding: 9px 16px; border-radius: 999px; cursor: pointer; transition: color 0.12s ease, border-color 0.12s ease, transform 0.12s ease; }
+.ghost-cancel:hover { color: #c0392b; border-color: #c0392b; transform: translateY(-1px); }
+.ghost-cancel:active { transform: scale(0.95); }
 
 .ghost-error { margin: 4px 0 0; color: #c0392b; font-size: 12.5px; max-width: 420px; }
 
@@ -3034,8 +3035,6 @@ code, pre { font-family: var(--font-mono); }
 .ghost-msg.from-user { align-self: flex-end; align-items: flex-end; background: var(--accent-soft); border-radius: 14px 14px 4px 14px; padding: 10px 13px; }
 .ghost-msg.from-user p { color: var(--ink); }
 .ghost-msg.from-ghost p { color: var(--ink); }
-.ghost-msg-tag { font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 8.5px; letter-spacing: 0.24em; color: var(--ink-soft); }
-.ghost-msg.from-user .ghost-msg-tag { order: 2; }
 .ghost-cursor { display: inline-block; width: 8px; height: 14px; background: var(--accent); margin-left: 3px; vertical-align: -2px; animation: ghost-cursor-blink 0.9s steps(1) infinite; }
 @keyframes ghost-cursor-blink { 50% { opacity: 0; } }
 
@@ -3047,7 +3046,6 @@ code, pre { font-family: var(--font-mono); }
 
 @media (max-width: 520px) {
   .ghost-msg { max-width: 94%; }
-  .ghost-gauge { display: none; }
 }
 
 /* Ghost model picker */
@@ -3061,19 +3059,16 @@ code, pre { font-family: var(--font-mono); }
 .ghost-model-blurb { font-size: 10px; line-height: 1.45; color: var(--ink-soft); }
 @media (max-width: 520px) { .ghost-picker { grid-template-columns: 1fr; } }
 
-/* Ghost brains manager */
-.ghost-brains { border: 1px solid var(--line); border-top: 0; background: var(--paper-raised); border-radius: 0 0 12px 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-.ghost-brains-title { margin: 0 0 2px; font: 700 9px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.22em; color: var(--ink-soft); }
+/* Ghost brains manager rows (settings + history sheets) */
 .ghost-brain-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
 .ghost-brain-row.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .ghost-brain-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.ghost-brain-name { font: 800 12.5px/1.2 var(--font-ui); color: var(--ink); }
-.ghost-brain-meta { font: 600 9px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.1em; color: var(--ink-soft); }
+.ghost-brain-name { font: 800 12.5px/1.2 var(--font-ui); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ghost-brain-meta { font: 600 9px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.1em; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .ghost-brain-actions { display: flex; align-items: center; gap: 6px; flex: none; }
 .ghost-brain-state { font: 600 10px/1 var(--font-mono, ui-monospace, Menlo, monospace); color: var(--ink-soft); letter-spacing: 0.08em; }
 .ghost-minibtn.danger { color: #c0392b; border-color: color-mix(in srgb, #c0392b 35%, var(--line)); }
 .ghost-minibtn:disabled { opacity: 0.4; cursor: default; }
-.ghost-brain-progress { display: flex; align-items: center; gap: 7px; font: 700 10px/1 var(--font-mono, ui-monospace, Menlo, monospace); color: var(--ink-soft); }
 .ghost-brain-bar { width: 72px; height: 5px; border-radius: 999px; background: var(--line); overflow: hidden; display: inline-block; }
 .ghost-brain-bar > span { display: block; height: 100%; background: var(--accent); transition: width 0.25s ease; }
 .ghost-brains-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 4px; font: 600 10px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.08em; color: var(--ink-soft); }
@@ -3085,7 +3080,7 @@ code, pre { font-family: var(--font-mono); }
 .ghost-hero-sub { margin: 8px 0 4px; color: var(--ink-soft); font-size: 14px; line-height: 1.6; max-width: 46ch; text-align: left; }
 .ghost-intro { align-items: stretch; text-align: left; gap: 12px; }
 .ghost-intro .ghost-face { align-self: center; margin: 4px 0 2px; }
-.ghost-intro .ghost-spec, .ghost-intro .ghost-picker { width: 100%; }
+.ghost-intro .ghost-picker { width: 100%; }
 .ghost-intro .ghost-note, .ghost-intro .ghost-summon, .ghost-intro .ghost-error { align-self: center; }
 .ghost-chat { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .ghost-messages { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 18px 2px 10px; scroll-padding-bottom: 12px; }
@@ -3107,8 +3102,6 @@ code, pre { font-family: var(--font-mono); }
 /* ── Ghost v3: sheet, microrow, polish ────────────────────── */
 .ghost-section-label { margin: 10px 0 0; font: 700 9.5px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.26em; color: var(--ink-soft); }
 .ghost-model { padding: 13px 14px; gap: 4px; border-radius: 14px; }
-.ghost-model-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.ghost-model-badge { font: 800 8px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.14em; color: var(--on-accent); background: var(--accent); border-radius: 5px; padding: 3px 6px; }
 .ghost-summon { width: 100%; margin-top: 2px; }
 .ghost-storage-link { appearance: none; border: 0; background: transparent; color: var(--ink-soft); font: 600 11px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.04em; cursor: pointer; padding: 4px 0; text-align: left; }
 .ghost-storage-link:hover { color: var(--accent); }
@@ -3123,11 +3116,8 @@ code, pre { font-family: var(--font-mono); }
 
 /* ── Ghost v4: quiet chrome ───────────────────────────────── */
 .ghost-chat { position: relative; }
-.ghost-gear { position: absolute; top: 10px; right: 0; z-index: 6; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); background: color-mix(in srgb, var(--paper-raised) 88%, transparent); color: var(--ink-soft); font-size: 15px; cursor: pointer; transition: color .12s ease, border-color .12s ease, transform .12s ease; }
-.ghost-gear:hover { color: var(--accent); border-color: var(--accent); transform: rotate(22deg); }
 .ghost-msg-body p { margin: 0; }
 .ghost-sheet-foot-actions { display: inline-flex; gap: 8px; }
-@media (min-width: 700px) { .ghost-gear { top: 12px; right: 12px; } }
 
 /* ── Ghost v5: layout guards ──────────────────────────────── */
 .ghost-msg > .ghost-face { flex: 0 0 auto; align-self: flex-end; }
@@ -3141,8 +3131,6 @@ code, pre { font-family: var(--font-mono); }
 .ghost-chatbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0 10px; }
 .ghost-chatbar-title { font: 600 11px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46%; letter-spacing: 0.04em; }
 .ghost-chatbar-actions { display: inline-flex; gap: 7px; align-items: center; }
-.ghost-gear-inline { appearance: none; width: 30px; height: 26px; display: grid; place-items: center; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--ink-soft); font-size: 14px; cursor: pointer; transition: color 0.14s ease, border-color 0.14s ease, transform 0.2s ease; }
-.ghost-gear-inline:hover { color: var(--accent); border-color: var(--line); transform: rotate(18deg); }
 .ghost-minibtn.accent { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 .ghost-minibtn.accent:hover { filter: brightness(1.06); }
 .ghost-thinking-chip { align-self: center !important; position: static; display: inline-flex; align-items: center; gap: 7px; background: var(--paper-raised); border: 1px solid var(--line); color: var(--ink-soft); font: 600 11px/1 var(--font-ui); border-radius: 999px; padding: 7px 12px; animation: ghost-rise-in 0.18s ease both; }
@@ -3637,3 +3625,269 @@ code, pre { font-family: var(--font-mono); }
   .corona-hud { gap: 4px; }
   .corona-hud > * { font-size: 10px; padding: 2px 6px; }
 }
+
+/* ── Ghost v14 · the clean pass ──────────────────────────────
+   Flat assistant text (no bubble), markdown-lite, icon chrome,
+   breathing room. The clutter leaves; the ghost stays. */
+
+/* markdown-lite */
+.ghost-md { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ghost-md-p { margin: 0; font-size: 14.5px; line-height: 1.65; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
+.ghost-md-h { margin: 2px 0 0; font-size: 13.5px; font-weight: 800; letter-spacing: 0.01em; color: var(--ink); }
+.ghost-md-ul, .ghost-md-ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.ghost-md-ul li, .ghost-md-ol li { font-size: 14px; line-height: 1.6; color: var(--ink); }
+.ghost-md-code { font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 12.5px; background: var(--paper-raised); border: 1px solid var(--line); border-radius: 6px; padding: 1.5px 6px; color: var(--ink); word-break: break-all; }
+.ghost-codeblock { border: 1px solid var(--line); border-radius: 12px; background: var(--paper-raised); overflow: hidden; max-width: 100%; }
+.ghost-codeblock-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 6px 12px; border-bottom: 1px solid var(--line); font: 700 9px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.22em; color: var(--ink-soft); }
+.ghost-code-copy { appearance: none; border: 1px solid var(--line); background: var(--paper); color: var(--ink-soft); font: 700 9.5px/1 var(--font-ui); letter-spacing: 0.1em; padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: color 0.12s ease, border-color 0.12s ease, transform 0.12s ease; }
+.ghost-code-copy:hover { color: var(--accent); border-color: var(--accent); }
+.ghost-code-copy:active { transform: scale(0.94); }
+.ghost-codeblock pre { margin: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 12px 14px; }
+.ghost-codeblock pre code { font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 12.5px; line-height: 1.6; color: var(--ink); white-space: pre; }
+
+/* flat assistant message — bubble only for the user */
+.ghost-msg.from-ghost { align-items: flex-start; }
+.ghost-msg.from-ghost .ghost-msg-body { background: transparent !important; border: 0 !important; padding: 0 !important; border-radius: 0 !important; max-width: 100%; }
+.ghost-msg.from-ghost .ghost-msg-body p { font-size: 14.5px; }
+.ghost-msg.from-user .ghost-msg-body { background: var(--accent-soft); border-radius: 18px 18px 6px 18px; padding: 10px 14px; }
+.ghost-msg.from-user { max-width: 84% !important; }
+.ghost-msg.from-ghost { max-width: 96% !important; }
+
+/* copy affordance under assistant messages */
+.ghost-copy { appearance: none; border: 0; background: transparent; color: var(--ink-soft); font: 700 9px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.16em; padding: 2px 0 0; cursor: pointer; opacity: 0.72; transition: opacity 0.12s ease, color 0.12s ease; align-self: flex-start; margin-top: -2px; }
+.ghost-copy:hover { opacity: 1; color: var(--accent); }
+
+/* header: face + two-line identity + icon buttons */
+.ghost-chatbar { padding: 4px 0 12px; }
+.ghost-chatbar-id { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.ghost-chatbar-titles { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ghost-chatbar-title { font: 800 13px/1.2 var(--font-ui); color: var(--ink); letter-spacing: 0.01em; }
+.ghost-chatbar-sub { font: 600 9.5px/1.3 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.1em; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+.ghost-iconbtn { appearance: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; border: 1px solid var(--line); background: var(--paper-raised); color: var(--ink-soft); cursor: pointer; transition: color 0.13s ease, border-color 0.13s ease, transform 0.13s ease; flex: none; }
+.ghost-iconbtn:hover { color: var(--accent); border-color: var(--accent); transform: translateY(-1px); }
+.ghost-iconbtn:active { transform: scale(0.93); }
+.ghost-iconbtn:disabled { opacity: 0.45; cursor: default; transform: none; }
+
+/* thinking dots */
+.ghost-thinking-chip { gap: 9px; }
+.ghost-dots { display: inline-flex; gap: 4px; align-items: center; }
+.ghost-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--ink-soft); opacity: 0.4; animation: ghost-dot 1.2s ease-in-out infinite; }
+.ghost-dots i:nth-child(2) { animation-delay: 0.18s; }
+.ghost-dots i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes ghost-dot { 0%, 60%, 100% { opacity: 0.35; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-2.5px); } }
+.ghost-tps { font: 700 9px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.08em; color: var(--ink-soft); }
+@media (prefers-reduced-motion: reduce) { .ghost-dots i { animation: none !important; } }
+
+/* empty state: a greeting, not a void */
+.ghost-empty { gap: 6px; }
+.ghost-empty-hi { margin: 6px 0 0; font: 800 17px/1.2 var(--font-ui) !important; color: var(--ink) !important; letter-spacing: 0.005em; }
+.ghost-empty-sub { margin: 0 0 10px; font: 500 12.5px/1.5 var(--font-ui) !important; color: var(--ink-soft) !important; max-width: 34ch; }
+.ghost-chip { border-radius: 999px; }
+
+/* composer: auto-grow textarea */
+.ghost-input { display: block; resize: none; overflow-y: auto; min-height: 44px; max-height: 132px; line-height: 1.45; }
+.ghost-input::-webkit-scrollbar { width: 3px; }
+
+/* send / stop icons */
+.ghost-send { display: grid; place-items: center; width: 44px; height: 44px; padding: 0 !important; border-radius: 13px !important; }
+
+/* backend selector row */
+.ghost-backend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.ghost-backend-choices { display: inline-flex; gap: 5px; flex: none; }
+.ghost-backend-btn { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--ink-soft); font: 800 9px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.14em; padding: 6px 9px; border-radius: 7px; cursor: pointer; transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease; }
+.ghost-backend-btn.active { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.ghost-backend-btn:disabled { opacity: 0.35; cursor: default; }
+.ghost-backend-btn:not(.active):not(:disabled):hover { color: var(--accent); border-color: var(--accent); }
+
+/* jump pill icon alignment */
+.ghost-jump { display: inline-flex; align-items: center; gap: 5px; }
+
+/* ── Ghost v16 · motion system — physics, continuity, restraint ──
+   Research notes: docs/ghost-design-motion.md.
+   Springs are generated from a damped harmonic oscillator, not eyeballed
+   (scripts/ghost_spring_curves.py). Three budgets:
+     settle — near-critical, big surfaces (sheets, phases): no bounce
+     pop    — ~9% overshoot, messages and pills
+     micro  — fast ~5% overshoot, chips and icon confirms
+   Rules: enter fast + settle; every exit is animated; small things
+   bounce, big things settle; reduced-motion swaps springs for ease-out
+   and kills travel/shimmer but keeps every fade. */
+
+.ghost-app {
+  --g-ease-out: cubic-bezier(0.22, 0.9, 0.24, 1);
+  --g-ease-settle: linear(0, 0.01345 3.846%, 0.04873 7.692%, 0.09935 11.54%, 0.1601 15.38%, 0.2267 19.23%, 0.2961 23.08%, 0.3658 26.92%, 0.4338 30.77%, 0.4989 34.62%, 0.5601 38.46%, 0.6169 42.31%, 0.669 46.15%, 0.7162 50%, 0.7585 53.85%, 0.7962 57.69%, 0.8295 61.54%, 0.8586 65.38%, 0.8838 69.23%, 0.9056 73.08%, 0.9242 76.92%, 0.9399 80.77%, 0.9532 84.62%, 0.9642 88.46%, 0.9734 92.31%, 0.9809 96.15%, 1);
+  --g-ease-pop: linear(0, 0.03318 3.846%, 0.118 7.692%, 0.2346 11.54%, 0.3669 15.38%, 0.5021 19.23%, 0.631 23.08%, 0.7471 26.92%, 0.8468 30.77%, 0.9283 34.62%, 0.9916 38.46%, 1.038 42.31%, 1.069 46.15%, 1.087 50%, 1.094 53.85%, 1.094 57.69%, 1.087 61.54%, 1.077 65.38%, 1.065 69.23%, 1.052 73.08%, 1.04 76.92%, 1.028 80.77%, 1.018 84.62%, 1.01 88.46%, 1.003 92.31%, 0.998 96.15%, 1);
+  --g-ease-micro: linear(0, 0.04702 5%, 0.1604 10%, 0.3061 15%, 0.4596 20%, 0.6048 25%, 0.7319 30%, 0.8364 35%, 0.9173 40%, 0.9761 45%, 1.016 50%, 1.04 55%, 1.051 60%, 1.054 65%, 1.051 70%, 1.045 75%, 1.037 80%, 1.029 85%, 1.021 90%, 1.014 95%, 1);
+}
+@supports not (animation-timing-function: linear(0, 1)) {
+  .ghost-app { --g-ease-settle: cubic-bezier(0.22, 0.9, 0.24, 1); --g-ease-pop: cubic-bezier(0.3, 1.36, 0.36, 1); --g-ease-micro: cubic-bezier(0.3, 1.3, 0.36, 1); }
+}
+
+/* phase containers rise in — state changes animate through, never teleport */
+.ghost-intro, .ghost-center, .ghost-chat { animation: ghost-phase-in 0.34s var(--g-ease-out) both; }
+@keyframes ghost-phase-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* stagger: intro children and empty-state children read as a sequence */
+.ghost-intro > *, .ghost-empty > * { animation: ghost-rise-stagger 0.46s var(--g-ease-settle) both; }
+.ghost-intro > *:nth-child(1), .ghost-empty > *:nth-child(1) { animation-delay: 0ms; }
+.ghost-intro > *:nth-child(2), .ghost-empty > *:nth-child(2) { animation-delay: 45ms; }
+.ghost-intro > *:nth-child(3), .ghost-empty > *:nth-child(3) { animation-delay: 90ms; }
+.ghost-intro > *:nth-child(4), .ghost-empty > *:nth-child(4) { animation-delay: 135ms; }
+.ghost-intro > *:nth-child(5) { animation-delay: 180ms; }
+.ghost-intro > *:nth-child(6) { animation-delay: 225ms; }
+.ghost-intro > *:nth-child(7) { animation-delay: 255ms; }
+@keyframes ghost-rise-stagger { from { opacity: 0; transform: translateY(8px); } }
+.ghost-intro > .ghost-picker { animation: none; }
+.ghost-picker > .ghost-model { animation: ghost-rise-stagger 0.46s var(--g-ease-settle) both; }
+.ghost-picker > .ghost-model:nth-child(1) { animation-delay: 130ms; }
+.ghost-picker > .ghost-model:nth-child(2) { animation-delay: 185ms; }
+.ghost-picker > .ghost-model:nth-child(3) { animation-delay: 240ms; }
+
+/* messages: the user's words pop, the ghost's arrive quietly */
+.ghost-msg.from-user { animation: ghost-msg-pop 0.44s var(--g-ease-pop) both; }
+@keyframes ghost-msg-pop { from { opacity: 0; transform: translateY(10px) scale(0.94); } }
+.ghost-msg.from-ghost { animation: ghost-msg-in 0.3s var(--g-ease-out) both; }
+
+/* word-level reveal: appended words materialize (keyed by char offset,
+   so revealed text never re-animates). Pure opacity — vertical travel
+   inside a paragraph reflows the line. */
+.ghost-w { animation: ghost-w-in 0.26s var(--g-ease-out) both; }
+@keyframes ghost-w-in { from { opacity: 0; } }
+/* while streaming, each new markdown block also materializes */
+.ghost-md.streaming > * { animation: ghost-w-in 0.3s var(--g-ease-out) both; }
+
+/* caret: soft block, breathing pulse (was: hard 2-frame blink) */
+.ghost-cursor { display: inline-block; width: 7px; height: 15px; border-radius: 2.5px; background: var(--accent); margin-left: 2px; vertical-align: -2.5px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent); animation: ghost-cursor-breathe 1.15s ease-in-out infinite; }
+@keyframes ghost-cursor-breathe { 0%, 100% { opacity: 0.9; } 50% { opacity: 0.32; } }
+
+/* live tok/s readout under the streaming reply */
+.ghost-stream-tps { font: 700 9px/1 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.08em; color: var(--ink-soft); font-variant-numeric: tabular-nums; animation: ghost-rise-in 0.18s var(--g-ease-out) both; }
+
+/* download bar: clean fill, moving sheen, honest indeterminate states */
+.ghost-progress { height: 8px; border: 0; background: color-mix(in srgb, var(--ink) 7%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent); }
+.ghost-progress-fill { background: var(--accent); position: relative; overflow: hidden; transition: width 0.38s var(--g-ease-out); }
+.ghost-progress-fill::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 25%, color-mix(in srgb, var(--paper) 42%, transparent) 46%, transparent 68%); transform: translateX(-130%); animation: ghost-sheen 2s var(--g-ease-out) infinite; }
+@keyframes ghost-sheen { 55% { transform: translateX(130%); } 100% { transform: translateX(130%); } }
+.ghost-progress.indet .ghost-progress-fill { width: 38% !important; transition: none; animation: ghost-indet 1.15s var(--g-ease-out) infinite; }
+.ghost-progress.indet .ghost-progress-fill::after { animation: none; opacity: 0; }
+@keyframes ghost-indet { from { transform: translateX(-102%); } to { transform: translateX(268%); } }
+
+/* sheets: spring entry, animated exit, drag-to-dismiss plumbing.
+   .ghost-sheet-head is the drag zone (touch-action none there).
+   z-index 130: page modals float above the app-mode header (100) and
+   the shell's more-menu (120), matching the shell's own sheet (110+). */
+.ghost-sheet-backdrop { position: fixed; z-index: 130; background: rgba(10, 12, 16, 0.45); backdrop-filter: blur(3px) saturate(1.05); -webkit-backdrop-filter: blur(3px) saturate(1.05); }
+.ghost-sheet { animation: ghost-sheet-in 0.44s var(--g-ease-settle) both; }
+@keyframes ghost-sheet-in { from { transform: translateY(102%); } }
+.ghost-sheet-backdrop.closing { animation: ghost-fade-out 0.16s ease both; }
+.ghost-sheet.closing { animation: ghost-sheet-out 0.2s cubic-bezier(0.5, 0, 0.75, 0.4) both; }
+@keyframes ghost-sheet-out { to { transform: translateY(58%); opacity: 0; } }
+@keyframes ghost-fade-out { to { opacity: 0; } }
+.ghost-sheet-head { display: flex; flex-direction: column; gap: 8px; align-items: center; touch-action: none; cursor: grab; }
+.ghost-sheet-head:active { cursor: grabbing; }
+.ghost-sheet.dragging, .ghost-sheet-backdrop.dragging { animation: none !important; transition: none !important; }
+.ghost-sheet.settle { transition: transform 0.32s var(--g-ease-settle); transform: translateY(0); }
+
+/* send <-> stop: one button, the icon rotates through */
+.ghost-send { position: relative; overflow: hidden; transition: background-color 0.24s ease, color 0.24s ease, transform 0.13s ease, filter 0.13s ease, opacity 0.13s ease; }
+.ghost-send-ico { position: absolute; inset: 0; display: grid; place-items: center; transition: transform 0.32s var(--g-ease-pop), opacity 0.16s ease; }
+.ghost-send[data-mode="stop"] .ghost-send-ico.ico-send { transform: rotate(90deg) scale(0.55); opacity: 0; }
+.ghost-send[data-mode="send"] .ghost-send-ico.ico-stop { transform: rotate(-90deg) scale(0.55); opacity: 0; }
+
+/* jump pill: sticky inside the scroller — can never overlap a grown composer */
+.ghost-jump-wrap { position: sticky; bottom: 10px; z-index: 5; display: flex; justify-content: center; pointer-events: none; margin-top: 10px; }
+.ghost-jump { position: static; transform: none; pointer-events: auto; animation: ghost-jump-pop 0.4s var(--g-ease-pop) both; }
+@keyframes ghost-jump-pop { from { opacity: 0; transform: translateY(8px) scale(0.9); } }
+
+/* copy confirm: check morphs in with a micro spring */
+.ghost-copy { display: inline-flex; align-items: center; gap: 4px; }
+.ghost-copy-ok { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); animation: ghost-copy-pop 0.34s var(--g-ease-micro) both; }
+@keyframes ghost-copy-pop { from { opacity: 0; transform: scale(0.8); } }
+
+/* errors earn attention: slide + settle */
+.ghost-error { animation: ghost-error-in 0.32s var(--g-ease-out) both; }
+@keyframes ghost-error-in { from { opacity: 0; transform: translateY(-5px); } }
+
+/* idle float: the face breathes only where it is large enough to matter */
+.ghost-intro .ghost-face svg, .ghost-center .ghost-face svg, .ghost-empty .ghost-face svg { animation: ghost-float 3.4s ease-in-out infinite; }
+@keyframes ghost-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+
+/* focus rings + touch targets + tap-zoom kill */
+.ghost-app :is(button, [role="radio"], [role="tab"]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ghost-iconbtn { width: 40px; height: 40px; border-radius: 12px; touch-action: manipulation; }
+.ghost-app :is(.ghost-chip, .ghost-model, .ghost-minibtn, .ghost-backend-btn, .ghost-cancel, .ghost-summon, .ghost-send, .ghost-jump, .ghost-card-del) { touch-action: manipulation; }
+.ghost-model { transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.16s ease, box-shadow 0.2s ease; }
+.ghost-model:active { transform: scale(0.985); }
+
+/* thin scroller: present on desktop, invisible until needed */
+.ghost-messages { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ink) 18%, transparent) transparent; }
+.ghost-messages::-webkit-scrollbar { width: 5px; height: 5px; }
+.ghost-messages::-webkit-scrollbar-track { background: transparent; }
+.ghost-messages::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 999px; }
+
+/* type niceties: balanced heroes, tabular numbers, spec mini */
+.ghost-hero-title, .ghost-empty-hi { text-wrap: balance; }
+.ghost-dl-meta, .ghost-tps { font-variant-numeric: tabular-nums; }
+.ghost-spec-mini { margin: 8px 0 0; font: 600 10px/1.4 var(--font-mono, ui-monospace, Menlo, monospace); letter-spacing: 0.08em; color: var(--ink-soft); }
+.ghost-input { field-sizing: content; }
+
+/* reduced motion: the honest variant — feedback stays, physics goes */
+@media (prefers-reduced-motion: reduce) {
+  .ghost-app { --g-ease-settle: ease-out; --g-ease-pop: ease-out; --g-ease-micro: ease-out; --g-ease-out: ease-out; }
+  .ghost-intro, .ghost-center, .ghost-chat,
+  .ghost-intro > *, .ghost-empty > *, .ghost-picker, .ghost-picker > .ghost-model,
+  .ghost-msg, .ghost-w, .ghost-jump, .ghost-jump-wrap, .ghost-stream-tps,
+  .ghost-copy-ok, .ghost-error, .ghost-phase-in, .ghost-rise-stagger,
+  .ghost-intro .ghost-face svg, .ghost-center .ghost-face svg, .ghost-empty .ghost-face svg {
+    animation: none !important;
+  }
+  .ghost-progress-fill { transition: none; }
+  .ghost-progress-fill::after, .ghost-progress.indet .ghost-progress-fill { animation: none !important; }
+  .ghost-progress.indet .ghost-progress-fill { width: 24% !important; opacity: 0.6; }
+  .ghost-cursor { animation: none !important; opacity: 0.8; }
+  .ghost-sheet, .ghost-sheet-backdrop { animation: none !important; }
+  .ghost-send-ico, .ghost-send { transition: none; }
+  .ghost-sheet.settle { transition: none; }
+}
+
+/* ── Ghost v17 · turbo fetch — visible GPU-weight downloads ──
+   A turbo switch with uncached ONNX weights used to download silently
+   behind a spinner. Now it renders wherever the user is: a slim strip
+   under the chatbar mid-session, a full bar on the boot/loading screen. */
+.ghost-gpu-fetch {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 10px 16px 4px;
+  animation: ghost-rise-in 0.22s var(--g-ease-out) both;
+}
+.ghost-gpu-fetch-bar {
+  width: min(260px, 64%); height: 4px; border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.ghost-gpu-fetch-bar > span {
+  display: block; height: 100%; border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.38s var(--g-ease-out);
+  position: relative; overflow: hidden;
+}
+.ghost-gpu-fetch-bar > span::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.32) 50%, transparent 80%);
+  transform: translateX(-100%);
+  animation: ghost-sheen 1.5s ease-in-out infinite;
+}
+.ghost-gpu-fetch-bar > span.indet { width: 38% !important; transition: none; animation: ghost-indet 1.15s var(--g-ease-out) infinite; }
+.ghost-gpu-fetch-bar > span.indet::after { animation: none; opacity: 0; }
+.ghost-gpu-fetch > .mono {
+  font: 600 9px/1 var(--font-mono, ui-monospace, Menlo, monospace);
+  letter-spacing: 0.08em; color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ghost-gpu-fetch { animation: none !important; }
+  .ghost-gpu-fetch-bar > span { transition: none; }
+  .ghost-gpu-fetch-bar > span::after { animation: none !important; }
+  .ghost-gpu-fetch-bar > span.indet { animation: none !important; width: 26% !important; opacity: 0.6; }
+}
+/* v17 indet reuses the v16 ghost-indet keyframes (translateX sweep) */

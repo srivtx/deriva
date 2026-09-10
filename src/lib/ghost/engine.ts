@@ -5,6 +5,64 @@
 // for WASM inference, so our old wrapper was a pure boot-failure liability.
 // Library loads browser-natively from /ghost/vendor/wllama (same-origin,
 // precached by the SW) — fully offline once installed.
+//
+// ── ghost/faster-smarter v17 — the turbo pass ─────────────────────────
+// Field report from v16 (preview-site): "switched to turbo, it says it
+// downloads its own copy, but no progress shows, and replies come out as
+// a weird hallucinated transcript" (echoed system prompt, fake user
+// turns). Root causes found and fixed here:
+// · GPU PROMPT BUG (the weird replies): v15/v16 fed transformers.js a
+//   hand-built raw ChatML string. The pipeline tokenizes strings with
+//   add_special_tokens=false — no <|startoftext|> BOS, a stray leading
+//   newline — so the model derailed into echoing the system prompt
+//   ("Under 50 words.") and inventing whole follow-up turns. Fix: the GPU
+//   path now passes the MESSAGES ARRAY and lets the model's own chat
+//   template render it (verified by A/B experiment, see
+//   scripts/turbo_repro*.js + docs/ghost-optimization.md).
+// · GPU STOP BUG: generation now carries an InterruptableStoppingCriteria
+//   that fires the moment the stream shows a turn-end marker
+//   (<|im_end|> / <|im_start|> / <|startoftext|>) — a stop guarantee that
+//   does not depend on the repo's generation_config eos ids — plus the
+//   STOP button and the 120s timeout both interrupt GPU generation now.
+// · SILENT TURBO DOWNLOAD: load() forwards download progress events, so
+//   fetching the GPU weights renders in the boot/loading UI instead of
+//   stalling behind a spinner; chat() never builds pipelines at all (it
+//   would silently download mid-conversation) — it runs CPU for that turn.
+// · QWEN3 GPU: enable_thinking=false rides through tokenizer_encode_kwargs
+//   so the official non-thinking contract holds on the GPU path too.
+// · TURBO PROGRESS HONESTY: aggregate progress stays indeterminate until
+//   a weight file (>24 MB) is in flight (the aggregate total grows as
+//   files register, which made the bar jump backwards), then reports
+//   monotonic fraction + EMA speed + ETA; events carry cancellable:false
+//   so the UI stops offering a CANCEL button that cannot abort anything.
+//
+// ── ghost/faster-smarter v15 — the correctness pass ──────────────────
+// Field reports from v14 (preview-site): "download is glitchy", "the
+// settings icon looks like a light/dark toggle", "0.6 qwen is very slow
+// on M2 and phones". Root causes found and fixed here:
+// · QWEN3 THINK BUG (the big one): v14 shipped assistantSuffix "\n\n",
+//   which neither opens nor closes Qwen3's think block — the model entered
+//   thinking mode on EVERY reply, burning up to nPredict hidden reasoning
+//   tokens (3x latency, replies dying mid-think at the cap, raw reasoning
+//   leaking into the stream). The official non-thinking recipe — verified
+//   byte-for-byte against Qwen/Qwen3-0.6B's chat_template — appends an
+//   EMPTY think block: "<think>\n\n</think>\n\n" (see text.ts).
+// · STREAM CLEANING: cleaning now runs over the full text so far (wllama
+//   hands us currentText), so think blocks spanning many tokens are hidden
+//   while they stream, special tokens never flash, and split multibyte
+//   characters are held back instead of rendering as   glyphs.
+// · BACKEND POLICY: auto-WebGPU was a mistake — measured parity
+//   (transformers.js ~62-66 tok/s vs wllama ~60 on the same desktop) plus
+//   a second multi-file weight download (the glitchy progress) plus
+//   ORT/WebGPU variability on phones. CPU wllama is now THE default on
+//   every device (single-file download, resumable, cancellable, OPFS);
+//   WebGPU survives as an explicit TURBO toggle in settings.
+// · DOWNLOAD: streams straight to OPFS (no 378MB in-memory Blob), resumes
+//   from partial files via HTTP Range, is cancellable, and reports honest
+//   monotonic progress (throttled ~3/s) with speed + ETA. The turbo path
+//   aggregates transformers.js per-file events via its progress_total.
+
+import { buildPrompt, cleanFinal, visibleDelta, QWEN3_NO_THINK_SUFFIX } from "./text"
 
 export interface GhostModel {
   id: string
@@ -13,37 +71,91 @@ export interface GhostModel {
   url: string
   sizeMb: number
   blurb: string
+  /** prompt family — decides template suffix + stop tokens */
+  family: "lfm2" | "qwen3"
+  /** sampling profile */
+  temp: number
+  topP: number
+  minP: number
+  /** appended after `<|im_start|>assistant\n` — Qwen3 non-thinking contract */
+  assistantSuffix?: string
+  /** ONNX repo for the WebGPU path */
+  gpuRepo?: string
 }
 
 export const GHOST_MODELS: GhostModel[] = [
   {
-    id: "smollm2-135m",
-    label: "NANO · 101 MB",
-    name: "SmolLM2 135M",
-    url: "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf",
-    sizeMb: 101,
-    blurb: "default · fast on any phone",
+    id: "lfm2.5-350m",
+    label: "NANO · 219 MB",
+    name: "LFM 2.5 350M",
+    url: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
+    sizeMb: 219,
+    blurb: "default · fastest brain per byte — happy on any phone",
+    family: "lfm2",
+    temp: 0.45,
+    topP: 0.9,
+    minP: 0.05,
+    gpuRepo: "onnx-community/LFM2.5-350M-ONNX",
   },
   {
-    id: "smollm2-360m",
-    label: "LITE · 258 MB",
-    name: "SmolLM2 360M",
-    url: "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf",
-    sizeMb: 258,
-    blurb: "deeper reasoning · still quick",
+    id: "qwen3-0.6b",
+    label: "LITE · 378 MB",
+    name: "Qwen 3 0.6B",
+    url: "https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf",
+    sizeMb: 378,
+    blurb: "deeper reasoning · best on desktop, patient on phone",
+    family: "qwen3",
+    temp: 0.7,
+    topP: 0.8,
+    minP: 0.05,
+    // Qwen3's official non-thinking recipe (verified against the model's
+    // chat_template): an EMPTY think block after the assistant header.
+    // v14 shipped "\n\n" — the block was never closed, so the model thought
+    // silently on every reply: 3x latency, cap-death mid-reasoning.
+    assistantSuffix: QWEN3_NO_THINK_SUFFIX,
+    gpuRepo: "onnx-community/Qwen3-0.6B-ONNX",
   },
 ]
 
 export const GHOST_LEGACY_URLS = [
   "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+  "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf",
+  "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf",
 ]
 
-export const DEFAULT_MODEL_ID = "smollm2-135m"
+export const DEFAULT_MODEL_ID = "lfm2.5-350m"
+
+/** max tokens per reply — 288 keeps the tutor terse but lets answers breathe */
+export const GHOST_MAX_TOKENS = 288
+
+/** honest progress events for model downloads */
+export interface DownloadProgress {
+  /** connect → fetch → verify → store → done (turbo: connect → fetch → done) */
+  phase: "connect" | "fetch" | "verify" | "store" | "done"
+  /** 0..1, monotonic */
+  fraction: number
+  loadedMb: number
+  totalMb: number
+  /** smoothed MB/s (0 until measurable) */
+  speedMbps: number
+  /** seconds remaining, null when unknown */
+  etaSec: number | null
+  /** set once when a resume actually continued a partial download */
+  resumedMb?: number
+  /** turbo only: number of files in flight */
+  files?: number
+  /** false when the engine cannot abort this download (turbo/transformers.js) */
+  cancellable?: boolean
+}
 
 export function getSelectedModel(): GhostModel {
   try {
     const id = localStorage.getItem("deriva-ghost-model")
-    return GHOST_MODELS.find(m => m.id === id) ?? GHOST_MODELS.find(m => m.id === DEFAULT_MODEL_ID)!
+    const found = GHOST_MODELS.find(m => m.id === id)
+    if (found) return found
+    // migrate: a stored SmolLM2/Qwen2.5 id no longer exists → default
+    if (id && !found) localStorage.setItem("deriva-ghost-model", DEFAULT_MODEL_ID)
+    return GHOST_MODELS.find(m => m.id === DEFAULT_MODEL_ID)!
   } catch {
     return GHOST_MODELS.find(m => m.id === DEFAULT_MODEL_ID)!
   }
@@ -65,7 +177,14 @@ interface WllamaInstance {
     options: {
       nPredict?: number
       useCache?: boolean
-      sampling?: { temp?: number; top_p?: number; penalty_repeat?: number }
+      sampling?: {
+        temp?: number
+        top_p?: number
+        top_k?: number
+        min_p?: number
+        penalty_repeat?: number
+        penalty_last_n?: number
+      }
       stopTokens?: number[]
       abortSignal?: AbortSignal
       onNewToken?: (token: number, piece: Uint8Array, currentText: string) => void
@@ -80,8 +199,14 @@ interface WllamaModule {
 
 /* ---------- our own OPFS store (the vendored lib exports no usable one) --
    Layout under OPFS dir "cache":
-     <basename>          model blob
-     <basename>.meta.json { originalURL, originalSize, createdAt }        */
+     <basename>          model blob (only present once verified complete)
+     <basename>.meta.json { originalURL, originalSize, createdAt }
+     <basename>.part     in-flight download (resumable)
+   A model is trusted ONLY when the final name exists with a GGUF magic
+   header and a matching meta size — a killed download leaves just the
+   .part, never a half-valid "cached" model. */
+
+type PartHandle = FileSystemFileHandle & { move?: (name: string) => Promise<void> }
 
 class GhostStore {
   private async dir(): Promise<FileSystemDirectoryHandle> {
@@ -102,7 +227,11 @@ class GhostStore {
     const w = await fh.createWritable()
     await w.write(blob)
     await w.close()
-    const meta = JSON.stringify({ originalURL: url, originalSize: blob.size, createdAt: Date.now() })
+    await this.writeMeta(url, blob.size)
+  }
+  async writeMeta(url: string, size: number): Promise<void> {
+    const d = await this.dir()
+    const meta = JSON.stringify({ originalURL: url, originalSize: size, createdAt: Date.now() })
     const mh = await d.getFileHandle(`${baseName(url)}.meta.json`, { create: true })
     const mw = await mh.createWritable()
     await mw.write(meta)
@@ -118,9 +247,39 @@ class GhostStore {
   }
   async delete(url: string): Promise<void> {
     const d = await this.dir()
-    for (const name of [baseName(url), `${baseName(url)}.meta.json`]) {
+    for (const name of [baseName(url), `${baseName(url)}.meta.json`, `${baseName(url)}.part`]) {
       try { await d.removeEntry(name) } catch {}
     }
+  }
+  /** open (creating if needed) the .part file handle for a resumable download */
+  async partHandle(url: string): Promise<PartHandle> {
+    const d = await this.dir()
+    return (await d.getFileHandle(`${baseName(url)}.part`, { create: true })) as PartHandle
+  }
+  /** committed rename: .part → final name; falls back to a copy when the
+   *  File System Access move() is unavailable (Safari/Firefox). */
+  async commitPart(url: string): Promise<void> {
+    const d = await this.dir()
+    const part = await this.partHandle(url)
+    const file = await part.getFile()
+    if (typeof part.move === "function") {
+      try {
+        await part.move(baseName(url))
+        return
+      } catch { /* fall through to copy */ }
+    }
+    const blob = await file.slice(0, file.size).arrayBuffer().then(b => new Blob([b]))
+    const fh = await d.getFileHandle(baseName(url), { create: true })
+    const w = await fh.createWritable()
+    await w.write(blob)
+    await w.close()
+    try { await d.removeEntry(`${baseName(url)}.part`) } catch {}
+  }
+  async removePart(url: string): Promise<void> {
+    try {
+      const d = await this.dir()
+      await d.removeEntry(`${baseName(url)}.part`)
+    } catch {}
   }
 }
 
@@ -132,15 +291,15 @@ function store(): GhostStore {
 
 /* ---------- WebGPU backend (Transformers.js v4 + ONNX Runtime WebGPU) ---- */
 
-const GPU_MODEL_REPOS: Record<string, string> = {
-  "smollm2-135m": "onnx-community/SmolLM2-135M-Instruct-ONNX",
-  "smollm2-360m": "onnx-community/SmolLM2-360M-Instruct-ONNX",
-}
+const GPU_MODEL_REPOS: Record<string, string> = Object.fromEntries(
+  GHOST_MODELS.filter(m => m.gpuRepo).map(m => [m.id, m.gpuRepo!]),
+)
 
 interface TfLike {
   env: { backends: { onnx: { wasm: { wasmPaths: string } } }; allowLocalModels: boolean }
   pipeline(task: string, repo: string, opts?: Record<string, unknown>): Promise<unknown>
   TextStreamer: new (tok: unknown, cfg: Record<string, unknown>) => unknown
+  InterruptableStoppingCriteria: new () => { interrupt(): void; reset(): void }
 }
 
 let tfPromise: Promise<TfLike> | null = null
@@ -183,13 +342,32 @@ async function gpuBytes(modelId: string): Promise<number> {
   } catch { return 0 }
 }
 
-export function gpuOptIn(): boolean {
-  try { return localStorage.getItem("deriva-ghost-gpu") === "1" } catch { return false }
-}
-export function setGpuOptIn(on: boolean) {
+/* ---------- backend selection ───────────────────────────────────────────
+   "deriva-ghost-backend": "cpu" (default) | "gpu" (turbo).
+
+   v14 shipped auto-WebGPU. Field result: the transformers.js path downloads
+   a SECOND set of weights (multi-file, jumpy progress) and measured a wash
+   against multithreaded wllama on desktops (~60 tok/s both) while being
+   fragile on phones. New policy: CPU wllama is the default everywhere —
+   one file, resumable, cancellable, offline. WebGPU stays as an explicit
+   TURBO opt-in for users who want to experiment. Legacy values:
+   "auto" (v14) → cpu; the ancient "deriva-ghost-gpu"="1" opt-in → gpu. */
+
+type BackendPref = "gpu" | "cpu"
+const BACKEND_KEY = "deriva-ghost-backend"
+
+export function backendPref(): BackendPref {
   try {
-    if (on) localStorage.setItem("deriva-ghost-gpu", "1")
-    else localStorage.removeItem("deriva-ghost-gpu")
+    const v = localStorage.getItem(BACKEND_KEY)
+    if (v === "gpu" || v === "cpu") return v
+    if (v === "auto") localStorage.removeItem(BACKEND_KEY) // v14 leftover
+    if (localStorage.getItem("deriva-ghost-gpu") === "1") return "gpu"
+  } catch {}
+  return "cpu"
+}
+export function setBackendPref(p: BackendPref) {
+  try {
+    localStorage.setItem(BACKEND_KEY, p)
   } catch {}
 }
 
@@ -213,6 +391,11 @@ const WLLAMA_PATHS = {
   "multi-thread/wllama.wasm": `${WLLAMA_BASE}/multi-thread/wllama.wasm`,
 }
 const CHATML_STOP = ["<|im_end|>", "<|im_start|>"]
+/** GPU generation guard: once the model closes its assistant turn (or
+ *  tries to open the next one), generation is interrupted — even if the
+ *  repo's generation_config eos ids are missing or wrong. This is what
+ *  stops the "hallucinated transcript" failure mode dead. */
+const GPU_TURN_END_RE = /<\|im_end\|>|<\|im_start\|>|<\|startoftext\|>/
 
 let modPromise: Promise<WllamaModule> | null = null
 function lib(): Promise<WllamaModule> {
@@ -227,8 +410,6 @@ function lib(): Promise<WllamaModule> {
   }
   return modPromise
 }
-
-
 
 function baseName(url: string): string {
   try { return new URL(url).pathname.split("/").pop() || url } catch { return url }
@@ -260,6 +441,13 @@ async function opfsSweep(fragment: string): Promise<void> {
   } catch {}
 }
 
+/** thread pinning: decode is memory-bandwidth bound — 2–6 workers is the
+ *  sweet spot on both big.LITTLE phones (8 logical cores) and desktops. */
+function pickThreads(): number {
+  const hc = navigator.hardwareConcurrency || 4
+  return Math.min(Math.max(hc, 2), 6)
+}
+
 class GhostEngine {
   private instance: WllamaInstance | null = null
   private loadedUrl: string | null = null
@@ -269,6 +457,14 @@ class GhostEngine {
   private stopTokenIds: number[] | null = null
   private stopIdsUrl: string | null = null
   private activeAbort: AbortController | null = null
+  private downloadAbort: AbortController | null = null
+  private gpuFailed = false
+  /** live GPU generation stopper — stop() interrupts it mid-generation */
+  private gpuStop: { interrupt(): void } | null = null
+  /** diagnostics for the gauge */
+  lastThreads = 0
+  lastFlashAttn = false
+  lastKvQuant = false
 
   /* ---------- runtime ---------- */
 
@@ -292,10 +488,33 @@ class GhostEngine {
     if (!blob || blob.size <= 0) {
       throw new Error("MODEL_NOT_CACHED · download the brain first")
     }
-    this.instance = new m.Wllama(WLLAMA_PATHS)
-    this.loadedUrl = url
-    await this.instance.loadModel([blob], { n_ctx: 2048 })
-    try { this.lastThreads = this.instance.getNumThreads() } catch { this.lastThreads = 0 }
+    // Fallback ladder: flash-attn + q8_0 KV cache first (halves KV memory
+    // bandwidth), plain config if the wasm build refuses it. Silent — the
+    // user never sees a config error, only the speed.
+    // n_batch 256: chat prompts are short (useCache keeps them incremental),
+    // so a small ubatch halves the compute buffer with zero prefill cost.
+    const nThreads = pickThreads()
+    const attempts: Array<Record<string, unknown>> = [
+      { n_ctx: 2048, n_batch: 256, n_threads: nThreads, flash_attn: true, cache_type_k: "q8_0", cache_type_v: "q8_0" },
+      { n_ctx: 2048, n_batch: 256, n_threads: nThreads },
+    ]
+    let lastErr: unknown = null
+    for (const opts of attempts) {
+      try {
+        const inst = new m.Wllama(WLLAMA_PATHS)
+        await inst.loadModel([blob], opts)
+        this.instance = inst
+        this.loadedUrl = url
+        this.lastFlashAttn = !!opts.flash_attn
+        this.lastKvQuant = opts.cache_type_k === "q8_0"
+        try { this.lastThreads = inst.getNumThreads() } catch { this.lastThreads = 0 }
+        return
+      } catch (err) {
+        lastErr = err
+        try { await this.releaseRuntime() } catch {}
+      }
+    }
+    throw lastErr ?? new Error("MODEL_NOT_CACHED · download the brain first")
   }
 
   private async releaseRuntime(): Promise<void> {
@@ -307,53 +526,137 @@ class GhostEngine {
 
   private async ensurePipeline(
     modelId: string,
-    onProgress?: (fraction: number, mbLoaded: number, mbTotal: number) => void,
+    onProgress?: (p: DownloadProgress) => void,
   ): Promise<unknown> {
     if (this.pipes.has(modelId)) return this.pipes.get(modelId)
     const repo = GPU_MODEL_REPOS[modelId]
     if (!repo) throw new Error("MODEL_NOT_CACHED · download the brain first")
     const T = await tf()
-    let seenTotal = 0
-    const pipe = (await T.pipeline("text-generation", repo, {
-      device: "webgpu",
-      dtype: "q4f16",
-      progress_callback: (info: { status?: string; loaded?: number; total?: number }) => {
-        if (info?.status === "progress") {
-          const loaded = Number(info.loaded ?? 0)
-          const total = Number(info.total ?? 0)
-          if (total > seenTotal && total < 10 * 1024 * 1024 * 1024) seenTotal = total
-          if (onProgress) onProgress(total > 0 ? Math.min(1, loaded / total) : 0, loaded / 1048576, total / 1048576)
-        }
-      },
-    } as Record<string, unknown>)) as unknown
+    // transformers.js emits `progress_total` — an AGGREGATE event summed
+    // across every file in the repo. v14 listened to per-file `progress`
+    // events, so the bar reset to 0% with each new file: "glitchy".
+    //
+    // v17 honesty rules for the aggregate stream:
+    // · files only enter the map when their download STARTS, so `total`
+    //   grows mid-flight and loaded/total can jump BACKWARDS. We therefore
+    //   stay indeterminate ("connect") until a weight file (>24 MB) is in
+    //   flight — from then on the total is final and the bar monotonic.
+    // · speed/ETA are EMA-smoothed over the aggregate loaded counter.
+    const tracker = {
+      seenTotal: 0,
+      peakFraction: 0,
+      lastLoaded: 0,
+      lastT: 0,
+      speed: 0,
+    }
+    const emit = (p: DownloadProgress) => { if (onProgress) onProgress(p) }
+    emit({ phase: "connect", fraction: 0, loadedMb: 0, totalMb: 0, speedMbps: 0, etaSec: null, cancellable: false })
+    const progress_callback = (info: { status?: string; progress?: number; loaded?: number; total?: number; files?: Record<string, { loaded?: number; total?: number }> }) => {
+      if (info?.status !== "progress_total" || !onProgress) return
+      const loaded = Number(info.loaded ?? 0)
+      const total = Number(info.total ?? 0)
+      if (total > tracker.seenTotal && total < 16 * 1024 * 1024 * 1024) tracker.seenTotal = total
+      const files = Object.values(info.files ?? {})
+      // a weight file is in flight once one registers a real size
+      const weightsInFlight = files.some(f => (f?.total ?? 0) > 24 * 1048576)
+      if (!weightsInFlight) {
+        // config / tokenizer / small parts: indeterminate, but show bytes
+        emit({
+          phase: "connect",
+          fraction: 0,
+          loadedMb: loaded / 1048576,
+          totalMb: tracker.seenTotal / 1048576,
+          speedMbps: 0,
+          etaSec: null,
+          files: files.length,
+          cancellable: false,
+        })
+        return
+      }
+      const now = performance.now()
+      const dt = tracker.lastT > 0 ? (now - tracker.lastT) / 1000 : 0
+      if (dt > 0.25) {
+        const inst = Math.max(0, (loaded - tracker.lastLoaded) / 1048576 / dt)
+        tracker.speed = tracker.speed > 0 ? 0.7 * tracker.speed + 0.3 * inst : inst
+        tracker.lastLoaded = loaded
+        tracker.lastT = now
+      }
+      let fraction = tracker.seenTotal > 0 ? Math.min(1, loaded / tracker.seenTotal) : 0
+      // monotonic: total can only grow as files register, so clamp
+      fraction = Math.max(fraction, tracker.peakFraction)
+      tracker.peakFraction = fraction
+      const remaining = tracker.seenTotal - loaded
+      const etaSec = tracker.speed > 0.05 && remaining > 0 ? Math.round(remaining / 1048576 / tracker.speed) : null
+      // weights fully landed but the pipeline is still building (shader/
+      // graph compilation can take seconds): say so instead of a stale 100%
+      const compiling = remaining <= 1024
+      onProgress({
+        phase: compiling ? "verify" : "fetch",
+        fraction: compiling ? 1 : fraction,
+        loadedMb: loaded / 1048576,
+        totalMb: tracker.seenTotal / 1048576,
+        speedMbps: compiling ? 0 : tracker.speed,
+        etaSec: compiling ? 0 : etaSec,
+        files: files.length,
+        cancellable: false,
+      })
+    }
+    // dtype ladder: q4f16 is the fast path on capable GPUs; q4 (fp32
+    // activations) is the compatibility rung when fp16 is refused.
+    let pipe: unknown
+    let lastErr: unknown = null
+    for (const dtype of ["q4f16", "q4"]) {
+      try {
+        pipe = await T.pipeline("text-generation", repo, {
+          device: "webgpu",
+          dtype,
+          progress_callback,
+        } as Record<string, unknown>)
+        break
+      } catch (err) {
+        lastErr = err
+      }
+    }
+    if (!pipe) throw lastErr ?? new Error("WebGPU pipeline failed to build")
     this.pipes.set(modelId, pipe)
     if (!gpuBytesCache.has(modelId)) {
-      gpuBytesCache.set(modelId, seenTotal)
-      void gpuMark(modelId, seenTotal)
+      gpuBytesCache.set(modelId, tracker.seenTotal)
+      void gpuMark(modelId, tracker.seenTotal)
     }
+    // clear any progress UI the moment the pipeline is live
+    emit({ phase: "done", fraction: 1, loadedMb: tracker.seenTotal / 1048576, totalMb: tracker.seenTotal / 1048576, speedMbps: 0, etaSec: 0, cancellable: false })
     return pipe
   }
 
-  async backend(): Promise<"webgpu" | "cpu"> {
-    return (await gpuAvailable()) && gpuOptIn() ? "webgpu" : "cpu"
+  /** turbo only: the explicit "gpu" backend pref. CPU is the default —
+   *  see the backend-selection notes above. */
+  private async useGpu(): Promise<boolean> {
+    if (this.gpuFailed) return false
+    if (backendPref() !== "gpu") return false
+    return await gpuAvailable()
   }
 
-  private async useGpu(): Promise<boolean> {
-    return (await gpuAvailable()) && gpuOptIn()
+  async backend(): Promise<"webgpu" | "cpu"> {
+    return (await this.useGpu()) ? "webgpu" : "cpu"
   }
 
   /* ---------- storage queries ---------- */
 
-  lastThreads = 0
-
-  async diagnostics(): Promise<{ isolated: boolean; threads: number; resident: boolean; backend: "webgpu" | "cpu" }> {
+  async diagnostics(): Promise<{
+    isolated: boolean
+    threads: number
+    resident: boolean
+    backend: "webgpu" | "cpu"
+    flashAttn: boolean
+    kvQuant: boolean
+  }> {
     const isolated = typeof crossOriginIsolated !== "undefined" ? crossOriginIsolated : false
     const backend = (await this.useGpu()) ? "webgpu" as const : "cpu" as const
     if (this.instance && this.lastThreads > 0) {
-      return { isolated, threads: this.lastThreads, resident: true, backend }
+      return { isolated, threads: this.lastThreads, resident: true, backend, flashAttn: this.lastFlashAttn, kvQuant: this.lastKvQuant }
     }
-    const expected = Math.floor((navigator.hardwareConcurrency || 1) / 2)
-    return { isolated, threads: Math.max(expected, 1), resident: false, backend }
+    const expected = pickThreads()
+    return { isolated, threads: Math.max(expected, 1), resident: false, backend, flashAttn: false, kvQuant: false }
   }
 
   async probe(): Promise<{ webgpu: boolean; storageQuotaMb: number | null; cachedMb: number | null }> {
@@ -417,44 +720,184 @@ class GhostEngine {
 
   async download(
     model: GhostModel,
-    onProgress: (fraction: number, mbLoaded: number, mbTotal: number) => void,
+    onProgress: (p: DownloadProgress) => void,
   ): Promise<void> {
     if (await this.useGpu()) {
+      // TURBO path: transformers.js fetches its own ONNX weights into the
+      // Cache API; progress arrives aggregated (progress_total) and is NOT
+      // cancellable — the price of the experimental toggle. The UI hides
+      // the CANCEL button accordingly (events carry cancellable: false).
       await this.ensurePipeline(model.id, onProgress)
       const bytes = gpuBytesCache.get(model.id) ?? model.sizeMb * 1048576
       gpuBytesCache.set(model.id, bytes)
       await gpuMark(model.id, bytes)
       setSelectedModel(model.id)
       try { localStorage.setItem("deriva-ghost-ready", "1") } catch {}
+      onProgress({ phase: "done", fraction: 1, loadedMb: bytes / 1048576, totalMb: bytes / 1048576, speedMbps: 0, etaSec: null, cancellable: false })
       return
     }
-    const res = await fetch(model.url)
-    if (!res.ok || !res.body) throw new Error(`Download failed (HTTP ${res.status})`)
-    const total = Number(res.headers.get("content-length")) || model.sizeMb * 1048576
-    const reader = res.body.getReader()
-    const chunks: Uint8Array[] = []
-    let received = 0
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      chunks.push(value)
-      received += value.byteLength
-      onProgress(total > 0 ? Math.min(1, received / total) : 0, received / 1048576, total / 1048576)
+    await this.downloadGguf(model, onProgress)
+  }
+
+  /** CPU path: stream the GGUF straight into OPFS, resuming a partial
+   *  file when the CDN honours Range, cancelling cleanly, and reporting
+   *  throttled, honest, monotonic progress with live speed + ETA. */
+  private async downloadGguf(
+    model: GhostModel,
+    onProgress: (p: DownloadProgress) => void,
+  ): Promise<void> {
+    const c = store()
+    // idempotence: a verified copy already on device → nothing to do
+    const existing = await c.open(model.url).catch(() => null)
+    if (existing && existing.size > 4) {
+      const magic = await existing.slice(0, 4).text()
+      const expected = await c.getOriginalSize(model.url).catch(() => 0)
+      if (magic === "GGUF" && (expected === 0 || Math.abs(existing.size - expected) <= 1024)) {
+        setSelectedModel(model.id)
+        try { localStorage.setItem("deriva-ghost-ready", "1") } catch {}
+        onProgress({ phase: "done", fraction: 1, loadedMb: existing.size / 1048576, totalMb: existing.size / 1048576, speedMbps: 0, etaSec: null })
+        return
+      }
     }
-    const blob = new Blob(chunks as BlobPart[])
-    if (blob.size !== received) throw new Error("Download verification failed — retry")
-    await store().write(model.url, blob)
-    setSelectedModel(model.id)
-    try { localStorage.setItem("deriva-ghost-ready", "1") } catch {}
+
+    const abort = new AbortController()
+    this.downloadAbort = abort
+
+    // resume: any bytes already in the .part file are kept and the fetch
+    // continues from that offset when the server answers 206.
+    const part = await c.partHandle(model.url)
+    let start = 0
+    try { start = (await part.getFile()).size } catch { start = 0 }
+    let resumed = false
+    let total = 0
+
+    onProgress({ phase: "connect", fraction: 0, loadedMb: start / 1048576, totalMb: total / 1048576, speedMbps: 0, etaSec: null, resumedMb: start > 0 ? start / 1048576 : undefined })
+
+    try {
+      const headers: Record<string, string> = {}
+      if (start > 0) headers.Range = `bytes=${start}-`
+      const res = await fetch(model.url, { headers, signal: abort.signal })
+      if (!res.ok && res.status !== 206) throw new Error(`Download failed (HTTP ${res.status})`)
+      if (!res.body) throw new Error("Download failed — no stream from the network")
+      if (res.status === 206 && start > 0) {
+        resumed = true
+        const contentRange = res.headers.get("content-range") // "bytes s-e/total"
+        const rangeTotal = contentRange ? Number(contentRange.split("/").pop()) : 0
+        total = rangeTotal > 0 ? rangeTotal : start + Number(res.headers.get("content-length") || 0)
+      } else {
+        // fresh copy — the server ignored Range or nothing to resume
+        start = 0
+        resumed = false
+        total = Number(res.headers.get("content-length")) || model.sizeMb * 1048576
+      }
+
+      // keepExistingData keeps prior .part bytes when resuming; a fresh
+      // writable truncates, which is exactly what a restart wants.
+      const writable = await part.createWritable({ keepExistingData: resumed })
+      const reader = res.body.getReader()
+      let received = 0
+      let position = start
+      let speed = 0
+      let lastEmit = 0
+      let lastFraction = -1
+      const t0 = performance.now()
+      const emit = (force = false) => {
+        const now = performance.now()
+        const loaded = start + received
+        const fraction = total > 0 ? Math.min(1, loaded / total) : 0
+        if (!force && now - lastEmit < 300 && fraction - lastFraction < 0.03) return
+        lastEmit = now
+        lastFraction = fraction
+        const inst = received > 0 ? (received / 1048576) / Math.max((now - t0) / 1000, 0.001) : 0
+        speed = speed > 0 ? 0.7 * speed + 0.3 * inst : inst
+        const etaSec = speed > 0.01 && total > loaded ? Math.round((total - loaded) / 1048576 / speed) : null
+        onProgress({
+          phase: "fetch",
+          fraction,
+          loadedMb: loaded / 1048576,
+          totalMb: total / 1048576,
+          speedMbps: speed,
+          etaSec,
+          resumedMb: resumed && start > 0 ? start / 1048576 : undefined,
+        })
+      }
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          await writable.write({ type: "write", position, data: value })
+          position += value.byteLength
+          received += value.byteLength
+          emit()
+        }
+        await writable.close()
+      } catch (streamErr) {
+        // abort mid-stream: close the writer so flushed bytes survive in
+        // the .part — the next attempt resumes from them.
+        if (abort.signal.aborted) {
+          try { await writable.close() } catch {}
+          throw new Error("Download cancelled — it will resume from here.")
+        }
+        try { await writable.abort?.(streamErr) } catch { try { await writable.close() } catch {} }
+        throw streamErr
+      }
+
+      // verify before trusting: magic + size
+      onProgress({ phase: "verify", fraction: 0.995, loadedMb: total / 1048576, totalMb: total / 1048576, speedMbps: speed, etaSec: 0 })
+      const partFile = await part.getFile()
+      const magic = await partFile.slice(0, 4).text()
+      if (magic !== "GGUF" || (total > 0 && Math.abs(partFile.size - total) > 1024)) {
+        await c.removePart(model.url)
+        throw new Error("Download verification failed — the file was damaged in transit. Try again.")
+      }
+
+      // commit: rename .part → final, then write the trust meta
+      onProgress({ phase: "store", fraction: 0.998, loadedMb: total / 1048576, totalMb: total / 1048576, speedMbps: speed, etaSec: 0 })
+      await c.commitPart(model.url)
+      await c.writeMeta(model.url, partFile.size)
+
+      setSelectedModel(model.id)
+      try { localStorage.setItem("deriva-ghost-ready", "1") } catch {}
+      onProgress({ phase: "done", fraction: 1, loadedMb: total / 1048576, totalMb: total / 1048576, speedMbps: speed, etaSec: 0 })
+    } finally {
+      if (this.downloadAbort === abort) this.downloadAbort = null
+    }
+  }
+
+  /** abort an in-flight download (CPU path). The partial .part file is
+   *  kept so the next attempt resumes instead of restarting. */
+  cancelDownload(): void {
+    try { this.downloadAbort?.abort() } catch {}
   }
 
   /* ---------- lifecycle ---------- */
 
-  async load(model: GhostModel, onProgress?: (label: string) => void): Promise<void> {
+  async load(
+    model: GhostModel,
+    onProgress?: (label: string) => void,
+    onDownload?: (p: DownloadProgress) => void,
+  ): Promise<void> {
     onProgress?.(`waking ${model.name}`)
     if (await this.useGpu()) {
-      await this.ensurePipeline(model.id)
-      return
+      try {
+        // onDownload matters: when the GPU weights are not cached yet,
+        // building the pipeline downloads them — that MUST surface as
+        // progress, never as a silent stall behind a spinner (the v16
+        // field report: "why is it not showing any progress or downloading
+        // thing"). The boot/loading UI renders these events live.
+        await this.ensurePipeline(model.id, onDownload)
+        return
+      } catch (err) {
+        // GPU pipeline failed to build — demote for this device and fall
+        // through to CPU. Silent unless even CPU fails. Clear the progress
+        // UI first: the CPU fallback has its own loading story.
+        onDownload?.({ phase: "done", fraction: 1, loadedMb: 0, totalMb: 0, speedMbps: 0, etaSec: null, cancellable: false })
+        this.gpuFailed = true
+        setBackendPref("cpu")
+        console.warn("[ghost] WebGPU pipeline failed — demoted to CPU:", err)
+        onProgress?.("gpu refused · falling back to cpu")
+      }
     }
     await this.ensureLoaded(model.url)
   }
@@ -466,53 +909,108 @@ class GhostEngine {
     onToken?: (piece: string) => void,
   ): Promise<{ text: string; tps: number }> {
     const started = performance.now()
-    const clean = (s: unknown) => String(s ?? "").replace(/<\|[a-z_]+\|>/g, "")
+    const cap = Math.min(maxTokens || GHOST_MAX_TOKENS, GHOST_MAX_TOKENS)
 
-    if (await this.useGpu()) {
-      const pipe = (await this.ensurePipeline(model.id)) as {
-        (messages: unknown, opts?: Record<string, unknown>): Promise<Array<{ generated_text: Array<{ role: string; content: string }> }>>
-        tokenizer: unknown
-      }
-      this.stopDetached = false
-      let tokens = 0
-      let currentText = ""
-      const T = await tf()
-      const streamer = new T.TextStreamer(pipe.tokenizer, {
-        skip_prompt: true,
-        skip_special_tokens: true,
-        callback_function: (piece: string) => {
-          tokens += 1
-          currentText += piece
-          if (!this.stopDetached && piece && !clean(piece).includes("[")) onToken?.(clean(piece))
-        },
-      })
-      const run = (async () => {
-        await pipe(
-          messages.map(m => ({ role: m.role, content: m.content })),
-          {
-            max_new_tokens: Math.min(maxTokens || 220, 220),
-            do_sample: true,
-            temperature: 0.35,
-            top_p: 0.9,
-            repetition_penalty: 1.1,
-            streamer,
-          },
-        )
-        return clean(currentText).trim()
-      })()
-      let timer: ReturnType<typeof setTimeout> | undefined
-      const timeout = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("Ghost timed out — try again.")), 120000)
-      })
+    let useGpu = await this.useGpu()
+    if (useGpu && !this.pipes.has(model.id)) {
+      // NEVER build a pipeline mid-chat: a build here can silently
+      // download hundreds of MB behind the "thinking" chip (v16 field
+      // report). Pipelines are built in load()/download(), where the UI
+      // shows progress; mid-session we simply run CPU this turn.
+      useGpu = false
+    }
+    if (useGpu) {
       try {
-        const text = await Promise.race([run, timeout])
-        const seconds = (performance.now() - started) / 1000
-        return { text, tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
-      } finally {
-        if (timer) clearTimeout(timer)
+        // The pipeline gets the MESSAGES ARRAY, not a hand-built prompt:
+        // transformers.js applies the model's own chat template (LFM2:
+        // <|startoftext|> + ChatML; Qwen3: ChatML + optional think block).
+        // v15/v16 fed it a raw string with add_special_tokens=false — no
+        // BOS, a stray leading newline — which derailed the model into
+        // echoing the system prompt ("Under 50 words.") and hallucinating
+        // whole multi-turn transcripts. Verified by experiment: official
+        // template answers cleanly and stops at <|im_end|>.
+        const pipe = this.pipes.get(model.id) as {
+          (input: string | { role: string; content: string }[], opts?: Record<string, unknown>): Promise<unknown>
+          tokenizer: unknown
+        }
+        this.stopDetached = false
+        let tokens = 0
+        let currentText = ""
+        let emitted = ""
+        let turnEnded = false
+        const T = await tf()
+        const stopper = new T.InterruptableStoppingCriteria()
+        this.gpuStop = stopper
+        // raw pieces (skip_special_tokens: false): the downstream cleaner
+        // strips control tokens for display anyway, and the raw text lets
+        // us SEE the turn-end marker and interrupt generation at the
+        // boundary — a stop guarantee independent of the repo's
+        // generation_config eos ids.
+        const streamer = new T.TextStreamer(pipe.tokenizer, {
+          skip_prompt: true,
+          skip_special_tokens: false,
+          callback_function: (piece: string) => {
+            tokens += 1
+            currentText += piece
+            if (!turnEnded && GPU_TURN_END_RE.test(currentText)) {
+              turnEnded = true
+              stopper.interrupt()
+            }
+            if (this.stopDetached) return
+            // full-text cleaning (v15): piece-wise cleaning could not hide
+            // a think block spanning several pieces.
+            const delta = visibleDelta(currentText, emitted)
+            if (delta) {
+              emitted += delta
+              onToken?.(delta)
+            }
+          },
+        })
+        const generateOpts: Record<string, unknown> = {
+          max_new_tokens: cap,
+          do_sample: true,
+          temperature: model.temp,
+          top_p: model.topP,
+          repetition_penalty: 1.1,
+          streamer,
+          stopping_criteria: stopper,
+        }
+        if (model.family === "qwen3") {
+          // Qwen3 non-thinking contract on the GPU path too: the template
+          // appends the empty think block only when the flag is passed.
+          generateOpts.tokenizer_encode_kwargs = { enable_thinking: false }
+        }
+        const run = (async () => {
+          await pipe(messages ?? [], generateOpts)
+          return cleanFinal(currentText)
+        })()
+        let timer: ReturnType<typeof setTimeout> | undefined
+        const timeout = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            try { stopper.interrupt() } catch {}
+            reject(new Error("Ghost timed out — try again."))
+          }, 120000)
+        })
+        try {
+          const text = await Promise.race([run, timeout])
+          const seconds = (performance.now() - started) / 1000
+          return { text, tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
+        } finally {
+          if (timer) clearTimeout(timer)
+          if (this.gpuStop === stopper) this.gpuStop = null
+        }
+      } catch (err) {
+        // First GPU generation failed → demote and rerun on CPU below.
+        this.gpuFailed = true
+        setBackendPref("cpu")
+        console.warn("[ghost] WebGPU generation failed — demoted to CPU:", err)
+        useGpu = false
       }
     }
 
+    // ── CPU path: ONE hand-built ChatML prompt (wllama adds the BOS and
+    // tolerates the format — verified E2E in v15) ──
+    const promptStr = buildPrompt(messages ?? [], model.assistantSuffix)
     await this.ensureLoaded(model.url)
     const wllama = this.instance!
 
@@ -521,10 +1019,12 @@ class GhostEngine {
       const ids = new Set<number>()
       const eos = wllama.getEOS()
       if (eos >= 0) ids.add(eos)
-      try {
-        const imStart = await wllama.lookupToken("<|im_start|>")
-        if (imStart >= 0) ids.add(imStart)
-      } catch {}
+      for (const piece of [...CHATML_STOP, "<|startoftext|>"]) {
+        try {
+          const id = await wllama.lookupToken(piece)
+          if (id >= 0) ids.add(id)
+        } catch {}
+      }
       this.stopTokenIds = [...ids]
       this.stopIdsUrl = model.url
     }
@@ -533,36 +1033,48 @@ class GhostEngine {
     this.activeAbort = abort
 
     const run = (async () => {
-      const msgs = messages ?? []
-      const promptStr =
-        msgs.map(m => `<|im_start|>${m.role}\n${m.content}<|im_end|>`).join("\n") +
-        "\n<|im_start|>assistant\n"
       let tokens = 0
       let currentText = ""
-      const decoder = new TextDecoder("utf-8")
+      let emitted = ""
       try {
         const text = await wllama.createCompletion(promptStr, {
-          nPredict: Math.min(maxTokens || 220, 220),
-          sampling: { temp: 0.6, top_p: 0.9, penalty_repeat: 1.15 },
+          nPredict: cap,
+          // ⚡ THE fix: reuse the KV cache across turns. Without this,
+          // wllama kvClear()s and re-prefills the entire conversation
+          // every single message — the main source of dead time on phones.
+          useCache: true,
+          sampling: {
+            temp: model.temp,
+            top_p: model.topP,
+            min_p: model.minP,
+            penalty_repeat: 1.15,
+            penalty_last_n: 64,
+          },
           stopTokens: this.stopTokenIds!,
           abortSignal: abort.signal,
-          onNewToken: (_token, piece) => {
+          // wllama hands us the FULL decoded text so far as arg 3 — the
+          // decoder in the worker already joined multi-byte characters
+          // correctly, so cleaning can run over the whole text.
+          onNewToken: (_token, _piece, fullText) => {
             tokens += 1
-            currentText += decoder.decode(piece, { stream: true })
-            const pieceStr = clean(decoder.decode(piece, { stream: false }))
-            if (pieceStr) onToken?.(pieceStr)
+            currentText = fullText
+            const delta = visibleDelta(fullText, emitted)
+            if (delta) {
+              emitted += delta
+              onToken?.(delta)
+            }
           },
         })
-        const finalText = clean(typeof text === "string" && text ? text : currentText)
+        const finalText = cleanFinal(typeof text === "string" && text ? text : currentText)
         const seconds = (performance.now() - started) / 1000
-        return { text: finalText, tokens: Math.max(tokens, 1), tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
+        return { text: finalText, tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
       } catch (err) {
         const name = (err as Error)?.name || ""
         const msg = String((err as Error)?.message || err)
         if (abort.signal.aborted || /abort/i.test(name) || /abort/i.test(msg)) {
           // User pressed stop — hand back whatever was generated so far.
           const seconds = (performance.now() - started) / 1000
-          return { text: clean(currentText), tokens: Math.max(tokens, 1), tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
+          return { text: cleanFinal(currentText), tps: seconds > 0 ? Math.max(tokens, 1) / seconds : 0 }
         }
         throw err
       } finally {
@@ -572,10 +1084,11 @@ class GhostEngine {
 
     let timer: ReturnType<typeof setTimeout> | undefined
     const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(
-        () => reject(new Error("Ghost timed out — the phone reclaimed the brain. Try again.")),
-        120000,
-      )
+      timer = setTimeout(() => {
+        // unwind the generation instead of leaving the worker hot
+        try { abort.abort() } catch {}
+        reject(new Error("Ghost timed out — the phone reclaimed the brain. Try again."))
+      }, 120000)
     })
     try {
       return await Promise.race([run, timeout])
@@ -589,9 +1102,12 @@ class GhostEngine {
   }
 
   // Stop: aborts generation via signal — v2 unwinds cleanly and rolls back
-  // the KV cache, so the runtime stays warm for the next question.
+  // the KV cache, so the runtime stays warm for the next question. On GPU,
+  // the interruptable stopping criteria unwinds the generate loop.
   stop(): void {
     this.stopDetached = true
+    const gpu = this.gpuStop
+    if (gpu) { try { gpu.interrupt() } catch {} }
     const abort = this.activeAbort
     if (!abort) return
     try { abort.abort() } catch {}
