@@ -5,7 +5,76 @@ Scope: why Ghost was slow, what the facts are, what changed, and what the
 next levers are. Everything below was verified against the vendored runtime
 (`public/ghost/vendor/wllama`) and the HuggingFace file API unless noted.
 
-## 1. Why it was slow — the facts
+## 0. v15 — the correctness pass (field-report triage)
+
+Preview-site feedback on v14: "download is glitchy", "the settings icon
+looks like a light/dark toggle", "0.6 qwen is very slow on M2 and phone".
+Root causes (all fixed, all E2E-verified in-browser):
+
+### R1 · Qwen 3 was THINKING on every reply (the "slow" bug)
+v14 shipped `assistantSuffix: "\n\n"`. Qwen3's official non-thinking
+contract — re-verified byte-for-byte against `Qwen/Qwen3-0.6B`'s
+`chat_template` — appends an **empty think block** after the assistant
+header: `<think>\n\n</think>\n\n`. The "\n\n" suffix neither opened nor closed
+the block, so the model entered thinking mode on every reply: up to
+nPredict hidden reasoning tokens (≈3× latency), replies dying at the token
+cap mid-reasoning, and raw reasoning leaking into the stream. With the
+correct suffix (now `QWEN3_NO_THINK_SUFFIX` in `src/lib/ghost/text.ts`)
+Qwen 3 answers directly — verified: first streamed tokens are the answer
+itself.
+
+### R2 · Piece-wise cleaning could not hide a think block
+The stream cleaner ran per-token-piece, so a think block spanning many
+pieces (its tags sit in different pieces) always leaked. Cleaning now runs
+over the full text so far (wllama hands us `currentText`), an unclosed
+think block hides everything after it, partially-received control tags
+(`<thi`, `<|im_en`) are held back, and split multi-byte characters are
+buffered instead of flashing `\uFFFD`. Pure functions + 20 unit tests in
+`src/lib/ghost/` (`text.ts` + `__tests__/text.test.ts`).
+
+### R3 · The glitchy download
+- v14's GPU path listened to transformers.js per-file `progress` events —
+  the bar **reset to 0% with each file**. Fixed by listening to the
+  aggregate `progress_total` event (present in transformers.js 4.2.0,
+  verified in the vendored source).
+- The CPU path setState-d on every ~64 KB chunk with no throttle, plus a
+  fake 2% minimum width. Now: throttled (~3/s), honest 0–100%, phases
+  (`connect → fetch → verify → store`), live MB/s + ETA, ARIA values.
+- The whole file was buffered in memory as a `Blob` (378 MB on phones) —
+  now it streams **directly into OPFS** (`.part` file).
+- **Cancel** (AbortController) and **resume** (HTTP `Range: bytes=N-` off
+  the kept `.part`, HF CDN answers 206) are new. Verified E2E: cancel at
+  16% → "resumed from 63 MB" → completes → loads.
+- A model is trusted only when the final file exists with GGUF magic + a
+  matching meta size; a killed download leaves only the `.part`.
+
+### R4 · The sun that looked like a theme toggle
+The settings icon was a circle with eight detached rays — literally a sun
+glyph. It is now a cog: outer ring + hub + teeth that reach the ring.
+
+### R5 · Auto-WebGPU was the wrong default
+Field evidence + measurement: transformers.js ≈62–66 tok/s vs wllama
+≈58–60 tok/s on the same desktop (parity, not 2×), while the GPU path
+downloads a *second* set of ONNX weights (multi-file = the glitchy
+progress), doubles storage, and is fragile on phones (ORT/WebGPU
+variability, memory). New policy: **CPU wllama is the default everywhere**;
+WebGPU survives as an explicit **TURBO** toggle in settings (with a
+q4f16 → q4 dtype ladder, string-prompt execution so both backends share
+the exact same non-thinking prompt, and automatic CPU demotion on
+failure). Legacy `"auto"` pref migrates to `"cpu"`.
+
+### Also in v15
+- The generation timeout now aborts the worker instead of racing a reject
+  and leaving it hot.
+- Live progress during replies: elapsed seconds until the first token
+  ("first reply warms the engine"), then live tok/s; chatbar shows the
+  last reply's t/s.
+- Model picker copy is honest about device fit ("happy on any phone" /
+  "best on desktop, patient on phone").
+
+---
+
+## 1. Why it was slow — the facts (v14 baseline)
 
 ### F1 · Every turn re-prefilled the entire conversation
 `createCompletion()` was called **without `useCache: true`**. In wllama's

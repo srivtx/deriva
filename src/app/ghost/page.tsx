@@ -12,6 +12,7 @@ import {
   backendPref,
   setBackendPref,
   type GhostModel,
+  type DownloadProgress,
 } from "@/lib/ghost/engine"
 
 interface ChatMessage {
@@ -216,7 +217,7 @@ export default function GhostPage() {
   const [storage, setStorage] = useState<StorageEntry[]>([])
   const [sheetOpen, setSheetOpen] = useState(false)
   const [action, setAction] = useState<string | null>(null)
-  const [getProgress, setGetProgress] = useState<{ url: string; fraction: number; loadedMb: number; totalMb: number }>({ url: "", fraction: 0, loadedMb: 0, totalMb: 0 })
+  const [dl, setDl] = useState<DownloadProgress>({ phase: "connect", fraction: 0, loadedMb: 0, totalMb: 0, speedMbps: 0, etaSec: null })
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [sessions, setSessions] = useState<GhostSession[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -228,7 +229,9 @@ export default function GhostPage() {
   const [pendingGet, setPendingGet] = useState<GhostModel | null>(null)
   const [caps, setCaps] = useState<{ webgpu: boolean; storageQuotaMb: number | null } | null>(null)
   const [diag, setDiag] = useState<{ backend: string; threads: number; flashAttn: boolean; kvQuant: boolean } | null>(null)
-  const [pref, setPref] = useState<"auto" | "gpu" | "cpu">("auto")
+  const [pref, setPref] = useState<"cpu" | "gpu">("cpu")
+  const [busyElapsed, setBusyElapsed] = useState(0)
+  const [liveTps, setLiveTps] = useState<number | null>(null)
   const busyRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const taRef = useRef<HTMLTextAreaElement | null>(null)
@@ -376,26 +379,10 @@ export default function GhostPage() {
     setError(null)
   }, [action])
 
-  const downloadModel = useCallback(async (m: GhostModel, after: () => void) => {
-    if (action) return
-    setAction(`get:${m.id}`)
-    setError(null)
-    try {
-      await ghostEngine.download(m, (_f, loaded, total) =>
-        setGetProgress({ url: m.url, fraction: total > 0 ? loaded / total : 0, loadedMb: Math.round(loaded / 1048576), totalMb: Math.round(total / 1048576) }),
-      )
-      await refreshStorage()
-      setSelectedModel(m.id)
-      setModel(m)
-      markEverDownloaded(m.id)
-      after()
-    } catch (err) {
-      setError(String((err as Error)?.message || err))
-    } finally {
-      setAction(null)
-      setGetProgress({ url: "", fraction: 0, loadedMb: 0, totalMb: 0 })
-    }
-  }, [action, refreshStorage])
+  const cancelDownload = useCallback(() => {
+    haptic(10)
+    ghostEngine.cancelDownload()
+  }, [])
 
   const deleteByUrl = useCallback(async (url: string) => {
     if (action) return
@@ -420,11 +407,10 @@ export default function GhostPage() {
     setPendingGet(m)
     setSheetOpen(false)
     setError(null)
+    setDl({ phase: "connect", fraction: 0, loadedMb: 0, totalMb: 0, speedMbps: 0, etaSec: null })
     setPhase("downloading")
     try {
-      await ghostEngine.download(m, (_f, loaded, total) =>
-        setGetProgress({ url: m.url, fraction: total > 0 ? loaded / total : 0, loadedMb: Math.round(loaded / 1048576), totalMb: Math.round(total / 1048576) }),
-      )
+      await ghostEngine.download(m, setDl)
       await refreshStorage()
       setSelectedModel(m.id)
       setModel(m)
@@ -443,7 +429,7 @@ export default function GhostPage() {
     } finally {
       setAction(null)
       setPendingGet(null)
-      setGetProgress({ url: "", fraction: 0, loadedMb: 0, totalMb: 0 })
+      setDl({ phase: "connect", fraction: 0, loadedMb: 0, totalMb: 0, speedMbps: 0, etaSec: null })
     }
   }, [action, refreshStorage])
 
@@ -470,11 +456,29 @@ export default function GhostPage() {
     await startGet(model)
   }, [model, isCached, startGet, refreshStorage])
 
+  // live progress while the ghost thinks: elapsed seconds until the first
+  // token lands, then a live tok/s readout (pieces ≈ tokens)
+  const busyStartRef = useRef(0)
+  const livePieceCount = useRef(0)
+  const lastTpsEmit = useRef(0)
+  useEffect(() => {
+    if (!busy) return
+    const id = setInterval(() => {
+      if (busyStartRef.current) setBusyElapsed((performance.now() - busyStartRef.current) / 1000)
+    }, 200)
+    return () => clearInterval(id)
+  }, [busy])
+
   const send = useCallback(async (raw?: string) => {
     const text = (raw ?? input).trim()
     if (!text || busyRef.current) return
     busyRef.current = true
     setBusy(true)
+    busyStartRef.current = performance.now()
+    livePieceCount.current = 0
+    lastTpsEmit.current = 0
+    setBusyElapsed(0)
+    setLiveTps(null)
     stick.current = true
     setFollow(true)
     setInput("")
@@ -508,6 +512,13 @@ export default function GhostPage() {
         GHOST_MAX_TOKENS,
         piece => {
           streamedText += piece
+          livePieceCount.current += 1
+          const now = performance.now()
+          if (now - lastTpsEmit.current > 250) {
+            lastTpsEmit.current = now
+            const secs = Math.max((now - busyStartRef.current) / 1000, 0.001)
+            setLiveTps(livePieceCount.current / secs)
+          }
           if (!flushTimer) flushTimer = setTimeout(flushNow, 90)
         },
       )
@@ -597,6 +608,8 @@ export default function GhostPage() {
     } finally {
       busyRef.current = false
       setBusy(false)
+      busyStartRef.current = 0
+      setLiveTps(null)
     }
   }, [input, messages, persistSession, model, deleteByUrl, startGet])
 
@@ -686,7 +699,7 @@ export default function GhostPage() {
     setAction(null)
   }, [action, refreshStorage])
 
-  const chooseBackend = useCallback((p: "auto" | "gpu" | "cpu") => {
+  const chooseBackend = useCallback((p: "cpu" | "gpu") => {
     setBackendPref(p)
     setPref(p)
     setSheetOpen(false)
@@ -696,8 +709,8 @@ export default function GhostPage() {
 
   const legacyLeftovers = storage.filter(s => GHOST_LEGACY_URLS.includes(s.url))
   const backendLabel = diag
-    ? diag.backend === "webgpu" ? "GPU" : `CPU · ${diag.threads}t`
-    : pref === "gpu" ? "GPU" : pref === "cpu" ? "CPU" : "auto"
+    ? diag.backend === "webgpu" ? "TURBO · GPU" : `CPU · ${diag.threads}t`
+    : pref === "gpu" ? "TURBO · GPU" : "CPU"
 
   return (
     <div className="ghost-app">
@@ -772,12 +785,35 @@ export default function GhostPage() {
           <span className="ghost-kicker">MATERIALISING</span>
           <p className="ghost-hero-title">{(pendingGet ?? model).name}</p>
           <p className="ghost-tagline mono">{(pendingGet ?? model).sizeMb} MB · one-time</p>
-          <div className="ghost-progress" role="progressbar" aria-valuenow={Math.round(getProgress.fraction * 100)}>
-            <div className="ghost-progress-fill" style={{ width: `${Math.max(2, getProgress.fraction * 100)}%` }} />
+          <div
+            className="ghost-progress"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(dl.fraction * 100)}
+            aria-valuetext={`${Math.round(dl.loadedMb)} of ${Math.round(dl.totalMb)} MB`}
+          >
+            <div className="ghost-progress-fill" style={{ width: `${dl.fraction * 100}%` }} />
           </div>
-          <p className="ghost-tagline mono">
-            {Math.round(getProgress.fraction * 100)}%{getProgress.totalMb > 0 ? ` · ${getProgress.loadedMb} / ${getProgress.totalMb} MB` : ""}
+          <p className="ghost-dl-meta mono">
+            {dl.phase === "connect" ? "finding a clean copy…"
+              : dl.phase === "verify" ? "verifying…"
+              : dl.phase === "store" ? "filing into storage…"
+              : dl.phase === "done" ? "done"
+              : `${Math.round(dl.fraction * 100)}% · ${Math.round(dl.loadedMb)} / ${dl.totalMb > 0 ? Math.round(dl.totalMb) : "?"} MB`}
           </p>
+          <p className="ghost-dl-sub mono">
+            {dl.resumedMb ? `resumed from ${Math.round(dl.resumedMb)} MB · ` : ""}
+            {dl.speedMbps > 0.05 ? `${dl.speedMbps.toFixed(1)} MB/s` : ""}
+            {dl.etaSec != null && dl.etaSec > 0 ? ` · ~${dl.etaSec}s left` : ""}
+            {dl.files ? ` · ${dl.files} files` : ""}
+          </p>
+          {(dl.phase === "connect" || dl.phase === "fetch") && (
+            <button type="button" className="ghost-cancel" onClick={cancelDownload}>
+              <svg viewBox="0 0 20 20" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
+              CANCEL
+            </button>
+          )}
           <p className="ghost-note">One-time download. After this, Ghost works in airplane mode.</p>
         </div>
       )}
@@ -794,7 +830,7 @@ export default function GhostPage() {
               <div className="ghost-chatbar-titles">
                 <span className="ghost-chatbar-title">Ghost</span>
                 <span className="ghost-chatbar-sub">
-                  {model.name}{diag ? ` · ${backendLabel}${diag.backend === "cpu" && diag.kvQuant ? " · kv q8" : ""}` : ""}
+                  {model.name}{diag ? ` · ${backendLabel}${diag.backend === "cpu" && diag.kvQuant ? " · kv q8" : ""}` : ""}{!busy && tps != null && tps > 0 ? ` · ${tps.toFixed(0)} t/s` : ""}
                 </span>
               </div>
             </div>
@@ -805,8 +841,12 @@ export default function GhostPage() {
               <button type="button" className="ghost-iconbtn" aria-label="New chat" disabled={busy} onClick={newChat}>
                 <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M10 4v12M4 10h12"/></svg>
               </button>
-              <button type="button" className="ghost-iconbtn" aria-label="Ghost settings" onClick={() => setSheetOpen(true)}>
-                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4"/></svg>
+              <button type="button" className="ghost-iconbtn" aria-label="Ghost settings" title="Settings" onClick={() => setSheetOpen(true)}>
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <circle cx="10" cy="10" r="5.2" />
+                  <circle cx="10" cy="10" r="1.8" />
+                  <path d="M10 1.4v3.4M10 15.2v3.4M1.4 10h3.4M15.2 10h3.4M3.95 3.95l2.4 2.4M13.65 13.65l2.4 2.4M16.05 3.95l-2.4 2.4M6.35 13.65l-2.4 2.4" />
+                </svg>
               </button>
             </span>
           </div>
@@ -814,7 +854,12 @@ export default function GhostPage() {
             {busy && (
               <div className="ghost-thinking-chip" aria-live="polite">
                 <span className="ghost-dots"><i /><i /><i /></span>
-                thinking{tps != null && tps > 0 ? <span className="ghost-tps">{tps.toFixed(1)} tok/s</span> : null}
+                {liveTps != null && liveTps > 0 ? "streaming" : "thinking"}
+                {liveTps != null && liveTps > 0 ? (
+                  <span className="ghost-tps">{liveTps.toFixed(1)} tok/s</span>
+                ) : busyElapsed >= 0.4 ? (
+                  <span className="ghost-tps">{busyElapsed.toFixed(1)}s · first reply warms the engine</span>
+                ) : null}
               </div>
             )}
             {messages.length === 0 && !busy && (
@@ -892,10 +937,14 @@ export default function GhostPage() {
             <div className="ghost-backend-row">
               <div className="ghost-brain-info">
                 <span className="ghost-brain-name">Engine</span>
-                <span className="ghost-brain-meta">{caps?.webgpu ? "WebGPU available on this device" : "CPU only on this device"}</span>
+                <span className="ghost-brain-meta">
+                  {caps?.webgpu
+                    ? pref === "gpu" ? "turbo · downloads its own GPU copy · experimental" : "cpu · default · fastest everywhere"
+                    : "cpu · this device has no WebGPU"}
+                </span>
               </div>
               <div className="ghost-backend-choices" role="radiogroup" aria-label="Backend">
-                {(["auto", "gpu", "cpu"] as const).map(p => (
+                {(["cpu", "gpu"] as const).map(p => (
                   <button
                     key={p}
                     type="button"
@@ -905,7 +954,7 @@ export default function GhostPage() {
                     disabled={p === "gpu" && !caps?.webgpu}
                     onClick={() => chooseBackend(p)}
                   >
-                    {p.toUpperCase()}
+                    {p === "cpu" ? "CPU" : "TURBO"}
                   </button>
                 ))}
               </div>
@@ -914,21 +963,21 @@ export default function GhostPage() {
             {GHOST_MODELS.map(m => {
               const cached = isCached(m.url)
               const resident = phase === "ready" && m.id === model.id
-              const working = action?.endsWith(`:${m.id}`) || (action === `get:${m.id}` && getProgress.url === m.url)
+              const working = action?.endsWith(`:${m.id}`)
               return (
                 <div key={m.id} className={`ghost-brain-row${resident ? " active" : ""}`}>
                   <div className="ghost-brain-info">
                     <span className="ghost-brain-name">{m.name}{resident ? " · RESIDENT" : ""}</span>
                     <span className="ghost-brain-meta">{cached ? `${sizeOf(m.url)} MB on device` : `${m.sizeMb} MB · not downloaded`}</span>
-                    {working && action === `get:${m.id}` && (
-                      <span className="ghost-brain-bar"><span style={{ width: `${Math.max(3, getProgress.fraction * 100)}%` }} /></span>
+                    {working && action === `get:${m.id}` && phase === "downloading" && (
+                      <span className="ghost-brain-bar"><span style={{ width: `${Math.max(3, dl.fraction * 100)}%` }} /></span>
                     )}
                   </div>
                   <div className="ghost-brain-actions">
                     {resident ? (
                       <span className="ghost-brain-state">in use</span>
                     ) : working ? (
-                      <span className="ghost-brain-state">{action?.startsWith("get") ? `${Math.round(getProgress.fraction * 100)}%` : "…"}</span>
+                      <span className="ghost-brain-state">{action?.startsWith("get") ? `${Math.round(dl.fraction * 100)}%` : "…"}</span>
                     ) : cached ? (
                       <>
                         <button type="button" className="ghost-minibtn" disabled={!!action} onClick={() => useModel(m)}>USE</button>
