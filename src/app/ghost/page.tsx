@@ -145,13 +145,32 @@ function CopyBtn({ text, className }: { text: string; className?: string }) {
 }
 
 function CodeBlock({ code }: { code: string }) {
+  const preRef = useRef<HTMLPreElement | null>(null)
+  // v19: overflow affordance — a right-edge fade while the code scrolls,
+  // lifted once the reader reaches the end. Static screenshots (and VLM
+  // reviews) read overflowing code as "clipped"; the fade says "more
+  // this way" without a scrollbar that mobile never renders.
+  useEffect(() => {
+    const pre = preRef.current
+    if (!pre) return
+    const sync = () => {
+      const over = pre.scrollWidth - pre.clientWidth > 2
+      const atEnd = pre.scrollLeft + pre.clientWidth >= pre.scrollWidth - 2
+      pre.parentElement?.classList.toggle("scrolls-x", over && !atEnd)
+    }
+    sync()
+    pre.addEventListener("scroll", sync, { passive: true })
+    const ro = new ResizeObserver(sync)
+    ro.observe(pre)
+    return () => { pre.removeEventListener("scroll", sync); ro.disconnect() }
+  }, [code])
   return (
     <div className="ghost-codeblock">
       <div className="ghost-codeblock-bar">
         <span>code</span>
         <CopyBtn text={code} className="ghost-code-copy" />
       </div>
-      <pre><code>{code}</code></pre>
+      <pre ref={preRef}><code>{code}</code></pre>
     </div>
   )
 }
