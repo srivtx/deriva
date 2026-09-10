@@ -3849,3 +3849,45 @@ code, pre { font-family: var(--font-mono); }
   .ghost-send-ico, .ghost-send { transition: none; }
   .ghost-sheet.settle { transition: none; }
 }
+
+/* ── Ghost v17 · turbo fetch — visible GPU-weight downloads ──
+   A turbo switch with uncached ONNX weights used to download silently
+   behind a spinner. Now it renders wherever the user is: a slim strip
+   under the chatbar mid-session, a full bar on the boot/loading screen. */
+.ghost-gpu-fetch {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 10px 16px 4px;
+  animation: ghost-rise-in 0.22s var(--g-ease-out) both;
+}
+.ghost-gpu-fetch-bar {
+  width: min(260px, 64%); height: 4px; border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.ghost-gpu-fetch-bar > span {
+  display: block; height: 100%; border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.38s var(--g-ease-out);
+  position: relative; overflow: hidden;
+}
+.ghost-gpu-fetch-bar > span::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.32) 50%, transparent 80%);
+  transform: translateX(-100%);
+  animation: ghost-sheen 1.5s ease-in-out infinite;
+}
+.ghost-gpu-fetch-bar > span.indet { width: 38% !important; transition: none; animation: ghost-indet 1.15s var(--g-ease-out) infinite; }
+.ghost-gpu-fetch-bar > span.indet::after { animation: none; opacity: 0; }
+.ghost-gpu-fetch > .mono {
+  font: 600 9px/1 var(--font-mono, ui-monospace, Menlo, monospace);
+  letter-spacing: 0.08em; color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ghost-gpu-fetch { animation: none !important; }
+  .ghost-gpu-fetch-bar > span { transition: none; }
+  .ghost-gpu-fetch-bar > span::after { animation: none !important; }
+  .ghost-gpu-fetch-bar > span.indet { animation: none !important; width: 26% !important; opacity: 0.6; }
+}
+/* v17 indet reuses the v16 ghost-indet keyframes (translateX sweep) */

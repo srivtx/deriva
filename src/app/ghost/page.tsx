@@ -376,6 +376,7 @@ export default function GhostPage() {
   const [pref, setPref] = useState<"cpu" | "gpu">("cpu")
   const [busyElapsed, setBusyElapsed] = useState(0)
   const [liveTps, setLiveTps] = useState<number | null>(null)
+  const [gpuFetch, setGpuFetch] = useState(false)
   const busyRef = useRef(false)
   // active-session id mirror: persistence reads this so it never sees a
   // stale closure — the root cause of duplicated history rows (v16 fix)
@@ -530,6 +531,14 @@ export default function GhostPage() {
     setStorage(await ghostEngine.scanStorage().catch(() => []))
   }, [])
 
+  // download-progress hook for LOAD-time turbo fetches: when the GPU
+  // weights are not cached, building the pipeline downloads them, and
+  // that must render (boot screen / in-chat strip) — never a silent stall.
+  const loadDl = useCallback((p: DownloadProgress) => {
+    setGpuFetch(p.phase !== "done")
+    setDl(p)
+  }, [])
+
   const chooseModel = useCallback((next: GhostModel) => {
     if (action) return
     haptic(4)
@@ -581,7 +590,8 @@ export default function GhostPage() {
       setModel(m)
       markEverDownloaded(m.id)
       setPhase("loading")
-      await ghostEngine.load(m)
+      await ghostEngine.load(m, undefined, loadDl)
+      setGpuFetch(false)
       setPhase("ready")
       void ghostEngine.diagnostics().then(d => { if (d) setDiag({ backend: d.backend, threads: d.threads, flashAttn: d.flashAttn, kvQuant: d.kvQuant }) }).catch(() => {})
       setMessages(prev => {
@@ -594,15 +604,17 @@ export default function GhostPage() {
     } finally {
       setAction(null)
       setPendingGet(null)
+      setGpuFetch(false)
       setDl({ phase: "connect", fraction: 0, loadedMb: 0, totalMb: 0, speedMbps: 0, etaSec: null })
     }
-  }, [action, refreshStorage])
+  }, [action, refreshStorage, loadDl])
 
   const startSummon = useCallback(async () => {
     if (isCached(model.url)) {
       setPhase("loading")
       try {
-        await ghostEngine.load(model)
+        await ghostEngine.load(model, undefined, loadDl)
+        setGpuFetch(false)
         setPhase("ready")
         void ghostEngine.diagnostics().then(d => { if (d) setDiag({ backend: d.backend, threads: d.threads, flashAttn: d.flashAttn, kvQuant: d.kvQuant }) }).catch(() => {})
       } catch (err) {
@@ -615,11 +627,13 @@ export default function GhostPage() {
         }
         setError(msg.includes("MODEL_NOT_CACHED") ? "Brain not on device yet — download it first." : msg)
         setPhase("intro")
+      } finally {
+        setGpuFetch(false)
       }
       return
     }
     await startGet(model)
-  }, [model, isCached, startGet, refreshStorage])
+  }, [model, isCached, startGet, refreshStorage, loadDl])
 
   // live progress while the ghost thinks: elapsed seconds until the first
   // token lands, then a live tok/s readout (pieces ≈ tokens)
@@ -688,7 +702,7 @@ export default function GhostPage() {
         },
       )
     try {
-      await ghostEngine.load(model)
+      await ghostEngine.load(model, undefined, loadDl)
       const result = await askGhost()
 
       // Echo guard: tiny models sometimes regurgitate their previous reply
@@ -737,7 +751,7 @@ export default function GhostPage() {
         // and retry the generation ONCE — no re-download.
         try {
           await ghostEngine.eject()
-          await ghostEngine.load(model)
+          await ghostEngine.load(model, undefined, loadDl)
           const retry = await askGhost()
           if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
           flushNow()
@@ -775,8 +789,9 @@ export default function GhostPage() {
       setBusy(false)
       busyStartRef.current = 0
       setLiveTps(null)
+      setGpuFetch(false)
     }
-  }, [input, messages, persistSession, model, deleteByUrl, startGet])
+  }, [input, messages, persistSession, model, deleteByUrl, startGet, loadDl])
 
   const stop = useCallback(() => {
     haptic(12)
@@ -853,14 +868,15 @@ export default function GhostPage() {
     setError(null)
     try {
       await ghostEngine.swapModel(m)
-      await ghostEngine.load(m)
+      await ghostEngine.load(m, undefined, loadDl)
       setModel(m)
     } catch (err) {
       setError(String((err as Error)?.message || err))
     } finally {
       setAction(null)
+      setGpuFetch(false)
     }
-  }, [action, model.id])
+  }, [action, model.id, loadDl])
 
   const clearEverything = useCallback(async () => {
     if (action) return
@@ -960,7 +976,10 @@ export default function GhostPage() {
           <GhostFace size={88} thinking />
           <span className="ghost-kicker">MATERIALISING</span>
           <p className="ghost-hero-title">{(pendingGet ?? model).name}</p>
-          <p className="ghost-tagline mono">{(pendingGet ?? model).sizeMb} MB · one-time</p>
+          <p className="ghost-tagline mono">
+            {dl.phase === "fetch" && dl.totalMb > 0 ? Math.round(dl.totalMb) : (pendingGet ?? model).sizeMb} MB · one-time
+            {dl.cancellable === false ? " · GPU weights" : ""}
+          </p>
           <div
             className={`ghost-progress${dl.phase === "connect" || dl.phase === "verify" || dl.phase === "store" ? " indet" : ""}`}
             role="progressbar"
@@ -972,7 +991,7 @@ export default function GhostPage() {
             <div className="ghost-progress-fill" style={{ width: `${dl.fraction * 100}%` }} />
           </div>
           <p className="ghost-dl-meta mono">
-            {dl.phase === "connect" ? "finding a clean copy…"
+            {dl.phase === "connect" ? (dl.loadedMb > 0.05 ? `fetching engine parts · ${Math.round(dl.loadedMb)} MB` : "finding a clean copy…")
               : dl.phase === "verify" ? "verifying…"
               : dl.phase === "store" ? "filing into storage…"
               : dl.phase === "done" ? "done"
@@ -984,18 +1003,49 @@ export default function GhostPage() {
             {dl.etaSec != null && dl.etaSec > 0 ? ` · ~${dl.etaSec}s left` : ""}
             {dl.files ? ` · ${dl.files} files` : ""}
           </p>
-          {(dl.phase === "connect" || dl.phase === "fetch") && (
+          {(dl.phase === "connect" || dl.phase === "fetch") && dl.cancellable !== false && (
             <button type="button" className="ghost-cancel" onClick={cancelDownload}>
               <svg viewBox="0 0 20 20" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
               CANCEL
             </button>
+          )}
+          {(dl.phase === "connect" || dl.phase === "fetch") && dl.cancellable === false && (
+            <p className="ghost-note">GPU copy streams through the engine — keep this tab open.</p>
           )}
           <p className="ghost-note">One-time download. After this, Ghost works in airplane mode.</p>
         </div>
       )}
 
       {phase === "loading" && (
-        <div className="ghost-center"><GhostFace size={72} thinking /><p className="ghost-tagline">waking ghost…</p></div>
+        <div className="ghost-center">
+          <GhostFace size={72} thinking />
+          <p className="ghost-tagline">{gpuFetch ? "fetching the GPU copy…" : "waking ghost…"}</p>
+          {gpuFetch && (
+            <>
+              <div
+                className={`ghost-progress${dl.phase === "connect" ? " indet" : ""}`}
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(dl.fraction * 100)}
+                aria-valuetext={`${Math.round(dl.loadedMb)} of ${Math.round(dl.totalMb)} MB`}
+              >
+                <div className="ghost-progress-fill" style={{ width: `${dl.fraction * 100}%` }} />
+              </div>
+              <p className="ghost-dl-meta mono">
+                {dl.phase === "connect"
+                  ? dl.loadedMb > 0.05 ? `engine parts · ${Math.round(dl.loadedMb)} MB` : "connecting…"
+                  : dl.phase === "verify" ? "compiling GPU engine…"
+                  : `${Math.round(dl.fraction * 100)}% · ${Math.round(dl.loadedMb)} / ${dl.totalMb > 0 ? Math.round(dl.totalMb) : "?"} MB`}
+              </p>
+              <p className="ghost-dl-sub mono">
+                {dl.speedMbps > 0.05 ? `${dl.speedMbps.toFixed(1)} MB/s` : ""}
+                {dl.etaSec != null && dl.etaSec > 0 ? ` · ~${dl.etaSec}s left` : ""}
+                {dl.files ? ` · ${dl.files} files` : ""}
+              </p>
+            </>
+          )}
+        </div>
       )}
 
       {phase === "ready" && (
@@ -1074,6 +1124,20 @@ export default function GhostPage() {
               </div>
             )}
           </div>
+          {gpuFetch && (
+            <div className="ghost-gpu-fetch" role="status" aria-label="Fetching GPU model copy">
+              <div className="ghost-gpu-fetch-bar">
+                <span className={dl.phase === "connect" ? "indet" : ""} style={{ width: `${Math.max(dl.phase === "fetch" ? 2 : 0, dl.fraction * 100)}%` }} />
+              </div>
+              <span className="mono">
+                {dl.phase === "connect"
+                  ? `GPU copy · ${Math.round(dl.loadedMb)} MB${dl.files ? ` · ${dl.files} files` : ""}`
+                  : dl.phase === "verify"
+                    ? "compiling GPU engine…"
+                    : `GPU copy · ${Math.round(dl.fraction * 100)}%${dl.etaSec != null && dl.etaSec > 0 ? ` · ~${dl.etaSec}s` : ""}`}
+              </span>
+            </div>
+          )}
 
           <footer className="ghost-composer">
             {error && <p className="ghost-error">{error}</p>}

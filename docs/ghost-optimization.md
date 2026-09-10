@@ -5,6 +5,108 @@ Scope: why Ghost was slow, what the facts are, what changed, and what the
 next levers are. Everything below was verified against the vendored runtime
 (`public/ghost/vendor/wllama`) and the HuggingFace file API unless noted.
 
+## 0a. v17 — the turbo pass (field-report triage #2)
+
+Preview-site feedback on v16: *"switched to turbo, it says it downloads its
+own copy, but no progress shows"* and *"replies come out as a weird
+hallucinated transcript"* — a real answer followed by invented user turns
+("ssup", "what are you doing"), assistant turns echoing the system prompt
+("Under 50 words."), and stray "copy" fragments. Root causes (all fixed,
+all verified — Node mirror tests + browser E2E):
+
+### R6 · The turbo prompt was malformed — the "weird replies" bug
+v15/v16 fed transformers.js a hand-built raw ChatML string. The
+`TextGenerationPipeline` tokenizes plain strings with
+`add_special_tokens=false`, so the prompt reached the model **without its
+BOS token** (`<|startoftext|>` for LFM2) and with a stray leading newline.
+That derailed the model into system-prompt echo and multi-turn
+hallucination. A/B experiment (Node, CPU device, identical sampling,
+`scripts/turbo_repro.js`):
+
+| prompt strategy | result |
+| --- | --- |
+| raw string (v16 shape) | `"Understand"` / literally `"Under 50 words."` — the field-report garbage |
+| messages array → official `chat_template` | clean socratic reply, stopped at `<\|im_end\|>` |
+| raw string, no repetition penalty | still garbage (penalty was NOT the cause) |
+| raw string + explicit `eos_token_id` | still garbage (eos ids can't save a bad prompt) |
+
+Fix: the GPU path now passes the **messages array** and lets each model's
+own chat template render it. The CPU path keeps the hand-built ChatML
+prompt — llama.cpp adds the BOS itself and is format-tolerant (verified
+E2E). One prompt-building module was the wrong shared abstraction; the
+shared thing is the *messages*.
+
+For Qwen3 the non-thinking contract rides through
+`tokenizer_encode_kwargs: { enable_thinking: false }` — the template then
+appends the empty think block itself (verified against the repo's
+`tokenizer_config.json`; Qwen3-0.6B-ONNX thinking default burned 239
+tokens/51 s in the lab harness vs 49 tokens direct).
+
+### R7 · Turbo generation could outrun its stop tokens
+Generation on the GPU path now carries an `InterruptableStoppingCriteria`
+plus a marker watcher: the stream runs with `skip_special_tokens: false`
+(the display cleaner strips control tokens anyway) and the moment the raw
+stream shows a turn-end marker (`<|im_end|>` / `<|im_start|>` /
+`<|startoftext|>`) generation is interrupted — a stop guarantee that does
+not depend on the repo's `generation_config.eos_token_id` being right.
+The STOP button and the 120 s timeout now interrupt GPU generation too
+(previously stop() only aborted the wllama worker; on GPU it silently did
+nothing).
+
+### R8 · The silent turbo download — "no progress or downloading thing"
+Sequence of the bug: GGUF already cached → `deriva-ghost-ready=1` → boot
+jumps straight to the chat → first message → `chat()` →
+`ensurePipeline()` **without any progress callback** → ~200 MB of ONNX
+weights download behind the "thinking" chip. On slow links the 120 s chat
+timeout could even fire mid-download.
+
+Fixes:
+- `load()` now forwards download events, so a turbo fetch renders in the
+  boot/loading UI with a real progress bar.
+- `chat()` **never builds pipelines** — if the pipe is missing it runs CPU
+  for that turn. This kills the silent-download class entirely.
+- In-chat: a slim `ghost-gpu-fetch` strip (bar + MB/%/ETA) renders under
+  the chatbar while weights stream, wherever the user is.
+- Aggregate-progress honesty: transformers.js' `progress_total` total only
+  includes files whose download has *started*, so `loaded/total` jumps
+  backwards as new files register. The bar now stays indeterminate until a
+  weight file (>24 MB) registers, then reports a monotonic fraction,
+  EMA-smoothed speed and ETA, and a "compiling GPU engine…" phase once the
+  weights land but the pipeline is still building.
+- Events carry `cancellable: false` on the turbo path (transformers.js
+  can't abort mid-download) — the UI stops offering a CANCEL button that
+  cannot cancel anything, and says "GPU copy streams through the engine —
+  keep this tab open" instead.
+
+### Verification (v17)
+- `scripts/turbo_engine_mirror.js` — LFM2 GPU-path mirror: 8/8 PASS
+  (clean reply, turn-end stop, no sysprompt echo, token budget, no control
+  tokens leaked, STOP interrupt ends generation at ~8 tokens).
+- `scripts/turbo_engine_mirror_qwen.js` — Qwen3 mirror: 6/6 PASS (same,
+  plus no think leak with `enable_thinking:false`).
+- `scripts/turbo_e2e.js` — browser E2E of the exact field scenario (fake
+  WebGPU adapter injected before page scripts, turbo pref, GGUF cached):
+  progress strip rendered live 31%→100% monotonic with MB counters,
+  demote-to-CPU logged on pipeline failure, final reply clean — single
+  turn, no echo, no control tokens. CPU-path regression (download phases,
+  chat, kv q8 chatbar) re-run PASS.
+- Full evidence: `research/turbo-weird-replies.json`.
+
+### API facts recorded along the way (transformers.js 4.2.0)
+- `progress_total` fires only while files actively stream; cached files
+  emit nothing (a fully-cached turbo model shows no fetch at all — by
+  design).
+- `generate()` accepts `stopping_criteria` and `eos_token_id` kwargs and
+  the pipeline forwards them; `InterruptableStoppingCriteria` is exported
+  from the package root.
+- `min_p` is NOT implemented in v4.2 — the GPU path omits it (CPU wllama
+  keeps it).
+- `TextStreamer` with `skip_special_tokens: false` emits special-token
+  text as atomic pieces (flush-then-emit), which is what makes the marker
+  watcher reliable.
+
+---
+
 ## 0. v15 — the correctness pass (field-report triage)
 
 Preview-site feedback on v14: "download is glitchy", "the settings icon
@@ -59,9 +161,12 @@ downloads a *second* set of ONNX weights (multi-file = the glitchy
 progress), doubles storage, and is fragile on phones (ORT/WebGPU
 variability, memory). New policy: **CPU wllama is the default everywhere**;
 WebGPU survives as an explicit **TURBO** toggle in settings (with a
-q4f16 → q4 dtype ladder, string-prompt execution so both backends share
-the exact same non-thinking prompt, and automatic CPU demotion on
-failure). Legacy `"auto"` pref migrates to `"cpu"`.
+q4f16 → q4 dtype ladder and automatic CPU demotion on failure).
+Legacy `"auto"` pref migrates to `"cpu"`. *(v17 note: the
+"string-prompt execution so both backends share one prompt" idea was
+itself the R6 bug — see §0a; the two backends now each get the prompt
+shape their runtime expects: messages array on GPU, ChatML string on
+CPU.)*
 
 ### Also in v15
 - The generation timeout now aborts the worker instead of racing a reject
