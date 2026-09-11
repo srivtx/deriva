@@ -386,3 +386,46 @@ repeat penalty window, and per-model temperature profiles.
 - **i18n quality pass on the Socratic prompts** per model family — Qwen 3
   follows instructions noticeably better and can carry a stricter tutor
   contract.
+
+## 5. v20 storage pass — why Vercel showed 9 GB of deployment storage
+
+Root cause (measured, not guessed): `public/` was 82 MB, and Next.js copies
+`public/` verbatim into **every** deployment's output. At ~110 deployments
+(main pushes + preview branches over the project's life) that is ~9 GB of
+accumulated deployment storage on Vercel — the meter sums the files kept for
+ALL deployments, not just the latest.
+
+The payload was dominated by four vendored ONNX Runtime wasm builds in
+`public/ghost/vendor/onnx/` (77 MB total). Only two are ever fetched:
+
+- `ort-wasm-simd-threaded.jsep.{mjs,wasm}` — the WebGPU/JSEP build the Turbo
+  pipeline (`device: "webgpu"`) resolves.
+- `ort-wasm-simd-threaded.{mjs,wasm}` — the plain wasm build ORT can resolve
+  when `wasmPaths` is a directory string and the non-JSEP build is selected.
+
+The other two are provably dead and were removed (−38.2 MB per deployment):
+
+- `ort-wasm-simd-threaded.asyncify.{mjs,wasm}` — only fetched when
+  `env.wasm.proxy === true`; transformers.js v4.2.0 explicitly sets
+  `ONNX_ENV.wasm.proxy = false` (verified in its dist source).
+- `ort-wasm-simd-threaded.jspi.{mjs,wasm}` — only fetched when JSPI is
+  explicitly enabled; nothing in the codebase touches it.
+
+Verification before cutting: grep over src/, public/sw.js, scripts/, tests/,
+harness/, docs/ shows the only references to the vendor dir are the engine's
+`wasmPaths = "/ghost/vendor/onnx/"` string and sw.js's runtime cache-first
+handler (it caches whatever is actually fetched — no precache manifest, so
+missing files cannot break offline installs).
+
+`public/` is now 45 MB (jsep 26.1 + plain 12.9 + wllama 5.6 + apk 1.2), a 45%
+cut per deployment. The plain wasm pair (12.9 MB) is kept on purpose: it is
+the fallback ORT may resolve on non-JSEP configurations; deleting it saves
+more but risks breaking Turbo on edge devices — re-evaluate only with a real
+WebGPU E2E in place.
+
+Reclaiming the already-accrued 9 GB (repo changes only stop future growth):
+delete old deployments on Vercel — dashboard → project → Deployments →
+multi-select old Preview + Production deployments (keep the latest
+production) → Delete; or `npx vercel rm <deployment-url>` per deployment
+after `npx vercel link`. Storage frees as deployments are removed. A
+`.vercelignore` was added so CLI deploys stay the same size as Git deploys.

@@ -1,0 +1,22 @@
+# Build/deploy hygiene — files excluded when deploying through the Vercel CLI.
+# (Git-connected deployments clone the repo and build; this file keeps
+# `vercel deploy` uploads lean so CLI and Git deploys match in size.)
+#
+# Storage context (v20 pass): everything under public/ ships inside EVERY
+# deployment's output. The dead ORT wasm variants were cut from
+# public/ghost/vendor/onnx/ — do not re-vendor all four variants; the engine
+# only ever resolves the .jsep (WebGPU) and plain (wasm) builds because
+# transformers.js forces wasm.proxy=false and never enables JSPI.
+android/
+harness/
+tests/
+system-ai/
+scripts/
+docs/
+RIG-PLAN-V2.md
+RIG-PLAN-V3.md
+RIG-HANDOVER.md
+AGENTS.md
+CHANGELOG.md
+visual-style.md
+dev.log
