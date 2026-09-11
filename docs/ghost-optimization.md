@@ -427,5 +427,10 @@ Reclaiming the already-accrued 9 GB (repo changes only stop future growth):
 delete old deployments on Vercel — dashboard → project → Deployments →
 multi-select old Preview + Production deployments (keep the latest
 production) → Delete; or `npx vercel rm <deployment-url>` per deployment
-after `npx vercel link`. Storage frees as deployments are removed. A
-`.vercelignore` was added so CLI deploys stay the same size as Git deploys.
+after `npx vercel link`. Storage frees as deployments are removed.
+
+Post-mortem on `.vercelignore`: it was added in the same pass and made every
+Git deployment fail fast (<90s, before compile) even though the local
+`next build` was green — Vercel's Git integration does not tolerate it
+here. It was removed (4db7573) and the deployment went green immediately;
+Git deployments clone the full repo anyway, so the file bought nothing.
