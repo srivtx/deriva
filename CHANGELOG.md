@@ -10,11 +10,17 @@
 - **Serving Floor** — a discrete-event inference-server simulator: KV cache priced by dtype (fp16/q8/q4), 64-token prefill chunks, memory-bound decode batches, static vs continuous batching, contiguous vs paged allocation with OOM preemption and queue timeouts, TTFT/latency/throughput metrics replayed as a live trace (Kwon et al. 2023; Yu et al. 2022).
 - **Retrieval Bench** — a RAG pipeline that fails the way real ones fail: keyword stuffing outranking truth in BM25, chunk boundaries cutting the answer in half, and a final context you compose under a token budget (Robertson & Zaragoza 2009; Lewis et al. 2020).
 - **Agent Loop** — a deterministic ReAct executor you can break: runaway retries, observation bloat blowing the context window, prompt injection hiding in a tool result; set the guardrails, run the loop, read the trace (Yao et al. 2022; OWASP LLM Top 10).
-- **Engine test suite**: 70 vitest cases covering all six engines (merge order, softmax/nucleus math, attention normalization, server invariants and determinism, retrieval failure modes, guardrail behavior).
+- **Engine test suite**: 77 vitest cases covering all six engines (merge order, softmax/nucleus math, attention normalization, server invariants and determinism, retrieval failure modes, guardrail behavior) plus the progress checkpoint math (no double-awarded XP across resume + full-clear).
 
 ### Fixed
+- Foundry was invisible in the home app drawer, command-center search, More menu and mobile title — those surfaces carry hand-maintained app lists alongside the central catalog. Registered everywhere Ghost is: home Studio tile, search commands for the workshop and each of the six stations, More-menu Studio link, mobile title.
 - Completed the Retrieval Bench page truncated mid-write in the prior session (unterminated string literal cascading parse errors).
 - Serving engine typing: admission now carries stamped arrival ids; drop-reason accounting narrows correctly.
+
+### Changed
+- Mission checkpoints: every cleared mission now saves immediately (partial progress and XP survive an interrupted session), and reopening a station resumes at the first uncleared mission — fully cleared stations replay from the top.
+- Foundry home: workshop ranks (Apprentice → Master of the Forge) on the progress card, a "next up" line, and a resume chip on the station card to continue from.
+- Discovery cross-links: the games hub and the AI/ML hub now point at the Foundry for engineers finishing the concept games.
 
 ## v1.6.0 — Studio expansion (2026-08-26)
 

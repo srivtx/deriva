@@ -4037,6 +4037,8 @@ code, pre { font-family: var(--font-mono); }
 .foundry-progress-bar { height: 6px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
 .foundry-progress-bar span { display: block; height: 100%; border-radius: 999px; background: var(--accent); transition: width var(--dur-med) var(--ease-standard); }
 .foundry-progress-stats { display: flex; justify-content: space-between; color: var(--ink-soft); font: 11px var(--font-mono); }
+.foundry-next-up { color: var(--accent); font: 600 11px var(--font-mono); letter-spacing: .02em; }
+.foundry-continue-chip { align-self: flex-start; padding: 4px 10px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); font: 700 10px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
 .foundry-station-list { display: flex; flex-direction: column; gap: 10px; margin-top: 32px; }
 .foundry-station-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink); text-decoration: none; transition: transform var(--dur-fast) var(--ease-standard), border-color var(--dur-fast), box-shadow var(--dur-fast); }
 .foundry-station-card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow-raised); }

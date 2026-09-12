@@ -5,11 +5,11 @@
 // a dtype, break the straggler lock with continuous batching, kill the
 // fragmentation waste with paging, then hold the SLA in a traffic crisis.
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FoundryCompletion, FoundryShell } from "@/components/foundry-shell"
 import { FOUNDRIES } from "@/foundry/catalog"
 import { triggerGameFeedback } from "@/games/feedback"
-import { recordStationRun } from "@/foundry/progress"
+import { loadStationProgress, recordMissionCleared, recordStationRun } from "@/foundry/progress"
 import {
   DTYPE_MB_PER_TOKEN,
   WORKLOAD_BATCHING,
@@ -256,6 +256,12 @@ export default function ServingFloorPage() {
   const [mistakes, setMistakes] = useState(0)
   const [finished, setFinished] = useState(false)
 
+  // Resume where the last session left off; fully cleared stations replay from the top.
+  useEffect(() => {
+    const saved = loadStationProgress(STATION.id)
+    if (saved && saved.missionsCleared > 0 && saved.missionsCleared < STATION.missions) setMission(saved.missionsCleared + 1)
+  }, [])
+
   const complete = () => {
     triggerGameFeedback("complete")
     recordStationRun(STATION.id, STATION.missions, mistakes)
@@ -295,7 +301,10 @@ export default function ServingFloorPage() {
         index={mission - 1}
         onDone={() => {
           if (mission === STATION.missions) complete()
-          else setMission(m => m + 1)
+          else {
+            recordMissionCleared(STATION.id, mission)
+            setMission(m => m + 1)
+          }
         }}
         onMistake={() => setMistakes(m => m + 1)}
       />

@@ -4,11 +4,11 @@
 // A trigram LM with the full decode stack exposed. Missions: freeze it
 // (T=0), hit an entropy band, cut the nucleus, then fly it hot and land it.
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FoundryCompletion, FoundryShell } from "@/components/foundry-shell"
 import { FOUNDRIES } from "@/foundry/catalog"
 import { triggerGameFeedback } from "@/games/feedback"
-import { recordStationRun } from "@/foundry/progress"
+import { loadStationProgress, recordMissionCleared, recordStationRun } from "@/foundry/progress"
 import { LM_CORPUS, generate, samplingPipeline, trainLM, type SamplingParams } from "@/foundry/engine-lm"
 
 const STATION = FOUNDRIES[1]
@@ -302,6 +302,17 @@ export default function SamplingDeckPage() {
   const [mistakes, setMistakes] = useState(0)
   const [finished, setFinished] = useState(false)
 
+  // Resume where the last session left off; fully cleared stations replay from the top.
+  useEffect(() => {
+    const saved = loadStationProgress(STATION.id)
+    if (saved && saved.missionsCleared > 0 && saved.missionsCleared < STATION.missions) setMission(saved.missionsCleared + 1)
+  }, [])
+
+  const next = () => {
+    recordMissionCleared(STATION.id, mission)
+    setMission(m => m + 1)
+  }
+
   const complete = () => {
     triggerGameFeedback("complete")
     recordStationRun(STATION.id, STATION.missions, mistakes)
@@ -336,9 +347,9 @@ export default function SamplingDeckPage() {
 
   return (
     <FoundryShell station={STATION} mission={mission}>
-      {mission === 1 && <FrozenMission onDone={() => setMission(2)} />}
-      {mission === 2 && <EntropyMission onDone={() => setMission(3)} />}
-      {mission === 3 && <NucleusMission onDone={() => setMission(4)} />}
+      {mission === 1 && <FrozenMission onDone={next} />}
+      {mission === 2 && <EntropyMission onDone={next} />}
+      {mission === 3 && <NucleusMission onDone={next} />}
       {mission === 4 && <HotLandingMission onDone={complete} onMistake={() => setMistakes(m => m + 1)} />}
     </FoundryShell>
   )

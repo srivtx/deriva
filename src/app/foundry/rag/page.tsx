@@ -5,11 +5,11 @@
 // keyword stuffing, chunk boundaries cutting answers, and the final
 // composition under a token budget.
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FoundryCompletion, FoundryShell } from "@/components/foundry-shell"
 import { FOUNDRIES } from "@/foundry/catalog"
 import { triggerGameFeedback } from "@/games/feedback"
-import { recordStationRun } from "@/foundry/progress"
+import { loadStationProgress, recordMissionCleared, recordStationRun } from "@/foundry/progress"
 import {
   BENCH_CORPUS,
   LIMITS_QUERY,
@@ -287,6 +287,17 @@ export default function RetrievalBenchPage() {
   const [mistakes, setMistakes] = useState(0)
   const [finished, setFinished] = useState(false)
 
+  // Resume where the last session left off; fully cleared stations replay from the top.
+  useEffect(() => {
+    const saved = loadStationProgress(STATION.id)
+    if (saved && saved.missionsCleared > 0 && saved.missionsCleared < STATION.missions) setMission(saved.missionsCleared + 1)
+  }, [])
+
+  const next = () => {
+    recordMissionCleared(STATION.id, mission)
+    setMission(m => m + 1)
+  }
+
   const complete = () => {
     triggerGameFeedback("complete")
     recordStationRun(STATION.id, STATION.missions, mistakes)
@@ -321,8 +332,8 @@ export default function RetrievalBenchPage() {
 
   return (
     <FoundryShell station={STATION} mission={mission}>
-      {mission === 1 && <StuffingMission onDone={() => setMission(2)} onMistake={() => setMistakes(m => m + 1)} />}
-      {mission === 2 && <BoundaryMission onDone={() => setMission(3)} onMistake={() => setMistakes(m => m + 1)} />}
+      {mission === 1 && <StuffingMission onDone={next} onMistake={() => setMistakes(m => m + 1)} />}
+      {mission === 2 && <BoundaryMission onDone={next} onMistake={() => setMistakes(m => m + 1)} />}
       {mission === 3 && <ComposeMission onDone={complete} onMistake={() => setMistakes(m => m + 1)} />}
     </FoundryShell>
   )

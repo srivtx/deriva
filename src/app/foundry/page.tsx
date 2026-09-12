@@ -6,7 +6,7 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { FOUNDRIES, FOUNDRY } from "@/foundry/catalog"
-import { FOUNDRY_TOTAL_MISSIONS, foundryLevel, foundryTotals, loadAllFoundryProgress, type StationProgress } from "@/foundry/progress"
+import { FOUNDRY_TOTAL_MISSIONS, foundryLevel, foundryRank, foundryTotals, loadAllFoundryProgress, type StationProgress } from "@/foundry/progress"
 
 function StationDots({ cleared, total }: { cleared: number; total: number }) {
   return (
@@ -18,7 +18,7 @@ function StationDots({ cleared, total }: { cleared: number; total: number }) {
   )
 }
 
-function StationCard({ station, progress }: { station: (typeof FOUNDRIES)[number]; progress?: StationProgress }) {
+function StationCard({ station, progress, isNext }: { station: (typeof FOUNDRIES)[number]; progress?: StationProgress; isNext?: boolean }) {
   const cleared = Math.min(progress?.missionsCleared ?? 0, station.missions)
   return (
     <Link href={station.href} className="foundry-station-card">
@@ -43,6 +43,7 @@ function StationCard({ station, progress }: { station: (typeof FOUNDRIES)[number
           <span className="foundry-station-score">no runs yet</span>
         )}
       </div>
+      {isNext && <span className="foundry-continue-chip">resume · mission {cleared + 1} →</span>}
     </Link>
   )
 }
@@ -57,6 +58,7 @@ export default function FoundryPage() {
   }, [])
 
   const level = foundryLevel(totals.xp)
+  const nextStation = FOUNDRIES.find(station => (progress[station.id]?.missionsCleared ?? 0) < station.missions)
 
   return (
     <main className="foundry-home">
@@ -66,7 +68,7 @@ export default function FoundryPage() {
 
       <section className="foundry-progress-card" aria-label="Workshop progress">
         <div className="foundry-progress-readout">
-          <span>level {level.level}</span>
+          <span>level {level.level} · {foundryRank(level.level)}</span>
           <b>{totals.xp} XP</b>
         </div>
         <div className="foundry-progress-bar">
@@ -76,12 +78,17 @@ export default function FoundryPage() {
           <span>{totals.missionsCleared} / {FOUNDRY_TOTAL_MISSIONS} missions</span>
           <span>{totals.stationsCleared} / {FOUNDRIES.length} stations cleared</span>
         </div>
+        <span className="foundry-next-up">
+          {nextStation
+            ? `next up: ${nextStation.title} · mission ${(progress[nextStation.id]?.missionsCleared ?? 0) + 1} of ${nextStation.missions}`
+            : "the whole floor is cleared ✦ — replay any station to sharpen"}
+        </span>
       </section>
 
       <section className="foundry-station-list">
         <div className="game-section-label">The floor</div>
         {FOUNDRIES.map(station => (
-          <StationCard key={station.id} station={station} progress={progress[station.id]} />
+          <StationCard key={station.id} station={station} progress={progress[station.id]} isNext={nextStation?.id === station.id} />
         ))}
       </section>
 

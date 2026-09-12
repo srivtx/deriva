@@ -4,11 +4,11 @@
 // One frozen head, three missions: predict the arcs, repair a smeared
 // context (Lost in the Middle), and see why scores are scaled by 1/√d.
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FoundryCompletion, FoundryShell } from "@/components/foundry-shell"
 import { FOUNDRIES } from "@/foundry/catalog"
 import { triggerGameFeedback } from "@/games/feedback"
-import { recordStationRun } from "@/foundry/progress"
+import { loadStationProgress, recordMissionCleared, recordStationRun } from "@/foundry/progress"
 import {
   ATTENTION_CORPUS,
   COREFERENCE_SENTENCE,
@@ -332,6 +332,17 @@ export default function AttentionLensPage() {
   const [mistakes, setMistakes] = useState(0)
   const [finished, setFinished] = useState(false)
 
+  // Resume where the last session left off; fully cleared stations replay from the top.
+  useEffect(() => {
+    const saved = loadStationProgress(STATION.id)
+    if (saved && saved.missionsCleared > 0 && saved.missionsCleared < STATION.missions) setMission(saved.missionsCleared + 1)
+  }, [])
+
+  const next = () => {
+    recordMissionCleared(STATION.id, mission)
+    setMission(m => m + 1)
+  }
+
   const complete = () => {
     triggerGameFeedback("complete")
     recordStationRun(STATION.id, STATION.missions, mistakes)
@@ -366,8 +377,8 @@ export default function AttentionLensPage() {
 
   return (
     <FoundryShell station={STATION} mission={mission}>
-      {mission === 1 && <PredictTheArcs onDone={() => setMission(2)} onMistake={() => setMistakes(m => m + 1)} />}
-      {mission === 2 && <SmearMission onDone={() => setMission(3)} onMistake={() => setMistakes(m => m + 1)} />}
+      {mission === 1 && <PredictTheArcs onDone={next} onMistake={() => setMistakes(m => m + 1)} />}
+      {mission === 2 && <SmearMission onDone={next} onMistake={() => setMistakes(m => m + 1)} />}
       {mission === 3 && <ScalingMission onDone={complete} onMistake={() => setMistakes(m => m + 1)} />}
     </FoundryShell>
   )

@@ -83,6 +83,7 @@ export default function AiMlHubPage() {
         <div className="ai-hub-grid">
           <Link href="/ai-ml/projects" className="ai-hub-card"><b>Projects</b><span>15 cumulative builds, from data contract to the knowledge system</span></Link>
           <Link href="/ai-ml/systems" className="ai-hub-card ai-hub-card-featured"><b>Systems Atelier beta</b><span>S1–S2: build the handlers, watch the API interaction under load</span></Link>
+          <Link href="/foundry" className="ai-hub-card ai-hub-card-featured"><b>Foundry</b><span>Six real engines you operate: tokenizer, sampler, attention, serving, retrieval, agents</span></Link>
           <Link href="/ai-ml/build-everything" className="ai-hub-card"><b>Build Everything</b><span>37 first-principles projects: gradient descent → transformers → real systems → DeepSeek</span></Link>
           <Link href="/ai-ml/patterns" className="ai-hub-card"><b>Patterns</b><span>The named patterns this track deposits into your journal</span></Link>
         </div>

@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { FoundryCompletion, FoundryShell } from "@/components/foundry-shell"
 import { FOUNDRIES } from "@/foundry/catalog"
 import { triggerGameFeedback } from "@/games/feedback"
-import { recordStationRun } from "@/foundry/progress"
+import { loadStationProgress, recordMissionCleared, recordStationRun } from "@/foundry/progress"
 import { AGENT_SCENARIOS, DEFAULT_AGENT_CONFIG, runAgent, type AgentConfig, type AgentEvent, type AgentRun } from "@/foundry/engine-agent"
 
 const STATION = FOUNDRIES[5]
@@ -203,6 +203,12 @@ export default function AgentLoopPage() {
   const [finished, setFinished] = useState(false)
   const scenario = SCENARIOS[mission - 1]
 
+  // Resume where the last session left off; fully cleared stations replay from the top.
+  useEffect(() => {
+    const saved = loadStationProgress(STATION.id)
+    if (saved && saved.missionsCleared > 0 && saved.missionsCleared < STATION.missions) setMission(saved.missionsCleared + 1)
+  }, [])
+
   const complete = () => {
     triggerGameFeedback("complete")
     recordStationRun(STATION.id, STATION.missions, mistakes)
@@ -243,7 +249,10 @@ export default function AgentLoopPage() {
         locks={scenario.locks}
         onSolved={() => {
           if (mission === STATION.missions) complete()
-          else setMission(m => m + 1)
+          else {
+            recordMissionCleared(STATION.id, mission)
+            setMission(m => m + 1)
+          }
         }}
         onFirstFail={() => setMistakes(m => m + 1)}
       />

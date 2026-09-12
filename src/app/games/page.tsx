@@ -84,6 +84,7 @@ export default function GamesPage() {
         <p>You physically descend the call stack, meet the base case, and return values upward. The game trains the shape before the code.</p>
       </div>
 
+      <Link href="/foundry" className="expedition-secondary-link">Ready for production AI? Operate the real engines in the Foundry →</Link>
       <Link href="/expedition" className="expedition-secondary-link">Return to pattern Expeditions →</Link>
     </main>
   )
