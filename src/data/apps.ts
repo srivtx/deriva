@@ -31,6 +31,7 @@ const G = {
   lake: "linear-gradient(135deg, #1F6F8B, #123F52)",
   ultron: "linear-gradient(135deg, #6D28D9, #3B0E7E)",
   pdb: "linear-gradient(135deg, #B45309, #7C2D12)",
+  foundry: "linear-gradient(135deg, #9A3412, #431407)",
   kyma: "linear-gradient(135deg, #0F766E, #3B0764)",
   corona: "linear-gradient(135deg, #1E3A8A, #B45309)",
 }
@@ -87,6 +88,7 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "media", name: "Media Studio", glyph: "◑", gradient: G.ember, desc: "Cut · convert · compress — nothing uploaded", category: "Studio", href: "/media", status: "installed" },
   { id: "glyph", name: "Glyph Studio", glyph: "✺", gradient: G.pink, desc: "Draw dot glyphs, export art", category: "Studio", href: "/glyph", status: "installed" },
   { id: "ghost", name: "Ghost", glyph: "◍", gradient: G.ghost, desc: "Offline AI tutor — lives on your phone", category: "Studio", href: "/ghost", status: "installed" },
+  { id: "foundry", name: "Foundry", glyph: "⚒", gradient: G.foundry, desc: "AI production workshop — six real engines", category: "Studio", href: "/foundry", status: "installed" },
   { id: "osc", name: "OSC-1", glyph: "≋", gradient: G.osc, desc: "Pocket synthesizer — beats from thin air", category: "Studio", href: "/osc", status: "installed" },
   { id: "rig", name: "RIG", glyph: "⌘", gradient: G.osc, desc: "Code on your Mac — from anywhere", category: "Studio", href: "/rig", status: "installed" },
   // Coming soon
@@ -97,7 +99,7 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "soon-voice", name: "Voice Memos", glyph: "◠", gradient: G.pink, desc: "Record & replay", category: "Life", status: "soon" },
 ]
 
-export const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/pdb", "/kyma", "/corona", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/ultron", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig"]
+export const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/pdb", "/kyma", "/corona", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/ultron", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig", "/foundry"]
 
 export function matchesAppModePrefix(href: string): boolean {
   return APP_MODE_PREFIXES.some(prefix => href === prefix || href.startsWith(prefix + "/") || href.startsWith(prefix + "?"))

@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.7.0 — Foundry (2026-09-12)
+
+### New
+- **Foundry, the AI production workshop** (`/foundry`): a standalone Studio app (a peer of Ghost) where every station is a real engine you operate to learn a production AI-engineering skill. 22 missions across six stations, XP/level progression persisted locally, per-station best-mistake tracking, and full catalog/icon-pack/command-center integration (hammer glyph authored for all four icon languages).
+- **Token Bench** — a real byte-pair-encoding trainer: train merges on a corpus step by step, watch the vocabulary grow, then budget prompts and price them by the token. Grounded in Sennrich et al. 2016 and the GPT tokenizer lineage.
+- **Sampling Deck** — an n-gram language model with its probabilities exposed: temperature, top-k and nucleus truncation reshape the distribution live; entropy meters and degeneration drills teach what each dial really does (Holtzman et al. 2020).
+- **Attention Lens** — one attention head with the covers off: Q·K/√d scoring, softmax weights, sinusoidal positions, attention arcs you predict before the reveal, plus a Lost-in-the-Middle context bug to fix (Vaswani et al. 2017; Liu et al.).
+- **Serving Floor** — a discrete-event inference-server simulator: KV cache priced by dtype (fp16/q8/q4), 64-token prefill chunks, memory-bound decode batches, static vs continuous batching, contiguous vs paged allocation with OOM preemption and queue timeouts, TTFT/latency/throughput metrics replayed as a live trace (Kwon et al. 2023; Yu et al. 2022).
+- **Retrieval Bench** — a RAG pipeline that fails the way real ones fail: keyword stuffing outranking truth in BM25, chunk boundaries cutting the answer in half, and a final context you compose under a token budget (Robertson & Zaragoza 2009; Lewis et al. 2020).
+- **Agent Loop** — a deterministic ReAct executor you can break: runaway retries, observation bloat blowing the context window, prompt injection hiding in a tool result; set the guardrails, run the loop, read the trace (Yao et al. 2022; OWASP LLM Top 10).
+- **Engine test suite**: 70 vitest cases covering all six engines (merge order, softmax/nucleus math, attention normalization, server invariants and determinism, retrieval failure modes, guardrail behavior).
+
+### Fixed
+- Completed the Retrieval Bench page truncated mid-write in the prior session (unterminated string literal cascading parse errors).
+- Serving engine typing: admission now carries stamped arrival ids; drop-reason accounting narrows correctly.
+
 ## v1.6.0 — Studio expansion (2026-08-26)
 
 ### New

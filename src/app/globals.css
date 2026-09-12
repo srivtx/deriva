@@ -4026,3 +4026,143 @@ code, pre { font-family: var(--font-mono); }
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
 }
 
+
+/* ── FOUNDRY — the AI production workshop ── */
+.foundry-home { width: 100%; max-width: 720px; min-height: calc(100dvh - 52px); margin: 0 auto; padding: clamp(28px, 7vw, 64px) clamp(16px, 5vw, 32px) calc(112px + env(safe-area-inset-bottom)); }
+.foundry-intro { max-width: 620px; color: var(--ink-soft); }
+.foundry-progress-card { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); box-shadow: var(--shadow-raised); }
+.foundry-progress-readout { display: flex; align-items: baseline; justify-content: space-between; }
+.foundry-progress-readout span { color: var(--accent); font: 700 10px var(--font-ui); letter-spacing: .12em; text-transform: uppercase; }
+.foundry-progress-readout b { font: 700 20px var(--font-mono); }
+.foundry-progress-bar { height: 6px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.foundry-progress-bar span { display: block; height: 100%; border-radius: 999px; background: var(--accent); transition: width var(--dur-med) var(--ease-standard); }
+.foundry-progress-stats { display: flex; justify-content: space-between; color: var(--ink-soft); font: 11px var(--font-mono); }
+.foundry-station-list { display: flex; flex-direction: column; gap: 10px; margin-top: 32px; }
+.foundry-station-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink); text-decoration: none; transition: transform var(--dur-fast) var(--ease-standard), border-color var(--dur-fast), box-shadow var(--dur-fast); }
+.foundry-station-card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow-raised); }
+.foundry-station-head { display: flex; align-items: center; gap: 12px; }
+.foundry-station-index { flex: 0 0 auto; display: grid; width: 40px; height: 40px; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); font: 700 15px var(--font-mono); }
+.foundry-station-head > div { flex: 1; min-width: 0; }
+.foundry-station-verb { color: var(--accent); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+.foundry-station-card h2 { margin: 2px 0 0; font: 700 20px var(--font-narrative); }
+.foundry-station-card p { margin: 0; color: var(--ink-soft); font: 13px/1.5 var(--font-ui); }
+.foundry-station-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.foundry-skill-tag { color: var(--ink-soft); font: 600 10px var(--font-mono); letter-spacing: .04em; }
+.foundry-station-score { color: var(--viz-cached); font: 600 10px var(--font-mono); }
+.foundry-mission-dots { display: inline-flex; gap: 4px; }
+.foundry-mission-dots i { width: 7px; height: 7px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 16%, transparent); }
+.foundry-mission-dots i.on { background: var(--viz-settled); }
+.foundry-field-note { margin-top: 28px; padding: 14px 16px; border: 1px dashed var(--line); border-radius: var(--radius); }
+.foundry-field-note b { color: var(--viz-cached); font: 700 10px var(--font-ui); letter-spacing: .12em; text-transform: uppercase; }
+.foundry-field-note p { margin: 6px 0 0; color: var(--ink-soft); font: 13px/1.5 var(--font-narrative); }
+.foundry-engine-tag { display: inline-block; margin-top: 8px; color: var(--ink-soft); font: 600 10px var(--font-mono); }
+/* instrument panels */
+.forge-panel { gap: 14px; }
+.forge-panel > code { display: block; padding-top: 4px; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); color: var(--ink-soft); font: 11px/1.5 var(--font-mono); overflow-wrap: anywhere; }
+.foundry-merge-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.foundry-merge-line code { padding: 3px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); font: 700 13px var(--font-mono); }
+.foundry-merge-line span { color: var(--viz-cached); font: 600 11px var(--font-mono); }
+.foundry-merge-line .foundry-merge-out { border-color: var(--accent); color: var(--accent); }
+.foundry-word-lab { display: flex; flex-direction: column; gap: 8px; }
+.foundry-word-evolution small { display: block; margin-bottom: 3px; color: var(--ink-soft); font: 600 10px var(--font-ui); text-transform: uppercase; letter-spacing: .08em; }
+.foundry-token-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.foundry-token-chip { display: inline-flex; align-items: center; min-height: 26px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); font: 600 12px var(--font-mono); overflow-wrap: anywhere; }
+.foundry-token-chip.as-button { cursor: pointer; }
+.foundry-token-chip.as-button:hover { border-color: var(--accent); }
+.foundry-token-chip.is-picked { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.foundry-token-chip.is-query { border-color: var(--viz-pruned); color: var(--viz-pruned); }
+.foundry-token-chip.is-wrong { border-color: var(--viz-pruned); background: color-mix(in srgb, var(--viz-pruned) 12%, transparent); }
+.foundry-generated { padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.foundry-prompt-line { margin: 0; font: 15px/1.5 var(--font-narrative); }
+.foundry-step-controls { display: flex; flex-wrap: wrap; gap: 10px; }
+.foundry-over { color: var(--viz-pruned) !important; }
+.foundry-under { color: var(--viz-settled) !important; }
+.foundry-budget-bar { height: 8px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.foundry-budget-bar span { display: block; height: 100%; border-radius: 999px; transition: width var(--dur-fast) var(--ease-standard); }
+.foundry-sentence-list { display: flex; flex-direction: column; gap: 7px; }
+.foundry-sentence-toggle { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); color: var(--ink); text-align: left; cursor: pointer; font-family: var(--font-ui); }
+.foundry-sentence-toggle i { flex: 0 0 auto; color: var(--ink-soft); font-style: normal; }
+.foundry-sentence-toggle span { flex: 1; min-width: 0; font: 12px/1.45 var(--font-ui); overflow-wrap: anywhere; }
+.foundry-sentence-toggle code { flex: 0 0 auto; color: var(--viz-cached); font: 600 10px var(--font-mono); }
+.foundry-sentence-toggle.on { border-color: var(--viz-settled); background: var(--success-soft); }
+.foundry-sentence-toggle.on i { color: var(--viz-settled); }
+.foundry-sentence-toggle.required code { color: var(--viz-pointer); }
+.foundry-sentence-toggle.stuffed code { color: var(--viz-pruned); }
+.foundry-formula { display: block; margin-top: 4px; color: var(--ink-soft) !important; font: 11px/1.6 var(--font-mono) !important; }
+/* sampling deck */
+.foundry-dist-bars { display: flex; flex-direction: column; gap: 6px; }
+.foundry-dist-row { display: grid; grid-template-columns: 84px 1fr 46px; align-items: center; gap: 10px; }
+.foundry-dist-row code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px var(--font-mono); }
+.foundry-dist-track { height: 12px; overflow: hidden; border-radius: 6px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.foundry-dist-track span { display: block; height: 100%; border-radius: 6px; background: var(--viz-active); transition: width var(--dur-fast) var(--ease-standard); }
+.foundry-dist-row small { color: var(--ink-soft); font: 600 10px var(--font-mono); text-align: right; }
+.foundry-dial-row { display: flex; flex-direction: column; gap: 12px; }
+.foundry-dial { display: flex; flex-direction: column; gap: 6px; }
+.foundry-dial-label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--ink-soft); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+.foundry-dial-label b { color: var(--accent); font: 700 12px var(--font-mono); letter-spacing: 0; text-transform: none; }
+.foundry-dial input[type="range"] { width: 100%; accent-color: var(--accent); }
+.foundry-dial.locked { opacity: .55; }
+/* attention lens */
+.foundry-arc-svg { width: 100%; height: auto; }
+.foundry-arc-label { fill: var(--ink-soft); font: 600 9px var(--font-mono); }
+.foundry-arc-ranking { display: flex; flex-wrap: wrap; gap: 12px; color: var(--ink-soft); font: 600 11px var(--font-mono); }
+.foundry-arc-ranking b { color: var(--accent); }
+.foundry-mass-bars { display: flex; flex-direction: column; gap: 8px; }
+.foundry-mass-row { display: grid; grid-template-columns: minmax(140px, 220px) 1fr 48px; align-items: center; gap: 10px; }
+.foundry-mass-row small { color: var(--ink-soft); font: 10px/1.3 var(--font-ui); }
+.foundry-mass-row b { font: 700 12px var(--font-mono); text-align: right; }
+.foundry-heat-grid { display: grid; gap: 3px; }
+.foundry-heat-grid span { height: 26px; border-radius: 5px; background: var(--viz-active); transition: opacity var(--dur-fast); }
+/* serving floor */
+.foundry-control-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.foundry-control { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.foundry-control input[type="range"] { width: 100%; accent-color: var(--accent); }
+.foundry-segmented { display: flex; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; }
+.foundry-segmented button { flex: 1; min-height: 34px; border: 0; background: var(--paper); color: var(--ink-soft); font: 600 11px var(--font-mono); cursor: pointer; }
+.foundry-segmented button + button { border-left: 1px solid var(--line); }
+.foundry-segmented button.on { background: var(--accent-soft); color: var(--accent); }
+.foundry-segmented button:disabled { opacity: .55; cursor: default; }
+.foundry-readout-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.foundry-readout { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); }
+.foundry-readout small { color: var(--ink-soft); font: 700 9px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
+.foundry-readout b { font: 700 15px var(--font-mono); }
+.foundry-readout.bad b { color: var(--viz-pruned); }
+.foundry-lane-svg { width: 100%; height: auto; }
+.foundry-lane-label { fill: var(--ink-soft); font: 600 9px var(--font-mono); }
+.foundry-lane-drop { fill: var(--viz-pruned); font: 700 9px var(--font-mono); }
+.foundry-kv-gauge { display: flex; flex-direction: column; gap: 6px; }
+.foundry-kv-track { height: 8px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.foundry-kv-track span { display: block; height: 100%; border-radius: 999px; background: var(--viz-cached); transition: width var(--dur-fast) var(--ease-standard); }
+.foundry-run-view { gap: 16px; }
+.foundry-run-view > input[type="range"] { width: 100%; accent-color: var(--viz-cached); }
+/* retrieval bench */
+.foundry-rank-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.foundry-rank-item { display: flex; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.foundry-rank-item b { flex: 0 0 auto; color: var(--ink-soft); font: 700 12px var(--font-mono); }
+.foundry-rank-item span { color: var(--ink-soft); font: 600 10px var(--font-ui); text-transform: uppercase; letter-spacing: .06em; }
+.foundry-rank-item p { margin: 4px 0 0; font: 11px/1.45 var(--font-mono); overflow-wrap: anywhere; }
+.foundry-rank-item.is-truth { border-color: var(--viz-settled); }
+.foundry-rank-item.is-stuffed { border-color: var(--viz-pruned); }
+.foundry-rank-item.is-stuffed span { color: var(--viz-pruned); }
+.foundry-chunk-map { display: flex; flex-direction: column; gap: 3px; min-height: 40px; }
+.foundry-chunk-map span { height: 12px; border-radius: 4px; background: color-mix(in srgb, var(--viz-cached) 45%, transparent); color: transparent; font: 6px var(--font-mono); }
+.foundry-top-chunk { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.foundry-top-chunk small { color: var(--ink-soft); font: 700 9px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
+.foundry-top-chunk p { margin: 5px 0 0; font: 11px/1.5 var(--font-mono); overflow-wrap: anywhere; }
+.foundry-top-chunk mark { background: color-mix(in srgb, var(--viz-settled) 25%, transparent); color: inherit; padding: 1px 2px; border-radius: 3px; }
+.foundry-answer-panel { border-color: var(--viz-settled); }
+/* agent loop */
+.foundry-terminal { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.foundry-terminal-line { display: grid; grid-template-columns: 58px 1fr auto; align-items: baseline; gap: 8px; font: 11px/1.5 var(--font-mono); }
+.foundry-terminal-line b { color: var(--ink-soft); font: 700 9px var(--font-ui); letter-spacing: .06em; }
+.foundry-terminal-line span { min-width: 0; overflow-wrap: anywhere; }
+.foundry-terminal-line code { color: var(--viz-cached); font: 600 10px var(--font-mono); }
+.foundry-terminal-line.think span { color: var(--ink-soft); }
+.foundry-terminal-line.think b { color: var(--viz-pointer); }
+.foundry-terminal-line.act b { color: var(--viz-active); }
+.foundry-terminal-line.obs span { color: var(--ink); }
+.foundry-terminal-line.obs.quarantined span { color: var(--viz-pruned); }
+.foundry-terminal-line.note b, .foundry-terminal-line.note span { color: var(--viz-cached); }
+.foundry-terminal-line.done b { font-size: 10px; }
+.foundry-terminal-line.done.ok b { color: var(--viz-settled); }
+.foundry-terminal-line.done.fail b { color: var(--viz-pruned); }
