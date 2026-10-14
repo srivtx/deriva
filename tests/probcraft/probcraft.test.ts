@@ -70,6 +70,46 @@ describe("ProbCraft 3D Worlds & Curriculum Invariants", () => {
       expect(floorBlock, `World ${world.worldNumber} (${world.title}) missing floor under spawn [${sx}, ${sy}, ${sz}]`).toBeDefined()
     }
   })
+
+  it("every world is a sprawling adventure environment (at least 40x40 footprint and 1,500+ blocks)", () => {
+    for (const world of PROBCRAFT_WORLDS) {
+      expect(world.blocks.length).toBeGreaterThanOrEqual(1500)
+      const xs = world.blocks.map(b => b.x)
+      const zs = world.blocks.map(b => b.z)
+      const minX = Math.min(...xs)
+      const maxX = Math.max(...xs)
+      const minZ = Math.min(...zs)
+      const maxZ = Math.max(...zs)
+
+      expect(minX).toBeLessThanOrEqual(-20)
+      expect(maxX).toBeGreaterThanOrEqual(20)
+      expect(minZ).toBeLessThanOrEqual(-20)
+      expect(maxZ).toBeGreaterThanOrEqual(20)
+    }
+  })
+
+  it("every world has at least 5 interactive targets including ancient discovery shrines/monuments", () => {
+    for (const world of PROBCRAFT_WORLDS) {
+      expect(world.interactiveTargets.length).toBeGreaterThanOrEqual(5)
+
+      const discoveryShrines = world.interactiveTargets.filter(
+        t => t.id.startsWith("shrine-") || t.id.startsWith("stele-") || t.id.startsWith("monument-") ||
+             t.id.startsWith("perch-") || t.id.startsWith("altar-") ||
+             t.name.toLowerCase().includes("shrine") || t.name.toLowerCase().includes("stele") ||
+             t.name.toLowerCase().includes("monument") || t.name.toLowerCase().includes("perch") ||
+             t.name.toLowerCase().includes("inscription")
+      )
+      expect(discoveryShrines.length, `World ${world.worldNumber} should have at least 2 discovery shrines/perches`).toBeGreaterThanOrEqual(2)
+
+      // Ensure every interactive target has valid descriptive telemetry
+      for (const target of world.interactiveTargets) {
+        expect(target.id).toBeTruthy()
+        expect(target.name.length).toBeGreaterThan(3)
+        expect(target.oddsDesc.length).toBeGreaterThan(5)
+        expect(Number.isFinite(target.expectedValue)).toBe(true)
+      }
+    }
+  })
 })
 
 describe("ProbCraft Mathematical Theorem Invariants", () => {

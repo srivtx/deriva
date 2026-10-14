@@ -26,6 +26,9 @@ export interface ProbCraftHUDProps {
   allWorlds: ProbWorld[]
   microstateCounts?: Record<string, number>
   lastMicrostateId?: string | null
+  isHudHidden?: boolean
+  onToggleHud?: () => void
+  discoveriesFound?: string[]
 }
 
 export function ProbCraftHUD({
@@ -49,10 +52,16 @@ export function ProbCraftHUD({
   allWorlds,
   microstateCounts = {},
   lastMicrostateId = null,
+  isHudHidden = false,
+  onToggleHud = () => {},
+  discoveriesFound = [],
 }: ProbCraftHUDProps) {
   const [showCodex, setShowCodex] = useState(false)
   const [showTeleportMenu, setShowTeleportMenu] = useState(false)
   const [activeQuestStep, setActiveQuestStep] = useState(0)
+  const [isQuestCollapsed, setIsQuestCollapsed] = useState(false)
+  const [isMicrostateCollapsed, setIsMicrostateCollapsed] = useState(false)
+  const [isTrackerCollapsed, setIsTrackerCollapsed] = useState(false)
 
   const currentQuestStage = world.questStages[activeQuestStep] || world.questStages[0]
 
@@ -72,6 +81,7 @@ export function ProbCraftHUD({
   return (
     <div className="probcraft-hud" aria-label="3D Voxel Simulation HUD">
       {/* 1. Center Crosshair Reticle */}
+      {/* Center Crosshair Reticle (Always visible for aiming) */}
       <div className="hud-crosshair" aria-hidden="true">
         <div className="crosshair-dot" />
         {currentTarget && (
@@ -83,223 +93,311 @@ export function ProbCraftHUD({
         )}
       </div>
 
-      {/* 2. Top Banner: World Info & Progress */}
-      <header className="hud-top-bar">
-        <div className="world-badge-group">
-          <button
-            type="button"
-            className="hud-btn-teleport"
-            onClick={() => setShowTeleportMenu(!showTeleportMenu)}
-            title="Teleport to any world"
-          >
-            World {world.worldNumber}/8 ▾
-          </button>
-          <div className="world-titles">
-            <h1 className="world-h1">{world.title}</h1>
-            <span className="world-subtitle">{world.subtitle}</span>
-          </div>
-        </div>
-
-        <div className="hud-stats-pill">
-          <div className="stat-col">
-            <span className="stat-label">Trials (N)</span>
-            <strong className="stat-val">{trialsCount} / {world.targetTrials}</strong>
-          </div>
-          <div className="stat-col">
-            <span className="stat-label">Sample Mean</span>
-            <strong className="stat-val accent">{empiricalMean.toFixed(3)}</strong>
-          </div>
-          <div className="stat-col">
-            <span className="stat-label">Theoretical E[X]</span>
-            <strong className="stat-val settled">
-              {world.interactiveTargets[0]?.expectedValue.toFixed(3) ?? "—"}
-            </strong>
-          </div>
-          <button
-            type="button"
-            onClick={onToggleSound}
-            className={`hud-icon-btn${isSoundEnabled ? " active" : ""}`}
-            title="Toggle Web Audio Synthesizer"
-          >
-            {isSoundEnabled ? "🔊" : "🔇"}
-          </button>
-        </div>
-      </header>
-
-      {/* Teleport World Dropdown Menu */}
-      {showTeleportMenu && (
-        <div className="teleport-modal">
-          <span className="teleport-kicker">PROBCRAFT 8-WORLD LADDER</span>
-          <div className="teleport-grid">
-            {allWorlds.map(w => (
-              <button
-                key={w.id}
-                type="button"
-                onClick={() => {
-                  onTeleportSelect(w.worldNumber)
-                  setShowTeleportMenu(false)
-                }}
-                className={`teleport-cell${w.worldNumber === world.worldNumber ? " active" : ""}`}
-              >
-                <span className="tele-num">W{w.worldNumber}</span>
-                <span className="tele-title">{w.title}</span>
-                <span className="tele-diff">{w.difficulty}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Floating Restore Pill when HUD is Hidden */}
+      {isHudHidden && (
+        <button
+          type="button"
+          className="hud-unhide-pill"
+          onClick={onToggleHud}
+          title="Show HUD [Press H]"
+        >
+          👁 Show HUD (H)
+        </button>
       )}
 
-      {/* 3. Left Telemetry & Quest Guide Stack */}
-      <div className="hud-left-panel">
-        {/* Active Quest & Inquiry Card */}
-        <section className="hud-quest-card" aria-label="Current Probability Quest">
-          <div className="quest-header">
-            <div className="quest-pills-row">
-              {world.questStages.map((stage, idx) => (
-                <button
-                  key={stage.stageNumber}
-                  type="button"
-                  onClick={() => setActiveQuestStep(idx)}
-                  className={`quest-pill${activeQuestStep === idx ? " active" : ""}`}
-                >
-                  Step {stage.stageNumber}
-                </button>
-              ))}
+      {/* Full Minimalist Translucent HUD Overlay */}
+      {!isHudHidden && (
+        <>
+          {/* 2. Top Banner: World Info & Progress */}
+          <header className="hud-top-bar">
+            <div className="world-badge-group">
+              <button
+                type="button"
+                className="hud-btn-teleport"
+                onClick={() => setShowTeleportMenu(!showTeleportMenu)}
+                title="Teleport to any world"
+              >
+                World {world.worldNumber}/8 ▾
+              </button>
+              <div className="world-titles">
+                <h1 className="world-h1">{world.title}</h1>
+                <span className="world-subtitle">{world.subtitle}</span>
+              </div>
             </div>
-            <span className="quest-diff-badge">{world.difficulty}</span>
+
+            <div className="hud-stats-pill">
+              {discoveriesFound.length > 0 && (
+                <div className="stat-col discovery-shard-stat">
+                  <span className="stat-label">Discovery Shards</span>
+                  <strong className="stat-val accent">{discoveriesFound.length} Found</strong>
+                </div>
+              )}
+              <div className="stat-col">
+                <span className="stat-label">Trials (N)</span>
+                <strong className="stat-val">{trialsCount} / {world.targetTrials}</strong>
+              </div>
+              <div className="stat-col">
+                <span className="stat-label">Sample Mean</span>
+                <strong className="stat-val accent">{empiricalMean.toFixed(3)}</strong>
+              </div>
+              <div className="stat-col">
+                <span className="stat-label">Theoretical E[X]</span>
+                <strong className="stat-val settled">
+                  {world.interactiveTargets[0]?.expectedValue.toFixed(3) ?? "—"}
+                </strong>
+              </div>
+              <button
+                type="button"
+                onClick={onToggleSound}
+                className={`hud-icon-btn${isSoundEnabled ? " active" : ""}`}
+                title="Toggle Web Audio Synthesizer"
+              >
+                {isSoundEnabled ? "🔊" : "🔇"}
+              </button>
+              <button
+                type="button"
+                onClick={onToggleHud}
+                className="hud-hide-pill-btn"
+                title="Hide all HUD overlays [Press H]"
+              >
+                👁 Hide (H)
+              </button>
+            </div>
+          </header>
+
+          {/* Teleport World Dropdown Menu */}
+          {showTeleportMenu && (
+            <div className="teleport-modal">
+              <span className="teleport-kicker">PROBCRAFT 8-WORLD LADDER</span>
+              <div className="teleport-grid">
+                {allWorlds.map(w => (
+                  <button
+                    key={w.id}
+                    type="button"
+                    onClick={() => {
+                      onTeleportSelect(w.worldNumber)
+                      setShowTeleportMenu(false)
+                    }}
+                    className={`teleport-cell${w.worldNumber === world.worldNumber ? " active" : ""}`}
+                  >
+                    <span className="tele-num">W{w.worldNumber}</span>
+                    <span className="tele-title">{w.title}</span>
+                    <span className="tele-diff">{w.difficulty}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 3. Left Telemetry & Quest Guide Stack */}
+          <div className="hud-left-panel">
+            {/* Active Quest & Inquiry Card */}
+            <section className="hud-quest-card" aria-label="Current Probability Quest">
+              <div className="quest-header">
+                <div className="quest-pills-row">
+                  {world.questStages.map((stage, idx) => (
+                    <button
+                      key={stage.stageNumber}
+                      type="button"
+                      onClick={() => {
+                        setActiveQuestStep(idx)
+                        setIsQuestCollapsed(false)
+                      }}
+                      className={`quest-pill${activeQuestStep === idx ? " active" : ""}`}
+                    >
+                      Act {stage.stageNumber}
+                    </button>
+                  ))}
+                </div>
+                <div className="card-header-actions">
+                  <span className="quest-diff-badge">{world.difficulty}</span>
+                  <button
+                    type="button"
+                    className="hud-card-toggle"
+                    onClick={() => setIsQuestCollapsed(!isQuestCollapsed)}
+                    title={isQuestCollapsed ? "Expand Quest" : "Minimize Quest"}
+                  >
+                    {isQuestCollapsed ? "+" : "—"}
+                  </button>
+                </div>
+              </div>
+
+              {!isQuestCollapsed ? (
+                <>
+                  <div className="quest-content">
+                    <h2 className="quest-step-title">{currentQuestStage.title}</h2>
+                    <p className="quest-step-obj">{currentQuestStage.objective}</p>
+
+                    {activeQuestStep === 1 && (
+                      <div className="quest-experiment-status">
+                        <div className="experiment-meter-labels">
+                          <span>Experiment Trials</span>
+                          <strong>{trialsCount} / {world.targetTrials}</strong>
+                        </div>
+                        <div className="progress-track">
+                          <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="quest-hint-box">
+                      <span className="quest-hint-kicker">Thinking Move</span>
+                      <p className="quest-hint-text">{currentQuestStage.hint}</p>
+                    </div>
+                  </div>
+
+                  <div className="quest-footer">
+                    <button
+                      type="button"
+                      className="quest-nav-btn"
+                      disabled={activeQuestStep === 0}
+                      onClick={() => setActiveQuestStep(prev => Math.max(0, prev - 1))}
+                    >
+                      ← Prev
+                    </button>
+                    {activeQuestStep === 2 ? (
+                      <button
+                        type="button"
+                        className="quest-nav-btn action"
+                        onClick={() => setShowCodex(true)}
+                      >
+                        Open Invariant Proof →
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="quest-nav-btn next"
+                        onClick={() => setActiveQuestStep(prev => Math.min(world.questStages.length - 1, prev + 1))}
+                      >
+                        Next Act →
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="card-collapsed-row" onClick={() => setIsQuestCollapsed(false)}>
+                  <span className="card-collapsed-title">📖 Act {activeQuestStep + 1}: {currentQuestStage.title}</span>
+                  <span className="card-collapsed-action">Expand ▾</span>
+                </div>
+              )}
+            </section>
+
+            {/* Live Microstate Sample Space Inspector Card */}
+            <section className="hud-microstate-card" aria-label="Microstate Inspector">
+              <div className="microstate-card-header">
+                <span className="microstate-card-kicker">Sample Space Microstates</span>
+                <div className="card-header-actions">
+                  <span className="microstate-total">N = {trialsCount}</span>
+                  <button
+                    type="button"
+                    className="hud-card-toggle"
+                    onClick={() => setIsMicrostateCollapsed(!isMicrostateCollapsed)}
+                    title={isMicrostateCollapsed ? "Expand Microstates" : "Minimize Microstates"}
+                  >
+                    {isMicrostateCollapsed ? "+" : "—"}
+                  </button>
+                </div>
+              </div>
+
+              {!isMicrostateCollapsed ? (
+                <div className="microstate-list">
+                  {world.microstatePaths.map(path => {
+                    const count = microstateCounts[path.id] || 0
+                    const pct = trialsCount > 0 ? Math.round((count / trialsCount) * 100) : 0
+                    const isPulse = lastMicrostateId === path.id
+
+                    return (
+                      <div key={path.id} className={`microstate-row${isPulse ? " pulse" : ""}`}>
+                        <div className="microstate-top">
+                          <span className="micro-indicator" style={{ backgroundColor: path.color }} />
+                          <span className="micro-label">{path.label}</span>
+                          <strong className="micro-val">{pct}% ({count})</strong>
+                        </div>
+                        <div className="micro-bar">
+                          <div className="micro-bar-fill" style={{ width: `${pct}%`, backgroundColor: path.color }} />
+                        </div>
+                        <span className="micro-sub">{path.probDesc}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="card-collapsed-row" onClick={() => setIsMicrostateCollapsed(false)}>
+                  <span className="card-collapsed-title">📊 Microstates ({world.microstatePaths.length} Paths)</span>
+                  <span className="card-collapsed-action">Expand ▾</span>
+                </div>
+              )}
+            </section>
           </div>
 
-          <div className="quest-content">
-            <h2 className="quest-step-title">{currentQuestStage.title}</h2>
-            <p className="quest-step-obj">{currentQuestStage.objective}</p>
+          {/* 4. Live Convergence Real-Time Mini Graph (Top Right HUD) */}
+          <div className="hud-convergence-card">
+            <div className="card-header">
+              <span className="kicker">Convergence Tracker</span>
+              <div className="card-header-actions">
+                <span className="indicator">{progressPercent}%</span>
+                <button
+                  type="button"
+                  className="hud-card-toggle"
+                  onClick={() => setIsTrackerCollapsed(!isTrackerCollapsed)}
+                  title={isTrackerCollapsed ? "Expand Tracker" : "Minimize Tracker"}
+                >
+                  {isTrackerCollapsed ? "+" : "—"}
+                </button>
+              </div>
+            </div>
 
-            {activeQuestStep === 1 && (
-              <div className="quest-experiment-status">
-                <div className="experiment-meter-labels">
-                  <span>Experiment Trials</span>
-                  <strong>{trialsCount} / {world.targetTrials}</strong>
-                </div>
+            {!isTrackerCollapsed ? (
+              <>
                 <div className="progress-track">
                   <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
                 </div>
+
+                {/* Mini SVG Sparkline of the Sample Mean History */}
+                <div className="sparkline-wrap">
+                  <svg className="sparkline" viewBox="0 0 200 60" preserveAspectRatio="none">
+                    {/* Target Expectation Center Line */}
+                    <line x1="0" y1="30" x2="200" y2="30" stroke="var(--ink-soft)" strokeDasharray="3 3" opacity="0.4" />
+
+                    {/* Empirical History Polyline */}
+                    {history.length > 1 && (
+                      <polyline
+                        fill="none"
+                        stroke="var(--accent)"
+                        strokeWidth="2"
+                        points={history
+                          .slice(-30)
+                          .map((val, idx, arr) => {
+                            const x = (idx / (arr.length - 1)) * 200
+                            const expected = world.interactiveTargets[0]?.expectedValue ?? 1
+                            const deviation = (val - expected) * 20
+                            const y = Math.max(5, Math.min(55, 30 - deviation))
+                            return `${x},${y}`
+                          })
+                          .join(" ")}
+                      />
+                    )}
+                  </svg>
+                </div>
+
+                <div className="convergence-footer">
+                  <button
+                    type="button"
+                    className="btn-quick-sim"
+                    onClick={() => onFastSimulate(25)}
+                    title="Simulate 25 trials instantly"
+                  >
+                    ⚡ Fast Run +25 Trials
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="card-collapsed-row" onClick={() => setIsTrackerCollapsed(false)}>
+                <span className="card-collapsed-title">⚡ Convergence ({progressPercent}%)</span>
+                <span className="card-collapsed-action">Expand ▾</span>
               </div>
             )}
-
-            <div className="quest-hint-box">
-              <span className="quest-hint-kicker">Invariant Clue</span>
-              <p className="quest-hint-text">{currentQuestStage.hint}</p>
-            </div>
           </div>
-
-          <div className="quest-footer">
-            <button
-              type="button"
-              className="quest-nav-btn"
-              disabled={activeQuestStep === 0}
-              onClick={() => setActiveQuestStep(prev => Math.max(0, prev - 1))}
-            >
-              ← Prev
-            </button>
-            {activeQuestStep === 2 ? (
-              <button
-                type="button"
-                className="quest-nav-btn action"
-                onClick={() => setShowCodex(true)}
-              >
-                Open Codex Proof →
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="quest-nav-btn next"
-                onClick={() => setActiveQuestStep(prev => Math.min(world.questStages.length - 1, prev + 1))}
-              >
-                Next Step →
-              </button>
-            )}
-          </div>
-        </section>
-
-        {/* Live Microstate Sample Space Inspector Card */}
-        <section className="hud-microstate-card" aria-label="Microstate Inspector">
-          <div className="microstate-card-header">
-            <span className="microstate-card-kicker">Microstate Partition</span>
-            <span className="microstate-total">N = {trialsCount}</span>
-          </div>
-
-          <div className="microstate-list">
-            {world.microstatePaths.map(path => {
-              const count = microstateCounts[path.id] || 0
-              const pct = trialsCount > 0 ? Math.round((count / trialsCount) * 100) : 0
-              const isPulse = lastMicrostateId === path.id
-
-              return (
-                <div key={path.id} className={`microstate-row${isPulse ? " pulse" : ""}`}>
-                  <div className="microstate-top">
-                    <span className="micro-indicator" style={{ backgroundColor: path.color }} />
-                    <span className="micro-label">{path.label}</span>
-                    <strong className="micro-val">{pct}% ({count})</strong>
-                  </div>
-                  <div className="micro-bar">
-                    <div className="micro-bar-fill" style={{ width: `${pct}%`, backgroundColor: path.color }} />
-                  </div>
-                  <span className="micro-sub">{path.probDesc}</span>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      </div>
-
-      {/* 4. Live Convergence Real-Time Mini Graph (Top Right HUD) */}
-      <div className="hud-convergence-card">
-        <div className="card-header">
-          <span className="kicker">LLN Convergence Tracker</span>
-          <span className="indicator">{progressPercent}% Calibrated</span>
-        </div>
-        <div className="progress-track">
-          <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
-        </div>
-
-        {/* Mini SVG Sparkline of the Sample Mean History */}
-        <div className="sparkline-wrap">
-          <svg className="sparkline" viewBox="0 0 200 60" preserveAspectRatio="none">
-            {/* Target Expectation Center Line */}
-            <line x1="0" y1="30" x2="200" y2="30" stroke="var(--ink-soft)" strokeDasharray="3 3" opacity="0.4" />
-
-            {/* Empirical History Polyline */}
-            {history.length > 1 && (
-              <polyline
-                fill="none"
-                stroke="var(--accent)"
-                strokeWidth="2"
-                points={history
-                  .slice(-30)
-                  .map((val, idx, arr) => {
-                    const x = (idx / (arr.length - 1)) * 200
-                    const expected = world.interactiveTargets[0]?.expectedValue ?? 1
-                    const deviation = (val - expected) * 20
-                    const y = Math.max(5, Math.min(55, 30 - deviation))
-                    return `${x},${y}`
-                  })
-                  .join(" ")}
-              />
-            )}
-          </svg>
-        </div>
-
-        <div className="convergence-footer">
-          <button
-            type="button"
-            className="btn-quick-sim"
-            onClick={() => onFastSimulate(25)}
-            title="Cast Monte Carlo Pulse: Simulates 25 block tests instantly"
-          >
-            ⚡ Fast Simulate +25 Trials
-          </button>
-        </div>
-      </div>
 
       {/* 4. Controls Guidance Overlay (Bottom Left) */}
       <div className="hud-controls-hint">
@@ -362,6 +460,8 @@ export function ProbCraftHUD({
           Next World →
         </button>
       </div>
+      </>
+      )}
 
       {/* 7. Full Mathematical Invariant Codex & Socratic Proof Modal */}
       {showCodex && (
@@ -516,16 +616,16 @@ export function ProbCraftHUD({
 
         .crosshair-target-tooltip {
           margin-top: 14px;
-          background: rgba(20, 22, 26, 0.88);
-          backdrop-filter: blur(4px);
-          border: 1px solid var(--line);
+          background: rgba(14, 17, 23, 0.55);
+          backdrop-filter: blur(14px);
+          border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: var(--radius);
           padding: 8px 12px;
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 2px;
-          box-shadow: var(--shadow-raised);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
           text-align: center;
         }
 
@@ -548,6 +648,33 @@ export function ProbCraftHUD({
           font-family: var(--font-mono);
         }
 
+        /* Floating Restore Pill when HUD is Hidden */
+        .hud-unhide-pill {
+          position: absolute;
+          top: var(--sp-4);
+          left: var(--sp-4);
+          background: rgba(14, 17, 23, 0.55);
+          backdrop-filter: blur(14px);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: var(--paper-raised);
+          border-radius: var(--radius);
+          padding: 6px 14px;
+          font-size: 11px;
+          font-family: var(--font-mono);
+          font-weight: 700;
+          cursor: pointer;
+          pointer-events: auto;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+          transition: all var(--dur-fast);
+          z-index: 30;
+        }
+
+        .hud-unhide-pill:hover {
+          background: var(--accent);
+          color: var(--paper);
+          border-color: var(--accent);
+        }
+
         /* Top Bar */
         .hud-top-bar {
           display: flex;
@@ -562,9 +689,9 @@ export function ProbCraftHUD({
           display: flex;
           align-items: center;
           gap: 12px;
-          background: rgba(20, 22, 26, 0.85);
-          backdrop-filter: blur(6px);
-          border: 1px solid var(--line);
+          background: rgba(14, 17, 23, 0.42);
+          backdrop-filter: blur(14px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: calc(var(--radius) + 2px);
           padding: 8px 16px;
         }
@@ -609,9 +736,9 @@ export function ProbCraftHUD({
           display: flex;
           align-items: center;
           gap: 16px;
-          background: rgba(20, 22, 26, 0.85);
-          backdrop-filter: blur(6px);
-          border: 1px solid var(--line);
+          background: rgba(14, 17, 23, 0.42);
+          backdrop-filter: blur(14px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: calc(var(--radius) + 2px);
           padding: 6px 14px;
         }
@@ -619,6 +746,11 @@ export function ProbCraftHUD({
         .stat-col {
           display: flex;
           flex-direction: column;
+        }
+
+        .discovery-shard-stat {
+          border-right: 1px solid rgba(255, 255, 255, 0.1);
+          padding-right: 14px;
         }
 
         .stat-label {
@@ -644,11 +776,28 @@ export function ProbCraftHUD({
 
         .hud-icon-btn {
           background: transparent;
-          border: 1px solid var(--line);
+          border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 6px;
           padding: 4px 8px;
           cursor: pointer;
           font-size: 14px;
+        }
+
+        .hud-hide-pill-btn {
+          background: transparent;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: var(--ink-soft);
+          border-radius: 6px;
+          padding: 4px 8px;
+          cursor: pointer;
+          font-size: 11px;
+          font-family: var(--font-mono);
+          transition: all var(--dur-fast);
+        }
+
+        .hud-hide-pill-btn:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: var(--paper-raised);
         }
 
         /* Left Panel: Quests & Microstate Inspector */
@@ -669,15 +818,70 @@ export function ProbCraftHUD({
 
         .hud-quest-card,
         .hud-microstate-card {
-          background: rgba(20, 22, 26, 0.92);
-          backdrop-filter: blur(8px);
-          border: 1px solid var(--line);
+          background: rgba(14, 17, 23, 0.42);
+          backdrop-filter: blur(14px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: var(--radius);
           padding: var(--sp-3);
-          box-shadow: var(--shadow-raised);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
           display: flex;
           flex-direction: column;
           gap: var(--sp-2);
+        }
+
+        .card-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .hud-card-toggle {
+          background: transparent;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: var(--ink-soft);
+          border-radius: 4px;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-family: var(--font-mono);
+          font-size: 11px;
+          line-height: 1;
+          transition: all var(--dur-fast);
+        }
+
+        .hud-card-toggle:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: var(--paper-raised);
+        }
+
+        .card-collapsed-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 4px 6px;
+          border-radius: var(--radius);
+          cursor: pointer;
+          background: rgba(255, 255, 255, 0.04);
+          transition: background var(--dur-fast);
+        }
+
+        .card-collapsed-row:hover {
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        .card-collapsed-title {
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--paper-raised);
+        }
+
+        .card-collapsed-action {
+          font-size: 10px;
+          font-family: var(--font-mono);
+          color: var(--accent);
         }
 
         .quest-header {
@@ -924,15 +1128,16 @@ export function ProbCraftHUD({
           top: 76px;
           right: var(--sp-4);
           width: 220px;
-          background: rgba(20, 22, 26, 0.85);
-          backdrop-filter: blur(6px);
-          border: 1px solid var(--line);
+          background: rgba(14, 17, 23, 0.42);
+          backdrop-filter: blur(14px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: var(--radius);
           padding: 12px;
           display: flex;
           flex-direction: column;
           gap: 8px;
           pointer-events: auto;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
         }
 
         .card-header {
@@ -1000,9 +1205,9 @@ export function ProbCraftHUD({
         /* Controls Hint */
         .hud-controls-hint {
           align-self: flex-start;
-          background: rgba(20, 22, 26, 0.7);
-          backdrop-filter: blur(4px);
-          border: 1px solid var(--line);
+          background: rgba(14, 17, 23, 0.42);
+          backdrop-filter: blur(14px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 8px;
           padding: 6px 12px;
           font-size: 11px;
@@ -1028,9 +1233,9 @@ export function ProbCraftHUD({
           transform: translateX(-50%);
           display: flex;
           gap: 6px;
-          background: rgba(20, 22, 26, 0.9);
-          backdrop-filter: blur(6px);
-          border: 2px solid var(--line);
+          background: rgba(14, 17, 23, 0.45);
+          backdrop-filter: blur(14px);
+          border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: calc(var(--radius) + 2px);
           padding: 4px;
           pointer-events: auto;
@@ -1040,7 +1245,7 @@ export function ProbCraftHUD({
           width: 52px;
           height: 52px;
           background: rgba(255, 255, 255, 0.05);
-          border: 1px solid var(--line);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: var(--radius);
           display: flex;
           flex-direction: column;
@@ -1083,9 +1288,9 @@ export function ProbCraftHUD({
         }
 
         .hud-nav-btn {
-          background: rgba(20, 22, 26, 0.85);
-          backdrop-filter: blur(4px);
-          border: 1px solid var(--line);
+          background: rgba(14, 17, 23, 0.45);
+          backdrop-filter: blur(14px);
+          border: 1px solid rgba(255, 255, 255, 0.12);
           color: var(--paper-raised);
           padding: 8px 14px;
           border-radius: var(--radius);
@@ -1097,6 +1302,7 @@ export function ProbCraftHUD({
 
         .hud-nav-btn:hover:not(:disabled) {
           border-color: var(--accent);
+          background: rgba(255, 255, 255, 0.1);
         }
 
         .hud-nav-btn:disabled {
@@ -1121,11 +1327,12 @@ export function ProbCraftHUD({
           position: absolute;
           top: 68px;
           left: var(--sp-4);
-          background: var(--paper-raised);
-          border: 1px solid var(--line);
+          background: rgba(14, 17, 23, 0.88);
+          backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: var(--radius);
           padding: 14px;
-          box-shadow: var(--shadow-raised);
+          box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
           display: flex;
           flex-direction: column;
           gap: 10px;

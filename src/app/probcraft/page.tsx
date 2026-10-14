@@ -27,6 +27,14 @@ export default function ProbCraftPage() {
   const [hasStarted, setHasStarted] = useState(false)
   const [microstateCounts, setMicrostateCounts] = useState<Record<string, number>>({})
   const [lastMicrostateId, setLastMicrostateId] = useState<string | null>(null)
+  const [isHudHidden, setIsHudHidden] = useState(false)
+  const [discoveriesFound, setDiscoveriesFound] = useState<string[]>([])
+
+  const handleToggleHud = useCallback(() => {
+    setIsHudHidden(prev => !prev)
+  }, [])
+
+  const handleBlockInteractionRef = useRef<(coord: VoxelCoord) => void>(() => {})
 
   const currentWorld: ProbWorld = PROBCRAFT_WORLDS[currentWorldIndex] || PROBCRAFT_WORLDS[0]
 
@@ -39,7 +47,10 @@ export default function ProbCraftPage() {
         setCurrentTarget(target)
       },
       onBlockMine: coord => {
-        handleBlockInteraction(coord)
+        handleBlockInteractionRef.current(coord)
+      },
+      onToggleHud: () => {
+        handleToggleHud()
       },
     })
     engineRef.current = engine
@@ -82,6 +93,7 @@ export default function ProbCraftPage() {
     setIsAnswerSubmitted(false)
     setMicrostateCounts({})
     setLastMicrostateId(null)
+    setDiscoveriesFound([])
 
     if (engineRef.current) {
       engineRef.current.loadWorld(PROBCRAFT_WORLDS[index])
@@ -94,6 +106,24 @@ export default function ProbCraftPage() {
 
   // Handle interacting / mining with targeted voxel block
   const handleBlockInteraction = (coord: VoxelCoord) => {
+    // Check if targeted voxel is an exploration discovery shrine, ancient stele, or observation perch
+    const shrineTarget = currentWorld.interactiveTargets.find(
+      t => Math.round(t.x) === Math.round(coord.x) && Math.round(t.y) === Math.round(coord.y) && Math.round(t.z) === Math.round(coord.z) &&
+        (t.id.startsWith("shrine-") || t.id.startsWith("stele-") || t.id.startsWith("monument-") || t.id.startsWith("perch-") || t.id.startsWith("altar-") || t.name.toLowerCase().includes("shrine") || t.name.toLowerCase().includes("inscription") || t.name.toLowerCase().includes("stele") || t.name.toLowerCase().includes("monument") || t.name.toLowerCase().includes("perch"))
+    )
+
+    if (shrineTarget) {
+      if (!discoveriesFound.includes(shrineTarget.id)) {
+        setDiscoveriesFound(prev => [...prev, shrineTarget.id])
+        probAudio.playFanfare()
+        engineRef.current?.spawnFloatingNotice(`📜 Shard: ${shrineTarget.name}`, [coord.x, coord.y + 0.9, coord.z], "#22c55e")
+      } else {
+        probAudio.playDing()
+        engineRef.current?.spawnFloatingNotice(`📜 ${shrineTarget.name}: Known`, [coord.x, coord.y + 0.9, coord.z], "#06b6d4")
+      }
+      return
+    }
+
     const worldNum = currentWorld.worldNumber
 
     let value = 0
@@ -255,6 +285,7 @@ export default function ProbCraftPage() {
     setHistory(nextHist)
     setEmpiricalMean(sum / nextCount)
   }
+  handleBlockInteractionRef.current = handleBlockInteraction
 
   // Fast Monte Carlo Wand: Simulates N rounds instantly with microstate distribution
   const handleFastSimulate = (rounds = 25) => {
@@ -357,6 +388,9 @@ export default function ProbCraftPage() {
         allWorlds={PROBCRAFT_WORLDS}
         microstateCounts={microstateCounts}
         lastMicrostateId={lastMicrostateId}
+        isHudHidden={isHudHidden}
+        onToggleHud={handleToggleHud}
+        discoveriesFound={discoveriesFound}
       />
 
       {/* Mobile Landscape Virtual Touch D-Pad */}

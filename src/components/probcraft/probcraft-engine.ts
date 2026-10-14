@@ -10,6 +10,7 @@ export interface EngineCallbacks {
   onTargetChange: (target: { id: string; name: string; oddsDesc: string; expectedValue: number } | null) => void
   onBlockMine: (coord: VoxelCoord) => void
   onPlayerMove?: (pos: [number, number, number]) => void
+  onToggleHud?: () => void
 }
 
 // Generate an authentic 16x16 pixelated voxel texture using HTML5 Canvas
@@ -111,10 +112,10 @@ export class ProbCraftEngine {
     // 1. Scene & Camera Setup
     this.scene = new THREE.Scene()
     this.scene.background = new THREE.Color(0x14161a) // var(--paper) dark tone
-    this.scene.fog = new THREE.FogExp2(0x14161a, 0.02)
+    this.scene.fog = new THREE.FogExp2(0x14161a, 0.011)
 
     const aspect = container.clientWidth / Math.max(1, container.clientHeight)
-    this.camera = new THREE.PerspectiveCamera(70, aspect, 0.1, 100)
+    this.camera = new THREE.PerspectiveCamera(70, aspect, 0.1, 160)
 
     // 2. WebGL Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" })
@@ -432,6 +433,10 @@ export class ProbCraftEngine {
     if (e.code === "KeyE") {
       this.interactCurrentTarget()
     }
+
+    if (e.code === "KeyH") {
+      this.callbacks.onToggleHud?.()
+    }
   }
 
   private onKeyUp = (e: KeyboardEvent) => {
@@ -542,7 +547,8 @@ export class ProbCraftEngine {
   // Physics Update with Sequential 3-Axis Collision Resolution (Zero Clipping & Zero Jitter)
   private lastTime = 0
   private updatePhysics(delta: number) {
-    const moveSpeed = 6.0
+    const isSprinting = this.keys["ShiftLeft"] || this.keys["ShiftRight"]
+    const moveSpeed = isSprinting ? 9.5 : 6.5
     const moveDir = new THREE.Vector3()
 
     if (this.keys["KeyW"] || this.keys["ArrowUp"]) moveDir.z -= 1
@@ -564,9 +570,10 @@ export class ProbCraftEngine {
       this.playerVel.x = deltaMove.x
       this.playerVel.z = deltaMove.z
 
-      // Footstep audio cadence
+      // Footstep audio cadence (faster when sprinting)
       this.stepAccumulator += delta
-      if (this.stepAccumulator > 0.36 && this.isGrounded) {
+      const stepInterval = isSprinting ? 0.24 : 0.36
+      if (this.stepAccumulator > stepInterval && this.isGrounded) {
         probAudio.playStep()
         this.stepAccumulator = 0
       }
@@ -587,7 +594,7 @@ export class ProbCraftEngine {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Sequential 3-Axis AABB Collision Resolution
+    // Sequential 3-Axis AABB Collision Resolution with Spatial Filtering
     // ──────────────────────────────────────────────────────────────────────────
 
     // 1. Resolve X Axis
@@ -597,7 +604,9 @@ export class ProbCraftEngine {
         new THREE.Vector3(nextX - 0.28, this.playerPos.y - 1.55, this.playerPos.z - 0.28),
         new THREE.Vector3(nextX + 0.28, this.playerPos.y + 0.15, this.playerPos.z + 0.28)
       )
-      for (const block of this.solidBoxes) {
+      for (let i = 0; i < this.solidBoxes.length; i++) {
+        const block = this.solidBoxes[i]
+        if (Math.abs(block.min.x - this.playerPos.x) > 1.8 || Math.abs(block.min.z - this.playerPos.z) > 1.8) continue
         if (boxX.intersectsBox(block)) {
           if (this.playerVel.x > 0) {
             nextX = block.min.x - 0.281
@@ -618,7 +627,9 @@ export class ProbCraftEngine {
         new THREE.Vector3(this.playerPos.x - 0.28, this.playerPos.y - 1.55, nextZ - 0.28),
         new THREE.Vector3(this.playerPos.x + 0.28, this.playerPos.y + 0.15, nextZ + 0.28)
       )
-      for (const block of this.solidBoxes) {
+      for (let i = 0; i < this.solidBoxes.length; i++) {
+        const block = this.solidBoxes[i]
+        if (Math.abs(block.min.x - this.playerPos.x) > 1.8 || Math.abs(block.min.z - this.playerPos.z) > 1.8) continue
         if (boxZ.intersectsBox(block)) {
           if (this.playerVel.z > 0) {
             nextZ = block.min.z - 0.281
@@ -641,7 +652,9 @@ export class ProbCraftEngine {
       new THREE.Vector3(this.playerPos.x + 0.28, nextY + 0.18, this.playerPos.z + 0.28)
     )
 
-    for (const block of this.solidBoxes) {
+    for (let i = 0; i < this.solidBoxes.length; i++) {
+      const block = this.solidBoxes[i]
+      if (Math.abs(block.min.x - this.playerPos.x) > 1.8 || Math.abs(block.min.z - this.playerPos.z) > 1.8) continue
       if (boxY.intersectsBox(block)) {
         if (this.playerVel.y <= 0) {
           // Landing on top of block
@@ -664,7 +677,9 @@ export class ProbCraftEngine {
         new THREE.Vector3(this.playerPos.x - 0.26, nextY - 1.68, this.playerPos.z - 0.26),
         new THREE.Vector3(this.playerPos.x + 0.26, nextY - 1.55, this.playerPos.z + 0.26)
       )
-      for (const block of this.solidBoxes) {
+      for (let i = 0; i < this.solidBoxes.length; i++) {
+        const block = this.solidBoxes[i]
+        if (Math.abs(block.min.x - this.playerPos.x) > 1.8 || Math.abs(block.min.z - this.playerPos.z) > 1.8) continue
         if (feetProbe.intersectsBox(block)) {
           nextY = block.max.y + 1.6
           this.playerVel.y = 0
