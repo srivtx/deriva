@@ -371,28 +371,30 @@ export class ProbCraftEngine {
     }
   }
 
-  public spawnFloatingNotice(text: string, pos: [number, number, number], color = "#fbbf24") {
+  public spawnFloatingNotice(text: string, pos: [number, number, number], color = "#D97757") {
     const canvas = document.createElement("canvas")
     canvas.width = 512
     canvas.height = 128
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    ctx.fillStyle = "rgba(17, 24, 39, 0.92)"
+    // Warm Claude dark card background
+    ctx.fillStyle = "rgba(24, 23, 22, 0.88)"
     if (typeof ctx.roundRect === "function") {
-      ctx.roundRect(12, 12, 488, 104, 16)
+      ctx.roundRect(16, 20, 480, 88, 10)
     } else {
-      ctx.rect(12, 12, 488, 104)
+      ctx.rect(16, 20, 480, 88)
     }
     ctx.fill()
-    ctx.lineWidth = 4
-    ctx.strokeStyle = color
+    ctx.lineWidth = 2
+    ctx.strokeStyle = "rgba(240, 238, 233, 0.22)"
     ctx.stroke()
 
-    ctx.font = "bold 30px monospace"
+    // Clean, crisp typography
+    ctx.font = "600 22px -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif"
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
-    ctx.fillStyle = color
+    ctx.fillStyle = "#FAF9F5"
     ctx.fillText(text, 256, 64)
 
     const texture = new THREE.CanvasTexture(canvas)
@@ -402,14 +404,14 @@ export class ProbCraftEngine {
     const material = new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 1.0 })
     const sprite = new THREE.Sprite(material)
     sprite.position.set(pos[0], pos[1] + 1.0, pos[2])
-    sprite.scale.set(2.8, 0.7, 1)
+    sprite.scale.set(2.6, 0.65, 1)
 
     this.scene.add(sprite)
     this.floatingTexts.push({
       sprite,
-      velY: 0.7,
+      velY: 0.6,
       life: 0,
-      maxLife: 1.3,
+      maxLife: 1.4,
       texture,
     })
   }

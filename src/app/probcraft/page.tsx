@@ -80,9 +80,9 @@ export default function ProbCraftPage() {
       probAudio.setEnabled(next)
       if (next) {
         probAudio.playDing(true)
-        engineRef.current?.spawnFloatingNotice("🔊 Audio: ON", [currentWorld.playerSpawn[0], currentWorld.playerSpawn[1] + 1.2, currentWorld.playerSpawn[2]], C_SETTLED)
+        engineRef.current?.spawnFloatingNotice("Audio enabled", [currentWorld.playerSpawn[0], currentWorld.playerSpawn[1] + 1.2, currentWorld.playerSpawn[2]], C_SETTLED)
       } else {
-        engineRef.current?.spawnFloatingNotice("🔇 Audio: MUTED", [currentWorld.playerSpawn[0], currentWorld.playerSpawn[1] + 1.2, currentWorld.playerSpawn[2]], C_MUTED)
+        engineRef.current?.spawnFloatingNotice("Audio muted", [currentWorld.playerSpawn[0], currentWorld.playerSpawn[1] + 1.2, currentWorld.playerSpawn[2]], C_MUTED)
       }
       return next
     })
@@ -124,7 +124,7 @@ export default function ProbCraftPage() {
           engineRef.current?.interactCurrentTarget()
         } else if (slot === 1) {
           probAudio.playDing()
-          engineRef.current?.spawnFloatingNotice("⌕ Odds Scanner Equipped", [currentWorld.playerSpawn[0], currentWorld.playerSpawn[1] + 1.2, currentWorld.playerSpawn[2]], C_ACTIVE)
+          engineRef.current?.spawnFloatingNotice("Microstate inspector active", [currentWorld.playerSpawn[0], currentWorld.playerSpawn[1] + 1.2, currentWorld.playerSpawn[2]], C_ACTIVE)
         } else if (slot === 2) {
           handleFastSimulateRef.current(25)
         } else if (slot === 3) {
@@ -187,10 +187,10 @@ export default function ProbCraftPage() {
           return next
         })
         probAudio.playFanfare()
-        engineRef.current?.spawnFloatingNotice(`📜 Shard Unsealed: ${shrineTarget.name}`, [coord.x, coord.y + 0.9, coord.z], C_SETTLED)
+        engineRef.current?.spawnFloatingNotice(`Historical Note: ${shrineTarget.name}`, [coord.x, coord.y + 0.9, coord.z], C_SETTLED)
       } else {
         probAudio.playDing()
-        engineRef.current?.spawnFloatingNotice(`📜 Inscription: ${shrineTarget.name}`, [coord.x, coord.y + 0.9, coord.z], C_ACTIVE)
+        engineRef.current?.spawnFloatingNotice(`Field Note: ${shrineTarget.name}`, [coord.x, coord.y + 0.9, coord.z], C_ACTIVE)
       }
       return
     }
@@ -208,21 +208,21 @@ export default function ProbCraftPage() {
         // Vault A (Gold + Gold): 50% G1, 50% G2
         pathId = Math.random() < 0.5 ? "path-g1" : "path-g2"
         value = 1
-        noticeText = `+1 Gold! [${pathId === "path-g1" ? "Path G1" : "Path G2"}: Vault A]`
+        noticeText = `+1 Gold [Vault A · ${pathId === "path-g1" ? "Path G1" : "Path G2"}]`
         noticeColor = C_CACHED
         probAudio.playDing(true)
       } else if (coord.x === 3) {
         // Vault C (Gold + Coal): Gold path G3, but other is Coal
         pathId = "path-g3"
         value = 0
-        noticeText = "+1 Gold! [Path G3: Vault C (Other is Coal)]"
+        noticeText = "+1 Gold [Vault C · Path G3 (Remaining is Coal)]"
         noticeColor = C_ACTIVE
         probAudio.playDing()
       } else {
         // Vault B (Coal + Coal): Ruled out by observing gold
         pathId = "path-g3"
         value = 0
-        noticeText = "0 Coal [Vault B Ruled Out]"
+        noticeText = "0 Coal [Vault B · Condition Ruled Out]"
         noticeColor = C_MUTED
         probAudio.playMine()
       }
@@ -231,14 +231,14 @@ export default function ProbCraftPage() {
       if (coord.x === -3) {
         pathId = "path-iron"
         value = 1.0
-        noticeText = "+1 Gold (Iron EV = 1.0)"
+        noticeText = "+1 Iron [EV = 1.0]"
         noticeColor = C_CACHED
         probAudio.playDing()
       } else if (coord.x === 0 || coord.type === "diamond_ore") {
         pathId = "path-diamond"
         const jackpot = Math.random() < 0.1
         value = jackpot ? 14 : 0
-        noticeText = jackpot ? "+14 Diamond Jackpot! (EV = 1.4)" : "0 Diamond (Variance)"
+        noticeText = jackpot ? "+14 Diamond [Jackpot] · EV = 1.4" : "0 Diamond · Expected Variance"
         noticeColor = jackpot ? C_ACTIVE : C_MUTED
         if (jackpot) probAudio.playDing(true)
         else probAudio.playMine()
@@ -246,7 +246,7 @@ export default function ProbCraftPage() {
         pathId = "path-cursed"
         const jackpot = Math.random() < 0.01
         value = jackpot ? 80 : 0
-        noticeText = jackpot ? "+80 Nether Gold Jackpot!" : "0 Gold (99% Miss Rate)"
+        noticeText = jackpot ? "+80 Nether Gold [Jackpot] · EV = 0.8" : "0 Gold · High Variance (99% Miss)"
         noticeColor = jackpot ? C_PRUNED : C_MUTED
         if (jackpot) probAudio.playDing(true)
         else probAudio.playMine()
@@ -258,7 +258,7 @@ export default function ProbCraftPage() {
         pathId = "path-switch"
         const win = Math.random() < 0.667
         value = win ? 1 : 0
-        noticeText = win ? "Citadel Diamond! (Switch Won 2/3)" : "Sheep Void! (Switch Lost 1/3)"
+        noticeText = win ? "Target Diamond [Switch Won · P = 2/3]" : "Null Outcome [Switch Lost · P = 1/3]"
         noticeColor = win ? C_ACTIVE : C_PRUNED
         if (win) probAudio.playDing(true)
         else probAudio.playMine()
@@ -267,7 +267,7 @@ export default function ProbCraftPage() {
         pathId = "path-stay"
         const win = Math.random() < 0.333
         value = win ? 1 : 0
-        noticeText = win ? "Citadel Diamond! (Stay Won 1/3)" : "Sheep Void! (Stay Lost 2/3)"
+        noticeText = win ? "Target Diamond [Stay Won · P = 1/3]" : "Null Outcome [Stay Lost · P = 2/3]"
         noticeColor = win ? C_ACTIVE : C_MUTED
         if (win) probAudio.playDing(true)
         else probAudio.playMine()
@@ -275,7 +275,7 @@ export default function ProbCraftPage() {
         // Host sheep portal
         pathId = "path-goat"
         value = 0
-        noticeText = "Host Revealed Sheep (0% Win)"
+        noticeText = "Host Revealed Null Portal [P = 0]"
         noticeColor = C_PRUNED
         probAudio.playMine()
       }
@@ -292,7 +292,7 @@ export default function ProbCraftPage() {
       const isRuin = Math.random() < 1 / 64
       pathId = isRuin ? "path-loss-catastrophic" : "path-win-small"
       value = isRuin ? -63 : 1
-      noticeText = isRuin ? "RUIN: -63 Gold Wipeout!" : "+1 Gold Profit"
+      noticeText = isRuin ? "Bankroll Exhausted: -63 Loss" : "+1 Gold Unit Profit"
       noticeColor = isRuin ? C_PRUNED : C_SETTLED
       if (isRuin) probAudio.playTrapBuzzer()
       else probAudio.playDing()
@@ -301,19 +301,19 @@ export default function ProbCraftPage() {
       const r = Math.random()
       if (r < 0.318) {
         pathId = "path-forest"
-        noticeText = "Transitioned -> Forest (31.8%)"
+        noticeText = "Transition: Forest (31.8%)"
         noticeColor = C_SETTLED
       } else if (r < 0.591) {
         pathId = "path-desert"
-        noticeText = "Transitioned -> Desert (27.3%)"
+        noticeText = "Transition: Desert (27.3%)"
         noticeColor = C_CACHED
       } else if (r < 0.841) {
         pathId = "path-nether"
-        noticeText = "Transitioned -> Nether (25.0%)"
+        noticeText = "Transition: Nether (25.0%)"
         noticeColor = C_PRUNED
       } else {
         pathId = "path-tundra"
-        noticeText = "Transitioned -> Tundra (15.9%)"
+        noticeText = "Transition: Tundra (15.9%)"
         noticeColor = C_ACTIVE
       }
       value = 1
@@ -332,7 +332,7 @@ export default function ProbCraftPage() {
       const queryIdx = 1 + (trialsCount % 4)
       pathId = `path-query-${queryIdx}`
       value = 1
-      noticeText = `Query ${queryIdx}/4: 1 Bit Extracted!`
+      noticeText = `Partition ${queryIdx}/4: 1.0 Bit Extracted`
       noticeColor = queryIdx === 4 ? C_SETTLED : C_ACTIVE
       probAudio.playDing(true)
     }
@@ -509,9 +509,9 @@ export default function ProbCraftPage() {
             e.preventDefault()
             engineRef.current?.interactCurrentTarget()
           }}
-          title="Mine or Probe Voxel"
+          title="Probe Voxel Microstate"
         >
-          ⛏ MINE
+          Probe [E]
         </button>
         <button
           type="button"
@@ -519,15 +519,15 @@ export default function ProbCraftPage() {
           onClick={() => setShowCodex(true)}
           title="Open Invariant Codex"
         >
-          § CODEX
+          Codex [C]
         </button>
         <button
           type="button"
           className="action-touch-btn journal"
           onClick={() => setShowJournal(true)}
-          title="Open Discovery Journal"
+          title="Open Discovery Field Notes"
         >
-          📜 SHARDS
+          Notes [J]
         </button>
       </div>
 
@@ -542,10 +542,16 @@ export default function ProbCraftPage() {
           }}
         >
           <div className="prompt-card">
-            <span className="prompt-glyph">⛏</span>
-            <h2>Enter ProbCraft 3D</h2>
-            <p>Look with mouse · Walk with [W][A][S][D] · Space to jump · Mine with Left-Click</p>
-            <span className="prompt-btn">Click to Start Exploring</span>
+            <span className="prompt-eyebrow">Deriva Laboratory · Interactive 3D</span>
+            <h2>ProbCraft 3D</h2>
+            <p className="prompt-sub">A first-principles spatial laboratory deriving probability from microstate geometry.</p>
+            <div className="prompt-controls-summary">
+              <span><strong>W A S D</strong> Walk</span>
+              <span><strong>Mouse</strong> Look</span>
+              <span><strong>Space</strong> Jump</span>
+              <span><strong>Left-Click / E</strong> Probe</span>
+            </div>
+            <span className="prompt-btn">Begin Exploration</span>
           </div>
         </div>
       )}
@@ -553,7 +559,7 @@ export default function ProbCraftPage() {
       {/* Subtle Re-Lock Reminder Pill (Non-blocking, clicks pass through) */}
       {hasStarted && !isPointerLocked && (
         <div className="re-lock-pill" aria-hidden="true">
-          <span>Click 3D world to capture mouse · [Esc] to free</span>
+          <span>Click canvas to lock cursor · Press [Esc] to release</span>
         </div>
       )}
 
@@ -561,17 +567,17 @@ export default function ProbCraftPage() {
       {!isPortraitNoticeDismissed && (
         <div className="mobile-orientation-banner">
           <div className="banner-content">
-            <span className="banner-icon">📱 ⇄ 🖥</span>
+            <span className="banner-kicker">Desktop Recommended</span>
             <div>
-              <strong>Desktop View Recommended</strong>
-              <p>For authentic 3D Minecraft controls, play on desktop or rotate your phone to Landscape.</p>
+              <strong>Full Keyboard & 3D Mouse Controls</strong>
+              <p>For authentic spatial exploration, desktop view or landscape orientation is recommended.</p>
             </div>
             <button
               type="button"
               className="btn-dismiss-banner"
               onClick={() => setIsPortraitNoticeDismissed(true)}
             >
-              Continue in 3D ✕
+              Dismiss
             </button>
           </div>
         </div>
@@ -625,8 +631,8 @@ export default function ProbCraftPage() {
         .pointer-lock-prompt {
           position: absolute;
           inset: 0;
-          background: rgba(20, 22, 26, 0.55);
-          backdrop-filter: blur(3px);
+          background: rgba(18, 17, 16, 0.72);
+          backdrop-filter: blur(16px);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -635,47 +641,75 @@ export default function ProbCraftPage() {
         }
 
         .prompt-card {
-          background: var(--paper-raised);
-          border: 1px solid var(--line);
+          background: rgba(26, 25, 23, 0.94);
+          backdrop-filter: blur(24px) saturate(110%);
+          border: 1px solid rgba(240, 238, 233, 0.12);
           border-radius: calc(var(--radius) + 4px);
-          padding: 24px 32px;
+          padding: 32px 36px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 10px;
-          box-shadow: var(--shadow-raised);
+          gap: 12px;
+          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
           text-align: center;
-          max-width: 440px;
+          max-width: 480px;
         }
 
-        .prompt-glyph {
-          font-size: 36px;
+        .prompt-eyebrow {
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
           color: var(--accent);
+          font-family: var(--font-mono);
+          font-weight: 700;
         }
 
         .prompt-card h2 {
           margin: 0;
-          font-size: 20px;
-          font-family: var(--font-narrative);
-          font-weight: 800;
-          color: var(--ink);
+          font-size: 26px;
+          font-family: var(--font-narrative), "Newsreader", "Charter", Georgia, serif;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          color: #FAF9F5;
         }
 
-        .prompt-card p {
+        .prompt-card .prompt-sub {
           margin: 0;
           font-size: 13px;
           line-height: 1.6;
-          color: var(--ink-soft);
+          color: #9E9B93;
+        }
+
+        .prompt-controls-summary {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 12px;
+          margin: 4px 0 8px;
+          font-size: 11px;
+          color: #C2BEB4;
+          font-family: var(--font-mono);
+        }
+
+        .prompt-controls-summary strong {
+          color: #FAF9F5;
+          margin-right: 4px;
         }
 
         .prompt-btn {
           margin-top: 6px;
           background: var(--accent);
-          color: var(--paper-raised);
-          padding: 8px 18px;
+          color: #FAF9F5;
+          padding: 10px 24px;
           border-radius: var(--radius);
           font-size: 12px;
-          font-weight: 800;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+          transition: opacity var(--dur-fast);
+        }
+
+        .prompt-btn:hover {
+          opacity: 0.92;
         }
 
         .mobile-orientation-banner {
@@ -685,11 +719,11 @@ export default function ProbCraftPage() {
           transform: translateX(-50%);
           width: 90%;
           max-width: 520px;
-          background: var(--paper-raised);
-          border: 1px solid var(--line);
+          background: rgba(26, 25, 23, 0.94);
+          border: 1px solid rgba(240, 238, 233, 0.12);
           border-radius: var(--radius);
           padding: 10px 14px;
-          box-shadow: var(--shadow-raised);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
           z-index: 25;
           display: none;
         }
@@ -700,29 +734,37 @@ export default function ProbCraftPage() {
           gap: 12px;
         }
 
-        .banner-icon {
-          font-size: 24px;
+        .banner-kicker {
+          font-size: 10px;
+          font-family: var(--font-mono);
+          text-transform: uppercase;
+          font-weight: 700;
+          color: var(--accent);
+          background: rgba(240, 238, 233, 0.06);
+          padding: 4px 8px;
+          border-radius: 4px;
         }
 
         .banner-content strong {
           font-size: 12px;
-          color: var(--ink);
+          color: #FAF9F5;
           display: block;
         }
 
         .banner-content p {
           margin: 0;
           font-size: 11px;
-          color: var(--ink-soft);
+          color: #9E9B93;
         }
 
         .btn-dismiss-banner {
           margin-left: auto;
-          background: var(--paper);
-          border: 1px solid var(--line);
+          background: transparent;
+          border: 1px solid rgba(240, 238, 233, 0.14);
+          color: #FAF9F5;
           border-radius: 6px;
           padding: 4px 8px;
-          font-size: 10px;
+          font-size: 11px;
           cursor: pointer;
         }
 
@@ -731,13 +773,14 @@ export default function ProbCraftPage() {
           top: 72px;
           left: 50%;
           transform: translateX(-50%);
-          background: rgba(20, 22, 26, 0.82);
-          backdrop-filter: blur(4px);
-          border: 1px solid var(--line);
-          border-radius: var(--radius);
-          padding: 6px 14px;
+          background: rgba(26, 25, 23, 0.88);
+          backdrop-filter: blur(16px);
+          border: 1px solid rgba(240, 238, 233, 0.1);
+          border-radius: 20px;
+          padding: 6px 16px;
           font-size: 11px;
-          color: var(--ink-soft);
+          font-family: var(--font-ui);
+          color: #9E9B93;
           pointer-events: none;
           z-index: 12;
         }
