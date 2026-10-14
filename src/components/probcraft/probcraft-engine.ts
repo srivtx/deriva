@@ -51,6 +51,26 @@ function createPixelTexture(baseColor: string, speckleColor?: string, isGrassTop
   return texture
 }
 
+const BLOCK_COLOR_HEX: Record<VoxelBlockType, number> = {
+  air: 0x000000,
+  grass: 0x4d7c0f,
+  dirt: 0x78350f,
+  stone: 0x6b7280,
+  cobble: 0x4b5563,
+  wood: 0x92400e,
+  gold_ore: 0xeab308,
+  diamond_ore: 0x06b6d4,
+  coal_ore: 0x27272a,
+  obsidian: 0x312e81,
+  portal: 0xa855f7,
+  lava: 0xea580c,
+  chest: 0xb45309,
+  bedrock: 0x18181b,
+  dice_block: 0xf59e0b,
+  glass: 0x93c5fd,
+  redstone: 0xef4444,
+}
+
 export class ProbCraftEngine {
   private container: HTMLDivElement
   private scene: THREE.Scene
@@ -78,6 +98,10 @@ export class ProbCraftEngine {
   // Texture Cache
   private materialCache = new Map<VoxelBlockType, THREE.Material | THREE.Material[]>()
   private stepAccumulator = 0
+
+  // 3D Visual Feedback: Debris Particles and Floating Text Billboards
+  private particles: { mesh: THREE.Mesh; vel: THREE.Vector3; life: number; maxLife: number }[] = []
+  private floatingTexts: { sprite: THREE.Sprite; velY: number; life: number; maxLife: number; texture: THREE.CanvasTexture }[] = []
 
   constructor(container: HTMLDivElement, world: ProbWorld, callbacks: EngineCallbacks) {
     this.container = container
@@ -198,6 +222,21 @@ export class ProbCraftEngine {
     this.targetedBlockCoord = null
     this.wireframeBox.visible = false
 
+    // Clear active particles and floating texts
+    this.particles.forEach(p => {
+      this.scene.remove(p.mesh)
+      p.mesh.geometry.dispose()
+      ;(p.mesh.material as THREE.Material).dispose()
+    })
+    this.particles = []
+
+    this.floatingTexts.forEach(ft => {
+      this.scene.remove(ft.sprite)
+      ft.sprite.material.dispose()
+      ft.texture.dispose()
+    })
+    this.floatingTexts = []
+
     // Set spawn point exactly on top of floor
     this.playerPos.set(world.playerSpawn[0], world.playerSpawn[1], world.playerSpawn[2])
     this.playerVel.set(0, 0, 0)
@@ -289,8 +328,83 @@ export class ProbCraftEngine {
   public interactCurrentTarget() {
     if (this.targetedBlockCoord) {
       probAudio.playMine()
+      this.spawnDebris(
+        new THREE.Vector3(this.targetedBlockCoord.x, this.targetedBlockCoord.y, this.targetedBlockCoord.z),
+        this.targetedBlockCoord.type
+      )
       this.callbacks.onBlockMine(this.targetedBlockCoord)
     }
+  }
+
+  public spawnDebris(pos: THREE.Vector3, type: VoxelBlockType) {
+    const colorHex = BLOCK_COLOR_HEX[type] || 0x6b7280
+    const miniGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12)
+    const count = 12
+
+    for (let i = 0; i < count; i++) {
+      const mat = new THREE.MeshBasicMaterial({ color: colorHex })
+      const mesh = new THREE.Mesh(miniGeo, mat)
+      mesh.position.set(
+        pos.x + (Math.random() - 0.5) * 0.5,
+        pos.y + (Math.random() - 0.5) * 0.5,
+        pos.z + (Math.random() - 0.5) * 0.5
+      )
+      const vel = new THREE.Vector3(
+        (Math.random() - 0.5) * 3.6,
+        Math.random() * 3.2 + 1.2,
+        (Math.random() - 0.5) * 3.6
+      )
+      this.scene.add(mesh)
+      this.particles.push({
+        mesh,
+        vel,
+        life: 0,
+        maxLife: 0.6 + Math.random() * 0.25,
+      })
+    }
+  }
+
+  public spawnFloatingNotice(text: string, pos: [number, number, number], color = "#fbbf24") {
+    const canvas = document.createElement("canvas")
+    canvas.width = 512
+    canvas.height = 128
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    ctx.fillStyle = "rgba(17, 24, 39, 0.92)"
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(12, 12, 488, 104, 16)
+    } else {
+      ctx.rect(12, 12, 488, 104)
+    }
+    ctx.fill()
+    ctx.lineWidth = 4
+    ctx.strokeStyle = color
+    ctx.stroke()
+
+    ctx.font = "bold 30px monospace"
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+    ctx.fillStyle = color
+    ctx.fillText(text, 256, 64)
+
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.magFilter = THREE.LinearFilter
+    texture.minFilter = THREE.LinearFilter
+
+    const material = new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 1.0 })
+    const sprite = new THREE.Sprite(material)
+    sprite.position.set(pos[0], pos[1] + 1.0, pos[2])
+    sprite.scale.set(2.8, 0.7, 1)
+
+    this.scene.add(sprite)
+    this.floatingTexts.push({
+      sprite,
+      velY: 0.7,
+      life: 0,
+      maxLife: 1.3,
+      texture,
+    })
   }
 
   // Player Controls & Event Handlers
@@ -591,6 +705,38 @@ export class ProbCraftEngine {
     this.updatePhysics(delta)
     this.checkTarget()
 
+    // Update debris particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i]
+      p.life += delta
+      if (p.life >= p.maxLife) {
+        this.scene.remove(p.mesh)
+        p.mesh.geometry.dispose()
+        ;(p.mesh.material as THREE.Material).dispose()
+        this.particles.splice(i, 1)
+      } else {
+        p.vel.y -= 14 * delta
+        p.mesh.position.addScaledVector(p.vel, delta)
+        const scale = Math.max(0.01, 1 - p.life / p.maxLife)
+        p.mesh.scale.set(scale, scale, scale)
+      }
+    }
+
+    // Update floating text billboards
+    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+      const ft = this.floatingTexts[i]
+      ft.life += delta
+      if (ft.life >= ft.maxLife) {
+        this.scene.remove(ft.sprite)
+        ft.sprite.material.dispose()
+        ft.texture.dispose()
+        this.floatingTexts.splice(i, 1)
+      } else {
+        ft.sprite.position.y += ft.velY * delta
+        ft.sprite.material.opacity = Math.max(0, 1 - ft.life / ft.maxLife)
+      }
+    }
+
     this.renderer.render(this.scene, this.camera)
     this.animationFrameId = requestAnimationFrame(this.animate)
   }
@@ -610,6 +756,20 @@ export class ProbCraftEngine {
     this.renderer.domElement.removeEventListener("touchmove", this.onTouchMove)
 
     this.resizeObserver?.disconnect()
+
+    this.particles.forEach(p => {
+      this.scene.remove(p.mesh)
+      p.mesh.geometry.dispose()
+      ;(p.mesh.material as THREE.Material).dispose()
+    })
+    this.particles = []
+
+    this.floatingTexts.forEach(ft => {
+      this.scene.remove(ft.sprite)
+      ft.sprite.material.dispose()
+      ft.texture.dispose()
+    })
+    this.floatingTexts = []
 
     this.renderer.dispose()
     if (this.container.contains(this.renderer.domElement)) {

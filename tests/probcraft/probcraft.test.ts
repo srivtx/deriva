@@ -21,6 +21,22 @@ describe("ProbCraft 3D Worlds & Curriculum Invariants", () => {
       expect(world.blocks.length).toBeGreaterThan(5)
       expect(world.interactiveTargets.length).toBeGreaterThan(0)
       expect(world.options.length).toBe(3)
+      expect(world.questStages.length).toBe(3)
+      expect(world.microstatePaths.length).toBeGreaterThanOrEqual(3)
+
+      world.questStages.forEach((stage, idx) => {
+        expect(stage.stageNumber).toBe(idx + 1)
+        expect(stage.title.length).toBeGreaterThan(5)
+        expect(stage.objective.length).toBeGreaterThan(15)
+        expect(stage.hint.length).toBeGreaterThan(10)
+      })
+
+      world.microstatePaths.forEach(path => {
+        expect(path.id).toBeTruthy()
+        expect(path.label.length).toBeGreaterThan(3)
+        expect(path.probDesc.length).toBeGreaterThan(5)
+        expect(path.color.startsWith("#") || path.color.startsWith("var(")).toBe(true)
+      })
 
       const correctOpt = world.options.find(o => o.id === world.correctOptionId)
       expect(correctOpt).toBeDefined()

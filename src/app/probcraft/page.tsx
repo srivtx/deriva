@@ -25,6 +25,8 @@ export default function ProbCraftPage() {
   const [isPortraitNoticeDismissed, setIsPortraitNoticeDismissed] = useState(false)
   const [isPointerLocked, setIsPointerLocked] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
+  const [microstateCounts, setMicrostateCounts] = useState<Record<string, number>>({})
+  const [lastMicrostateId, setLastMicrostateId] = useState<string | null>(null)
 
   const currentWorld: ProbWorld = PROBCRAFT_WORLDS[currentWorldIndex] || PROBCRAFT_WORLDS[0]
 
@@ -78,6 +80,8 @@ export default function ProbCraftPage() {
     setHistory([])
     setSelectedAnswerId(null)
     setIsAnswerSubmitted(false)
+    setMicrostateCounts({})
+    setLastMicrostateId(null)
 
     if (engineRef.current) {
       engineRef.current.loadWorld(PROBCRAFT_WORLDS[index])
@@ -93,70 +97,155 @@ export default function ProbCraftPage() {
     const worldNum = currentWorld.worldNumber
 
     let value = 0
+    let pathId = ""
+    let noticeText = ""
+    let noticeColor = "#fbbf24"
 
     if (worldNum === 1) {
       // World 1: Bertrand's Box
-      // If Vault A (double gold), returns 1 gold (other is gold)
-      // If Vault C (mixed), returns 0 (other is coal)
       if (coord.x === -3) {
-        value = 1 // 2/3 probability path
+        // Vault A (Gold + Gold): 50% G1, 50% G2
+        pathId = Math.random() < 0.5 ? "path-g1" : "path-g2"
+        value = 1
+        noticeText = `+1 Gold! [${pathId === "path-g1" ? "Path G1" : "Path G2"}: Vault A]`
+        noticeColor = "#eab308"
         probAudio.playDing(true)
       } else if (coord.x === 3) {
-        value = Math.random() < 0.333 ? 1 : 0
-        if (value === 1) probAudio.playDing()
-        else probAudio.playMine()
-      } else {
+        // Vault C (Gold + Coal): Gold path G3, but other is Coal
+        pathId = "path-g3"
         value = 0
+        noticeText = "+1 Gold! [Path G3: Vault C (Other is Coal)]"
+        noticeColor = "#06b6d4"
+        probAudio.playDing()
+      } else {
+        // Vault B (Coal + Coal): Ruled out by observing gold
+        pathId = "path-g3"
+        value = 0
+        noticeText = "0 Coal [Vault B Ruled Out]"
+        noticeColor = "#9ca3af"
         probAudio.playMine()
       }
     } else if (worldNum === 2) {
       // World 2: Vein of Large Numbers
-      // Simulate payout based on diamond/gold ore hit
-      if (coord.type === "diamond_ore") {
-        value = Math.random() < 0.1 ? 14 : 0
-        if (value > 0) probAudio.playDing(true)
-        else probAudio.playMine()
-      } else if (coord.type === "gold_ore") {
+      if (coord.x === -3) {
+        pathId = "path-iron"
         value = 1.0
+        noticeText = "+1 Gold (Iron EV = 1.0)"
+        noticeColor = "#eab308"
         probAudio.playDing()
+      } else if (coord.x === 0 || coord.type === "diamond_ore") {
+        pathId = "path-diamond"
+        const jackpot = Math.random() < 0.1
+        value = jackpot ? 14 : 0
+        noticeText = jackpot ? "+14 Diamond Jackpot! (EV = 1.4)" : "0 Diamond (Variance)"
+        noticeColor = jackpot ? "#06b6d4" : "#9ca3af"
+        if (jackpot) probAudio.playDing(true)
+        else probAudio.playMine()
       } else {
-        value = 0.5
-        probAudio.playMine()
+        pathId = "path-cursed"
+        const jackpot = Math.random() < 0.01
+        value = jackpot ? 80 : 0
+        noticeText = jackpot ? "+80 Nether Gold Jackpot!" : "0 Gold (99% Miss Rate)"
+        noticeColor = jackpot ? "#ef4444" : "#9ca3af"
+        if (jackpot) probAudio.playDing(true)
+        else probAudio.playMine()
       }
     } else if (worldNum === 3) {
       // World 3: Monty Hall
-      // Switching yields win with 2/3 probability
-      value = Math.random() < 0.667 ? 1 : 0
-      if (value === 1) probAudio.playDing(true)
-      else probAudio.playMine()
+      if (coord.x === 0) {
+        // Switching to Portal 2 (Wins with 2/3 probability)
+        pathId = "path-switch"
+        const win = Math.random() < 0.667
+        value = win ? 1 : 0
+        noticeText = win ? "Citadel Diamond! (Switch Won 2/3)" : "Sheep Void! (Switch Lost 1/3)"
+        noticeColor = win ? "#06b6d4" : "#ef4444"
+        if (win) probAudio.playDing(true)
+        else probAudio.playMine()
+      } else if (coord.x === -4) {
+        // Staying at Portal 1 (Wins with 1/3 probability)
+        pathId = "path-stay"
+        const win = Math.random() < 0.333
+        value = win ? 1 : 0
+        noticeText = win ? "Citadel Diamond! (Stay Won 1/3)" : "Sheep Void! (Stay Lost 2/3)"
+        noticeColor = win ? "#06b6d4" : "#9ca3af"
+        if (win) probAudio.playDing(true)
+        else probAudio.playMine()
+      } else {
+        // Host sheep portal
+        pathId = "path-goat"
+        value = 0
+        noticeText = "Host Revealed Sheep (0% Win)"
+        noticeColor = "#ef4444"
+        probAudio.playMine()
+      }
     } else if (worldNum === 4) {
-      // World 4: Random Walk
-      // Returns 1 if returned to origin within 20 steps
-      value = Math.random() < 0.85 ? 1 : 0
+      // World 4: Drunkard's Walk
+      const isPos = Math.random() < 0.5
+      pathId = isPos ? "path-step-pos" : "path-step-neg"
+      value = 1.0 // 1D recurrence
+      noticeText = isPos ? "+1 Step Forward" : "-1 Step Backward"
+      noticeColor = isPos ? "#22c55e" : "#ef4444"
       probAudio.playStep()
     } else if (worldNum === 5) {
       // World 5: Martingale
-      // 63/64 times wins +1, 1/64 times catastrophic ruin -63
       const isRuin = Math.random() < 1 / 64
+      pathId = isRuin ? "path-loss-catastrophic" : "path-win-small"
       value = isRuin ? -63 : 1
+      noticeText = isRuin ? "RUIN: -63 Gold Wipeout!" : "+1 Gold Profit"
+      noticeColor = isRuin ? "#ef4444" : "#22c55e"
       if (isRuin) probAudio.playTrapBuzzer()
       else probAudio.playDing()
     } else if (worldNum === 6) {
       // World 6: Markov Chain
-      // Biome transition simulation
+      const r = Math.random()
+      if (r < 0.318) {
+        pathId = "path-forest"
+        noticeText = "Transitioned -> Forest (31.8%)"
+        noticeColor = "#22c55e"
+      } else if (r < 0.591) {
+        pathId = "path-desert"
+        noticeText = "Transitioned -> Desert (27.3%)"
+        noticeColor = "#eab308"
+      } else if (r < 0.841) {
+        pathId = "path-nether"
+        noticeText = "Transitioned -> Nether (25.0%)"
+        noticeColor = "#ef4444"
+      } else {
+        pathId = "path-tundra"
+        noticeText = "Transitioned -> Tundra (15.9%)"
+        noticeColor = "#06b6d4"
+      }
       value = 1
       probAudio.playPortal()
     } else if (worldNum === 7) {
       // World 7: Poisson Spawner
-      // Exponential inter-arrival time (lambda = 2 / min = 1/30 sec)
       const u = Math.random()
-      value = -Math.log(1 - u) * 30 // seconds
+      const dt = -Math.log(1 - u) * 30
+      pathId = dt < 15 ? "path-short-wait" : dt <= 45 ? "path-avg-wait" : "path-long-wait"
+      value = dt
+      noticeText = `Arrival: Δt = ${dt.toFixed(1)}s (λ = 2/min)`
+      noticeColor = "#f59e0b"
       probAudio.playDing()
-    } else if (worldNum === 8) {
+    } else {
       // World 8: Shannon Entropy
-      // Binary search halving takes 4 queries
+      const queryIdx = 1 + (trialsCount % 4)
+      pathId = `path-query-${queryIdx}`
       value = 1
+      noticeText = `Query ${queryIdx}/4: 1 Bit Extracted!`
+      noticeColor = queryIdx === 4 ? "#22c55e" : "#06b6d4"
       probAudio.playDing(true)
+    }
+
+    if (noticeText) {
+      engineRef.current?.spawnFloatingNotice(noticeText, [coord.x, coord.y + 0.8, coord.z], noticeColor)
+    }
+
+    if (pathId) {
+      setMicrostateCounts(prev => ({
+        ...prev,
+        [pathId]: (prev[pathId] || 0) + 1,
+      }))
+      setLastMicrostateId(pathId)
     }
 
     const nextCount = trialsCount + 1
@@ -167,34 +256,54 @@ export default function ProbCraftPage() {
     setEmpiricalMean(sum / nextCount)
   }
 
-  // Fast Monte Carlo Wand: Simulates N rounds instantly
+  // Fast Monte Carlo Wand: Simulates N rounds instantly with microstate distribution
   const handleFastSimulate = (rounds = 25) => {
     probAudio.playFanfare()
     const worldNum = currentWorld.worldNumber
     const newValues: number[] = []
+    const newCounts: Record<string, number> = { ...microstateCounts }
 
     for (let i = 0; i < rounds; i++) {
       let val = 0
+      let path = ""
+
       if (worldNum === 1) {
         val = Math.random() < 0.667 ? 1 : 0
+        const r = Math.random()
+        path = r < 0.333 ? "path-g1" : r < 0.667 ? "path-g2" : "path-g3"
       } else if (worldNum === 2) {
-        val = Math.random() < 0.1 ? 14 : 0
+        const jackpot = Math.random() < 0.1
+        val = jackpot ? 14 : 0
+        path = "path-diamond"
       } else if (worldNum === 3) {
         val = Math.random() < 0.667 ? 1 : 0
+        path = val === 1 ? "path-switch" : "path-stay"
       } else if (worldNum === 4) {
         val = 1.0 // 1D recurrence
+        path = Math.random() < 0.5 ? "path-step-pos" : "path-step-neg"
       } else if (worldNum === 5) {
-        val = Math.random() < 1 / 64 ? -63 : 1
+        const ruin = Math.random() < 1 / 64
+        val = ruin ? -63 : 1
+        path = ruin ? "path-loss-catastrophic" : "path-win-small"
       } else if (worldNum === 6) {
         val = 1
+        const r = Math.random()
+        path = r < 0.318 ? "path-forest" : r < 0.591 ? "path-desert" : r < 0.841 ? "path-nether" : "path-tundra"
       } else if (worldNum === 7) {
         val = -Math.log(1 - Math.random()) * 30
+        path = val < 15 ? "path-short-wait" : val <= 45 ? "path-avg-wait" : "path-long-wait"
       } else {
-        val = 4 // Shannon bound
+        val = 1
+        path = `path-query-${1 + (i % 4)}`
       }
+
       newValues.push(val)
+      if (path) {
+        newCounts[path] = (newCounts[path] || 0) + 1
+      }
     }
 
+    setMicrostateCounts(newCounts)
     const nextCount = trialsCount + rounds
     const nextHist = [...history, ...newValues]
     const sum = nextHist.reduce((a, b) => a + b, 0)
@@ -246,6 +355,8 @@ export default function ProbCraftPage() {
         onToggleSound={toggleSound}
         onTeleportSelect={worldNum => switchWorld(worldNum - 1)}
         allWorlds={PROBCRAFT_WORLDS}
+        microstateCounts={microstateCounts}
+        lastMicrostateId={lastMicrostateId}
       />
 
       {/* Mobile Landscape Virtual Touch D-Pad */}
