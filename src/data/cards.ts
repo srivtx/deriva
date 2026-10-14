@@ -621,5 +621,95 @@ export const PATTERN_CARDS: PatternCard[] = [
     naiveWaste: "DP on intervals is O(n²). Sorting by end time makes the greedy choice globally optimal in O(n log n).",
     cue: "Interval scheduling: maximizing events or minimizing removals.",
     practiceLink: "/practice?topic=intervals&problem=2"
+  },
+  {
+    id: "interval-insert",
+    title: "Insert Interval Into Sorted Non-Overlapping Set",
+    topic: "intervals",
+    difficulty: "Medium",
+    prompt: "Insert a new interval into a sorted list of non-overlapping intervals and merge if necessary.",
+    options: [
+      "Three-phase pass: add all ending before newInterval, merge all overlapping into newInterval, add all starting after",
+      "Insert into array and re-sort all n intervals in O(n log n)",
+      "Binary search for start and end indices and splice array"
+    ],
+    correctOption: 0,
+    moveName: "Three-Phase Linear Sweep",
+    invariant: "Because the original array is pre-sorted and disjoint, non-overlapping intervals partition neatly into strictly-before, overlapping, and strictly-after.",
+    naiveWaste: "Re-sorting takes O(n log n). The three-phase linear sweep preserves order in O(n) time and O(n) space.",
+    cue: "Inserting into already-sorted, non-overlapping intervals.",
+    practiceLink: "/practice?topic=intervals&problem=3"
+  },
+  {
+    id: "interval-meeting-rooms",
+    title: "Meeting Rooms II (Min Conference Rooms)",
+    topic: "intervals",
+    difficulty: "Medium",
+    prompt: "Given an array of meeting time intervals, find the minimum number of conference rooms required.",
+    options: [
+      "Chronological event sweep: +1 room at start time, -1 room at end time; track max concurrent rooms",
+      "Graph coloring problem on interval intersection graph",
+      "Sort intervals by duration and allocate rooms greedily"
+    ],
+    correctOption: 0,
+    moveName: "Chronological Event Delta Sweep",
+    invariant: "Rooms are consumed at meeting start and released at meeting end. The maximum overlap at any point in time equals the minimum rooms required.",
+    naiveWaste: "Pairwise overlap checking is O(n²). Chronological timeline sorting reduces resource contention to O(n log n).",
+    cue: "Peak resource allocation or concurrent overlapping intervals.",
+    practiceLink: "/practice?topic=intervals&problem=4"
+  },
+  {
+    id: "bits-power-of-two",
+    title: "Power of Two & Lowest Set Bit",
+    topic: "bits",
+    difficulty: "Easy",
+    prompt: "Determine if an integer n is a power of two in O(1) time and space.",
+    options: [
+      "n > 0 and (n & (n - 1)) == 0",
+      "Repeatedly divide by 2 until reaching 1",
+      "Convert to binary string and count occurrences of '1'"
+    ],
+    correctOption: 0,
+    moveName: "Brian Kernighan Bit-Flip Invariant",
+    invariant: "Subtracting 1 flips the rightmost set bit and all trailing zeros to 1. A power of two has exactly one set bit, so n & (n - 1) clears it to 0.",
+    naiveWaste: "Division loops take O(log n) cycles. Bitwise subtraction clears the lowest set bit in exactly 1 clock cycle.",
+    cue: "Checking for single set bit, counting set bits, or isolating lowest power of two.",
+    practiceLink: "/practice?topic=bits&problem=1"
+  },
+  {
+    id: "dp-01-knapsack",
+    title: "0/1 Knapsack Space Optimization",
+    topic: "dp",
+    difficulty: "Medium",
+    prompt: "Given weights and values of n items, find maximum value fitting in knapsack of capacity W using O(W) space.",
+    options: [
+      "Iterate capacity W backwards from W down to weight[i] to ensure each item is used at most once",
+      "Iterate capacity W forwards from 0 up to W in 1D array",
+      "Greedy value-to-weight ratio sorting"
+    ],
+    correctOption: 0,
+    moveName: "Reverse Capacity Sweep (0/1 Bound)",
+    invariant: "Iterating capacity backwards reads dp[w - weight[i]] from the PREVIOUS item's step, preventing the current item from being used multiple times.",
+    naiveWaste: "Forward iteration solves unbounded knapsack (reusing items). Reverse iteration avoids allocating an O(n × W) 2D table.",
+    cue: "Subset sum or knapsack where each element can be chosen at most once.",
+    practiceLink: "/practice?topic=dp&problem=1"
+  },
+  {
+    id: "heaps-top-k-frequent",
+    title: "Top K Frequent Elements",
+    topic: "heaps",
+    difficulty: "Medium",
+    prompt: "Given an integer array and integer k, return the k most frequent elements in O(n log k) or better time.",
+    options: [
+      "Hash map frequencies + min-heap of size k: push each element, pop when size > k so heap retains top k",
+      "Sort the entire array by frequency in O(n log n)",
+      "Max-heap of all n unique elements and pop k times in O(n + k log n)"
+    ],
+    correctOption: 0,
+    moveName: "Bounded Min-Heap Filter",
+    invariant: "A min-heap of size k evicts the current smallest element whenever size exceeds k, leaving the top k largest frequencies at termination.",
+    naiveWaste: "Sorting all unique elements takes O(u log u). A size-k min-heap limits comparison overhead to O(u log k).",
+    cue: "Top K, largest K, or most frequent K elements from a stream or list.",
+    practiceLink: "/practice?topic=heaps&problem=1"
   }
 ]

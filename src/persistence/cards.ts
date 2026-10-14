@@ -22,8 +22,10 @@ export interface CardsStats {
 const CARDS_STORAGE_KEY = "deriva-cards-progress-v1"
 const CARDS_DAILY_KEY = "deriva-cards-daily-v1"
 
+let memoryCardsStore: Record<string, CardProgress> = {}
+
 export function loadCardsProgress(): Record<string, CardProgress> {
-  if (typeof window === "undefined") return {}
+  if (typeof window === "undefined") return memoryCardsStore
   try {
     const raw = localStorage.getItem(CARDS_STORAGE_KEY)
     if (!raw) return {}
@@ -34,7 +36,10 @@ export function loadCardsProgress(): Record<string, CardProgress> {
 }
 
 export function saveCardsProgress(progress: Record<string, CardProgress>): void {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") {
+    memoryCardsStore = progress
+    return
+  }
   try {
     localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(progress))
   } catch {}
@@ -96,8 +101,13 @@ export function recordCardReview(cardId: string, rating: CardRating): CardProgre
   return updated
 }
 
+let memoryDailyCount = 0
+
 function bumpDailyCardCount(): void {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") {
+    memoryDailyCount++
+    return
+  }
   try {
     const today = new Date().toISOString().slice(0, 10)
     const raw = localStorage.getItem(CARDS_DAILY_KEY)
@@ -108,7 +118,7 @@ function bumpDailyCardCount(): void {
 }
 
 export function loadTodayReviewedCount(): number {
-  if (typeof window === "undefined") return 0
+  if (typeof window === "undefined") return memoryDailyCount
   try {
     const today = new Date().toISOString().slice(0, 10)
     const raw = localStorage.getItem(CARDS_DAILY_KEY)
@@ -121,7 +131,11 @@ export function loadTodayReviewedCount(): number {
 }
 
 export function resetAllCardProgress(): void {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") {
+    memoryCardsStore = {}
+    memoryDailyCount = 0
+    return
+  }
   try {
     localStorage.removeItem(CARDS_STORAGE_KEY)
     localStorage.removeItem(CARDS_DAILY_KEY)

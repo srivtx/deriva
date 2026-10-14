@@ -1,7 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { runScript } from "@/execution/pyodide-client"
+import { PythonEditor } from "@/editor/python-editor"
+import { extractErrorLine } from "@/editor/indent"
 
 const STORAGE_KEY = "deriva-playground-code-v1"
 
@@ -22,8 +24,6 @@ export default function PlaygroundPage() {
   const [elapsed, setElapsed] = useState<number | null>(null)
   const [copied, setCopied] = useState(false)
   const [hydrated, setHydrated] = useState(false)
-  const textRef = useRef<HTMLTextAreaElement>(null)
-  const gutterRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
@@ -34,8 +34,6 @@ export default function PlaygroundPage() {
   useEffect(() => {
     if (hydrated) { try { localStorage.setItem(STORAGE_KEY, code) } catch {} }
   }, [code, hydrated])
-
-  const lineCount = code.split("\n").length
 
   const run = async () => {
     setRunning(true)
@@ -50,25 +48,6 @@ export default function PlaygroundPage() {
     } finally {
       setElapsed(performance.now() - started)
       setRunning(false)
-    }
-  }
-
-  const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      event.preventDefault()
-      run()
-      return
-    }
-    if (event.key === "Tab") {
-      event.preventDefault()
-      const target = event.currentTarget
-      const start = target.selectionStart
-      const end = target.selectionEnd
-      const next = code.slice(0, start) + "    " + code.slice(end)
-      setCode(next)
-      requestAnimationFrame(() => {
-        target.selectionStart = target.selectionEnd = start + 4
-      })
     }
   }
 
@@ -90,6 +69,9 @@ export default function PlaygroundPage() {
     URL.revokeObjectURL(url)
   }
 
+  const isFailure = !!output && (output.startsWith("Error:") || output.includes("Traceback") || output.includes("Error"))
+  const errorLine = isFailure ? extractErrorLine(output, 0) : null
+
   return (
     <main className="super-page">
       <section className="contest-hero">
@@ -103,33 +85,25 @@ export default function PlaygroundPage() {
       <section className="playground-examples" aria-label="Example snippets">
         <span className="super-kicker">LOAD AN EXAMPLE</span>
         <div className="playground-example-row">
-          {EXAMPLES.map((example, i) => (
+          {EXAMPLES.map(example => (
             <button key={example.name} type="button" className={`super-ghost${code === example.code ? " active-example" : ""}`} onClick={() => { setCode(example.code); setOutput(""); setElapsed(null) }}>{example.name}</button>
           ))}
         </div>
       </section>
 
-      <div className="ed-wrap">
-        <div className="ed-bar"><span className="ed-lang">Python</span><span className="ed-file">playground.py</span><span className="ready">⌘+Enter runs · autosaved</span></div>
-        <div className="playground-editor">
-          <div className="playground-gutter" ref={gutterRef} aria-hidden="true">
-            {Array.from({ length: lineCount }, (_, i) => <span key={i}>{i + 1}</span>)}
-          </div>
-          <textarea
-            ref={textRef}
-            value={code}
-            onChange={event => setCode(event.target.value)}
-            onKeyDown={onKeyDown}
-            onScroll={event => { if (gutterRef.current) gutterRef.current.scrollTop = event.currentTarget.scrollTop }}
-            className="ed playground-ed"
-            spellCheck={false}
-            aria-label="Python code"
-          />
-        </div>
-      </div>
+      <PythonEditor
+        value={code}
+        onChange={setCode}
+        onRun={run}
+        onReset={() => { setCode(""); setOutput(""); setElapsed(null) }}
+        filename="playground.py"
+        language="Python 3.12"
+        errorLine={errorLine}
+        minHeight={320}
+      />
 
       <div className="acts" aria-label="Playground actions">
-        <button type="button" onClick={run} disabled={running} className="btn btn-p primary-run">{running ? "Running..." : "▶ Run"}</button>
+        <button type="button" onClick={run} disabled={running} className="btn btn-p primary-run">{running ? "Running..." : "▶ Run"} <kbd className="shortcut-kbd">⌘↵</kbd></button>
         <button type="button" onClick={copy} className="btn">{copied ? "Copied ✓" : "Copy"}</button>
         <button type="button" onClick={download} className="btn">Download</button>
         <button type="button" onClick={() => { setCode(""); setOutput(""); setElapsed(null) }} className="btn">Clear</button>

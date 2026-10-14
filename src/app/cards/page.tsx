@@ -36,8 +36,10 @@ export default function CardsPage() {
     setTodayCount(loadTodayReviewedCount())
   }, [])
 
-  // Build current active queue
+  // Build current active queue (only rebuilds on mode/filter change, not mid-session card updates)
   useEffect(() => {
+    const currentProgress = loadCardsProgress()
+    setProgress(currentProgress)
     let pool = PATTERN_CARDS
     if (topicFilter !== "all") {
       pool = pool.filter(c => c.topic === topicFilter)
@@ -46,15 +48,15 @@ export default function CardsPage() {
     if (sessionMode === "quick5") {
       // Pick 5 cards prioritizing unmastered
       const sorted = [...pool].sort((a, b) => {
-        const pA = progress[a.id]?.streak || 0
-        const pB = progress[b.id]?.streak || 0
+        const pA = currentProgress[a.id]?.streak || 0
+        const pB = currentProgress[b.id]?.streak || 0
         return pA - pB
       })
       setCards(sorted.slice(0, 5))
     } else if (sessionMode === "due") {
       const now = Date.now()
       const due = pool.filter(c => {
-        const p = progress[c.id]
+        const p = currentProgress[c.id]
         return !p || p.nextDueAt <= now
       })
       setCards(due.length > 0 ? due : pool.slice(0, 5))
@@ -67,7 +69,7 @@ export default function CardsPage() {
     setSelectedOption(null)
     setSessionCompleted(false)
     setSessionScore({ correct: 0, total: 0 })
-  }, [topicFilter, sessionMode, progress])
+  }, [topicFilter, sessionMode])
 
   const currentCard = cards[currentIndex]
 
@@ -81,11 +83,11 @@ export default function CardsPage() {
 
   const handleFlip = () => {
     triggerHaptic([12])
-    setIsFlipped(!isFlipped)
+    setIsFlipped(prev => !prev)
   }
 
   const handleSelectOption = (idx: number) => {
-    if (selectedOption !== null) return
+    if (!currentCard || selectedOption !== null) return
     setSelectedOption(idx)
 
     const isCorrect = idx === currentCard.correctOption
@@ -120,6 +122,34 @@ export default function CardsPage() {
     }
   }
 
+  // Keyboard navigation for desktop / iPad
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+
+      if (e.code === "Space") {
+        e.preventDefault()
+        handleFlip()
+        return
+      }
+
+      if (!isFlipped && selectedOption === null) {
+        if (e.key === "1" || e.key === "a" || e.key === "A") handleSelectOption(0)
+        else if (e.key === "2" || e.key === "b" || e.key === "B") handleSelectOption(1)
+        else if (e.key === "3" || e.key === "c" || e.key === "C") handleSelectOption(2)
+        else if (e.key === "4" || e.key === "d" || e.key === "D") handleSelectOption(3)
+      } else if (isFlipped) {
+        if (e.key === "1" || e.key === "ArrowLeft") advanceCard("again")
+        else if (e.key === "2" || e.key === "ArrowDown") advanceCard("hard")
+        else if (e.key === "3" || e.key === "ArrowRight") advanceCard("good")
+        else if (e.key === "4" || e.key === "ArrowUp") advanceCard("easy")
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isFlipped, selectedOption, currentCard, cards.length, currentIndex])
+
   // Touch handlers for mobile swipe gestures
   const onTouchStart = (e: TouchEvent) => {
     const touch = e.touches[0]
@@ -151,6 +181,31 @@ export default function CardsPage() {
 
   const restartSession = () => {
     triggerHaptic([15])
+    const currentProgress = loadCardsProgress()
+    setProgress(currentProgress)
+    let pool = PATTERN_CARDS
+    if (topicFilter !== "all") {
+      pool = pool.filter(c => c.topic === topicFilter)
+    }
+
+    if (sessionMode === "quick5") {
+      const sorted = [...pool].sort((a, b) => {
+        const pA = currentProgress[a.id]?.streak || 0
+        const pB = currentProgress[b.id]?.streak || 0
+        return pA - pB
+      })
+      setCards(sorted.slice(0, 5))
+    } else if (sessionMode === "due") {
+      const now = Date.now()
+      const due = pool.filter(c => {
+        const p = currentProgress[c.id]
+        return !p || p.nextDueAt <= now
+      })
+      setCards(due.length > 0 ? due : pool.slice(0, 5))
+    } else {
+      setCards(pool)
+    }
+
     setCurrentIndex(0)
     setIsFlipped(false)
     setSelectedOption(null)
@@ -271,7 +326,7 @@ export default function CardsPage() {
                     <span className={`card-diff-tag diff-${currentCard.difficulty.toLowerCase()}`}>
                       {currentCard.difficulty}
                     </span>
-                    {isMastered && <span className="card-mastered-star">★ Mastered</span>}
+                    {isMastered && <span className="card-mastered-star">✓ Mastered</span>}
                   </div>
 
                   <h2 className="card-title">{currentCard.title}</h2>
@@ -385,7 +440,7 @@ export default function CardsPage() {
                 onClick={() => advanceCard("easy")}
                 title="Automatic (+7 days)"
               >
-                <span>★</span>
+                <span>Ω</span>
                 <small>Master</small>
               </button>
             </footer>
@@ -393,7 +448,7 @@ export default function CardsPage() {
         ) : (
           /* Session Completed Summary Screen */
           <div className="session-summary-card">
-            <span className="summary-icon">✦</span>
+            <span className="summary-icon">✓</span>
             <h2>Session Complete</h2>
             <p>
               You trained your pattern reflex across {cards.length} moves.

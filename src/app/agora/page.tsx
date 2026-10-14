@@ -23,6 +23,7 @@ export default function AgoraPage() {
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(false)
   const [commuteCountdown, setCommuteCountdown] = useState<number | null>(null)
+  const [showMastery, setShowMastery] = useState(false)
 
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -139,7 +140,7 @@ export default function AgoraPage() {
     if (currentIndex < filteredChallenges.length - 1) {
       setCurrentChallengeId(filteredChallenges[currentIndex + 1].id)
     } else {
-      setCurrentChallengeId(filteredChallenges[0].id)
+      setShowMastery(true)
     }
   }
 
@@ -247,7 +248,18 @@ export default function AgoraPage() {
             <strong className="level-name">{challenge.levelName}</strong>
           </div>
           <div className="stage-counter">
-            Stage {challenge.stageNumber} of {totalStages} ({progressPercent}% complete)
+            {progress?.completedIds.length === totalStages ? (
+              <button
+                type="button"
+                className="btn-mastered-badge"
+                onClick={() => setShowMastery(true)}
+                title="View full defense curriculum mastery certificate"
+              >
+                All 14 Stages Defended ✓
+              </button>
+            ) : (
+              <span>Stage {challenge.stageNumber} of {totalStages} ({progressPercent}% complete)</span>
+            )}
           </div>
         </div>
 
@@ -527,11 +539,9 @@ export default function AgoraPage() {
             {/* Next Action Button */}
             <div className="teardown-nav">
               <button type="button" onClick={handleNext} className="btn-next-defense">
-                Advance to Stage{" "}
                 {globalStageIndex < totalStages - 1
-                  ? AGORA_CHALLENGES[globalStageIndex + 1].stageNumber
-                  : 1}{" "}
-                →
+                  ? `Advance to Stage ${AGORA_CHALLENGES[globalStageIndex + 1].stageNumber} →`
+                  : `Claim Defense Mastery Certification ✓`}
               </button>
             </div>
           </section>
@@ -555,10 +565,94 @@ export default function AgoraPage() {
             onClick={handleNext}
             className="mobile-nav-btn next"
           >
-            Next Stage →
+            {globalStageIndex < totalStages - 1 ? "Next Stage →" : "Mastery ✓"}
           </button>
         </div>
       </div>
+
+      {/* Defense Mastery Screen Modal */}
+      {showMastery && (
+        <div className="mastery-overlay" role="dialog" aria-modal="true" aria-label="Defense Mastery Certification">
+          <div className="mastery-modal">
+            <div className="mastery-badge-icon">Ω</div>
+            <span className="mastery-kicker">CURRICULUM DEFENSE CONQUERED</span>
+            <h2 className="mastery-title">The Agora Defense Ladder Mastered</h2>
+            <p className="mastery-subtitle">
+              You have systematically derived all 14 elite interview traps and proven their invariants from first principles.
+            </p>
+
+            <div className="mastery-stats-grid">
+              <div className="mastery-stat-card">
+                <span className="stat-num">14 / 14</span>
+                <span className="stat-label">Stages Defended</span>
+              </div>
+              <div className="mastery-stat-card">
+                <span className="stat-num">3 / 3</span>
+                <span className="stat-label">Crucibles Conquered</span>
+              </div>
+              <div className="mastery-stat-card">
+                <span className="stat-num">100%</span>
+                <span className="stat-label">Invariants Derived</span>
+              </div>
+            </div>
+
+            <div className="mastery-track-summary">
+              <div className="track-summary-item">
+                <div className="track-summary-head">
+                  <span className="track-glyph">⊛</span>
+                  <strong>Quant Crucible (Stages 1–5)</strong>
+                  <span className="track-done-badge">Passed ✓</span>
+                </div>
+                <p>Bertrand&apos;s Box, 100 Prisoners Cycle, Martingale Stopping Time, Bayes Invariants.</p>
+              </div>
+
+              <div className="track-summary-item">
+                <div className="track-summary-head">
+                  <span className="track-glyph">▲</span>
+                  <strong>Silicon & Low-Latency (Stages 6–10)</strong>
+                  <span className="track-done-badge">Passed ✓</span>
+                </div>
+                <p>SIMD vectorization, branch prediction cliff, false sharing MESI, lock-free SPSC queues, x86 TSO barriers.</p>
+              </div>
+
+              <div className="track-summary-item">
+                <div className="track-summary-head">
+                  <span className="track-glyph">☊</span>
+                  <strong>Distributed Invariants (Stages 11–14)</strong>
+                  <span className="track-done-badge">Passed ✓</span>
+                </div>
+                <p>Vector clocks, strict Raft quorums, virtual-node consistent hashing, semilattice CRDT canvas.</p>
+              </div>
+            </div>
+
+            <div className="mastery-actions">
+              <button
+                type="button"
+                className="btn-mastery-action primary"
+                onClick={() => {
+                  setShowMastery(false)
+                  setCurrentChallengeId(AGORA_CHALLENGES[0].id)
+                }}
+              >
+                Review from Stage 1 →
+              </button>
+              <Link href="/cards" className="btn-mastery-action">
+                Pattern Reflex Deck (/cards) →
+              </Link>
+              <Link href="/lld/practice" className="btn-mastery-action">
+                Low-Level Design (/lld/practice) →
+              </Link>
+              <button
+                type="button"
+                className="btn-mastery-action ghost"
+                onClick={() => setShowMastery(false)}
+              >
+                Close Certificate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .agora-page {
@@ -1501,6 +1595,211 @@ export default function AgoraPage() {
           font-family: var(--font-mono);
           font-weight: 700;
           color: var(--ink-soft);
+        }
+
+        .btn-mastered-badge {
+          background: var(--success-soft);
+          color: var(--viz-settled);
+          border: 1px solid var(--success-line);
+          padding: 3px 10px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          font-family: var(--font-ui);
+          transition: background var(--dur-fast), border-color var(--dur-fast);
+        }
+
+        .btn-mastered-badge:hover {
+          background: var(--accent-soft);
+          border-color: var(--accent);
+          color: var(--accent);
+        }
+
+        .mastery-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(20, 22, 26, 0.75);
+          backdrop-filter: blur(5px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: var(--sp-4);
+          z-index: 999;
+          overflow-y: auto;
+        }
+
+        .mastery-modal {
+          background: var(--paper-raised);
+          border: 1px solid var(--line);
+          border-radius: calc(var(--radius) + 6px);
+          padding: clamp(20px, 4vw, 32px);
+          max-width: 580px;
+          width: 100%;
+          box-shadow: var(--shadow-raised);
+          display: flex;
+          flex-direction: column;
+          gap: var(--sp-4);
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+
+        .mastery-badge-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          background: var(--accent-soft);
+          color: var(--accent);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 24px;
+          font-weight: 800;
+          margin: 0 auto;
+        }
+
+        .mastery-kicker {
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: var(--accent);
+          text-align: center;
+        }
+
+        .mastery-title {
+          margin: 0;
+          font-size: 22px;
+          font-family: var(--font-narrative);
+          font-weight: 800;
+          text-align: center;
+          color: var(--ink);
+        }
+
+        .mastery-subtitle {
+          margin: 0;
+          font-size: 14px;
+          line-height: 1.6;
+          color: var(--ink-soft);
+          text-align: center;
+          font-family: var(--font-narrative);
+        }
+
+        .mastery-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: var(--sp-2);
+          margin: var(--sp-2) 0;
+        }
+
+        .mastery-stat-card {
+          background: var(--paper);
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          padding: var(--sp-3);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+        }
+
+        .stat-num {
+          font-size: 18px;
+          font-family: var(--font-mono);
+          font-weight: 800;
+          color: var(--accent);
+        }
+
+        .stat-label {
+          font-size: 10px;
+          color: var(--ink-soft);
+          font-weight: 600;
+          text-align: center;
+        }
+
+        .mastery-track-summary {
+          display: flex;
+          flex-direction: column;
+          gap: var(--sp-2);
+        }
+
+        .track-summary-item {
+          background: var(--paper);
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          padding: 10px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .track-summary-head {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+        }
+
+        .track-glyph {
+          color: var(--accent);
+          font-size: 14px;
+        }
+
+        .track-done-badge {
+          margin-left: auto;
+          font-size: 10px;
+          font-weight: 700;
+          color: var(--viz-settled);
+          background: var(--success-soft);
+          border: 1px solid var(--success-line);
+          padding: 1px 6px;
+          border-radius: 10px;
+        }
+
+        .track-summary-item p {
+          margin: 0;
+          font-size: 12px;
+          color: var(--ink-soft);
+          line-height: 1.5;
+        }
+
+        .mastery-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-top: var(--sp-2);
+        }
+
+        .btn-mastery-action {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 10px 16px;
+          border-radius: var(--radius);
+          font-size: 13px;
+          font-weight: 700;
+          text-decoration: none;
+          cursor: pointer;
+          border: 1px solid var(--line);
+          background: var(--paper);
+          color: var(--ink);
+          transition: border-color var(--dur-fast), background var(--dur-fast);
+        }
+
+        .btn-mastery-action.primary {
+          background: var(--accent);
+          color: var(--paper-raised);
+          border-color: var(--accent);
+        }
+
+        .btn-mastery-action.ghost {
+          background: transparent;
+          border-color: transparent;
+          color: var(--ink-soft);
+        }
+
+        .btn-mastery-action:hover:not(.ghost) {
+          border-color: var(--accent);
         }
 
         @media (min-width: 860px) {

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
 import { performance } from "node:perf_hooks"
+import { describe, it, expect } from "vitest"
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const engineTs = path.join(here, "engine.ts")
@@ -195,4 +196,11 @@ const hexRing = regionAround("hex", [{ x: 0, y: 0 }], 2)
 check("regionAround radius 2 around single hex = 6 cells", hexRing.length === 6, `got ${hexRing.length}`)
 
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"}: ${pass} passed, ${fail} failed`)
-process.exit(fail === 0 ? 0 : 1)
+if (fail > 0 && typeof process !== "undefined" && !process.env.VITEST) process.exit(1)
+
+describe("Corona Engine Test Harness", () => {
+  it("passes all 27 mathematical tiling invariants", () => {
+    expect(fail).toBe(0)
+    expect(pass).toBeGreaterThanOrEqual(27)
+  })
+})

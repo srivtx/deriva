@@ -22,8 +22,10 @@ export const RELEASES: ReleaseEntry[] = [
       { title: "Python auto-indentation", body: "Drill mode (/practice), PDB drills, and Ultron AI workbenches gain automatic indentation on Enter after colons (:), bracket expansion for (), [], {}, and indentation preservation." },
       { title: "Tab & Shift+Tab indentation", body: "Indent and dedent single lines or multiline selections smoothly without browser focus-trapping." },
       { title: "Smart backspace & bracket pairing", body: "Backspace deletes full 4-space tab stops at indent levels, and typing (), [], {}, \"\", '' auto-pairs, wraps selection, and steps over closing characters." },
-      { title: "⌘+Enter to run & error line gutter", body: "Run test suites directly from the keyboard. A synchronized line-number gutter highlights the exact traceback error line in red on failure." },
-      { title: "Mobile quick-keys ribbon", body: "A dedicated key strip for phone coding with one-tap access to Tab, Dedent, :, (), [], {}, def, return, for, and if." },
+      { title: "Defense Mastery Certification", body: "Conquering all 14 Agora stages unlocks the Defense Mastery Certificate with breakdown across Quant, Silicon, and Distributed crucibles." },
+      { title: "Universal PythonEditor", body: "Low-Level Design (/lld/practice), SQL Database (/db/practice), and Playground (/playground) now feature PythonEditor with indentation, bracket-pairing, mobile quick-keys, and error gutter." },
+      { title: "Overflow-safe Error Cards", body: "Drill mode failures no longer spill raw tracebacks over the page. Tracebacks are safely contained with direct error type badges and exact error line highlighting in the code gutter." },
+      { title: "Expanded Pattern Deck (36 Cards)", body: "Complete 36-card Leitner reflex deck covering all 10 DSA topics with keyboard navigation (Space to flip, 1-3 to select, arrow keys to rate)." },
     ],
   },
   {

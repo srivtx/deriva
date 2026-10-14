@@ -6,6 +6,8 @@ import MobileProblemNav from "@/components/mobile-problem-nav"
 import { loadWorkbenchProgress, saveWorkbenchProgress } from "@/persistence/workbench-progress"
 import { loadTheoryNote, saveTheoryNote } from "@/persistence/theory-notes"
 import { runScript } from "@/execution/pyodide-client"
+import { PythonEditor } from "@/editor/python-editor"
+import { extractErrorLine } from "@/editor/indent"
 
 export default function LLDPage() {
   const [currentId, setCurrentId] = useState(1)
@@ -24,6 +26,9 @@ export default function LLDPage() {
   const hints = hintLevel[currentId] || 0
   const isRevealed = revealed[currentId] || false
   const currentCode = savedCode[currentId] || problem.starterCode
+  const setupLines = DEPS ? DEPS.split("\n").length + 1 : 0
+  const isFailure = !!output && (output.startsWith("Error:") || output.includes("AssertionError") || output.includes("Traceback") || output.includes("IndentationError") || output.includes("SyntaxError"))
+  const errorLine = isFailure ? extractErrorLine(output, setupLines) : null
 
   useEffect(() => () => executionRef.current?.abort(), [])
 
@@ -159,10 +164,18 @@ export default function LLDPage() {
           <span className="theory-hint">A short explanation makes the next design feel familiar instead of new.</span>
         </div>
 
-        <div className="ed-wrap">
-           <div className="ed-bar"><span className="ed-lang">Python</span><span className="ed-file">design.py</span><span className="ready">Worker sandbox</span></div>
-          <textarea value={currentCode} onChange={e => setSavedCode({ ...savedCode, [currentId]: e.target.value })} className="ed" spellCheck={false} />
-        </div>
+        <PythonEditor
+          value={currentCode}
+          onChange={newCode => setSavedCode({ ...savedCode, [currentId]: newCode })}
+          onRun={runCode}
+          onReset={() => {
+            setSavedCode({ ...savedCode, [currentId]: problem.starterCode })
+            setOutput("")
+          }}
+          filename="design.py"
+          language="Python 3.12"
+          errorLine={errorLine}
+        />
 
         <div className="acts">
           <button onClick={runCode} disabled={running} className="btn btn-p">{running ? "Running..." : "▶ Run Tests"}</button>
@@ -220,7 +233,7 @@ export default function LLDPage() {
         .prob-row.active { color: var(--accent); background: var(--accent-soft); border-left-color: var(--accent); font-weight: 500; }
         .prob-row.done { color: var(--viz-settled); }
         .dot { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; color: var(--ink-soft); }
-        .prob-row.done .dot { background: var(--viz-settled); border-color: var(--viz-settled); color: #fff; }
+        .prob-row.done .dot { background: var(--viz-settled); border-color: var(--viz-settled); color: var(--paper-raised); }
         .prob-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .main { overflow-y: auto; padding: 24px 32px 60px; }
         .prob-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -247,19 +260,18 @@ export default function LLDPage() {
         .ed-file { color: var(--ink-soft); font-family: var(--font-mono); font-size: 11px; }
         .loading { color: var(--accent); font-size: 11px; }
         .ready { color: var(--viz-settled); font-size: 11px; }
-        .ed { width: 100%; min-height: 220px; max-height: 450px; background: var(--paper); color: var(--ink); border: none; outline: none; resize: vertical; padding: 12px 16px; font-family: var(--font-mono); font-size: 14px; line-height: 1.65; tab-size: 4; white-space: pre; overflow: auto; }
         .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; margin-bottom: 14px; }
         .btn { background: var(--paper-raised); color: var(--ink); border: 1px solid var(--line); padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: var(--font-ui); }
         .btn:hover:not(:disabled) { border-color: var(--accent); }
         .btn:disabled { opacity: 0.4; cursor: default; }
-        .btn-p { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+        .btn-p { background: var(--accent); color: var(--paper-raised); border-color: var(--accent); font-weight: 700; }
         .btn-s { background: var(--success-soft); color: var(--viz-settled); border-color: var(--success-line); }
         .solution-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
         .btn-load { min-height: 32px; padding: 5px 12px; font-size: 11px; font-weight: 700; border: 1px solid var(--accent); color: var(--accent); background: var(--paper-raised); }
-        .btn-load:hover { background: var(--accent); color: #fff; }
+        .btn-load:hover { background: var(--accent); color: var(--paper-raised); }
         .out { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; min-height: 50px; max-height: 250px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 14px; }
         .hint-row { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; font-size: 13px; }
-        .hint-b { background: var(--accent); color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }
+        .hint-b { background: var(--accent); color: var(--paper-raised); width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }
         .sol { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; overflow-x: auto; white-space: pre; }
         .wlk { font-size: 14px; line-height: 1.8; font-family: var(--font-narrative); }
         .kbd { text-align: center; color: var(--ink-soft); font-size: 11px; margin-top: 16px; font-family: var(--font-mono); }
