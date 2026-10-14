@@ -10,10 +10,13 @@ export const RELEASES: ReleaseEntry[] = [
   {
     version: "1.6",
     date: "2026-10-14",
-    title: "Pattern Cards & Smart Python Editor",
-    tagline: "A 60-second reflex deck built for handheld phone use, and real Python code-intelligence across every practice workspace.",
+    title: "Agora Oral Defense & Smart Python Editor",
+    tagline: "Spoken oral defense on hard quant paradoxes and low-latency systems, phone-first reflex cards, and real code-intelligence across drills.",
     highlights: [
-      { title: "Pattern Cards (/cards)", body: "A phone-first reflex deck of 36 flashcards matching every curriculum pattern. Trains the thinking move and underlying invariant instead of code memorization." },
+      { title: "Agora Oral Defense (/agora)", body: "The 14-stage oral Socratic defense chamber for elite technical rounds (Jane Street, HRT, Citadel, Figma, DeepMind). Built with a recursive 3-level linear ladder (Quant, Low-Latency Silicon, Distributed Invariants), each connected by explicit Concept Bridges." },
+      { title: "Natural Voice & Audio Chimes", body: "Clause-segmented conversational voice engine with human breath pacing, neural voice selection, synchronized active-phrase transcript highlighting, and built-in Web Audio broadcast chime cues." },
+      { title: "13 Zero-Collision Chalkboards", body: "All 14 stages feature custom 480×230 SVG technical chalkboards: Bertrand boxes, adverse selection D10, Penney prefix traps, permutation cycles, AoS vs SoA SIMD vectorization, branch prediction pipelines, L1 false sharing, SPSC ring buffer padding, TSO memory fences, vector clocks, Raft quorums, vnode hash rings, and CRDT lattices." },
+      { title: "Pattern Cards (/cards)", body: "A phone-first reflex deck of 36 flashcards matching every curriculum pattern with 3D flip card physics and Leitner spaced repetition." },
       { title: "Phone-first ergonomics", body: "3D flip card physics, touch swipe gestures (left to revisit, right for got-it), haptic feedback, and one-thumb intuition probes." },
       { title: "Leitner spaced repetition", body: "5-box local-first scheduling with streaks, daily targets, and 3 session modes: Quick 5 (subway sprint), Due Reps, and All 36." },
       { title: "Python auto-indentation", body: "Drill mode (/practice), PDB drills, and Ultron AI workbenches gain automatic indentation on Enter after colons (:), bracket expansion for (), [], {}, and indentation preservation." },

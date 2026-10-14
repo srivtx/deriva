@@ -35,6 +35,7 @@ const G = {
   pdb: "linear-gradient(135deg, #B45309, #7C2D12)",
   kyma: "linear-gradient(135deg, #0F766E, #3B0764)",
   corona: "linear-gradient(135deg, #1E3A8A, #B45309)",
+  wine: "linear-gradient(135deg, #A0305A, #6E1F3E)",
 }
 
 const APP_SECTIONS = [
@@ -45,6 +46,7 @@ const APP_SECTIONS = [
     { id: "interview", href: "/interview", name: "Interview", glyph: "◉", gradient: G.cobalt },
   ] },
   { label: "Practice", apps: [
+    { id: "agora", href: "/agora", name: "Agora", glyph: "🎙", gradient: G.wine },
     { id: "cards", href: "/cards", name: "Cards", glyph: "🂡", gradient: G.gold },
     { id: "practice", href: "/practice", name: "Drill", glyph: "▶", gradient: G.cobalt },
     { id: "one", href: "/one", name: "0NE", glyph: "⊙", gradient: G.violet },

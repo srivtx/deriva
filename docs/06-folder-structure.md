@@ -38,6 +38,7 @@ deriva/
 │   │   │   ├── observatory/page.tsx    #   living map: next move, patterns, systems, terrain
 │   │   ├── patterns/                  #   pattern directory, quiz, and earned journal
 │   │   ├── practice/                  #   daily queue (v0: simple; v1: spaced)
+│   │   ├── agora/                     #   oral technical defense: quant, silicon & distributed
 │   │   ├── cards/                     #   phone-first 60-second pattern reflex deck (touch & flip)
 │   │   ├── icpc/                      #   ICPC ladder hub: 13 linear sections, local progress
 │   │   └── layout.tsx                 #   design-system shell, fonts, theme
@@ -146,6 +147,7 @@ deriva/
 │   │
 │   ├── persistence/                   # ★ Local-first data (08) — ONLY dir touching localStorage
 │   │   ├── preferences.ts             #   theme / motion / text-scale prefs
+│   │   ├── agora.ts                   #   oral defense progress, attempts & speech prefs
 │   │   ├── cards.ts                   #   spaced repetition leitner state for pattern cards
 │   │   ├── lesson-progress.ts         #   9-stage progress, artifacts, pattern journal
 │   │   ├── practice-progress.ts       #   last-open problem per DSA topic
