@@ -79,11 +79,12 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "expedition", name: "Expedition", glyph: "△", gradient: G.ember, desc: "Retrieve & transfer ideas", category: "Explore", href: "/expedition", status: "installed" },
   { id: "res", name: "RES", glyph: "∴", gradient: G.wine, desc: "Research brainstorm trainer", category: "Explore", href: "/res", status: "installed" },
   { id: "games", name: "Games", glyph: "◆", gradient: G.pink, desc: "Practice through play", category: "Explore", href: "/games", status: "installed" },
+  { id: "probcraft", name: "ProbCraft", glyph: "⛏", gradient: G.gold, desc: "3D voxel probability game", category: "Explore", href: "/probcraft", status: "installed" },
   // System
   { id: "observatory", name: "Observatory", glyph: "◌", gradient: G.slate, desc: "Concept map", category: "System", href: "/observatory", status: "installed" },
   { id: "dashboard", name: "Progress", glyph: "▤", gradient: G.slate, desc: "Your history", category: "System", href: "/dashboard", status: "installed" },
   { id: "android", name: "Get app", glyph: "⤓", gradient: G.green, desc: "Install the APK", category: "System", href: "/android", status: "installed" },
-  { id: "releases", name: "What's new", glyph: "✦", gradient: G.green, desc: "Release notes", category: "System", href: "/releases", status: "installed" },
+  { id: "releases", name: "What's new", glyph: "§", gradient: G.green, desc: "Release notes", category: "System", href: "/releases", status: "installed" },
   { id: "settings", name: "Settings", glyph: "⚙", gradient: G.slate, desc: "Preferences", category: "System", href: "/settings", status: "installed" },
   { id: "store", name: "App Center", glyph: "❖", gradient: G.cobalt, desc: "Install & manage apps", category: "System", href: "/store", status: "installed" },
   // Studio
@@ -101,7 +102,7 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "soon-voice", name: "Voice Memos", glyph: "◠", gradient: G.pink, desc: "Record & replay", category: "Life", status: "soon" },
 ]
 
-export const APP_MODE_PREFIXES = ["/agora", "/cards", "/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/pdb", "/kyma", "/corona", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/ultron", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig", "/foundry"]
+export const APP_MODE_PREFIXES = ["/probcraft", "/agora", "/cards", "/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/pdb", "/kyma", "/corona", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/ultron", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig", "/foundry"]
 
 export function matchesAppModePrefix(href: string): boolean {
   return APP_MODE_PREFIXES.some(prefix => href === prefix || href.startsWith(prefix + "/") || href.startsWith(prefix + "?"))

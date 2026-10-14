@@ -40,6 +40,7 @@ deriva/
 │   │   ├── practice/                  #   daily queue (v0: simple; v1: spaced)
 │   │   ├── agora/                     #   oral technical defense: quant, silicon & distributed
 │   │   ├── cards/                     #   phone-first 60-second pattern reflex deck (touch & flip)
+│   │   ├── probcraft/                 #   3D voxel Minecraft-style probability game (Three.js)
 │   │   ├── icpc/                      #   ICPC ladder hub: 13 linear sections, local progress
 │   │   └── layout.tsx                 #   design-system shell, fonts, theme
 │   │

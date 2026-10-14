@@ -8,6 +8,19 @@ export type ReleaseEntry = {
 
 export const RELEASES: ReleaseEntry[] = [
   {
+    version: "1.7",
+    date: "2026-10-15",
+    title: "ProbCraft 3D: Minecraft-Style Probability",
+    tagline: "Learn probability by playing in a 3D voxel world: 8 linear worlds from Bertrand's Vault to Shannon Entropy Mines, with pointer-lock controls and real-time LLN convergence.",
+    highlights: [
+      { title: "ProbCraft 3D (/probcraft)", body: "A full 3D Minecraft-style voxel game built with Three.js. Walk with WASD, jump across floating stone bridges, mine ore veins, open ancient chests, and step through nether portals to derive probability invariants." },
+      { title: "8 Progressive Worlds (Start to Master)", body: "From beginner concepts (Bertrand's Box conditioning, Expected Value & WLLN) to intermediate (Monty Hall portal filtering, Pólya's 1D/2D random walks) and advanced/master (Martingale stopping times, Markov stationary eigenvectors, Poisson memorylessness, Shannon entropy halving)." },
+      { title: "Real-time Convergence HUD", body: "Live SVG sparkline graphing the sample mean convergence to theoretical expectation as you mine blocks, alongside an interactive crosshair tooltip identifying voxel microstates." },
+      { title: "Native Web Audio Synthesizer", body: "Pure Web Audio synthesis for footsteps, block mining crunches, gold dings, chest creaks, portal hums, and victory fanfares with zero network lag." },
+      { title: "Desktop-first with Landscape Mobile Support", body: "Optimized for desktop keyboards and pointer-lock mouse controls, with adaptive landscape touch controls for mobile tablets." },
+    ],
+  },
+  {
     version: "1.6",
     date: "2026-10-14",
     title: "Agora Oral Defense & Smart Python Editor",
