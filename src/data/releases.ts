@@ -8,6 +8,22 @@ export type ReleaseEntry = {
 
 export const RELEASES: ReleaseEntry[] = [
   {
+    version: "1.6",
+    date: "2026-10-14",
+    title: "Pattern Cards & Smart Python Editor",
+    tagline: "A 60-second reflex deck built for handheld phone use, and real Python code-intelligence across every practice workspace.",
+    highlights: [
+      { title: "Pattern Cards (/cards)", body: "A phone-first reflex deck of 36 flashcards matching every curriculum pattern. Trains the thinking move and underlying invariant instead of code memorization." },
+      { title: "Phone-first ergonomics", body: "3D flip card physics, touch swipe gestures (left to revisit, right for got-it), haptic feedback, and one-thumb intuition probes." },
+      { title: "Leitner spaced repetition", body: "5-box local-first scheduling with streaks, daily targets, and 3 session modes: Quick 5 (subway sprint), Due Reps, and All 36." },
+      { title: "Python auto-indentation", body: "Drill mode (/practice), PDB drills, and Ultron AI workbenches gain automatic indentation on Enter after colons (:), bracket expansion for (), [], {}, and indentation preservation." },
+      { title: "Tab & Shift+Tab indentation", body: "Indent and dedent single lines or multiline selections smoothly without browser focus-trapping." },
+      { title: "Smart backspace & bracket pairing", body: "Backspace deletes full 4-space tab stops at indent levels, and typing (), [], {}, \"\", '' auto-pairs, wraps selection, and steps over closing characters." },
+      { title: "⌘+Enter to run & error line gutter", body: "Run test suites directly from the keyboard. A synchronized line-number gutter highlights the exact traceback error line in red on failure." },
+      { title: "Mobile quick-keys ribbon", body: "A dedicated key strip for phone coding with one-tap access to Tab, Dedent, :, (), [], {}, def, return, for, and if." },
+    ],
+  },
+  {
     version: "1.5",
     date: "2026-08-26",
     title: "Ghost, the offline tutor",
