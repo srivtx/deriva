@@ -14,6 +14,12 @@ const nextConfig = {
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }]
   },
+  async redirects() {
+    return [
+      { source: "/apps", destination: "/store", permanent: false },
+      { source: "/games/probcraft", destination: "/probcraft", permanent: false },
+    ]
+  },
 }
 
 export default nextConfig

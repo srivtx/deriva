@@ -11,6 +11,12 @@ export interface EngineCallbacks {
   onBlockMine: (coord: VoxelCoord) => void
   onPlayerMove?: (pos: [number, number, number]) => void
   onToggleHud?: () => void
+  onToggleKeybindings?: () => void
+  onToggleJournal?: () => void
+  onToggleCodex?: () => void
+  onToggleSound?: () => void
+  onTeleportWorld?: (worldNumber: number) => void
+  onSelectHotbarSlot?: (slot: number) => void
 }
 
 // Generate an authentic 16x16 pixelated voxel texture using HTML5 Canvas
@@ -422,6 +428,17 @@ export class ProbCraftEngine {
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
+    // If typing in an input, textarea or content-editable, do not trigger game hotkeys
+    const target = e.target as HTMLElement | null
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+      return
+    }
+
+    // Do not interfere with browser / OS shortcuts (e.g. ⌘K, ⌘C, ⌘M, ⌘R)
+    if (e.metaKey || e.ctrlKey) {
+      return
+    }
+
     this.keys[e.code] = true
 
     if (e.code === "Space" && this.isGrounded) {
@@ -436,6 +453,51 @@ export class ProbCraftEngine {
 
     if (e.code === "KeyH") {
       this.callbacks.onToggleHud?.()
+    }
+
+    if (e.code === "KeyK" || (e.shiftKey && e.code === "Slash")) {
+      this.callbacks.onToggleKeybindings?.()
+    }
+
+    if (e.code === "KeyJ") {
+      this.callbacks.onToggleJournal?.()
+    }
+
+    if (e.code === "KeyC") {
+      this.callbacks.onToggleCodex?.()
+    }
+
+    if (e.code === "KeyM") {
+      this.callbacks.onToggleSound?.()
+    }
+
+    // Hotbar slots 1-4
+    if (e.code >= "Digit1" && e.code <= "Digit4" && !e.altKey) {
+      const slot = parseInt(e.code.replace("Digit", ""), 10) - 1
+      this.callbacks.onSelectHotbarSlot?.(slot)
+      return
+    }
+
+    // Alt + 1-8: Instant World Teleportation
+    if (e.altKey && e.code >= "Digit1" && e.code <= "Digit8") {
+      const worldNum = parseInt(e.code.replace("Digit", ""), 10)
+      this.callbacks.onTeleportWorld?.(worldNum)
+      return
+    }
+
+    // Digits 5-8 without Alt can also teleport directly
+    if (e.code >= "Digit5" && e.code <= "Digit8") {
+      const worldNum = parseInt(e.code.replace("Digit", ""), 10)
+      this.callbacks.onTeleportWorld?.(worldNum)
+      return
+    }
+
+    if (e.code === "BracketLeft") {
+      this.callbacks.onTeleportWorld?.(Math.max(1, this.currentWorld.worldNumber - 1))
+    }
+
+    if (e.code === "BracketRight") {
+      this.callbacks.onTeleportWorld?.(Math.min(8, this.currentWorld.worldNumber + 1))
     }
   }
 

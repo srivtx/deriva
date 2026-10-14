@@ -19,7 +19,9 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "icpc", label: "ICPC", href: "/icpc", glyph: "⚑", match: p => p.startsWith("/icpc") },
   { id: "atlas", label: "Atlas", href: "/atlas", glyph: "◎", match: p => p.startsWith("/atlas") },
   { id: "toolkit", label: "Toolkit", href: "/toolkit", glyph: "▦", match: p => p.startsWith("/toolkit") },
-  { id: "store", label: "Apps", href: "/store", glyph: "❖", match: p => p.startsWith("/store") },
+  { id: "games", label: "Games", href: "/games", glyph: "◆", match: p => p.startsWith("/games") },
+  { id: "probcraft", label: "ProbCraft", href: "/probcraft", glyph: "⛏", match: p => p.startsWith("/probcraft") },
+  { id: "store", label: "Apps", href: "/store", glyph: "❖", match: p => p.startsWith("/store") || p.startsWith("/apps") },
 ]
 
 export const NAV_MAX_SLOTS = 4

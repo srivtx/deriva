@@ -92,6 +92,7 @@ const APP_SECTIONS = [
     { id: "corona", href: "/corona", name: "CORONA", glyph: "⬡", gradient: G.corona },
     { id: "expedition", href: "/expedition", name: "Expedition", glyph: "△", gradient: G.ember },
     { id: "res", href: "/res", name: "RES", glyph: "∴", gradient: "linear-gradient(135deg, #A0305A, #6E1F3E)" },
+    { id: "probcraft", href: "/probcraft", name: "ProbCraft", glyph: "⛏", gradient: G.gold },
     { id: "games", href: "/games", name: "Games", glyph: "◆", gradient: G.pink },
   ] },
   { label: "System", apps: [
@@ -99,7 +100,7 @@ const APP_SECTIONS = [
     { id: "dashboard", href: "/dashboard", name: "Progress", glyph: "▤", gradient: G.slate },
     { id: "store", href: "/store", name: "App Center", glyph: "❖", gradient: G.cobalt },
     { id: "android", href: "/android", name: "Get app", glyph: "⤓", gradient: G.green },
-    { id: "releases", href: "/releases", name: "What's new", glyph: "✦", gradient: G.green },
+    { id: "releases", href: "/releases", name: "What's new", glyph: "§", gradient: G.green },
     { id: "settings", href: "/settings", name: "Settings", glyph: "⚙", gradient: G.slate },
   ] },
 ] as const
@@ -286,6 +287,7 @@ export default function HomePage() {
             <Link href="/patterns" className="explore-link"><b>Pattern Journal</b><span>Recognize the thinking moves</span></Link>
             <Link href="/expedition" className="explore-link"><b>Expedition</b><span>Retrieve, break, and transfer an idea</span></Link>
             <Link href="/games" className="explore-link"><b>Game Mode</b><span>Practice invariants through play</span></Link>
+            <Link href="/probcraft" className="explore-link"><b>ProbCraft 3D</b><span>Derive probability across 8 voxel realms</span></Link>
             <Link href="/design" className="explore-link"><b>System Design</b><span>53 architecture problems</span></Link>
             <Link href="/lld" className="explore-link"><b>Low-Level Design</b><span>55 object design problems, now with concurrency</span></Link>
             <Link href="/db" className="explore-link"><b>Database & SQL</b><span>50 query problems on real SQLite</span></Link>

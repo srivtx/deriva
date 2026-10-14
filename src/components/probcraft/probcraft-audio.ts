@@ -1,23 +1,50 @@
-// Native Web Audio Synthesizer for ProbCraft
-// Zero external asset downloads, zero network latency, instant audio feedback.
+export const SOUND_STORAGE_KEY = "deriva-probcraft-sound"
+
+export function loadSoundPreference(): boolean {
+  if (typeof window === "undefined") return true
+  try {
+    const val = window.localStorage.getItem(SOUND_STORAGE_KEY)
+    if (val !== null) return val === "1"
+  } catch {}
+  return true
+}
+
+export function saveSoundPreference(enabled: boolean): void {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.setItem(SOUND_STORAGE_KEY, enabled ? "1" : "0")
+  } catch {}
+}
 
 class ProbCraftAudioEngine {
   private ctx: AudioContext | null = null
   private enabled: boolean = true
 
+  constructor() {
+    if (typeof window !== "undefined") {
+      this.enabled = loadSoundPreference()
+    }
+  }
+
   private initContext() {
     if (typeof window === "undefined") return
     if (!this.ctx) {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-      this.ctx = new AudioCtx()
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AudioCtx) return
+      try {
+        this.ctx = new AudioCtx()
+      } catch {
+        return
+      }
     }
-    if (this.ctx.state === "suspended") {
+    if (this.ctx && this.ctx.state === "suspended") {
       this.ctx.resume().catch(() => {})
     }
   }
 
   public setEnabled(val: boolean) {
     this.enabled = val
+    saveSoundPreference(val)
     if (!val && this.ctx) {
       this.ctx.suspend().catch(() => {})
     } else if (val && this.ctx) {

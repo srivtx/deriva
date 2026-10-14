@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest"
 import { PROBCRAFT_WORLDS, type ProbWorld } from "../../src/data/probcraft-worlds"
+import { GAME_ENGINES } from "../../src/games/catalog"
+import { APP_CATALOG, APP_MODE_PREFIXES } from "../../src/data/apps"
+import { NAV_ITEMS } from "../../src/data/nav-items"
+import { NOTHING_DOTS, CLASSIC_PATHS, TEENAGE_PATHS } from "../../src/data/icon-packs"
+import { loadSoundPreference, saveSoundPreference, SOUND_STORAGE_KEY, probAudio } from "../../src/components/probcraft/probcraft-audio"
 
 describe("ProbCraft 3D Worlds & Curriculum Invariants", () => {
   it("contains all 8 progressive worlds from beginner to master", () => {
@@ -180,3 +185,126 @@ describe("ProbCraft Mathematical Theorem Invariants", () => {
     expect(entropy).toBe(4.0)
   })
 })
+
+describe("ProbCraft Discovery Shards & Archaeology Invariants", () => {
+  it("extracts exactly 17 discovery shrines and steles across the 8 curriculum realms", () => {
+    const allDiscoveryShards = PROBCRAFT_WORLDS.flatMap(w =>
+      w.interactiveTargets
+        .filter(t => t.id.startsWith("shrine-"))
+        .map(t => ({ ...t, worldNumber: w.worldNumber }))
+    )
+
+    expect(allDiscoveryShards.length).toBe(17)
+
+    // Check unique shard IDs
+    const ids = new Set(allDiscoveryShards.map(s => s.id))
+    expect(ids.size).toBe(17)
+
+    // Check per-world distribution: W1: 2, W2: 2, W3: 2, W4: 3, W5: 2, W6: 2, W7: 2, W8: 2
+    const countsPerWorld = [1, 2, 3, 4, 5, 6, 7, 8].map(
+      num => allDiscoveryShards.filter(s => s.worldNumber === num).length
+    )
+    expect(countsPerWorld).toEqual([2, 2, 2, 3, 2, 2, 2, 2])
+
+    // Validate shard payload integrity
+    for (const shard of allDiscoveryShards) {
+      expect(shard.name.trim().length).toBeGreaterThan(3)
+      expect(shard.oddsDesc.trim().length).toBeGreaterThan(10)
+      expect(Number.isFinite(shard.expectedValue)).toBe(true)
+      expect(Number.isFinite(shard.x)).toBe(true)
+      expect(Number.isFinite(shard.y)).toBe(true)
+      expect(Number.isFinite(shard.z)).toBe(true)
+    }
+  })
+})
+
+describe("ProbCraft Catalog & Icon Integration", () => {
+  it("is registered as playable in the Deriva Games catalog", () => {
+    const probcraftGame = GAME_ENGINES.find(g => g.id === "probcraft")
+    expect(probcraftGame).toBeDefined()
+    expect(probcraftGame?.title).toBe("ProbCraft 3D")
+    expect(probcraftGame?.status).toBe("playable")
+    expect(probcraftGame?.href).toBe("/probcraft")
+    expect(probcraftGame?.patterns.length).toBeGreaterThanOrEqual(4)
+  })
+
+  it("is registered in the Deriva system App Catalog", () => {
+    const probcraftApp = APP_CATALOG.find(a => a.id === "probcraft")
+    expect(probcraftApp).toBeDefined()
+    expect(probcraftApp?.name).toBe("ProbCraft")
+    expect(probcraftApp?.href).toBe("/probcraft")
+    expect(probcraftApp?.status).toBe("installed")
+  })
+
+  it("has custom icon definitions across all icon packs (Nothing, Classic, Teenage)", () => {
+    expect(NOTHING_DOTS["probcraft"]).toBeDefined()
+    expect(NOTHING_DOTS["probcraft"].length).toBe(7)
+    expect(CLASSIC_PATHS["probcraft"]).toBeDefined()
+    expect(CLASSIC_PATHS["probcraft"].length).toBeGreaterThan(10)
+    expect(TEENAGE_PATHS["probcraft"]).toBeDefined()
+    expect(TEENAGE_PATHS["probcraft"].length).toBeGreaterThan(10)
+  })
+})
+
+describe("ProbCraft Audio Preference Persistence", () => {
+  it("uses the designated sound storage key", () => {
+    expect(SOUND_STORAGE_KEY).toBe("deriva-probcraft-sound")
+  })
+
+  it("handles persistence when window/localStorage is present", () => {
+    const mockStorage: Record<string, string> = {}
+    const originalWindow = global.window
+
+    global.window = {
+      localStorage: {
+        getItem: (k: string) => mockStorage[k] ?? null,
+        setItem: (k: string, v: string) => { mockStorage[k] = v },
+      } as unknown as Storage,
+    } as unknown as Window & typeof globalThis
+
+    saveSoundPreference(false)
+    expect(loadSoundPreference()).toBe(false)
+    expect(mockStorage[SOUND_STORAGE_KEY]).toBe("0")
+
+    saveSoundPreference(true)
+    expect(loadSoundPreference()).toBe(true)
+    expect(mockStorage[SOUND_STORAGE_KEY]).toBe("1")
+
+    global.window = originalWindow
+  })
+
+  it("safely handles audio calls when AudioContext is unavailable or disabled without throwing", () => {
+    probAudio.setEnabled(false)
+    expect(() => probAudio.playStep()).not.toThrow()
+    expect(() => probAudio.playMine()).not.toThrow()
+    expect(() => probAudio.playDing()).not.toThrow()
+    expect(() => probAudio.playFanfare()).not.toThrow()
+    expect(() => probAudio.playTrapBuzzer()).not.toThrow()
+    probAudio.setEnabled(true)
+  })
+})
+
+describe("ProbCraft Navigation & Discovery Surfaces", () => {
+  it("registers probcraft and games in bottom navigation slots", () => {
+    const probcraftNav = NAV_ITEMS.find(n => n.id === "probcraft")
+    expect(probcraftNav).toBeDefined()
+    expect(probcraftNav?.href).toBe("/probcraft")
+    expect(probcraftNav?.match("/probcraft")).toBe(true)
+
+    const gamesNav = NAV_ITEMS.find(n => n.id === "games")
+    expect(gamesNav).toBeDefined()
+    expect(gamesNav?.href).toBe("/games")
+    expect(gamesNav?.match("/games")).toBe(true)
+
+    const appsNav = NAV_ITEMS.find(n => n.id === "store")
+    expect(appsNav).toBeDefined()
+    expect(appsNav?.match("/apps")).toBe(true)
+    expect(appsNav?.match("/store")).toBe(true)
+  })
+
+  it("includes /probcraft and /apps in APP_MODE_PREFIXES", () => {
+    expect(APP_MODE_PREFIXES).toContain("/probcraft")
+    expect(APP_MODE_PREFIXES).toContain("/apps")
+  })
+})
+

@@ -14,6 +14,15 @@ export type GameEngine = {
 
 export const GAME_ENGINES: GameEngine[] = [
   {
+    id: "probcraft",
+    title: "ProbCraft 3D",
+    verb: "mine, measure, derive",
+    description: "A first-person 3D voxel world where probability theorems are built from physical blocks, coin pillars, and discovery shards.",
+    patterns: ["Invariant-Driven Structure", "Decision Tree", "State Design", "Elimination", "Invariance-Preserving Reduction (Euclid)", "Representation Choice"],
+    status: "playable",
+    href: "/probcraft",
+  },
+  {
     id: "algorithm-relay",
     title: "Algorithm Relay",
     verb: "compose the system",

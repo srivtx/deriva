@@ -64,6 +64,7 @@ export const NOTHING_DOTS: Record<string, string[]> = {
   res: [".......", ".#...#.", ".#...#.", ".......", "...#...", ".......", "......."],
   pdb: [".#####.", "#.....#", "#..#..#", "#.....#", ".#####.", "...#...", "...#..."],
   foundry: [".......", ".#####.", ".#####.", "...#...", "...#...", "...#...", "......."],
+  probcraft: ["..###..", ".#...#.", "#.###.#", "#.#.#.#", "#.###.#", ".#...#.", "..###.."],
 }
 
 // ── Classic: solid silhouettes (filled, even-odd eye holes) ──
@@ -72,6 +73,8 @@ export const CLASSIC_PATHS: Record<string, string> = {
     "M12 3.25a6.75 6.75 0 0 1 6.75 6.75v9.6l-2.28-1.8-2.23 1.8-2.24-1.8-2.24 1.8-2.23-1.8L5.25 19.6V10A6.75 6.75 0 0 1 12 3.25Zm-2.7 5.85a1.05 1.05 0 1 0 0 2.1 1.05 1.05 0 0 0 0-2.1Zm5.4 0a1.05 1.05 0 1 0 0 2.1 1.05 1.05 0 0 0 0-2.1Z",
   foundry:
     "M6 4.5h12A1.5 1.5 0 0 1 19.5 6v3A1.5 1.5 0 0 1 18 10.5H6A1.5 1.5 0 0 1 4.5 9V6A1.5 1.5 0 0 1 6 4.5Zm5.4 7.5h1.2a.9.9 0 0 1 .9.9v6.6a.9.9 0 0 1-.9.9h-1.2a.9.9 0 0 1-.9-.9v-6.6a.9.9 0 0 1 .9-.9Z",
+  probcraft:
+    "M12 2.5L20 7v10l-8 4.5L4 17V7l8-4.5zm0 2.3L6 8.2v7.6l6 3.4 6-3.4V8.2L12 4.8z",
 }
 
 // ── Teenage Engineering: thin-line pictograms (24×24 stroke paths) ──
@@ -124,6 +127,7 @@ export const TEENAGE_PATHS: Record<string, string> = {
   foundry: "M5.5 5h13v4h-13zM12 9v11M9 20h6",
   more: "M5 12h.01M12 12h.01M19 12h.01",
   patterns: "M12 3l7 9-7 9-7-9zM8.5 12h7",
+  probcraft: "M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM12 12l8-4.5M12 12v9M12 12L4 7.5",
 }
 
 export function currentIconPack(): IconPackId {

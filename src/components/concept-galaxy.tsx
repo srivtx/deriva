@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, type CSSProperties } from "react"
+import Link from "next/link"
 import * as THREE from "three"
 import { GAME_ENGINES } from "@/games/catalog"
 
@@ -73,7 +74,8 @@ export default function ConceptGalaxy() {
         : index % 3 === 1
           ? new THREE.OctahedronGeometry(0.4, 0)
           : new THREE.IcosahedronGeometry(0.42, 0)
-      const material = new THREE.MeshStandardMaterial({ color: COLORS[index], emissive: COLORS[index], emissiveIntensity: 0.16, roughness: 0.34, metalness: 0.28 })
+      const color = COLORS[index % COLORS.length]
+      const material = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.16, roughness: 0.34, metalness: 0.28 })
       const node = new THREE.Mesh(geometry, material)
       node.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.62, (index % 2) * 0.35 - 0.15)
       node.userData = { id: engine.id, index }
@@ -84,7 +86,7 @@ export default function ConceptGalaxy() {
         new THREE.Vector3(0, 0, 0),
         node.position.clone(),
       ])
-      const line = new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: COLORS[index], transparent: true, opacity: 0.22 }))
+      const line = new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.22 }))
       galaxy.add(line)
     })
 
@@ -168,6 +170,11 @@ export default function ConceptGalaxy() {
         <span>Tap a shape to inspect the pattern family</span>
         <b>{selected.title}</b>
         <small>{selected.verb} · {selected.patterns.length} patterns</small>
+        {selected.href && (
+          <Link href={selected.href} style={{ display: "inline-block", marginTop: 4, color: "var(--accent)", textDecoration: "none", fontWeight: 600, fontSize: 12 }}>
+            Play {selected.title} →
+          </Link>
+        )}
       </div>
     </div>
   )

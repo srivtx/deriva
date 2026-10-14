@@ -74,9 +74,23 @@ export default function GamesPage() {
         </div>
       </Link>
 
+      <Link href="/probcraft" className="game-card" style={{ marginTop: "20px" }}>
+        <GameCardArt engineId="probcraft" />
+        <div className="game-card-top">
+          <span className="discovery-kicker">3D Voxel World · 8 Realms</span>
+          <span className="game-duration">10–25 min</span>
+        </div>
+        <h2>ProbCraft 3D</h2>
+        <p>A first-person 3D voxel sandbox where probability theorems are derived by mining blocks, unsealing ancient discovery steles, and testing empirical frequencies against theoretical limits.</p>
+        <div className="game-card-footer">
+          <span>Bertrand&apos;s Box · Law of Large Numbers · Monty Hall · Pólya Recurrence · Martingales · Markov Chains · Shannon Entropy</span>
+          <b>Enter 3D World →</b>
+        </div>
+      </Link>
+
       <section className="game-engine-list">
         <div className="game-section-label">The concept map</div>
-        {GAME_ENGINES.filter(engine => engine.id !== STACK_CLIMBER.id).map(engine => <EngineCard key={engine.id} engine={engine} />)}
+        {GAME_ENGINES.filter(engine => engine.id !== STACK_CLIMBER.id && engine.id !== "probcraft").map(engine => <EngineCard key={engine.id} engine={engine} />)}
       </section>
 
       <div className="game-design-note">

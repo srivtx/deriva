@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import dynamic from "next/dynamic"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { STACK_CLIMBER } from "@/games/stack-climber"
 import { GAME_ENGINES } from "@/games/catalog"
@@ -18,6 +18,7 @@ type FeedbackTone = "correct" | "wrong"
 
 export default function StackClimberPage() {
   const params = useParams()
+  const router = useRouter()
   const [phase, setPhase] = useState<Phase>("contract")
   const [mode, setMode] = useState<DecisionMode>("predict")
   const [current, setCurrent] = useState(STACK_CLIMBER.start)
@@ -30,6 +31,12 @@ export default function StackClimberPage() {
   const [playedBefore, setPlayedBefore] = useState(false)
   const [motion, setMotion] = useState<"descend" | "return" | "base" | null>(null)
   const [motionKey, setMotionKey] = useState(0)
+
+  useEffect(() => {
+    if (params.game === "probcraft") {
+      router.replace("/probcraft")
+    }
+  }, [params.game, router])
 
   useEffect(() => {
     if (params.game === STACK_CLIMBER.id) setPlayedBefore(!!loadGameProgress(STACK_CLIMBER.id))
@@ -49,6 +56,16 @@ export default function StackClimberPage() {
 
   if (params.game !== STACK_CLIMBER.id) {
     const engine = GAME_ENGINES.find(item => item.id === params.game)
+    if (engine?.href && engine.status === "playable") {
+      return (
+        <main className="game-missing">
+          <span className="stage-kicker">Playable Engine</span>
+          <h1>{engine.title}</h1>
+          <p>{engine.description}</p>
+          <Link href={engine.href} className="btn-primary as-link">Launch {engine.title} →</Link>
+        </main>
+      )
+    }
     return (
       <main className="game-missing">
         <span className="stage-kicker">{engine?.status === "prototype" ? "Prototype in progress" : "Next engine"}</span>
@@ -219,7 +236,7 @@ export default function StackClimberPage() {
 
       {phase === "done" ? (
         <section className="game-finished">
-          <span className="discovery-kicker">✦ Concept unlocked through play</span>
+          <span className="discovery-kicker">Concept unlocked through play</span>
           <h1 className="stage-title">You climbed the stack.</h1>
           <p className="narrative">You descended by making the problem smaller, found the floor, and returned answers upward. That shape is recursion before it is syntax.</p>
           <div className="game-result"><span>Mistakes this run</span><b>{mistakes}</b><span>Next recognition</span><b>Look for this shape in a tree.</b></div>

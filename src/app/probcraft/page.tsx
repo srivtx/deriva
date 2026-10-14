@@ -5,9 +5,18 @@ import Link from "next/link"
 import { PROBCRAFT_WORLDS, type ProbWorld, type VoxelCoord } from "@/data/probcraft-worlds"
 import { ProbCraftEngine } from "@/components/probcraft/probcraft-engine"
 import { ProbCraftHUD } from "@/components/probcraft/probcraft-hud"
-import { probAudio } from "@/components/probcraft/probcraft-audio"
+import { probAudio, loadSoundPreference } from "@/components/probcraft/probcraft-audio"
 
 const STORAGE_KEY = "deriva-probcraft-v1"
+const SHARDS_STORAGE_KEY = "deriva-probcraft-shards"
+
+// Strictly adhere to Deriva Design Tokens (docs/09 §4)
+const C_ACCENT = "#2F8F5B"  // var(--accent)
+const C_SETTLED = "#2F8F5B" // var(--viz-settled)
+const C_ACTIVE = "#2E5AAC"  // var(--viz-active)
+const C_CACHED = "#B07C24"  // var(--viz-cached)
+const C_PRUNED = "#C34A3D"  // var(--viz-pruned)
+const C_MUTED = "#9AA3AD"   // var(--viz-untouched)
 
 export default function ProbCraftPage() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -29,14 +38,56 @@ export default function ProbCraftPage() {
   const [lastMicrostateId, setLastMicrostateId] = useState<string | null>(null)
   const [isHudHidden, setIsHudHidden] = useState(false)
   const [discoveriesFound, setDiscoveriesFound] = useState<string[]>([])
+  const [showCodex, setShowCodex] = useState(false)
+  const [showJournal, setShowJournal] = useState(false)
+  const [showKeybindings, setShowKeybindings] = useState(false)
 
   const handleToggleHud = useCallback(() => {
     setIsHudHidden(prev => !prev)
   }, [])
 
   const handleBlockInteractionRef = useRef<(coord: VoxelCoord) => void>(() => {})
+  const toggleSoundRef = useRef<() => void>(() => {})
+  const handleFastSimulateRef = useRef<(rounds?: number) => void>(() => {})
 
   const currentWorld: ProbWorld = PROBCRAFT_WORLDS[currentWorldIndex] || PROBCRAFT_WORLDS[0]
+
+  // Switch world when index changes
+  const switchWorld = useCallback((index: number) => {
+    if (index < 0 || index >= PROBCRAFT_WORLDS.length) return
+    setCurrentWorldIndex(index)
+    setTrialsCount(0)
+    setEmpiricalMean(0)
+    setHistory([])
+    setSelectedAnswerId(null)
+    setIsAnswerSubmitted(false)
+    setMicrostateCounts({})
+    setLastMicrostateId(null)
+    setShowCodex(false)
+
+    if (engineRef.current) {
+      engineRef.current.loadWorld(PROBCRAFT_WORLDS[index])
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ worldIndex: index }))
+    } catch {}
+  }, [])
+
+  const toggleSound = useCallback(() => {
+    setIsSoundEnabled(prev => {
+      const next = !prev
+      probAudio.setEnabled(next)
+      if (next) {
+        probAudio.playDing(true)
+        engineRef.current?.spawnFloatingNotice("🔊 Audio: ON", [currentWorld.playerSpawn[0], currentWorld.playerSpawn[1] + 1.2, currentWorld.playerSpawn[2]], C_SETTLED)
+      } else {
+        engineRef.current?.spawnFloatingNotice("🔇 Audio: MUTED", [currentWorld.playerSpawn[0], currentWorld.playerSpawn[1] + 1.2, currentWorld.playerSpawn[2]], C_MUTED)
+      }
+      return next
+    })
+  }, [currentWorld.playerSpawn])
+  toggleSoundRef.current = toggleSound
 
   // Initialize Engine
   useEffect(() => {
@@ -51,6 +102,34 @@ export default function ProbCraftPage() {
       },
       onToggleHud: () => {
         handleToggleHud()
+      },
+      onToggleKeybindings: () => {
+        setShowKeybindings(prev => !prev)
+      },
+      onToggleJournal: () => {
+        setShowJournal(prev => !prev)
+      },
+      onToggleCodex: () => {
+        setShowCodex(prev => !prev)
+      },
+      onToggleSound: () => {
+        toggleSoundRef.current()
+      },
+      onTeleportWorld: (worldNum: number) => {
+        switchWorld(worldNum - 1)
+      },
+      onSelectHotbarSlot: (slot: number) => {
+        setActiveSlot(slot)
+        if (slot === 0) {
+          engineRef.current?.interactCurrentTarget()
+        } else if (slot === 1) {
+          probAudio.playDing()
+          engineRef.current?.spawnFloatingNotice("⌕ Odds Scanner Equipped", [currentWorld.playerSpawn[0], currentWorld.playerSpawn[1] + 1.2, currentWorld.playerSpawn[2]], C_ACTIVE)
+        } else if (slot === 2) {
+          handleFastSimulateRef.current(25)
+        } else if (slot === 3) {
+          setShowCodex(true)
+        }
       },
     })
     engineRef.current = engine
@@ -69,57 +148,49 @@ export default function ProbCraftPage() {
     }
   }, [])
 
-  // Load Saved Unlocked Progress
+  // Load Saved Progress & Sound Preference
   useEffect(() => {
+    setIsSoundEnabled(loadSoundPreference())
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved)
         if (typeof parsed.worldIndex === "number" && parsed.worldIndex >= 0 && parsed.worldIndex < PROBCRAFT_WORLDS.length) {
-          // Keep current index or restore
+          setCurrentWorldIndex(parsed.worldIndex)
+          engineRef.current?.loadWorld(PROBCRAFT_WORLDS[parsed.worldIndex])
+        }
+      }
+      const savedShards = localStorage.getItem(SHARDS_STORAGE_KEY)
+      if (savedShards) {
+        const parsedShards = JSON.parse(savedShards)
+        if (Array.isArray(parsedShards)) {
+          setDiscoveriesFound(parsedShards)
         }
       }
     } catch {}
   }, [])
 
-  // Switch world when index changes
-  const switchWorld = useCallback((index: number) => {
-    if (index < 0 || index >= PROBCRAFT_WORLDS.length) return
-    setCurrentWorldIndex(index)
-    setTrialsCount(0)
-    setEmpiricalMean(0)
-    setHistory([])
-    setSelectedAnswerId(null)
-    setIsAnswerSubmitted(false)
-    setMicrostateCounts({})
-    setLastMicrostateId(null)
-    setDiscoveriesFound([])
-
-    if (engineRef.current) {
-      engineRef.current.loadWorld(PROBCRAFT_WORLDS[index])
-    }
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ worldIndex: index }))
-    } catch {}
-  }, [])
-
   // Handle interacting / mining with targeted voxel block
   const handleBlockInteraction = (coord: VoxelCoord) => {
-    // Check if targeted voxel is an exploration discovery shrine, ancient stele, or observation perch
+    // Check if targeted voxel is an exploration discovery shrine
     const shrineTarget = currentWorld.interactiveTargets.find(
       t => Math.round(t.x) === Math.round(coord.x) && Math.round(t.y) === Math.round(coord.y) && Math.round(t.z) === Math.round(coord.z) &&
-        (t.id.startsWith("shrine-") || t.id.startsWith("stele-") || t.id.startsWith("monument-") || t.id.startsWith("perch-") || t.id.startsWith("altar-") || t.name.toLowerCase().includes("shrine") || t.name.toLowerCase().includes("inscription") || t.name.toLowerCase().includes("stele") || t.name.toLowerCase().includes("monument") || t.name.toLowerCase().includes("perch"))
+        t.id.startsWith("shrine-")
     )
 
     if (shrineTarget) {
       if (!discoveriesFound.includes(shrineTarget.id)) {
-        setDiscoveriesFound(prev => [...prev, shrineTarget.id])
+        setDiscoveriesFound(prev => {
+          if (prev.includes(shrineTarget.id)) return prev
+          const next = [...prev, shrineTarget.id]
+          try { localStorage.setItem(SHARDS_STORAGE_KEY, JSON.stringify(next)) } catch {}
+          return next
+        })
         probAudio.playFanfare()
-        engineRef.current?.spawnFloatingNotice(`📜 Shard: ${shrineTarget.name}`, [coord.x, coord.y + 0.9, coord.z], "#22c55e")
+        engineRef.current?.spawnFloatingNotice(`📜 Shard Unsealed: ${shrineTarget.name}`, [coord.x, coord.y + 0.9, coord.z], C_SETTLED)
       } else {
         probAudio.playDing()
-        engineRef.current?.spawnFloatingNotice(`📜 ${shrineTarget.name}: Known`, [coord.x, coord.y + 0.9, coord.z], "#06b6d4")
+        engineRef.current?.spawnFloatingNotice(`📜 Inscription: ${shrineTarget.name}`, [coord.x, coord.y + 0.9, coord.z], C_ACTIVE)
       }
       return
     }
@@ -129,7 +200,7 @@ export default function ProbCraftPage() {
     let value = 0
     let pathId = ""
     let noticeText = ""
-    let noticeColor = "#fbbf24"
+    let noticeColor = C_CACHED
 
     if (worldNum === 1) {
       // World 1: Bertrand's Box
@@ -138,21 +209,21 @@ export default function ProbCraftPage() {
         pathId = Math.random() < 0.5 ? "path-g1" : "path-g2"
         value = 1
         noticeText = `+1 Gold! [${pathId === "path-g1" ? "Path G1" : "Path G2"}: Vault A]`
-        noticeColor = "#eab308"
+        noticeColor = C_CACHED
         probAudio.playDing(true)
       } else if (coord.x === 3) {
         // Vault C (Gold + Coal): Gold path G3, but other is Coal
         pathId = "path-g3"
         value = 0
         noticeText = "+1 Gold! [Path G3: Vault C (Other is Coal)]"
-        noticeColor = "#06b6d4"
+        noticeColor = C_ACTIVE
         probAudio.playDing()
       } else {
         // Vault B (Coal + Coal): Ruled out by observing gold
         pathId = "path-g3"
         value = 0
         noticeText = "0 Coal [Vault B Ruled Out]"
-        noticeColor = "#9ca3af"
+        noticeColor = C_MUTED
         probAudio.playMine()
       }
     } else if (worldNum === 2) {
@@ -161,14 +232,14 @@ export default function ProbCraftPage() {
         pathId = "path-iron"
         value = 1.0
         noticeText = "+1 Gold (Iron EV = 1.0)"
-        noticeColor = "#eab308"
+        noticeColor = C_CACHED
         probAudio.playDing()
       } else if (coord.x === 0 || coord.type === "diamond_ore") {
         pathId = "path-diamond"
         const jackpot = Math.random() < 0.1
         value = jackpot ? 14 : 0
         noticeText = jackpot ? "+14 Diamond Jackpot! (EV = 1.4)" : "0 Diamond (Variance)"
-        noticeColor = jackpot ? "#06b6d4" : "#9ca3af"
+        noticeColor = jackpot ? C_ACTIVE : C_MUTED
         if (jackpot) probAudio.playDing(true)
         else probAudio.playMine()
       } else {
@@ -176,7 +247,7 @@ export default function ProbCraftPage() {
         const jackpot = Math.random() < 0.01
         value = jackpot ? 80 : 0
         noticeText = jackpot ? "+80 Nether Gold Jackpot!" : "0 Gold (99% Miss Rate)"
-        noticeColor = jackpot ? "#ef4444" : "#9ca3af"
+        noticeColor = jackpot ? C_PRUNED : C_MUTED
         if (jackpot) probAudio.playDing(true)
         else probAudio.playMine()
       }
@@ -188,7 +259,7 @@ export default function ProbCraftPage() {
         const win = Math.random() < 0.667
         value = win ? 1 : 0
         noticeText = win ? "Citadel Diamond! (Switch Won 2/3)" : "Sheep Void! (Switch Lost 1/3)"
-        noticeColor = win ? "#06b6d4" : "#ef4444"
+        noticeColor = win ? C_ACTIVE : C_PRUNED
         if (win) probAudio.playDing(true)
         else probAudio.playMine()
       } else if (coord.x === -4) {
@@ -197,7 +268,7 @@ export default function ProbCraftPage() {
         const win = Math.random() < 0.333
         value = win ? 1 : 0
         noticeText = win ? "Citadel Diamond! (Stay Won 1/3)" : "Sheep Void! (Stay Lost 2/3)"
-        noticeColor = win ? "#06b6d4" : "#9ca3af"
+        noticeColor = win ? C_ACTIVE : C_MUTED
         if (win) probAudio.playDing(true)
         else probAudio.playMine()
       } else {
@@ -205,7 +276,7 @@ export default function ProbCraftPage() {
         pathId = "path-goat"
         value = 0
         noticeText = "Host Revealed Sheep (0% Win)"
-        noticeColor = "#ef4444"
+        noticeColor = C_PRUNED
         probAudio.playMine()
       }
     } else if (worldNum === 4) {
@@ -214,7 +285,7 @@ export default function ProbCraftPage() {
       pathId = isPos ? "path-step-pos" : "path-step-neg"
       value = 1.0 // 1D recurrence
       noticeText = isPos ? "+1 Step Forward" : "-1 Step Backward"
-      noticeColor = isPos ? "#22c55e" : "#ef4444"
+      noticeColor = isPos ? C_SETTLED : C_PRUNED
       probAudio.playStep()
     } else if (worldNum === 5) {
       // World 5: Martingale
@@ -222,7 +293,7 @@ export default function ProbCraftPage() {
       pathId = isRuin ? "path-loss-catastrophic" : "path-win-small"
       value = isRuin ? -63 : 1
       noticeText = isRuin ? "RUIN: -63 Gold Wipeout!" : "+1 Gold Profit"
-      noticeColor = isRuin ? "#ef4444" : "#22c55e"
+      noticeColor = isRuin ? C_PRUNED : C_SETTLED
       if (isRuin) probAudio.playTrapBuzzer()
       else probAudio.playDing()
     } else if (worldNum === 6) {
@@ -231,19 +302,19 @@ export default function ProbCraftPage() {
       if (r < 0.318) {
         pathId = "path-forest"
         noticeText = "Transitioned -> Forest (31.8%)"
-        noticeColor = "#22c55e"
+        noticeColor = C_SETTLED
       } else if (r < 0.591) {
         pathId = "path-desert"
         noticeText = "Transitioned -> Desert (27.3%)"
-        noticeColor = "#eab308"
+        noticeColor = C_CACHED
       } else if (r < 0.841) {
         pathId = "path-nether"
         noticeText = "Transitioned -> Nether (25.0%)"
-        noticeColor = "#ef4444"
+        noticeColor = C_PRUNED
       } else {
         pathId = "path-tundra"
         noticeText = "Transitioned -> Tundra (15.9%)"
-        noticeColor = "#06b6d4"
+        noticeColor = C_ACTIVE
       }
       value = 1
       probAudio.playPortal()
@@ -254,7 +325,7 @@ export default function ProbCraftPage() {
       pathId = dt < 15 ? "path-short-wait" : dt <= 45 ? "path-avg-wait" : "path-long-wait"
       value = dt
       noticeText = `Arrival: Δt = ${dt.toFixed(1)}s (λ = 2/min)`
-      noticeColor = "#f59e0b"
+      noticeColor = C_CACHED
       probAudio.playDing()
     } else {
       // World 8: Shannon Entropy
@@ -262,7 +333,7 @@ export default function ProbCraftPage() {
       pathId = `path-query-${queryIdx}`
       value = 1
       noticeText = `Query ${queryIdx}/4: 1 Bit Extracted!`
-      noticeColor = queryIdx === 4 ? "#22c55e" : "#06b6d4"
+      noticeColor = queryIdx === 4 ? C_SETTLED : C_ACTIVE
       probAudio.playDing(true)
     }
 
@@ -342,12 +413,7 @@ export default function ProbCraftPage() {
     setHistory(nextHist)
     setEmpiricalMean(sum / nextCount)
   }
-
-  const toggleSound = () => {
-    const next = !isSoundEnabled
-    setIsSoundEnabled(next)
-    probAudio.setEnabled(next)
-  }
+  handleFastSimulateRef.current = handleFastSimulate
 
   return (
     <main className="probcraft-container" aria-label="ProbCraft 3D Voxel Probability Game">
@@ -391,6 +457,12 @@ export default function ProbCraftPage() {
         isHudHidden={isHudHidden}
         onToggleHud={handleToggleHud}
         discoveriesFound={discoveriesFound}
+        showCodex={showCodex}
+        onToggleCodex={setShowCodex}
+        showJournal={showJournal}
+        onToggleJournal={setShowJournal}
+        showKeybindings={showKeybindings}
+        onToggleKeybindings={setShowKeybindings}
       />
 
       {/* Mobile Landscape Virtual Touch D-Pad */}
@@ -426,6 +498,37 @@ export default function ProbCraftPage() {
           onTouchStart={e => { e.preventDefault(); engineRef.current?.setVirtualControls({ backward: true }) }}
           onTouchEnd={e => { e.preventDefault(); engineRef.current?.setVirtualControls({ backward: false }) }}
         >▼</button>
+      </div>
+
+      {/* Mobile Landscape Virtual Touch Action Buttons */}
+      <div className="mobile-touch-actions" aria-hidden="true">
+        <button
+          type="button"
+          className="action-touch-btn mine"
+          onTouchStart={e => {
+            e.preventDefault()
+            engineRef.current?.interactCurrentTarget()
+          }}
+          title="Mine or Probe Voxel"
+        >
+          ⛏ MINE
+        </button>
+        <button
+          type="button"
+          className="action-touch-btn codex"
+          onClick={() => setShowCodex(true)}
+          title="Open Invariant Codex"
+        >
+          § CODEX
+        </button>
+        <button
+          type="button"
+          className="action-touch-btn journal"
+          onClick={() => setShowJournal(true)}
+          title="Open Discovery Journal"
+        >
+          📜 SHARDS
+        </button>
       </div>
 
       {/* Initial Click-to-Play Overlay (Only before first interaction) */}
@@ -680,8 +783,54 @@ export default function ProbCraftPage() {
           font-weight: 800;
         }
 
+        .mobile-touch-actions {
+          position: absolute;
+          bottom: 24px;
+          right: 20px;
+          display: none;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 8px;
+          z-index: 22;
+          user-select: none;
+        }
+
+        .action-touch-btn {
+          height: 40px;
+          padding: 0 14px;
+          border-radius: var(--radius);
+          background: rgba(20, 22, 26, 0.75);
+          backdrop-filter: blur(6px);
+          border: 1px solid var(--line);
+          color: var(--paper-raised);
+          font-size: 11px;
+          font-family: var(--font-mono);
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          touch-action: none;
+        }
+
+        .action-touch-btn.mine {
+          background: var(--accent);
+          color: var(--paper);
+          border-color: var(--accent);
+          height: 44px;
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .action-touch-btn:hover {
+          border-color: var(--accent);
+        }
+
         @media (max-width: 1024px) {
           .mobile-touch-dpad {
+            display: flex;
+          }
+          .mobile-touch-actions {
             display: flex;
           }
         }

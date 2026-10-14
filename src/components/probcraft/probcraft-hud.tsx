@@ -1,7 +1,7 @@
 // In-Game 3D Voxel HUD & Probability Analysis Slate for ProbCraft
 // Conforms strictly to design tokens, zero arbitrary hex, zero AI icons.
 
-import { useState } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { type ProbWorld, type ProbOption } from "@/data/probcraft-worlds"
 import { probAudio } from "./probcraft-audio"
 
@@ -29,6 +29,13 @@ export interface ProbCraftHUDProps {
   isHudHidden?: boolean
   onToggleHud?: () => void
   discoveriesFound?: string[]
+  // Controlled modal props
+  showCodex?: boolean
+  onToggleCodex?: (val: boolean) => void
+  showJournal?: boolean
+  onToggleJournal?: (val: boolean) => void
+  showKeybindings?: boolean
+  onToggleKeybindings?: (val: boolean) => void
 }
 
 export function ProbCraftHUD({
@@ -55,18 +62,94 @@ export function ProbCraftHUD({
   isHudHidden = false,
   onToggleHud = () => {},
   discoveriesFound = [],
+  showCodex: propShowCodex,
+  onToggleCodex,
+  showJournal: propShowJournal,
+  onToggleJournal,
+  showKeybindings: propShowKeybindings,
+  onToggleKeybindings,
 }: ProbCraftHUDProps) {
-  const [showCodex, setShowCodex] = useState(false)
+  const [internalModalOpen, setInternalModalOpen] = useState(false)
+  const [activeModalTab, setActiveModalTab] = useState<"codex" | "journal" | "keys">("codex")
+  const [journalFilter, setJournalFilter] = useState<"all" | "current" | "unsealed">("all")
   const [showTeleportMenu, setShowTeleportMenu] = useState(false)
   const [activeQuestStep, setActiveQuestStep] = useState(0)
   const [isQuestCollapsed, setIsQuestCollapsed] = useState(false)
   const [isMicrostateCollapsed, setIsMicrostateCollapsed] = useState(false)
   const [isTrackerCollapsed, setIsTrackerCollapsed] = useState(false)
 
-  const currentQuestStage = world.questStages[activeQuestStep] || world.questStages[0]
+  // Extract all 17 Discovery Shards across the 8 curriculum realms
+  const allDiscoveryShards = useMemo(() => {
+    return allWorlds.flatMap(w =>
+      w.interactiveTargets
+        .filter(t => t.id.startsWith("shrine-"))
+        .map(t => ({
+          ...t,
+          worldNumber: w.worldNumber,
+          worldTitle: w.title,
+          worldConcept: w.concept,
+          worldTheorem: w.theorem,
+        }))
+    )
+  }, [allWorlds])
 
+  // Sync prop triggers with modal state
+  useEffect(() => {
+    if (propShowCodex) {
+      setActiveModalTab("codex")
+      setInternalModalOpen(true)
+    }
+  }, [propShowCodex])
+
+  useEffect(() => {
+    if (propShowJournal) {
+      setActiveModalTab("journal")
+      setInternalModalOpen(true)
+    }
+  }, [propShowJournal])
+
+  useEffect(() => {
+    if (propShowKeybindings) {
+      setActiveModalTab("keys")
+      setInternalModalOpen(true)
+    }
+  }, [propShowKeybindings])
+
+  const isModalOpen = internalModalOpen || Boolean(propShowCodex) || Boolean(propShowJournal) || Boolean(propShowKeybindings)
+
+  const closeModal = () => {
+    setInternalModalOpen(false)
+    onToggleCodex?.(false)
+    onToggleJournal?.(false)
+    onToggleKeybindings?.(false)
+  }
+
+  const openTab = (tab: "codex" | "journal" | "keys") => {
+    setActiveModalTab(tab)
+    setInternalModalOpen(true)
+    onToggleCodex?.(tab === "codex")
+    onToggleJournal?.(tab === "journal")
+    onToggleKeybindings?.(tab === "keys")
+  }
+
+  // Close modal when pressing Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isModalOpen) {
+        closeModal()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isModalOpen])
+
+  const currentQuestStage = world.questStages[activeQuestStep] || world.questStages[0]
   const progressPercent = Math.min(100, Math.round((trialsCount / world.targetTrials) * 100))
   const isGoalReached = trialsCount >= world.targetTrials
+
+  // Check if targeted voxel is an ancient discovery shrine
+  const isTargetShrine = Boolean(currentTarget && currentTarget.id.startsWith("shrine-"))
+  const isTargetShrineFound = Boolean(currentTarget && isTargetShrine && discoveriesFound.includes(currentTarget.id))
 
   const handleSelectOption = (opt: ProbOption) => {
     if (isAnswerSubmitted) return
@@ -78,17 +161,50 @@ export function ProbCraftHUD({
     onAnswerSubmit(opt.id)
   }
 
+  // Filtered discovery shards for journal
+  const filteredShards = useMemo(() => {
+    if (journalFilter === "current") {
+      return allDiscoveryShards.filter(s => s.worldNumber === world.worldNumber)
+    }
+    if (journalFilter === "unsealed") {
+      return allDiscoveryShards.filter(s => discoveriesFound.includes(s.id))
+    }
+    return allDiscoveryShards
+  }, [allDiscoveryShards, journalFilter, world.worldNumber, discoveriesFound])
+
   return (
     <div className="probcraft-hud" aria-label="3D Voxel Simulation HUD">
-      {/* 1. Center Crosshair Reticle */}
-      {/* Center Crosshair Reticle (Always visible for aiming) */}
+      {/* 1. Center Crosshair Reticle with Adaptive Lock Ticks */}
       <div className="hud-crosshair" aria-hidden="true">
-        <div className="crosshair-dot" />
+        <div className={`crosshair-reticle${currentTarget ? " target-locked" : ""}${isTargetShrine ? " shrine-locked" : ""}`}>
+          <div className="crosshair-dot" />
+          <span className="reticle-tick top-left" />
+          <span className="reticle-tick top-right" />
+          <span className="reticle-tick bottom-left" />
+          <span className="reticle-tick bottom-right" />
+        </div>
         {currentTarget && (
           <div className="crosshair-target-tooltip">
+            {isTargetShrine ? (
+              <span className={`target-badge shard${isTargetShrineFound ? " unsealed" : ""}`}>
+                {isTargetShrineFound ? "📜 SHARD UNSEALED" : "📜 ANCIENT INSCRIPTION SHARD"}
+              </span>
+            ) : currentTarget.oddsDesc.toLowerCase().includes("vault") ? (
+              <span className="target-badge vault">COIN VAULT</span>
+            ) : currentTarget.oddsDesc.toLowerCase().includes("portal") ? (
+              <span className="target-badge portal">PORTAL GATEWAY</span>
+            ) : (
+              <span className="target-badge">PROBABILITY TARGET</span>
+            )}
             <strong className="target-name">{currentTarget.name}</strong>
             <span className="target-odds">{currentTarget.oddsDesc}</span>
-            <span className="target-hint">[Left Click or E to Interact]</span>
+            <span className="target-hint">
+              {isTargetShrine
+                ? isTargetShrineFound
+                  ? "[Already Unsealed · Left Click or E to Re-read]"
+                  : "[Left Click or E to Unseal Shard & Play Fanfare]"
+                : "[Left Click or E to Mine & Probe Microstate]"}
+            </span>
           </div>
         )}
       </div>
@@ -115,7 +231,7 @@ export function ProbCraftHUD({
                 type="button"
                 className="hud-btn-teleport"
                 onClick={() => setShowTeleportMenu(!showTeleportMenu)}
-                title="Teleport to any world"
+                title="Teleport to any world [1-8]"
               >
                 World {world.worldNumber}/8 ▾
               </button>
@@ -126,12 +242,14 @@ export function ProbCraftHUD({
             </div>
 
             <div className="hud-stats-pill">
-              {discoveriesFound.length > 0 && (
-                <div className="stat-col discovery-shard-stat">
-                  <span className="stat-label">Discovery Shards</span>
-                  <strong className="stat-val accent">{discoveriesFound.length} Found</strong>
-                </div>
-              )}
+              <button
+                type="button"
+                className={`hud-tab-trigger-btn${discoveriesFound.length > 0 ? " active-shards" : ""}`}
+                onClick={() => openTab("journal")}
+                title="Open Discovery Shards Journal [Press J]"
+              >
+                📜 Shards: <strong>{discoveriesFound.length}/{allDiscoveryShards.length}</strong>
+              </button>
               <div className="stat-col">
                 <span className="stat-label">Trials (N)</span>
                 <strong className="stat-val">{trialsCount} / {world.targetTrials}</strong>
@@ -148,9 +266,25 @@ export function ProbCraftHUD({
               </div>
               <button
                 type="button"
+                className="hud-action-pill-btn"
+                onClick={() => openTab("codex")}
+                title="Open Invariant Codex [Press C]"
+              >
+                § Codex
+              </button>
+              <button
+                type="button"
+                className="hud-action-pill-btn"
+                onClick={() => openTab("keys")}
+                title="Open Keybindings Guide [Press K or ?]"
+              >
+                ⌨ Keys
+              </button>
+              <button
+                type="button"
                 onClick={onToggleSound}
                 className={`hud-icon-btn${isSoundEnabled ? " active" : ""}`}
-                title="Toggle Web Audio Synthesizer"
+                title={`Audio: ${isSoundEnabled ? "Mute" : "Unmute"} [Press M]`}
               >
                 {isSoundEnabled ? "🔊" : "🔇"}
               </button>
@@ -259,7 +393,7 @@ export function ProbCraftHUD({
                       <button
                         type="button"
                         className="quest-nav-btn action"
-                        onClick={() => setShowCodex(true)}
+                        onClick={() => openTab("codex")}
                       >
                         Open Invariant Proof →
                       </button>
@@ -405,7 +539,9 @@ export function ProbCraftHUD({
         <span className="key-badge">Mouse</span> Look &nbsp;
         <span className="key-badge">Space</span> Jump &nbsp;
         <span className="key-badge">L-Click / E</span> Mine Block &nbsp;
-        <span className="key-badge">1 - 8</span> Teleport
+        <span className="key-badge">1 - 4</span> Hotbar &nbsp;
+        <span className="key-badge">[ / ]</span> Realm &nbsp;
+        <span className="key-badge">Alt+1-8</span> Teleport
       </div>
 
       {/* 5. Voxel Hotbar (Bottom Center) */}
@@ -423,7 +559,7 @@ export function ProbCraftHUD({
               onSelectSlot(idx)
               if (idx === 0) onMineClick()
               if (idx === 2) onFastSimulate(25)
-              if (idx === 3) setShowCodex(true)
+              if (idx === 3) openTab("codex")
             }}
             className={`hotbar-slot${activeHotbarSlot === idx ? " selected" : ""}`}
             title={`${tool.name} — ${tool.desc}`}
@@ -446,7 +582,7 @@ export function ProbCraftHUD({
         </button>
         <button
           type="button"
-          onClick={() => setShowCodex(true)}
+          onClick={() => openTab("codex")}
           className={`hud-nav-btn codex${isGoalReached ? " highlight" : ""}`}
         >
           Invariant Codex {isGoalReached ? "✓" : "§"}
@@ -463,116 +599,358 @@ export function ProbCraftHUD({
       </>
       )}
 
-      {/* 7. Full Mathematical Invariant Codex & Socratic Proof Modal */}
-      {showCodex && (
-        <div className="codex-overlay" role="dialog" aria-modal="true" aria-label="Mathematical Codex">
+      {/* 7. Comprehensive Modal: Invariant Codex, Discovery Journal & Keybindings Guide */}
+      {isModalOpen && (
+        <div className="codex-overlay" role="dialog" aria-modal="true" aria-label="Deriva ProbCraft Codex">
           <div className="codex-modal">
-            <header className="codex-header">
-              <span className="codex-kicker">PROBCRAFT MATHEMATICAL DERIVATION · WORLD {world.worldNumber}</span>
-              <h2 className="codex-title">{world.title}</h2>
-              <span className="codex-theorem">{world.theorem}</span>
+            {/* Modal Tab Bar Header */}
+            <header className="modal-tab-bar">
+              <div className="modal-tabs">
+                <button
+                  type="button"
+                  className={`modal-tab-btn${activeModalTab === "codex" ? " active" : ""}`}
+                  onClick={() => openTab("codex")}
+                >
+                  § Invariant Codex (World {world.worldNumber})
+                </button>
+                <button
+                  type="button"
+                  className={`modal-tab-btn${activeModalTab === "journal" ? " active" : ""}`}
+                  onClick={() => openTab("journal")}
+                >
+                  📜 Discovery Journal ({discoveriesFound.length}/{allDiscoveryShards.length})
+                </button>
+                <button
+                  type="button"
+                  className={`modal-tab-btn${activeModalTab === "keys" ? " active" : ""}`}
+                  onClick={() => openTab("keys")}
+                >
+                  ⌨ Keybindings Guide
+                </button>
+              </div>
+              <button
+                type="button"
+                className="modal-close-icon-btn"
+                onClick={closeModal}
+                title="Close modal [Esc]"
+              >
+                ✕
+              </button>
             </header>
 
-            {/* Formula Block */}
-            <div className="codex-formula-box">
-              <span className="formula-kicker">The Governing Invariant</span>
-              <code className="formula-code">{world.formulaKatex}</code>
-            </div>
+            {/* TAB 1: CODEX */}
+            {activeModalTab === "codex" && (
+              <div className="tab-pane codex-pane">
+                <div className="codex-header">
+                  <span className="codex-kicker">PROBCRAFT MATHEMATICAL DERIVATION · WORLD {world.worldNumber}</span>
+                  <h2 className="codex-title">{world.title}</h2>
+                  <span className="codex-theorem">{world.theorem}</span>
+                </div>
 
-            {/* Naive Trap vs Invariant Leap */}
-            <div className="codex-comparison-grid">
-              <div className="comparison-card trap">
-                <span className="card-kicker">The Naive Intuition Trap</span>
-                <strong>{world.trapTitle}</strong>
-                <p>{world.naiveTrap}</p>
-              </div>
+                {/* Formula Block */}
+                <div className="codex-formula-box">
+                  <span className="formula-kicker">The Governing Invariant</span>
+                  <code className="formula-code">{world.formulaKatex}</code>
+                </div>
 
-              <div className="comparison-card leap">
-                <span className="card-kicker">The Mathematical Invariant</span>
-                <strong>First-Principles Proof</strong>
-                <p>{world.invariantProof}</p>
-              </div>
-            </div>
+                {/* Naive Trap vs Invariant Leap */}
+                <div className="codex-comparison-grid">
+                  <div className="comparison-card trap">
+                    <span className="card-kicker">The Naive Intuition Trap</span>
+                    <strong>{world.trapTitle}</strong>
+                    <p>{world.naiveTrap}</p>
+                  </div>
 
-            {/* Socratic Interactive Challenge */}
-            <section className="codex-challenge-section">
-              <span className="challenge-kicker">Prove the Invariant to Unlock World Portal</span>
-              <h3 className="challenge-prompt">{world.missionPrompt}</h3>
+                  <div className="comparison-card leap">
+                    <span className="card-kicker">The Mathematical Invariant</span>
+                    <strong>First-Principles Proof</strong>
+                    <p>{world.invariantProof}</p>
+                  </div>
+                </div>
 
-              <div className="options-grid">
-                {world.options.map(opt => {
-                  const isSelected = selectedAnswerId === opt.id
-                  const isCorrect = opt.id === world.correctOptionId
-                  let btnStateClass = ""
-                  if (isAnswerSubmitted) {
-                    if (isCorrect) btnStateClass = " correct"
-                    else if (isSelected) btnStateClass = " wrong"
-                  } else if (isSelected) {
-                    btnStateClass = " selected"
-                  }
+                {/* Socratic Interactive Challenge */}
+                <section className="codex-challenge-section">
+                  <span className="challenge-kicker">Prove the Invariant to Unlock World Portal</span>
+                  <h3 className="challenge-prompt">{world.missionPrompt}</h3>
 
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => handleSelectOption(opt)}
-                      disabled={isAnswerSubmitted}
-                      className={`option-btn${btnStateClass}`}
-                    >
-                      <span className="option-mark">{isCorrect && isAnswerSubmitted ? "✓" : "○"}</span>
-                      <span className="option-label">{opt.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
+                  <div className="options-grid">
+                    {world.options.map(opt => {
+                      const isSelected = selectedAnswerId === opt.id
+                      const isCorrect = opt.id === world.correctOptionId
+                      let btnStateClass = ""
+                      if (isAnswerSubmitted) {
+                        if (isCorrect) btnStateClass = " correct"
+                        else if (isSelected) btnStateClass = " wrong"
+                      } else if (isSelected) {
+                        btnStateClass = " selected"
+                      }
 
-              {/* Teardown Feedback after Answer */}
-              {isAnswerSubmitted && (
-                <div className="answer-teardown-box">
-                  {selectedAnswerId === world.correctOptionId ? (
-                    <div className="teardown-success">
-                      <strong>Invariant Conquered ✓</strong>
-                      <p>{world.options.find(o => o.id === selectedAnswerId)?.explanation}</p>
-                      <div className="rule-box">
-                        <strong>Rule of Thumb: </strong> {world.theoryTakeaway}
-                      </div>
-                      {world.worldNumber < allWorlds.length && (
+                      return (
                         <button
+                          key={opt.id}
                           type="button"
-                          className="btn-portal-advance"
-                          onClick={() => {
-                            setShowCodex(false)
-                            onNextWorld()
-                          }}
+                          onClick={() => handleSelectOption(opt)}
+                          disabled={isAnswerSubmitted}
+                          className={`option-btn${btnStateClass}`}
                         >
-                          Step Through Portal to World {world.worldNumber + 1} →
+                          <span className="option-mark">{isCorrect && isAnswerSubmitted ? "✓" : "○"}</span>
+                          <span className="option-label">{opt.label}</span>
                         </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Teardown Feedback after Answer */}
+                  {isAnswerSubmitted && (
+                    <div className="answer-teardown-box">
+                      {selectedAnswerId === world.correctOptionId ? (
+                        <div className="teardown-success">
+                          <strong>Invariant Conquered ✓</strong>
+                          <p>{world.options.find(o => o.id === selectedAnswerId)?.explanation}</p>
+                          <div className="rule-box">
+                            <strong>Rule of Thumb: </strong> {world.theoryTakeaway}
+                          </div>
+                          {world.worldNumber < allWorlds.length && (
+                            <button
+                              type="button"
+                              className="btn-portal-advance"
+                              onClick={() => {
+                                closeModal()
+                                onNextWorld()
+                              }}
+                            >
+                              Step Through Portal to World {world.worldNumber + 1} →
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="teardown-failure">
+                          <strong>Intuition Trap Identified</strong>
+                          <p>{world.options.find(o => o.id === selectedAnswerId)?.explanation}</p>
+                          <button
+                            type="button"
+                            className="btn-retry"
+                            onClick={() => onAnswerSubmit("")}
+                          >
+                            Try Re-deriving Again
+                          </button>
+                        </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="teardown-failure">
-                      <strong>Intuition Trap Identified</strong>
-                      <p>{world.options.find(o => o.id === selectedAnswerId)?.explanation}</p>
-                      <button
-                        type="button"
-                        className="btn-retry"
-                        onClick={() => onAnswerSubmit("")}
-                      >
-                        Try Re-deriving Again
-                      </button>
-                    </div>
                   )}
+                </section>
+              </div>
+            )}
+
+            {/* TAB 2: DISCOVERY JOURNAL */}
+            {activeModalTab === "journal" && (
+              <div className="tab-pane journal-pane">
+                <div className="journal-header">
+                  <div>
+                    <span className="codex-kicker">EXPLORATION & ARCHAEOLOGY</span>
+                    <h2 className="codex-title">The Discovery Codex</h2>
+                    <span className="codex-theorem">
+                      Ancient probability steles, shrines, and monuments scattered across the 8 realms.
+                    </span>
+                  </div>
+                  <div className="journal-progress-summary">
+                    <span className="journal-stat-label">Codex Completion</span>
+                    <strong className="journal-stat-val">
+                      {discoveriesFound.length} / {allDiscoveryShards.length} Shards Unsealed ({Math.round((discoveriesFound.length / Math.max(1, allDiscoveryShards.length)) * 100)}%)
+                    </strong>
+                    <div className="journal-progress-track">
+                      <div
+                        className="journal-progress-fill"
+                        style={{ width: `${(discoveriesFound.length / Math.max(1, allDiscoveryShards.length)) * 100}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
-              )}
-            </section>
+
+                {/* Filter Controls */}
+                <div className="journal-filters">
+                  <button
+                    type="button"
+                    className={`filter-pill${journalFilter === "all" ? " active" : ""}`}
+                    onClick={() => setJournalFilter("all")}
+                  >
+                    All Shards ({allDiscoveryShards.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-pill${journalFilter === "current" ? " active" : ""}`}
+                    onClick={() => setJournalFilter("current")}
+                  >
+                    Current World: W{world.worldNumber} ({allDiscoveryShards.filter(s => s.worldNumber === world.worldNumber).length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-pill${journalFilter === "unsealed" ? " active" : ""}`}
+                    onClick={() => setJournalFilter("unsealed")}
+                  >
+                    Unsealed ({discoveriesFound.length})
+                  </button>
+                </div>
+
+                {/* Shard Cards List */}
+                <div className="journal-cards-grid">
+                  {filteredShards.map(shard => {
+                    const isFound = discoveriesFound.includes(shard.id)
+                    const isCurrentWorld = shard.worldNumber === world.worldNumber
+
+                    return (
+                      <div
+                        key={shard.id}
+                        className={`journal-shard-card${isFound ? " unsealed" : " sealed"}${isCurrentWorld ? " current-realm" : ""}`}
+                      >
+                        <div className="shard-card-header">
+                          <div className="shard-realm-tag">
+                            <span className="shard-realm-badge">World {shard.worldNumber}</span>
+                            <span className="shard-realm-name">{shard.worldTitle}</span>
+                          </div>
+                          <span className={`shard-status-pill${isFound ? " unsealed" : " sealed"}`}>
+                            {isFound ? "Unsealed ✓" : "Undiscovered 🔒"}
+                          </span>
+                        </div>
+
+                        <div className="shard-card-body">
+                          <h4 className="shard-card-name">{shard.name}</h4>
+                          <p className="shard-inscription">
+                            {isFound ? shard.oddsDesc : "An ancient stele waiting to be found in the voxel terrain. Mine or probe the block to decipher its inscription."}
+                          </p>
+
+                          {isFound && (
+                            <div className="shard-takeaway-box">
+                              <span className="shard-takeaway-kicker">Theorem Insight</span>
+                              <span className="shard-takeaway-text">{shard.worldTheorem}</span>
+                            </div>
+                          )}
+
+                          <div className="shard-footer-info">
+                            <span className="shard-coord">Location: ({Math.round(shard.x)}, {Math.round(shard.y)}, {Math.round(shard.z)})</span>
+                            <span className="shard-ev">E[X] = {shard.expectedValue.toFixed(2)}</span>
+                          </div>
+                        </div>
+
+                        {!isCurrentWorld && (
+                          <div className="shard-card-actions">
+                            <button
+                              type="button"
+                              className="btn-shard-teleport"
+                              onClick={() => {
+                                onTeleportSelect(shard.worldNumber)
+                                closeModal()
+                              }}
+                            >
+                              Teleport to World {shard.worldNumber} →
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: KEYBINDINGS */}
+            {activeModalTab === "keys" && (
+              <div className="tab-pane keys-pane">
+                <div className="codex-header">
+                  <span className="codex-kicker">CONTROL SCHEME & SHORTCUTS</span>
+                  <h2 className="codex-title">Keyboard & Mouse Controls</h2>
+                  <span className="codex-theorem">
+                    Crafted for seamless navigation, rapid Monte Carlo simulation, and deep derivation.
+                  </span>
+                </div>
+
+                <div className="keybindings-sections">
+                  <div className="keybinding-category">
+                    <h3 className="key-cat-title">Locomotion & Camera</h3>
+                    <div className="key-table">
+                      <div className="key-row">
+                        <span className="key-badge">W A S D</span>
+                        <span className="key-desc">Walk forward, left, backward, right</span>
+                      </div>
+                      <div className="key-row">
+                        <span className="key-badge">Space</span>
+                        <span className="key-desc">Jump impulse (grounded only)</span>
+                      </div>
+                      <div className="key-row">
+                        <span className="key-badge">Mouse</span>
+                        <span className="key-desc">Look around in full 3D when pointer locked</span>
+                      </div>
+                      <div className="key-row">
+                        <span className="key-badge">Esc</span>
+                        <span className="key-desc">Free pointer lock / close open modals</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="keybinding-category">
+                    <h3 className="key-cat-title">Mining & Probing</h3>
+                    <div className="key-table">
+                      <div className="key-row">
+                        <span className="key-badge">Left Click / E</span>
+                        <span className="key-desc">Mine targeted voxel / probe microstate trial / unseal shard</span>
+                      </div>
+                      <div className="key-row">
+                        <span className="key-badge">1 - 4 (Hotbar)</span>
+                        <span className="key-desc">Pick tool, Odds Scanner, Fast Monte Carlo (+25), Codex</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="keybinding-category">
+                    <h3 className="key-cat-title">Curriculum Navigation & World Portals</h3>
+                    <div className="key-table">
+                      <div className="key-row">
+                        <span className="key-badge">Alt + 1-8 (or 5-8)</span>
+                        <span className="key-desc">Instant teleport to World 1 through World 8</span>
+                      </div>
+                      <div className="key-row">
+                        <span className="key-badge">[ and ]</span>
+                        <span className="key-desc">Step backward or forward one world</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="keybinding-category">
+                    <h3 className="key-cat-title">Interface & Audio</h3>
+                    <div className="key-table">
+                      <div className="key-row">
+                        <span className="key-badge">C</span>
+                        <span className="key-desc">Open Mathematical Invariant Codex & Socratic Proof</span>
+                      </div>
+                      <div className="key-row">
+                        <span className="key-badge">J</span>
+                        <span className="key-desc">Open Discovery Shards Journal & Archaeology Record</span>
+                      </div>
+                      <div className="key-row">
+                        <span className="key-badge">K or ?</span>
+                        <span className="key-desc">Toggle this Keybindings & Controls Guide</span>
+                      </div>
+                      <div className="key-row">
+                        <span className="key-badge">M</span>
+                        <span className="key-desc">Toggle Audio Synthesizer (persistent preference)</span>
+                      </div>
+                      <div className="key-row">
+                        <span className="key-badge">H</span>
+                        <span className="key-desc">Hide / show all HUD telemetry overlays</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <footer className="codex-footer">
               <button
                 type="button"
                 className="btn-close-codex"
-                onClick={() => setShowCodex(false)}
+                onClick={closeModal}
               >
-                Close Codex & Return to Voxel World [ESC]
+                Close & Return to Voxel World [ESC]
               </button>
             </footer>
           </div>
@@ -606,17 +984,86 @@ export function ProbCraftHUD({
           pointer-events: none;
         }
 
+        .crosshair-reticle {
+          position: relative;
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform var(--dur-fast);
+        }
+
         .crosshair-dot {
-          width: 8px;
-          height: 8px;
-          border: 2px solid var(--paper-raised);
+          width: 6px;
+          height: 6px;
+          background: var(--paper-raised);
           box-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
           border-radius: 50%;
+          transition: transform var(--dur-fast), background-color var(--dur-fast);
+        }
+
+        .reticle-tick {
+          position: absolute;
+          width: 6px;
+          height: 6px;
+          border-color: rgba(255, 255, 255, 0.4);
+          border-style: solid;
+          opacity: 0.5;
+          transition: all var(--dur-fast);
+        }
+
+        .reticle-tick.top-left {
+          top: 0;
+          left: 0;
+          border-width: 1.5px 0 0 1.5px;
+        }
+
+        .reticle-tick.top-right {
+          top: 0;
+          right: 0;
+          border-width: 1.5px 1.5px 0 0;
+        }
+
+        .reticle-tick.bottom-left {
+          bottom: 0;
+          left: 0;
+          border-width: 0 0 1.5px 1.5px;
+        }
+
+        .reticle-tick.bottom-right {
+          bottom: 0;
+          right: 0;
+          border-width: 0 1.5px 1.5px 0;
+        }
+
+        .crosshair-reticle.target-locked {
+          transform: scale(1.15);
+        }
+
+        .crosshair-reticle.target-locked .crosshair-dot {
+          background: var(--accent);
+          transform: scale(1.3);
+        }
+
+        .crosshair-reticle.target-locked .reticle-tick {
+          border-color: var(--accent);
+          opacity: 1;
+        }
+
+        .crosshair-reticle.shrine-locked .crosshair-dot {
+          background: var(--viz-cached);
+          transform: scale(1.5);
+        }
+
+        .crosshair-reticle.shrine-locked .reticle-tick {
+          border-color: var(--viz-cached);
+          opacity: 1;
         }
 
         .crosshair-target-tooltip {
           margin-top: 14px;
-          background: rgba(14, 17, 23, 0.55);
+          background: rgba(14, 17, 23, 0.85);
           backdrop-filter: blur(14px);
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: var(--radius);
@@ -624,9 +1071,45 @@ export function ProbCraftHUD({
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 2px;
+          gap: 3px;
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
           text-align: center;
+        }
+
+        .target-badge {
+          font-size: 9px;
+          font-family: var(--font-mono);
+          text-transform: uppercase;
+          font-weight: 700;
+          padding: 2px 6px;
+          border-radius: 4px;
+          background: var(--paper);
+          color: var(--ink-soft);
+          border: 1px solid var(--line);
+        }
+
+        .target-badge.shard {
+          background: var(--accent-soft);
+          color: var(--accent);
+          border-color: var(--accent);
+        }
+
+        .target-badge.shard.unsealed {
+          background: var(--success-soft);
+          color: var(--viz-settled);
+          border-color: var(--viz-settled);
+        }
+
+        .target-badge.vault {
+          background: var(--accent-soft);
+          color: var(--viz-cached);
+          border-color: var(--viz-cached);
+        }
+
+        .target-badge.portal {
+          background: var(--paper);
+          color: var(--viz-active);
+          border-color: var(--viz-active);
         }
 
         .target-name {
@@ -1651,6 +2134,385 @@ export function ProbCraftHUD({
         .btn-close-codex:hover {
           color: var(--ink);
           border-color: var(--accent);
+        }
+
+        /* Modal Tabs */
+        .modal-tab-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-bottom: 1px solid var(--line);
+          padding-bottom: var(--sp-2);
+          gap: var(--sp-2);
+          flex-wrap: wrap;
+        }
+
+        .modal-tabs {
+          display: flex;
+          align-items: center;
+          gap: var(--sp-1);
+          flex-wrap: wrap;
+        }
+
+        .modal-tab-btn {
+          background: transparent;
+          border: 1px solid transparent;
+          border-radius: var(--radius);
+          padding: 6px 12px;
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--ink-soft);
+          cursor: pointer;
+          transition: all var(--dur-fast);
+        }
+
+        .modal-tab-btn:hover {
+          color: var(--ink);
+          background: var(--paper);
+        }
+
+        .modal-tab-btn.active {
+          color: var(--accent);
+          background: var(--paper);
+          border-color: var(--line);
+        }
+
+        .modal-close-icon-btn {
+          background: var(--paper);
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 13px;
+          color: var(--ink-soft);
+          cursor: pointer;
+          transition: all var(--dur-fast);
+        }
+
+        .modal-close-icon-btn:hover {
+          color: var(--ink);
+          border-color: var(--accent);
+        }
+
+        .tab-pane {
+          display: flex;
+          flex-direction: column;
+          gap: var(--sp-4);
+        }
+
+        /* Journal Tab */
+        .journal-header {
+          display: flex;
+          flex-direction: column;
+          gap: var(--sp-3);
+        }
+
+        .journal-progress-summary {
+          background: var(--paper);
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          padding: 10px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .journal-stat-label {
+          font-size: 10px;
+          font-weight: 700;
+          color: var(--ink-soft);
+          text-transform: uppercase;
+        }
+
+        .journal-stat-val {
+          font-size: 13px;
+          color: var(--accent);
+        }
+
+        .journal-progress-track {
+          width: 100%;
+          height: 6px;
+          background: var(--paper-raised);
+          border-radius: 3px;
+          overflow: hidden;
+        }
+
+        .journal-progress-fill {
+          height: 100%;
+          background: var(--accent);
+          transition: width var(--dur-normal);
+        }
+
+        .journal-filters {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        .filter-pill {
+          background: var(--paper);
+          border: 1px solid var(--line);
+          border-radius: 20px;
+          padding: 4px 10px;
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--ink-soft);
+          cursor: pointer;
+          transition: all var(--dur-fast);
+        }
+
+        .filter-pill:hover {
+          color: var(--ink);
+          border-color: var(--accent);
+        }
+
+        .filter-pill.active {
+          background: var(--accent-soft);
+          color: var(--accent);
+          border-color: var(--accent);
+        }
+
+        .journal-cards-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 10px;
+          max-height: 440px;
+          overflow-y: auto;
+          padding-right: 4px;
+        }
+
+        .journal-shard-card {
+          background: var(--paper);
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          padding: 12px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          transition: border-color var(--dur-fast);
+        }
+
+        .journal-shard-card.unsealed {
+          border-color: var(--accent);
+          background: var(--paper-raised);
+        }
+
+        .journal-shard-card.current-realm {
+          box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .shard-card-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .shard-realm-tag {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .shard-realm-badge {
+          font-size: 9px;
+          font-family: var(--font-mono);
+          font-weight: 700;
+          background: var(--accent-soft);
+          color: var(--accent);
+          padding: 2px 6px;
+          border-radius: 4px;
+        }
+
+        .shard-realm-name {
+          font-size: 11px;
+          color: var(--ink-soft);
+        }
+
+        .shard-status-pill {
+          font-size: 10px;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 12px;
+        }
+
+        .shard-status-pill.unsealed {
+          background: var(--success-soft);
+          color: var(--viz-settled);
+        }
+
+        .shard-status-pill.sealed {
+          background: var(--paper);
+          border: 1px solid var(--line);
+          color: var(--ink-soft);
+        }
+
+        .shard-card-name {
+          margin: 0;
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--ink);
+        }
+
+        .shard-inscription {
+          margin: 4px 0 0;
+          font-size: 12px;
+          line-height: 1.5;
+          color: var(--ink-soft);
+        }
+
+        .shard-takeaway-box {
+          margin-top: 6px;
+          background: var(--accent-soft);
+          border-radius: 4px;
+          padding: 6px 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .shard-takeaway-kicker {
+          font-size: 9px;
+          font-weight: 800;
+          text-transform: uppercase;
+          color: var(--accent);
+        }
+
+        .shard-takeaway-text {
+          font-size: 11px;
+          color: var(--ink);
+        }
+
+        .shard-footer-info {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 6px;
+          font-size: 10px;
+          font-family: var(--font-mono);
+          color: var(--ink-soft);
+        }
+
+        .shard-card-actions {
+          margin-top: 4px;
+        }
+
+        .btn-shard-teleport {
+          background: var(--paper);
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          padding: 4px 10px;
+          font-size: 11px;
+          font-weight: 700;
+          color: var(--accent);
+          cursor: pointer;
+          transition: all var(--dur-fast);
+        }
+
+        .btn-shard-teleport:hover {
+          background: var(--accent);
+          color: var(--paper);
+          border-color: var(--accent);
+        }
+
+        /* Keybindings Tab */
+        .keybindings-sections {
+          display: flex;
+          flex-direction: column;
+          gap: var(--sp-3);
+        }
+
+        .keybinding-category {
+          background: var(--paper);
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          padding: 12px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .key-cat-title {
+          margin: 0;
+          font-size: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+          color: var(--accent);
+          letter-spacing: 0.04em;
+        }
+
+        .key-table {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .key-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .key-badge {
+          background: var(--paper-raised);
+          border: 1px solid var(--line);
+          border-radius: 4px;
+          padding: 2px 6px;
+          font-size: 10px;
+          font-family: var(--font-mono);
+          font-weight: 700;
+          color: var(--ink);
+          min-width: 70px;
+          text-align: center;
+        }
+
+        .key-desc {
+          font-size: 12px;
+          color: var(--ink-soft);
+        }
+
+        /* Top Bar Tabs & Action Buttons */
+        .hud-tab-trigger-btn {
+          background: transparent;
+          border: 1px solid transparent;
+          border-radius: var(--radius);
+          padding: 4px 8px;
+          font-size: 11px;
+          color: var(--paper-raised);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          transition: all var(--dur-fast);
+        }
+
+        .hud-tab-trigger-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
+
+        .hud-tab-trigger-btn.active-shards {
+          color: var(--accent);
+        }
+
+        .hud-action-pill-btn {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          border-radius: var(--radius);
+          padding: 4px 8px;
+          font-size: 11px;
+          font-weight: 700;
+          color: var(--paper-raised);
+          cursor: pointer;
+          transition: all var(--dur-fast);
+        }
+
+        .hud-action-pill-btn:hover {
+          background: var(--accent);
+          border-color: var(--accent);
+          color: var(--paper);
         }
 
         @media (max-width: 768px) {
