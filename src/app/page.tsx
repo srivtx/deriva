@@ -45,6 +45,7 @@ const APP_SECTIONS = [
     { id: "interview", href: "/interview", name: "Interview", glyph: "◉", gradient: G.cobalt },
   ] },
   { label: "Practice", apps: [
+    { id: "cards", href: "/cards", name: "Cards", glyph: "🂡", gradient: G.gold },
     { id: "practice", href: "/practice", name: "Drill", glyph: "▶", gradient: G.cobalt },
     { id: "one", href: "/one", name: "0NE", glyph: "⊙", gradient: G.violet },
     { id: "pdb", href: "/pdb", name: "PDB", glyph: "⌖", gradient: G.pdb },

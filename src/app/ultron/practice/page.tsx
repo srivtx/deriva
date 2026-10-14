@@ -6,6 +6,7 @@ import MobileProblemNav from "@/components/mobile-problem-nav"
 import { loadWorkbenchProgress, saveWorkbenchProgress } from "@/persistence/workbench-progress"
 import { loadTheoryNote, saveTheoryNote } from "@/persistence/theory-notes"
 import { runScript, warmPython } from "@/execution/pyodide-client"
+import { PythonEditor } from "@/editor/python-editor"
 
 export default function UltronPracticePage() {
   const [currentId, setCurrentId] = useState(1)
@@ -174,10 +175,17 @@ export default function UltronPracticePage() {
           <span className="theory-hint">A sentence in your own words survives longer than a re-read formula.</span>
         </div>
 
-        <div className="ed-wrap">
-           <div className="ed-bar"><span className="ed-lang">Python + NumPy</span><span className="ed-file">drill.py</span><span className="ready">Worker sandbox</span></div>
-          <textarea value={currentCode} onChange={e => setSavedCode({ ...savedCode, [currentId]: e.target.value })} className="ed" spellCheck={false} />
-        </div>
+        <PythonEditor
+          value={currentCode}
+          onChange={newCode => setSavedCode({ ...savedCode, [currentId]: newCode })}
+          onRun={runCode}
+          onReset={() => {
+            setSavedCode({ ...savedCode, [currentId]: problem.starterCode })
+            setOutput("")
+          }}
+          filename="drill.py"
+          language="Python + NumPy"
+        />
 
         <div className="acts">
           <button onClick={runCode} disabled={running} className="btn btn-p">{running ? "Running..." : "▶ Run Tests"}</button>

@@ -43,6 +43,7 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "contest", name: "Contest", glyph: "⏱", gradient: G.ember, desc: "3 problems, one clock", category: "Today", href: "/contest", status: "installed" },
   { id: "interview", name: "Interview", glyph: "◉", gradient: G.cobalt, desc: "Mock interview, hints locked", category: "Today", href: "/interview", status: "installed" },
   // Practice
+  { id: "cards", name: "Cards", glyph: "🂡", gradient: G.gold, desc: "60-second pattern reflex deck", category: "Practice", href: "/cards", status: "installed" },
   { id: "practice", name: "Drill", glyph: "▶", gradient: G.cobalt, desc: "Code practice by topic", category: "Practice", href: "/practice", status: "installed" },
   { id: "icpc", name: "ICPC", glyph: "⚑", gradient: G.green, desc: "91 contest problems", category: "Practice", href: "/icpc", status: "installed" },
   { id: "one", name: "0NE", glyph: "⊙", gradient: G.violet, desc: "148 problems, zero to mastery", category: "Practice", href: "/one", status: "installed" },
@@ -99,7 +100,7 @@ export const APP_CATALOG: AppMeta[] = [
   { id: "soon-voice", name: "Voice Memos", glyph: "◠", gradient: G.pink, desc: "Record & replay", category: "Life", status: "soon" },
 ]
 
-export const APP_MODE_PREFIXES = ["/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/pdb", "/kyma", "/corona", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/ultron", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig", "/foundry"]
+export const APP_MODE_PREFIXES = ["/cards", "/daily", "/review", "/contest", "/interview", "/icpc", "/one", "/pdb", "/kyma", "/corona", "/res", "/atlas", "/cheatsheets", "/playground", "/complexity", "/notebook", "/toolkit", "/releases", "/android", "/settings", "/dashboard", "/observatory", "/practice", "/topic", "/patterns", "/ai-ml", "/design", "/lld", "/db", "/lab", "/expedition", "/games", "/learn", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/media", "/ultron", "/store", "/expenses", "/calendar", "/translate", "/focus", "/glyph", "/ghost", "/osc", "/rig", "/foundry"]
 
 export function matchesAppModePrefix(href: string): boolean {
   return APP_MODE_PREFIXES.some(prefix => href === prefix || href.startsWith(prefix + "/") || href.startsWith(prefix + "?"))

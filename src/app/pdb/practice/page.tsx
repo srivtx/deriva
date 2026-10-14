@@ -6,6 +6,7 @@ import MobileProblemNav from "@/components/mobile-problem-nav"
 import { loadWorkbenchProgress, saveWorkbenchProgress } from "@/persistence/workbench-progress"
 import { loadTheoryNote, saveTheoryNote } from "@/persistence/theory-notes"
 import { runScript, warmPython } from "@/execution/pyodide-client"
+import { PythonEditor } from "@/editor/python-editor"
 
 // Shared check harness — prepended to every Run by the worker (the `setup` slot).
 // Drills call check()/check_call() then finish(); finish() prints the verdict
@@ -305,10 +306,17 @@ export default function PdbPracticePage() {
           <span className="theory-hint">A sentence in your own words survives longer than a re-read formula.</span>
         </div>
 
-        <div className="ed-wrap">
-           <div className="ed-bar"><span className="ed-lang">Python + NumPy</span><span className="ed-file">{problem.file}</span><span className="ready">Worker sandbox</span></div>
-          <textarea value={currentCode} onChange={e => setSavedCode({ ...savedCode, [currentId]: e.target.value })} className="ed" spellCheck={false} />
-        </div>
+        <PythonEditor
+          value={currentCode}
+          onChange={newCode => setSavedCode({ ...savedCode, [currentId]: newCode })}
+          onRun={runCode}
+          onReset={() => {
+            setSavedCode({ ...savedCode, [currentId]: problem.starterCode })
+            setOutput("")
+          }}
+          filename={problem.file}
+          language="Python + NumPy"
+        />
 
         <div className="acts">
           <button onClick={runCode} disabled={running} className="btn btn-p">{running ? "Running..." : "▶ Run Tests"}</button>

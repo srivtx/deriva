@@ -12,6 +12,8 @@ import { getActiveContest, recordContestSolve } from "@/persistence/contest"
 import { getActiveInterview, recordInterviewSolved, type ActiveInterview } from "@/persistence/interview"
 import SolveBurst from "@/components/solve-burst"
 import PartyCelebrate from "@/components/party-celebrate"
+import { PythonEditor } from "@/editor/python-editor"
+import { extractErrorLine } from "@/editor/indent"
 
 export default function PracticePage() {
   const [topicId, setTopicId] = useState("trees")
@@ -58,6 +60,8 @@ export default function PracticePage() {
     }
     return ""
   })()
+  const setupLines = topic.buildCode ? topic.buildCode.split("\n").length + 1 : 0
+  const errorLine = isFailure ? extractErrorLine(output, setupLines) : null
   const toggleBookmark = () => {
     const cur = new Set(bookmarks[topicId] || [])
     if (cur.has(currentId)) cur.delete(currentId)
@@ -307,13 +311,30 @@ export default function PracticePage() {
           <span className="theory-hint">A sentence in your own words is more useful than another saved solution.</span>
         </div>
 
-        <div className="ed-wrap">
-           <div className="ed-bar"><span className="ed-lang">Python</span><span className="ed-file">solution.py</span><span className="ready">Worker sandbox</span></div>
-          <textarea value={currentCode} onChange={e => { setSavedCode({ ...savedCode, [topicId]: { ...tCode, [currentId]: e.target.value } }) }} className="ed" spellCheck={false} />
-        </div>
+        <PythonEditor
+          value={currentCode}
+          onChange={newCode => {
+            setSavedCode(prev => ({
+              ...prev,
+              [topicId]: { ...(prev[topicId] || {}), [currentId]: newCode }
+            }))
+          }}
+          onRun={runCode}
+          onReset={() => {
+            setSavedCode(prev => ({
+              ...prev,
+              [topicId]: { ...(prev[topicId] || {}), [currentId]: problem.starterCode }
+            }))
+            setOutput("")
+          }}
+          filename={`${problem.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "solution"}.py`}
+          errorLine={errorLine}
+        />
 
         <div className="acts" aria-label="Code actions">
-          <button onClick={runCode} disabled={running} className="btn btn-p primary-run">{running ? "Running..." : "▶ Run Code"}</button>
+          <button onClick={runCode} disabled={running} className="btn btn-p primary-run">
+            {running ? "Running..." : "▶ Run Code"} <kbd className="shortcut-kbd">⌘↵</kbd>
+          </button>
           {!interviewMode && <button onClick={() => { const h = { ...tHints, [currentId]: Math.min(currentHint+1, 3) }; setHintLevel({ ...hintLevel, [topicId]: h }) }} disabled={currentHint>=3} className="btn">Hint ({currentHint}/3)</button>}
           {!interviewMode && <button onClick={() => { const r = { ...tRevealed, [currentId]: !currentRevealed }; setRevealed({ ...revealed, [topicId]: r }) }} className={`btn${currentRevealed?" btn-s":""}`}>{currentRevealed?"Hide":"Show"} Solution</button>}
           {!interviewMode && <button onClick={randomUnsolved} className="btn" title="Jump to a random problem you haven't solved in this topic">Random</button>}
@@ -455,8 +476,9 @@ export default function PracticePage() {
         .btn { background: var(--paper-raised); color: var(--ink); border: 1px solid var(--line); min-height: 40px; padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: var(--font-ui); }
         .btn:hover:not(:disabled) { border-color: var(--accent); }
         .btn:disabled { opacity: 0.4; cursor: default; }
-        .btn-p { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+        .btn-p { background: var(--accent); color: var(--paper-raised); border-color: var(--accent); font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
         .btn-p:hover:not(:disabled) { opacity: 0.9; }
+        .shortcut-kbd { font-family: var(--font-mono); font-size: 10px; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 3px; padding: 1px 4px; line-height: 1; }
         .btn-s { background: var(--success-soft); color: var(--viz-settled); border-color: var(--success-line); }
 
         .out { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; min-height: 50px; max-height: 250px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 14px; }
