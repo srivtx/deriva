@@ -60,8 +60,12 @@ class WorkerBridge {
       console.error("[sandbox worker]", event.message || "unspecified worker error",
         event.filename ? `${event.filename}:${event.lineno}` : "")
       const cause = event.message || "the sandbox crashed before Python could run"
+      // Self-heal stale caches on worker crash
+      if (typeof window !== "undefined" && "caches" in window) {
+        caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {})
+      }
       this.reset(new Error(
-        `${cause}. The sandbox restarts on your next Run — if it repeats, check your connection (first runs load Python + SQLite from a CDN) and reload the page.`,
+        `${cause}. If this works in Incognito, an ad blocker/extension may be blocking cdn.jsdelivr.net, or Chrome has a stale cache. Try disabling extensions for this site or use Settings > Reset sandbox & cache.`,
       ))
     }
     this.worker = worker
@@ -73,7 +77,19 @@ class WorkerBridge {
   }
 
   private handleResponse(response: WorkerResponse) {
-    if (!response.id) return
+    if (!response.id) {
+      if (response.type === "error") {
+        console.error("[sandbox worker error]", response.message)
+        const error = new Error(response.message)
+        for (const request of this.pending.values()) {
+          clearTimeout(request.timer)
+          request.cleanup()
+          request.reject(error)
+        }
+        this.pending.clear()
+      }
+      return
+    }
     const request = this.pending.get(response.id)
     if (!request) return
     this.pending.delete(response.id)

@@ -62,6 +62,41 @@ export function importWorkspace(file: File): Promise<number> {
   })
 }
 
+export async function purgeCachesAndSandbox(): Promise<{ cachesCleared: number; workersUnregistered: number }> {
+  let cachesCleared = 0
+  let workersUnregistered = 0
+  if (typeof window === "undefined") return { cachesCleared, workersUnregistered }
+
+  // 1. Purge CacheStorage (all versions of deriva-v*, static caches, workbox, etc.)
+  if ("caches" in window) {
+    try {
+      const keys = await caches.keys()
+      for (const key of keys) {
+        await caches.delete(key)
+        cachesCleared++
+      }
+    } catch {}
+  }
+
+  // 2. Unregister any active Service Workers so a clean fresh worker is registered
+  if ("serviceWorker" in navigator) {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations()
+      for (const reg of registrations) {
+        await reg.unregister()
+        workersUnregistered++
+      }
+    } catch {}
+  }
+
+  // 3. Clear session storage flags
+  try {
+    sessionStorage.clear()
+  } catch {}
+
+  return { cachesCleared, workersUnregistered }
+}
+
 export function eraseWorkspace() {
   if (typeof window === "undefined") return
   const keys: string[] = []
@@ -71,3 +106,4 @@ export function eraseWorkspace() {
   }
   keys.forEach(key => localStorage.removeItem(key))
 }
+

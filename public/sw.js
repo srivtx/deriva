@@ -1,5 +1,5 @@
 // Deriva service worker — cache-first for static assets, network-first for pages.
-const CACHE = "deriva-v48"
+const CACHE = "deriva-v49"
 const STATIC = ["/", "/practice", "/design", "/lld", "/dashboard", "/patterns", "/patterns/quiz", "/settings", "/expedition", "/games", "/icpc", "/daily", "/review", "/contest", "/interview", "/cheatsheets", "/playground", "/releases", "/android", "/atlas", "/complexity", "/notebook", "/toolkit", "/vault", "/weather", "/images", "/qr", "/whiteboard", "/store", "/expenses", "/calendar", "/translate", "/manifest.webmanifest", "/favicon.svg", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable.png"]
 
 self.addEventListener("install", (e) => {
@@ -23,8 +23,10 @@ self.addEventListener("fetch", (e) => {
   if (url.pathname.startsWith("/_next/static") || url.pathname.startsWith("/icons") || isGhostEngine) {
     e.respondWith(
       caches.match(request).then((hit) => hit || fetch(request).then((res) => {
-        const copy = res.clone()
-        caches.open(CACHE).then((c) => c.put(request, copy))
+        if (res.ok && res.status === 200) {
+          const copy = res.clone()
+          caches.open(CACHE).then((c) => c.put(request, copy))
+        }
         return res
       }))
     )
@@ -35,8 +37,10 @@ self.addEventListener("fetch", (e) => {
   if (request.headers.get("accept")?.includes("text/html")) {
     e.respondWith(
       fetch(request).then((res) => {
-        const copy = res.clone()
-        caches.open(CACHE).then((c) => c.put(request, copy))
+        if (res.ok && res.status === 200) {
+          const copy = res.clone()
+          caches.open(CACHE).then((c) => c.put(request, copy))
+        }
         return res
       }).catch(() => caches.match(request).then((hit) => hit || caches.match("/")))
     )

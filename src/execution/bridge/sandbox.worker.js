@@ -15,9 +15,11 @@ const ctx = self
 // Surface async failures that never reach the message try/catch — without this
 // the client only sees an empty onerror and nobody can diagnose the crash.
 self.addEventListener("unhandledrejection", (event) => {
+  event.preventDefault()
   ctx.postMessage({ type: "error", message: "sandbox promise rejected: " + String(event.reason) })
 })
 self.addEventListener("error", (event) => {
+  event.preventDefault()
   ctx.postMessage({ type: "error", message: "sandbox top-level error: " + (event.message || "unknown") + (event.filename ? ` (${event.filename}:${event.lineno})` : "") })
 })
 

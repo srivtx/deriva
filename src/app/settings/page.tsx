@@ -14,7 +14,7 @@ import PackIcon from "@/components/pack-icon"
 import { getNotificationPermission, requestDesktopNotifications } from "@/notifications/desktop-reminder"
 import { canPromptPwaInstall, promptPwaInstall } from "@/components/pwa-branding"
 import Logo from "@/components/logo"
-import { downloadWorkspace, importWorkspace, eraseWorkspace } from "@/persistence/data-transfer"
+import { downloadWorkspace, importWorkspace, eraseWorkspace, purgeCachesAndSandbox } from "@/persistence/data-transfer"
 
 const themes: { value: ThemePreference; title: string; body: string; swatch: string; isNew?: boolean }[] = [
   { value: "moss", title: "Moss", body: "Grounded, green, and clear.", swatch: "#2F8F5B" },
@@ -259,6 +259,19 @@ export default function SettingsPage() {
       setTimeout(() => window.location.reload(), 800)
     } catch (error) {
       setDataMessage(error instanceof Error ? error.message : "Import failed.")
+    }
+  }
+  const [purgingCache, setPurgingCache] = useState(false)
+  const handlePurgeCache = async () => {
+    setPurgingCache(true)
+    setDataMessage("Purging service worker cache and sandbox…")
+    try {
+      const { cachesCleared, workersUnregistered } = await purgeCachesAndSandbox()
+      setDataMessage(`Purged ${cachesCleared} cache store(s) and unregistered ${workersUnregistered} worker(s). Reloading…`)
+      setTimeout(() => window.location.reload(), 900)
+    } catch (error) {
+      setDataMessage(error instanceof Error ? error.message : "Cache purge failed.")
+      setPurgingCache(false)
     }
   }
   const handleErase = () => {
@@ -527,6 +540,9 @@ export default function SettingsPage() {
             Import backup
             <input type="file" accept="application/json,.json" onChange={handleImport} aria-label="Import backup file" />
           </label>
+          <button type="button" className="btn-purge" onClick={handlePurgeCache} disabled={purgingCache} title="Purge service worker caches, unregister stale workers, and reset the execution sandbox without deleting your progress or solutions">
+            {purgingCache ? "Purging…" : "Reset sandbox & cache"}
+          </button>
           <button type="button" className="btn-danger" onClick={handleErase}>Erase all data</button>
         </div>
         {dataMessage && <p className="data-message" role="status">{dataMessage}</p>}
