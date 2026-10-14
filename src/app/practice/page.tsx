@@ -50,13 +50,47 @@ export default function PracticePage() {
   const visibleProblems = !hasDifficulty || difficultyFilter === "all" ? topic.problems : topic.problems.filter(p => p.difficulty === difficultyFilter)
   const bookmarked = new Set(bookmarks[topicId] || [])
   const isBookmarked = bookmarked.has(currentId)
-  const isFailure = output.startsWith("Error:") || output.includes("AssertionError")
+  const isFailure = Boolean(
+    output && (
+      output.startsWith("Error:") ||
+      output.includes("AssertionError") ||
+      output.includes("Traceback (most recent call last):") ||
+      output.includes("Error:")
+    )
+  )
   const failingAssert = (() => {
     if (!isFailure) return ""
-    const lines = output.split("\n")
+    const lines = output.split("\n").map(l => l.trim()).filter(Boolean)
+    // 1. Look for failing assert statement in tests
     for (let i = lines.length - 1; i >= 0; i--) {
-      const line = lines[i].trim()
-      if (line.startsWith("assert ")) return line
+      if (lines[i].startsWith("assert ")) return lines[i]
+    }
+    // 2. Look for Python exception line (e.g. IndentationError, SyntaxError, TypeError)
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i]
+      if (
+        line.startsWith("IndentationError:") ||
+        line.startsWith("SyntaxError:") ||
+        line.startsWith("TypeError:") ||
+        line.startsWith("NameError:") ||
+        line.startsWith("ValueError:") ||
+        line.startsWith("ZeroDivisionError:") ||
+        line.startsWith("RecursionError:") ||
+        line.startsWith("IndexError:") ||
+        line.startsWith("KeyError:") ||
+        line.startsWith("AttributeError:") ||
+        /^[A-Z][A-Za-z0-9_]*(Error|Exception):/.test(line)
+      ) {
+        return line
+      }
+    }
+    // 3. Fallback to clean error message
+    const firstLine = lines[0] || ""
+    if (firstLine.startsWith("Error: PythonError:")) {
+      return lines[lines.length - 1] || firstLine
+    }
+    if (firstLine.startsWith("Error:")) {
+      return firstLine.replace(/^Error:\s*/, "")
     }
     return ""
   })()
@@ -348,7 +382,11 @@ export default function PracticePage() {
           <aside className="fail-card" aria-label="Tests did not pass">
             <span className="fail-kicker">Not through yet</span>
             <strong>{failingAssert || "A test didn't pass."}</strong>
-            <p>That check is the wall. Re-read the failing case, trace it by hand once, or take the next hint — the fix is usually one honest re-read away.</p>
+            <p>
+              {failingAssert.includes("IndentationError") || failingAssert.includes("SyntaxError")
+                ? "There is an indentation or syntax misalignment in your code. Check the highlighted error line in the editor."
+                : "That check is the wall. Re-read the failing case, trace it by hand once, or take the next hint — the fix is usually one honest re-read away."}
+            </p>
             <div className="fail-actions">
               <button type="button" onClick={revealNextHint} disabled={currentHint >= 3}>Reveal next hint ({currentHint}/3)</button>
             </div>
@@ -356,7 +394,7 @@ export default function PracticePage() {
           </aside>
         )}
 
-        {tCompleted.has(currentId) && (
+        {!isFailure && tCompleted.has(currentId) && (
           <aside className="completion-card" aria-label="Learning checkpoint">
             <span className="completion-mark">✓</span>
             <div>
@@ -499,47 +537,62 @@ export default function PracticePage() {
         .wlk { font-size: 14px; line-height: 1.8; font-family: var(--font-narrative); }
         .kbd { text-align: center; color: var(--ink-soft); font-size: 11px; margin-top: 16px; font-family: var(--font-mono); }
 
+        .bookmark-btn { display: inline-flex; width: 40px; height: 40px; flex: 0 0 40px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink-soft); font-size: 17px; cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+        .bookmark-btn:hover { border-color: var(--accent); color: var(--ink); }
+        .bookmark-btn.active { border-color: color-mix(in srgb, var(--viz-cached) 55%, var(--line)); background: color-mix(in srgb, var(--viz-cached) 12%, var(--paper-raised)); color: var(--viz-cached); }
+
+        .fail-card { margin-bottom: 14px; padding: 16px; border: 1px solid color-mix(in srgb, var(--viz-pruned) 45%, var(--line)); border-radius: var(--radius); background: color-mix(in srgb, var(--viz-pruned) 7%, var(--paper-raised)); box-sizing: border-box; clear: both; }
+        .fail-kicker { display: block; margin-bottom: 5px; color: var(--viz-pruned); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+        .fail-card strong { display: block; font: 700 13px var(--font-mono); overflow-wrap: anywhere; word-break: break-word; color: var(--ink); }
+        .fail-card p { margin: 8px 0 12px; color: var(--ink-soft); font: 13px/1.55 var(--font-ui); }
+        .fail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .fail-actions button { min-height: 38px; padding: 0 14px; border: 1px solid var(--viz-pruned); border-radius: var(--radius); background: transparent; color: var(--viz-pruned); font: 700 12px var(--font-ui); cursor: pointer; transition: background 0.15s; }
+        .fail-actions button:hover:not(:disabled) { background: color-mix(in srgb, var(--viz-pruned) 12%, transparent); }
+        .fail-actions button:disabled { opacity: .4; cursor: default; }
+
+        .raw-out { margin-top: 12px; border-top: 1px solid color-mix(in srgb, var(--viz-pruned) 25%, var(--line)); padding-top: 10px; width: 100%; box-sizing: border-box; }
+        .raw-out summary { color: var(--ink-soft); font: 600 12px var(--font-ui); cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 6px; }
+        .raw-out summary:hover { color: var(--ink); }
+        .raw-out[open] summary { color: var(--ink); margin-bottom: 8px; }
+        .raw-out pre { margin: 8px 0 0; padding: 12px 14px; background: var(--paper); border: 1px solid color-mix(in srgb, var(--viz-pruned) 30%, var(--line)); border-radius: var(--radius); font-family: var(--font-mono); font-size: 12px; line-height: 1.55; color: var(--ink); max-height: 280px; overflow-x: auto; overflow-y: auto; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; box-sizing: border-box; -webkit-overflow-scrolling: touch; }
+
+        .drill-mode-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--viz-pointer) 45%, var(--line)); border-radius: var(--radius); background: color-mix(in srgb, var(--viz-pointer) 8%, var(--paper-raised)); color: var(--ink); font-size: 13px; box-shadow: var(--shadow-raised); }
+        .drill-mode-banner div { display: flex; align-items: baseline; gap: 8px; }
+        .drill-mode-banner span { color: var(--viz-pointer); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+        .drill-mode-banner strong { color: var(--ink); font-weight: 700; }
+        .drill-mode-banner a { color: var(--viz-pointer); font-weight: 700; text-decoration: none; white-space: nowrap; }
+
         @media (max-width: 800px) {
           .practice-wrap { display: block; height: auto; min-height: calc(100dvh - 56px - env(safe-area-inset-top)); overflow: visible; }
           .sidebar { display: none; }
-         .main { overflow: visible; padding: var(--sp-4) var(--sp-4) calc(144px + env(safe-area-inset-bottom)); }
+          .main { overflow: visible; padding: var(--sp-4) var(--sp-4) calc(144px + env(safe-area-inset-bottom)); }
           .mobile-only { display: block; }
-           .mobile-context { position: static; display: grid; grid-template-columns: 1fr; gap: var(--sp-2); margin: 0 0 var(--sp-4); padding: 0; background: transparent; }
-         .mobile-context > * { box-shadow: none; }
-           .drill-mode-banner { align-items: stretch; flex-direction: column; gap: 8px; }
+          .mobile-context { position: static; display: grid; grid-template-columns: 1fr; gap: var(--sp-2); margin: 0 0 var(--sp-4); padding: 0; background: transparent; }
+          .mobile-context > * { box-shadow: none; }
+          .drill-mode-banner { align-items: stretch; flex-direction: column; gap: 8px; }
           .prob-header { align-items: flex-start; gap: var(--sp-3); margin-bottom: var(--sp-3); padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-raised); box-shadow: var(--shadow-raised); }
           .prob-num { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; background: var(--accent-soft); font-size: 16px; }
           .prob-h2 { font-size: 22px; line-height: 1.15; }
           .problem-tags { flex-wrap: wrap; }
           .problem-pager { width: 100%; padding-left: 46px; }
+          .problem-pager .btn { flex: 1; }
           .bookmark-btn { width: 44px; height: 44px; flex: 0 0 44px; font-size: 19px; }
           .fail-card { padding: 14px; }
           .fail-card strong { font-size: 12px; }
           .fail-actions button { width: 100%; min-height: 44px; }
-        .problem-pager .btn { flex: 1; }
-        .bookmark-btn { display: inline-flex; width: 40px; height: 40px; flex: 0 0 40px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); color: var(--ink-soft); font-size: 17px; cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s; }
-        .bookmark-btn.active { border-color: color-mix(in srgb, var(--viz-cached) 55%, var(--line)); background: color-mix(in srgb, var(--viz-cached) 12%, var(--paper-raised)); color: var(--viz-cached); }
-        .fail-card { margin-bottom: 14px; padding: 16px; border: 1px solid color-mix(in srgb, var(--viz-pruned) 45%, var(--line)); border-radius: var(--radius); background: color-mix(in srgb, var(--viz-pruned) 7%, var(--paper-raised)); }
-        .fail-kicker { display: block; margin-bottom: 5px; color: var(--viz-pruned); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
-        .fail-card strong { display: block; font: 700 13px var(--font-mono); overflow-wrap: anywhere; }
-        .fail-card p { margin: 8px 0 12px; color: var(--ink-soft); font: 13px/1.55 var(--font-ui); }
-        .fail-actions button { min-height: 38px; padding: 0 14px; border: 1px solid var(--viz-pruned); border-radius: var(--radius); background: transparent; color: var(--viz-pruned); font: 700 12px var(--font-ui); cursor: pointer; }
-        .fail-actions button:disabled { opacity: .4; cursor: default; }
-        .raw-out { margin-top: 12px; }
-        .raw-out summary { color: var(--ink-soft); font: 600 12px var(--font-ui); cursor: pointer; }
-        .raw-out pre { margin: 8px 0 0; max-height: 200px; }
-        .mobile-diff-filter { width: 100%; padding: 8px 10px; background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius); font-size: 13px; color: var(--ink); font-family: var(--font-ui); }
+          .raw-out pre { max-height: 240px; font-size: 11px; padding: 10px; }
+          .mobile-diff-filter { width: 100%; padding: 8px 10px; background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius); font-size: 13px; color: var(--ink); font-family: var(--font-ui); }
           .pbar { margin-bottom: var(--sp-4); }
           .pbar-label { min-width: 72px; text-align: right; font-size: 11px; }
           .card { padding: var(--sp-4); margin-bottom: var(--sp-3); }
           .stmt { margin: 0; font-size: 18px; line-height: 1.55; }
-           .ex-box { padding: var(--sp-3); overflow-wrap: anywhere; }
-           .chatgpt-assist { align-items: stretch; flex-direction: column; }
-           .chatgpt-link { text-align: center; }
+          .ex-box { padding: var(--sp-3); overflow-wrap: anywhere; }
+          .chatgpt-assist { align-items: stretch; flex-direction: column; }
+          .chatgpt-link { text-align: center; }
           .why { padding: var(--sp-4); font-size: 16px; line-height: 1.55; }
           .ed { min-height: 280px; max-height: none; padding: var(--sp-3); font-size: 13px; line-height: 1.6; }
-           .acts { margin: var(--sp-3) 0 0; padding: 0; background: transparent; border-top: 0; box-shadow: none; }
-           .acts .btn { min-height: 44px; padding-inline: 12px; }
+          .acts { margin: var(--sp-3) 0 0; padding: 0; background: transparent; border-top: 0; box-shadow: none; }
+          .acts .btn { min-height: 44px; padding-inline: 12px; }
           .primary-run { flex: 1 1 100%; font-size: 14px; }
           .acts .btn:not(.primary-run) { flex: 1 1 calc(33.333% - 6px); font-size: 12px; }
           .out { margin-top: var(--sp-4); overflow-wrap: anywhere; }
@@ -547,11 +600,6 @@ export default function PracticePage() {
           .completion-next { grid-column: 2; justify-self: start; }
           .kbd { display: none; }
         }
-         .drill-mode-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--viz-pointer) 45%, var(--line)); border-radius: var(--radius); background: color-mix(in srgb, var(--viz-pointer) 8%, var(--paper-raised)); color: var(--ink); font-size: 13px; box-shadow: var(--shadow-raised); }
-        .drill-mode-banner div { display: flex; align-items: baseline; gap: 8px; }
-         .drill-mode-banner span { color: var(--viz-pointer); font: 700 10px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
-         .drill-mode-banner strong { color: var(--ink); font-weight: 700; }
-         .drill-mode-banner a { color: var(--viz-pointer); font-weight: 700; text-decoration: none; white-space: nowrap; }
         @media (min-width: 801px) {
           .mobile-only { display: none; }
         }
