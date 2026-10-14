@@ -24,6 +24,7 @@ export default function ProbCraftPage() {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true)
   const [isPortraitNoticeDismissed, setIsPortraitNoticeDismissed] = useState(false)
   const [isPointerLocked, setIsPointerLocked] = useState(false)
+  const [hasStarted, setHasStarted] = useState(false)
 
   const currentWorld: ProbWorld = PROBCRAFT_WORLDS[currentWorldIndex] || PROBCRAFT_WORLDS[0]
 
@@ -42,7 +43,9 @@ export default function ProbCraftPage() {
     engineRef.current = engine
 
     const onLockChange = () => {
-      setIsPointerLocked(document.pointerLockElement === containerRef.current?.querySelector("canvas"))
+      const locked = document.pointerLockElement === containerRef.current?.querySelector("canvas")
+      setIsPointerLocked(locked)
+      if (locked) setHasStarted(true)
     }
     document.addEventListener("pointerlockchange", onLockChange)
 
@@ -156,16 +159,12 @@ export default function ProbCraftPage() {
       probAudio.playDing(true)
     }
 
-    setTrialsCount(prev => {
-      const nextCount = prev + 1
-      setHistory(prevHist => {
-        const nextHist = [...prevHist, value]
-        const sum = nextHist.reduce((a, b) => a + b, 0)
-        setEmpiricalMean(sum / nextCount)
-        return nextHist
-      })
-      return nextCount
-    })
+    const nextCount = trialsCount + 1
+    const nextHist = [...history, value]
+    const sum = nextHist.reduce((a, b) => a + b, 0)
+    setTrialsCount(nextCount)
+    setHistory(nextHist)
+    setEmpiricalMean(sum / nextCount)
   }
 
   // Fast Monte Carlo Wand: Simulates N rounds instantly
@@ -196,16 +195,12 @@ export default function ProbCraftPage() {
       newValues.push(val)
     }
 
-    setTrialsCount(prev => {
-      const nextCount = prev + rounds
-      setHistory(prevHist => {
-        const nextHist = [...prevHist, ...newValues]
-        const sum = nextHist.reduce((a, b) => a + b, 0)
-        setEmpiricalMean(sum / nextCount)
-        return nextHist
-      })
-      return nextCount
-    })
+    const nextCount = trialsCount + rounds
+    const nextHist = [...history, ...newValues]
+    const sum = nextHist.reduce((a, b) => a + b, 0)
+    setTrialsCount(nextCount)
+    setHistory(nextHist)
+    setEmpiricalMean(sum / nextCount)
   }
 
   const toggleSound = () => {
@@ -217,7 +212,16 @@ export default function ProbCraftPage() {
   return (
     <main className="probcraft-container" aria-label="ProbCraft 3D Voxel Probability Game">
       {/* 3D WebGL Canvas Viewport */}
-      <div ref={containerRef} className="voxel-canvas-host" />
+      <div
+        ref={containerRef}
+        className="voxel-canvas-host"
+        onClick={() => {
+          if (hasStarted && !isPointerLocked) {
+            const canvas = containerRef.current?.querySelector("canvas")
+            canvas?.requestPointerLock()
+          }
+        }}
+      />
 
       {/* Floating HUD & Socratic Invariant Slate */}
       <ProbCraftHUD
@@ -244,21 +248,64 @@ export default function ProbCraftPage() {
         allWorlds={PROBCRAFT_WORLDS}
       />
 
-      {/* Desktop Click-to-Play Overlay (when pointer is unlocked) */}
-      {!isPointerLocked && (
+      {/* Mobile Landscape Virtual Touch D-Pad */}
+      <div className="mobile-touch-dpad" aria-hidden="true">
+        <button
+          type="button"
+          className="dpad-btn up"
+          onTouchStart={e => { e.preventDefault(); engineRef.current?.setVirtualControls({ forward: true }) }}
+          onTouchEnd={e => { e.preventDefault(); engineRef.current?.setVirtualControls({ forward: false }) }}
+        >▲</button>
+        <div className="dpad-row">
+          <button
+            type="button"
+            className="dpad-btn left"
+            onTouchStart={e => { e.preventDefault(); engineRef.current?.setVirtualControls({ left: true }) }}
+            onTouchEnd={e => { e.preventDefault(); engineRef.current?.setVirtualControls({ left: false }) }}
+          >◀</button>
+          <button
+            type="button"
+            className="dpad-btn jump"
+            onTouchStart={e => { e.preventDefault(); engineRef.current?.setVirtualControls({ jump: true }) }}
+          >⤒</button>
+          <button
+            type="button"
+            className="dpad-btn right"
+            onTouchStart={e => { e.preventDefault(); engineRef.current?.setVirtualControls({ right: true }) }}
+            onTouchEnd={e => { e.preventDefault(); engineRef.current?.setVirtualControls({ right: false }) }}
+          >▶</button>
+        </div>
+        <button
+          type="button"
+          className="dpad-btn down"
+          onTouchStart={e => { e.preventDefault(); engineRef.current?.setVirtualControls({ backward: true }) }}
+          onTouchEnd={e => { e.preventDefault(); engineRef.current?.setVirtualControls({ backward: false }) }}
+        >▼</button>
+      </div>
+
+      {/* Initial Click-to-Play Overlay (Only before first interaction) */}
+      {!hasStarted && (
         <div
           className="pointer-lock-prompt"
           onClick={() => {
+            setHasStarted(true)
             const canvas = containerRef.current?.querySelector("canvas")
             canvas?.requestPointerLock()
           }}
         >
           <div className="prompt-card">
             <span className="prompt-glyph">⛏</span>
-            <h2>Click to Enter ProbCraft 3D</h2>
+            <h2>Enter ProbCraft 3D</h2>
             <p>Look with mouse · Walk with [W][A][S][D] · Space to jump · Mine with Left-Click</p>
-            <span className="prompt-btn">Activate Pointer Controls</span>
+            <span className="prompt-btn">Click to Start Exploring</span>
           </div>
+        </div>
+      )}
+
+      {/* Subtle Re-Lock Reminder Pill (Non-blocking, clicks pass through) */}
+      {hasStarted && !isPointerLocked && (
+        <div className="re-lock-pill" aria-hidden="true">
+          <span>Click 3D world to capture mouse · [Esc] to free</span>
         </div>
       )}
 
@@ -429,6 +476,69 @@ export default function ProbCraftPage() {
           padding: 4px 8px;
           font-size: 10px;
           cursor: pointer;
+        }
+
+        .re-lock-pill {
+          position: absolute;
+          top: 72px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(20, 22, 26, 0.82);
+          backdrop-filter: blur(4px);
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          padding: 6px 14px;
+          font-size: 11px;
+          color: var(--ink-soft);
+          pointer-events: none;
+          z-index: 12;
+        }
+
+        .mobile-touch-dpad {
+          position: absolute;
+          bottom: 24px;
+          left: 20px;
+          display: none;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          z-index: 22;
+          user-select: none;
+        }
+
+        .dpad-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .dpad-btn {
+          width: 44px;
+          height: 44px;
+          border-radius: 8px;
+          background: rgba(20, 22, 26, 0.75);
+          backdrop-filter: blur(6px);
+          border: 1px solid var(--line);
+          color: var(--paper-raised);
+          font-size: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          touch-action: none;
+        }
+
+        .dpad-btn.jump {
+          background: var(--accent);
+          color: var(--paper);
+          font-size: 18px;
+          font-weight: 800;
+        }
+
+        @media (max-width: 1024px) {
+          .mobile-touch-dpad {
+            display: flex;
+          }
         }
 
         @media (max-width: 768px) and (orientation: portrait) {

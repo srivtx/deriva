@@ -72,6 +72,18 @@ export interface ProbWorld {
   targetTrials: number
 }
 
+function createSquareFloor(radius = 7, defaultType: VoxelBlockType = "cobble", centerType?: VoxelBlockType): VoxelCoord[] {
+  const blocks: VoxelCoord[] = []
+  for (let x = -radius; x <= radius; x++) {
+    for (let z = -radius; z <= radius; z++) {
+      const isCenter = Math.abs(x) <= 2 && Math.abs(z) <= 2
+      const type = isCenter && centerType ? centerType : defaultType
+      blocks.push({ x, y: 0, z, type })
+    }
+  }
+  return blocks
+}
+
 // 8 Linear Progressive Worlds from Foundations to Master
 export const PROBCRAFT_WORLDS: ProbWorld[] = [
   // ──────────────────────────────────────────────────────────────────────────
@@ -94,18 +106,11 @@ export const PROBCRAFT_WORLDS: ProbWorld[] = [
     missionPrompt:
       "Three stone vaults stand before you: Vault 1 holds [Gold + Gold], Vault 2 holds [Coal + Coal], Vault 3 holds [Gold + Coal]. Open Vault 1 or 3 blindly. You extracted a Gold Ore! Inspect the other slot: why is the chance of finding Gold 2/3 instead of 1/2?",
     winConditionDesc: "Test 10 vault extractions and verify empirical convergence to 66.7%",
-    playerSpawn: [0, 2, 6],
-    cameraLookAt: [0, 1.5, 0],
+    playerSpawn: [0, 2.15, 4],
+    cameraLookAt: [0, 1.8, 0],
     blocks: [
-      // Floor (Grass & Stone)
-      ...Array.from({ length: 9 }, (_, x) =>
-        Array.from({ length: 9 }, (_, z) => ({
-          x: x - 4,
-          y: 0,
-          z: z - 4,
-          type: (Math.abs(x - 4) <= 1 && Math.abs(z - 4) <= 1 ? "cobble" : "grass") as VoxelBlockType,
-        }))
-      ).flat(),
+      // Floor (Grass & Cobblestone 15x15)
+      ...createSquareFloor(7, "grass", "cobble"),
       // Vault Pedestals
       { x: -3, y: 1, z: 0, type: "stone" },
       { x: -3, y: 2, z: 0, type: "chest", label: "Vault A [Gold + Gold]" },
@@ -157,18 +162,11 @@ export const PROBCRAFT_WORLDS: ProbWorld[] = [
     missionPrompt:
       "A massive vein of mystic ores stretches ahead. Test three mining tools: Iron Pick (1 gold guaranteed, E=1.0), Diamond Pick (10% chance of 14 gold, E=1.4), and Cursed Pick (1% chance of 80 gold, E=0.8). Mine 20 blocks to watch sample average converge to expectation!",
     winConditionDesc: "Mine 20 blocks to observe sample average convergence within 10% of theoretical mean",
-    playerSpawn: [0, 2, 8],
-    cameraLookAt: [0, 2, 0],
+    playerSpawn: [0, 2.15, 4],
+    cameraLookAt: [0, 2.0, 0],
     blocks: [
-      // Floor
-      ...Array.from({ length: 11 }, (_, x) =>
-        Array.from({ length: 11 }, (_, z) => ({
-          x: x - 5,
-          y: 0,
-          z: z - 5,
-          type: "stone" as VoxelBlockType,
-        }))
-      ).flat(),
+      // Floor (Stone 15x15)
+      ...createSquareFloor(7, "stone", "cobble"),
       // Ore Vein Wall (Diamond & Gold ores)
       ...Array.from({ length: 7 }, (_, x) =>
         Array.from({ length: 4 }, (_, y) => ({
@@ -217,18 +215,11 @@ export const PROBCRAFT_WORLDS: ProbWorld[] = [
     missionPrompt:
       "Three glowing Nether Portals stand in the obsidian sanctum. One leads to the Diamond Citadel; two drop into the Sheep Void. Pick Portal 1. The dungeon master steps forward and activates Portal 3, exposing a sheep! Should you STAY at Portal 1, or SWITCH to Portal 2?",
     winConditionDesc: "Test 15 rounds of Switching vs Staying and verify the 2:1 win ratio",
-    playerSpawn: [0, 2, 7],
-    cameraLookAt: [0, 2, 0],
+    playerSpawn: [0, 2.15, 4],
+    cameraLookAt: [0, 2.0, 0],
     blocks: [
-      // Floor Obsidian
-      ...Array.from({ length: 9 }, (_, x) =>
-        Array.from({ length: 9 }, (_, z) => ({
-          x: x - 4,
-          y: 0,
-          z: z - 4,
-          type: "obsidian" as VoxelBlockType,
-        }))
-      ).flat(),
+      // Floor Obsidian (15x15)
+      ...createSquareFloor(7, "obsidian", "cobble"),
       // Portal 1 (Left)
       { x: -3, y: 1, z: 0, type: "obsidian" },
       { x: -3, y: 2, z: 0, type: "portal", label: "Portal 1" },
@@ -277,39 +268,39 @@ export const PROBCRAFT_WORLDS: ProbWorld[] = [
     missionPrompt:
       "A narrow 1-block stone bridge spans a bottomless void. You take random steps forward (+1) or backward (-1). With a fair wind (p=0.5), will you return to your starting block? Step onto the bridge and simulate 25 walks to test recurrence vs transience!",
     winConditionDesc: "Simulate 25 random walk paths and verify 100% recurrence in 1D",
-    playerSpawn: [0, 2, 8],
-    cameraLookAt: [0, 2, 0],
+    playerSpawn: [0, 2.15, 4],
+    cameraLookAt: [0, 1.5, -2],
     blocks: [
-      // Spawn platform
-      ...Array.from({ length: 3 }, (_, x) =>
-        Array.from({ length: 3 }, (_, z) => ({
-          x: x - 1,
-          y: 1,
-          z: z + 7,
+      // Safe Spawn Plaza (5x5 Cobblestone at y=0)
+      ...Array.from({ length: 5 }, (_, x) =>
+        Array.from({ length: 5 }, (_, z) => ({
+          x: x - 2,
+          y: 0,
+          z: z + 2,
           type: "cobble" as VoxelBlockType,
         }))
       ).flat(),
-      // 1D Narrow Bridge suspended over void
-      ...Array.from({ length: 12 }, (_, i) => ({
+      // 1D Narrow Bridge suspended over void (y=0, from z=1 down to z=-5)
+      ...Array.from({ length: 7 }, (_, i) => ({
         x: 0,
-        y: 1,
-        z: 6 - i,
-        type: (i === 6 ? "diamond_ore" : "stone") as VoxelBlockType,
-        label: `Tile ${i - 6}`,
+        y: 0,
+        z: 1 - i,
+        type: (i === 3 ? "diamond_ore" : "stone") as VoxelBlockType,
+        label: `Tile ${3 - i}`,
       })),
-      // Finish platform
-      ...Array.from({ length: 3 }, (_, x) =>
-        Array.from({ length: 3 }, (_, z) => ({
-          x: x - 1,
-          y: 1,
-          z: z - 7,
+      // Finish Gold Platform (5x5 Gold Ore at y=0, z=-6 to -10)
+      ...Array.from({ length: 5 }, (_, x) =>
+        Array.from({ length: 5 }, (_, z) => ({
+          x: x - 2,
+          y: 0,
+          z: -6 - z,
           type: "gold_ore" as VoxelBlockType,
         }))
       ).flat(),
     ],
     interactiveTargets: [
-      { id: "walk-fair", x: 0, y: 1, z: 0, name: "Fair Walk (p=0.5)", oddsDesc: "Recurrent: Expected visits to origin is infinite", expectedValue: 0 },
-      { id: "walk-biased", x: 0, y: 1, z: -3, name: "Adverse Wind (p=0.4)", oddsDesc: "Transient: Drifts inevitably into the void", expectedValue: -0.2 },
+      { id: "walk-fair", x: 0, y: 0, z: 0, name: "Fair Walk (p=0.5)", oddsDesc: "Recurrent: Expected visits to origin is infinite", expectedValue: 0 },
+      { id: "walk-biased", x: 0, y: 0, z: -3, name: "Adverse Wind (p=0.4)", oddsDesc: "Transient: Drifts inevitably into the void", expectedValue: -0.2 },
     ],
     options: [
       { id: "opt-never", label: "In 1D, fair steps will almost surely drift away and never return to origin", isTrap: true, explanation: "False! Pólya proved 1D and 2D symmetric walks return to the starting position with probability 1." },
@@ -341,28 +332,46 @@ export const PROBCRAFT_WORLDS: ProbWorld[] = [
     missionPrompt:
       "A path of gold pressure plates spans across bubbling lava. Step on a plate: flip a coin. If you lose, double your bet. Your pouch holds 64 gold chunks. Can you generate risk-free profit by doubling down? Run the simulation to watch the fatal 6-loss streak wipeout!",
     winConditionDesc: "Simulate 30 Martingale sessions and discover why E[Profit] remains exactly 0",
-    playerSpawn: [0, 2, 6],
+    playerSpawn: [0, 2.15, 4],
     cameraLookAt: [0, 1.5, 0],
     blocks: [
-      // Lava Lake
-      ...Array.from({ length: 9 }, (_, x) =>
-        Array.from({ length: 9 }, (_, z) => ({
-          x: x - 4,
+      // Safe Start Plaza (5x5 Cobblestone at y=0)
+      ...Array.from({ length: 5 }, (_, x) =>
+        Array.from({ length: 5 }, (_, z) => ({
+          x: x - 2,
           y: 0,
-          z: z - 4,
+          z: z + 2,
+          type: "cobble" as VoxelBlockType,
+        }))
+      ).flat(),
+      // Stepping Stone Pillars at y=0
+      { x: 0, y: 0, z: 1, type: "cobble", label: "Start Bet: 1 Gold" },
+      { x: 0, y: 0, z: -1, type: "stone", label: "Bet 2 Gold" },
+      { x: 0, y: 0, z: -3, type: "stone", label: "Bet 4 Gold" },
+      { x: 0, y: 0, z: -5, type: "stone", label: "Bet 8 Gold" },
+      // Goal Plaza (5x5 Gold Ore at y=0)
+      ...Array.from({ length: 5 }, (_, x) =>
+        Array.from({ length: 5 }, (_, z) => ({
+          x: x - 2,
+          y: 0,
+          z: -6 - z,
+          type: "gold_ore" as VoxelBlockType,
+          label: "Goal (+1 Gold Profit)",
+        }))
+      ).flat(),
+      // Surrounding Lava Lake (15x17 at y=-1)
+      ...Array.from({ length: 15 }, (_, x) =>
+        Array.from({ length: 17 }, (_, z) => ({
+          x: x - 7,
+          y: -1,
+          z: z - 10,
           type: "lava" as VoxelBlockType,
         }))
       ).flat(),
-      // Stepping Stone Pillars
-      { x: 0, y: 1, z: 4, type: "cobble", label: "Start Bet: 1 Gold" },
-      { x: 0, y: 1, z: 2, type: "stone", label: "Bet 2 Gold" },
-      { x: 0, y: 1, z: 0, type: "stone", label: "Bet 4 Gold" },
-      { x: 0, y: 1, z: -2, type: "stone", label: "Bet 8 Gold" },
-      { x: 0, y: 1, z: -4, type: "gold_ore", label: "Goal (+1 Gold Profit)" },
     ],
     interactiveTargets: [
-      { id: "bet-single", x: 0, y: 1, z: 4, name: "Flat 1 Gold Bet", oddsDesc: "Fair 50/50 coin flip, EV = 0", expectedValue: 0 },
-      { id: "bet-martingale", x: 0, y: 1, z: 0, name: "Martingale Doubling (1 -> 2 -> 4 -> 8)", oddsDesc: "Frequent +1 wins, rare total bankroll wipeout", expectedValue: 0 },
+      { id: "bet-single", x: 0, y: 0, z: 1, name: "Flat 1 Gold Bet", oddsDesc: "Fair 50/50 coin flip, EV = 0", expectedValue: 0 },
+      { id: "bet-martingale", x: 0, y: 0, z: -1, name: "Martingale Doubling (1 -> 2 -> 4 -> 8)", oddsDesc: "Frequent +1 wins, rare total bankroll wipeout", expectedValue: 0 },
     ],
     options: [
       { id: "opt-guarantee", label: "Martingale is guaranteed profit because P(win eventually) = 1", isTrap: true, explanation: "Ignores the unbounded negative tail. Under any finite bankroll, total ruin cancels all small profits." },
@@ -394,14 +403,14 @@ export const PROBCRAFT_WORLDS: ProbWorld[] = [
     missionPrompt:
       "A 4-room labyrinth: Forest (1), Desert (2), Tundra (3), Nether (4). The portals transition between rooms with fixed probabilities. Release 100 scout golems through the portals. Watch the room occupancy percentages settle into the stationary eigenvector!",
     winConditionDesc: "Observe 100 transitions converge to the stationary distribution within 2% margin",
-    playerSpawn: [0, 2, 6],
+    playerSpawn: [0, 2.15, 4],
     cameraLookAt: [0, 1.5, 0],
     blocks: [
-      // 4 Quadrant Biomes
-      ...Array.from({ length: 8 }, (_, x) =>
-        Array.from({ length: 8 }, (_, z) => {
-          const rx = x - 4
-          const rz = z - 4
+      // 4 Quadrant Biomes (15x15 at y=0)
+      ...Array.from({ length: 15 }, (_, x) =>
+        Array.from({ length: 15 }, (_, z) => {
+          const rx = x - 7
+          const rz = z - 7
           let type: VoxelBlockType = "cobble"
           if (rx < 0 && rz < 0) type = "grass" // Forest
           else if (rx >= 0 && rz < 0) type = "dirt" // Desert
@@ -411,16 +420,16 @@ export const PROBCRAFT_WORLDS: ProbWorld[] = [
         })
       ).flat(),
       // Portal Pillars in each room
-      { x: -2, y: 1, z: -2, type: "portal", label: "Forest Portal [Stay: 0.5, Desert: 0.3, Tundra: 0.2]" },
-      { x: 2, y: 1, z: -2, type: "portal", label: "Desert Portal [Forest: 0.4, Stay: 0.2, Nether: 0.4]" },
-      { x: -2, y: 1, z: 2, type: "portal", label: "Tundra Portal [Forest: 0.3, Nether: 0.7]" },
-      { x: 2, y: 1, z: 2, type: "portal", label: "Nether Portal [Desert: 0.5, Tundra: 0.1, Stay: 0.4]" },
+      { x: -3, y: 1, z: -3, type: "portal", label: "Forest Portal [Stay: 0.5, Desert: 0.3, Tundra: 0.2]" },
+      { x: 3, y: 1, z: -3, type: "portal", label: "Desert Portal [Forest: 0.4, Stay: 0.2, Nether: 0.4]" },
+      { x: -3, y: 1, z: 3, type: "portal", label: "Tundra Portal [Forest: 0.3, Nether: 0.7]" },
+      { x: 3, y: 1, z: 3, type: "portal", label: "Nether Portal [Desert: 0.5, Tundra: 0.1, Stay: 0.4]" },
     ],
     interactiveTargets: [
-      { id: "quad-forest", x: -2, y: 1, z: -2, name: "Forest Biome", oddsDesc: "Stationary mass: ~31.8%", expectedValue: 0.318 },
-      { id: "quad-desert", x: 2, y: 1, z: -2, name: "Desert Biome", oddsDesc: "Stationary mass: ~27.3%", expectedValue: 0.273 },
-      { id: "quad-tundra", x: -2, y: 1, z: 2, name: "Tundra Biome", oddsDesc: "Stationary mass: ~15.9%", expectedValue: 0.159 },
-      { id: "quad-nether", x: 2, y: 1, z: 2, name: "Nether Biome", oddsDesc: "Stationary mass: ~25.0%", expectedValue: 0.250 },
+      { id: "quad-forest", x: -3, y: 1, z: -3, name: "Forest Biome", oddsDesc: "Stationary mass: ~31.8%", expectedValue: 0.318 },
+      { id: "quad-desert", x: 3, y: 1, z: -3, name: "Desert Biome", oddsDesc: "Stationary mass: ~27.3%", expectedValue: 0.273 },
+      { id: "quad-tundra", x: -3, y: 1, z: 3, name: "Tundra Biome", oddsDesc: "Stationary mass: ~15.9%", expectedValue: 0.159 },
+      { id: "quad-nether", x: 3, y: 1, z: 3, name: "Nether Biome", oddsDesc: "Stationary mass: ~25.0%", expectedValue: 0.250 },
     ],
     options: [
       { id: "opt-initial-bias", label: "Starting in the Nether guarantees you will spend most time in the Nether", isTrap: true, explanation: "Initial conditions decay exponentially. The stationary state is independent of where you start." },
@@ -452,18 +461,11 @@ export const PROBCRAFT_WORLDS: ProbWorld[] = [
     missionPrompt:
       "In the mob dungeon, a cage spawner clicks with rate λ = 2 spawns per minute. 50 seconds have elapsed with total silence. Does the spawner have a higher probability of popping in the next 10 seconds than it did right at the beginning? Measure 15 arrivals!",
     winConditionDesc: "Record 15 inter-arrival intervals and observe the memoryless histogram shape",
-    playerSpawn: [0, 2, 6],
+    playerSpawn: [0, 2.15, 4],
     cameraLookAt: [0, 1.5, 0],
     blocks: [
-      // Stone Dungeon
-      ...Array.from({ length: 7 }, (_, x) =>
-        Array.from({ length: 7 }, (_, z) => ({
-          x: x - 3,
-          y: 0,
-          z: z - 3,
-          type: "cobble" as VoxelBlockType,
-        }))
-      ).flat(),
+      // Stone Dungeon Floor (15x15 at y=0)
+      ...createSquareFloor(7, "cobble", "stone"),
       // Spawner Cage in Center
       { x: 0, y: 1, z: 0, type: "obsidian" },
       { x: 0, y: 2, z: 0, type: "dice_block", label: "Creeper Spawner (λ=2/min)" },
@@ -502,10 +504,12 @@ export const PROBCRAFT_WORLDS: ProbWorld[] = [
     missionPrompt:
       "A pure Netherite-Diamond core is buried beneath one of 16 bedrock blocks. You have an acoustic sonar pulse. Test single blocks (extracting ~0.34 bits/query, average 8.5 queries) versus binary partition pulses (extracting 1.0 bit/query, guaranteed 4 queries). Prove Shannon's 4-bit bound!",
     winConditionDesc: "Locate the hidden diamond in exactly 4 binary tests across 5 consecutive rounds",
-    playerSpawn: [0, 2, 6],
+    playerSpawn: [0, 2.15, 5],
     cameraLookAt: [0, 1.5, 0],
     blocks: [
-      // 4x4 Bedrock Vault Grid
+      // Solid Vault Floor (15x15 at y=0)
+      ...createSquareFloor(7, "cobble", "obsidian"),
+      // 4x4 Bedrock Vault Grid on top of floor (y=1)
       ...Array.from({ length: 4 }, (_, x) =>
         Array.from({ length: 4 }, (_, z) => ({
           x: (x - 1.5) * 1.5,
@@ -539,3 +543,4 @@ export const PROBCRAFT_WORLDS: ProbWorld[] = [
     targetTrials: 5,
   },
 ]
+

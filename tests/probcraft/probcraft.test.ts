@@ -41,6 +41,19 @@ describe("ProbCraft 3D Worlds & Curriculum Invariants", () => {
     expect(jsonStr).not.toContain("✨")
     expect(jsonStr).not.toContain("🪄")
   })
+
+  it("every world has a solid floor block directly beneath the player spawn to prevent void fall loops", () => {
+    for (const world of PROBCRAFT_WORLDS) {
+      const [sx, sy, sz] = world.playerSpawn
+      const floorBlock = world.blocks.find(
+        b => b.type !== "air" && b.type !== "lava" && b.type !== "portal" &&
+             Math.abs(b.x - sx) <= 0.6 &&
+             Math.abs(b.z - sz) <= 0.6 &&
+             b.y <= sy - 1.5 && b.y >= sy - 2.5
+      )
+      expect(floorBlock, `World ${world.worldNumber} (${world.title}) missing floor under spawn [${sx}, ${sy}, ${sz}]`).toBeDefined()
+    }
+  })
 })
 
 describe("ProbCraft Mathematical Theorem Invariants", () => {

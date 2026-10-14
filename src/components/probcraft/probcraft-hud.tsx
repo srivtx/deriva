@@ -382,7 +382,7 @@ export function ProbCraftHUD({
           padding: var(--sp-4);
           font-family: var(--font-ui);
           user-select: none;
-          z-index: 10;
+          z-index: 20;
         }
 
         /* Center Crosshair */

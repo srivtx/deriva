@@ -60,11 +60,11 @@ export class ProbCraftEngine {
   private callbacks: EngineCallbacks
 
   // Physics & Player State
-  private playerPos = new THREE.Vector3(0, 2, 6)
+  private playerPos = new THREE.Vector3(0, 2.15, 4)
   private playerVel = new THREE.Vector3(0, 0, 0)
   private yaw = 0
   private pitch = 0
-  private isGrounded = false
+  private isGrounded = true
   private keys: Record<string, boolean> = {}
 
   // World Voxels
@@ -73,6 +73,7 @@ export class ProbCraftEngine {
   private solidBoxes: THREE.Box3[] = []
   private wireframeBox: THREE.LineSegments
   private targetedBlockCoord: VoxelCoord | null = null
+  private lastTargetId: string | null = null
 
   // Texture Cache
   private materialCache = new Map<VoxelBlockType, THREE.Material | THREE.Material[]>()
@@ -86,7 +87,7 @@ export class ProbCraftEngine {
     // 1. Scene & Camera Setup
     this.scene = new THREE.Scene()
     this.scene.background = new THREE.Color(0x14161a) // var(--paper) dark tone
-    this.scene.fog = new THREE.FogExp2(0x14161a, 0.025)
+    this.scene.fog = new THREE.FogExp2(0x14161a, 0.02)
 
     const aspect = container.clientWidth / Math.max(1, container.clientHeight)
     this.camera = new THREE.PerspectiveCamera(70, aspect, 0.1, 100)
@@ -94,21 +95,21 @@ export class ProbCraftEngine {
     // 2. WebGL Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" })
     this.renderer.setSize(container.clientWidth, container.clientHeight)
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     container.appendChild(this.renderer.domElement)
 
     // 3. Lighting Setup
-    const ambient = new THREE.AmbientLight(0xffffff, 1.2)
+    const ambient = new THREE.AmbientLight(0xffffff, 1.3)
     this.scene.add(ambient)
 
-    const sun = new THREE.DirectionalLight(0xfff7ed, 2.0)
+    const sun = new THREE.DirectionalLight(0xfff7ed, 1.8)
     sun.position.set(20, 40, 20)
     sun.castShadow = true
-    sun.shadow.mapSize.width = 1024
-    sun.shadow.mapSize.height = 1024
+    sun.shadow.mapSize.width = 512
+    sun.shadow.mapSize.height = 512
     this.scene.add(sun)
 
     // 4. Targeted Block Outline Box
@@ -190,28 +191,31 @@ export class ProbCraftEngine {
     // Remove existing block meshes
     this.blockMeshes.forEach(mesh => {
       this.scene.remove(mesh)
-      mesh.geometry.dispose()
     })
     this.blockMeshes.clear()
     this.solidBoxes = []
+    this.lastTargetId = null
+    this.targetedBlockCoord = null
+    this.wireframeBox.visible = false
 
-    // Set spawn point
+    // Set spawn point exactly on top of floor
     this.playerPos.set(world.playerSpawn[0], world.playerSpawn[1], world.playerSpawn[2])
     this.playerVel.set(0, 0, 0)
+    this.isGrounded = true
 
     const lookTarget = new THREE.Vector3(world.cameraLookAt[0], world.cameraLookAt[1], world.cameraLookAt[2])
     const dir = new THREE.Vector3().subVectors(lookTarget, this.playerPos).normalize()
     this.yaw = Math.atan2(-dir.x, -dir.z)
     this.pitch = Math.asin(dir.y)
 
-    // Build Voxel Mesh Blocks
+    // Build Voxel Mesh Blocks using shared BoxGeometry
     const boxGeo = new THREE.BoxGeometry(1, 1, 1)
 
     world.blocks.forEach(block => {
       if (block.type === "air") return
 
       const mat = this.materialCache.get(block.type) || new THREE.MeshStandardMaterial({ color: 0x6b7280 })
-      const mesh = new THREE.Mesh(boxGeo.clone(), mat)
+      const mesh = new THREE.Mesh(boxGeo, mat)
       mesh.position.set(block.x, block.y, block.z)
       mesh.castShadow = true
       mesh.receiveShadow = true
@@ -256,20 +260,29 @@ export class ProbCraftEngine {
         t => Math.round(t.x) === Math.round(coord.x) && Math.round(t.y) === Math.round(coord.y) && Math.round(t.z) === Math.round(coord.z)
       )
 
-      if (interactive) {
-        this.callbacks.onTargetChange(interactive)
-      } else {
-        this.callbacks.onTargetChange({
-          id: `block-${coord.x}-${coord.y}-${coord.z}`,
-          name: coord.label || `${coord.type.replace("_", " ").toUpperCase()}`,
-          oddsDesc: "Voxel Material Block",
-          expectedValue: 1.0,
-        })
+      const targetId = interactive ? interactive.id : `block-${coord.x}-${coord.y}-${coord.z}`
+
+      // ONLY dispatch React state update when the targeted ID actually changes!
+      if (targetId !== this.lastTargetId) {
+        this.lastTargetId = targetId
+        if (interactive) {
+          this.callbacks.onTargetChange(interactive)
+        } else {
+          this.callbacks.onTargetChange({
+            id: targetId,
+            name: coord.label || `${coord.type.replace("_", " ").toUpperCase()}`,
+            oddsDesc: "Voxel Material Block",
+            expectedValue: 1.0,
+          })
+        }
       }
     } else {
       this.targetedBlockCoord = null
       this.wireframeBox.visible = false
-      this.callbacks.onTargetChange(null)
+      if (this.lastTargetId !== null) {
+        this.lastTargetId = null
+        this.callbacks.onTargetChange(null)
+      }
     }
   }
 
@@ -281,11 +294,23 @@ export class ProbCraftEngine {
   }
 
   // Player Controls & Event Handlers
+  public setVirtualControls(ctrl: { forward?: boolean; backward?: boolean; left?: boolean; right?: boolean; jump?: boolean }) {
+    if (ctrl.forward !== undefined) this.keys["KeyW"] = ctrl.forward
+    if (ctrl.backward !== undefined) this.keys["KeyS"] = ctrl.backward
+    if (ctrl.left !== undefined) this.keys["KeyA"] = ctrl.left
+    if (ctrl.right !== undefined) this.keys["KeyD"] = ctrl.right
+    if (ctrl.jump && this.isGrounded) {
+      this.playerVel.y = 7.5
+      this.isGrounded = false
+      probAudio.playStep()
+    }
+  }
+
   private onKeyDown = (e: KeyboardEvent) => {
     this.keys[e.code] = true
 
     if (e.code === "Space" && this.isGrounded) {
-      this.playerVel.y = 7.0 // Jump impulse
+      this.playerVel.y = 7.5 // Jump impulse
       this.isGrounded = false
       probAudio.playStep()
     }
@@ -299,24 +324,37 @@ export class ProbCraftEngine {
     this.keys[e.code] = false
   }
 
+  private isDragging = false
+  private dragStartX = 0
+  private dragStartY = 0
+
   private onMouseMove = (e: MouseEvent) => {
-    // Only adjust view if pointer is locked, or if dragging
-    if (document.pointerLockElement === this.renderer.domElement || this.isDragging) {
+    const isLocked = document.pointerLockElement === this.renderer.domElement
+    if (isLocked) {
+      // Clamp sudden spikes (e.g. browser recentering during lock activation)
+      if (Math.abs(e.movementX) > 100 || Math.abs(e.movementY) > 100) return
       const sensitivity = 0.0022
       this.yaw -= e.movementX * sensitivity
       this.pitch -= e.movementY * sensitivity
       const maxPitch = (85 * Math.PI) / 180
       this.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.pitch))
+    } else if (this.isDragging) {
+      const dx = e.clientX - this.dragStartX
+      const dy = e.clientY - this.dragStartY
+      this.dragStartX = e.clientX
+      this.dragStartY = e.clientY
+
+      if (Math.abs(dx) > 100 || Math.abs(dy) > 100) return
+      const sensitivity = 0.003
+      this.yaw -= dx * sensitivity
+      this.pitch -= dy * sensitivity
+      const maxPitch = (85 * Math.PI) / 180
+      this.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.pitch))
     }
   }
 
-  private isDragging = false
-  private dragStartX = 0
-  private dragStartY = 0
-
   private onMouseDown = (e: MouseEvent) => {
     if (e.button === 0) {
-      // Left click: request pointer lock for desktop mouse feel
       if (document.pointerLockElement !== this.renderer.domElement) {
         this.renderer.domElement.requestPointerLock()
       } else {
@@ -341,6 +379,7 @@ export class ProbCraftEngine {
       this.dragStartX = touch.clientX
       this.dragStartY = touch.clientY
 
+      if (Math.abs(dx) > 100 || Math.abs(dy) > 100) return
       const sensitivity = 0.004
       this.yaw -= dx * sensitivity
       this.pitch -= dy * sensitivity
@@ -367,12 +406,17 @@ export class ProbCraftEngine {
 
   private resizeObserver: ResizeObserver | null = null
 
+  private onPointerLockChange = () => {
+    this.isDragging = false
+  }
+
   private bindEvents() {
     window.addEventListener("keydown", this.onKeyDown)
     window.addEventListener("keyup", this.onKeyUp)
     window.addEventListener("mousemove", this.onMouseMove)
     this.renderer.domElement.addEventListener("mousedown", this.onMouseDown)
     window.addEventListener("mouseup", this.onMouseUp)
+    document.addEventListener("pointerlockchange", this.onPointerLockChange)
 
     this.renderer.domElement.addEventListener("touchstart", this.onTouchStart, { passive: true })
     this.renderer.domElement.addEventListener("touchmove", this.onTouchMove, { passive: true })
@@ -381,7 +425,7 @@ export class ProbCraftEngine {
     this.resizeObserver.observe(this.container)
   }
 
-  // Physics Update with Voxel Bounding Box Collisions
+  // Physics Update with Sequential 3-Axis Collision Resolution (Zero Clipping & Zero Jitter)
   private lastTime = 0
   private updatePhysics(delta: number) {
     const moveSpeed = 6.0
@@ -413,47 +457,123 @@ export class ProbCraftEngine {
         this.stepAccumulator = 0
       }
     } else {
-      this.playerVel.x *= 0.75
-      this.playerVel.z *= 0.75
+      this.playerVel.x *= 0.5
+      this.playerVel.z *= 0.5
     }
 
-    // Apply Gravity
-    const gravity = -18.0
-    this.playerVel.y += gravity * delta
+    // Vertical Velocity & Gravity
+    if (this.isGrounded) {
+      if (this.playerVel.y < 0) {
+        this.playerVel.y = 0
+      }
+    } else {
+      const gravity = -20.0
+      this.playerVel.y += gravity * delta
+      this.playerVel.y = Math.max(-25.0, this.playerVel.y) // Terminal velocity clamp
+    }
 
-    // Predict next position
-    const nextPos = this.playerPos.clone().addScaledVector(this.playerVel, delta)
+    // ──────────────────────────────────────────────────────────────────────────
+    // Sequential 3-Axis AABB Collision Resolution
+    // ──────────────────────────────────────────────────────────────────────────
 
-    // Player AABB Bounding Box: width 0.6, height 1.8
-    const playerBox = new THREE.Box3(
-      new THREE.Vector3(nextPos.x - 0.3, nextPos.y - 1.6, nextPos.z - 0.3),
-      new THREE.Vector3(nextPos.x + 0.3, nextPos.y + 0.2, nextPos.z + 0.3)
+    // 1. Resolve X Axis
+    let nextX = this.playerPos.x + this.playerVel.x * delta
+    if (Math.abs(this.playerVel.x) > 0.0001) {
+      const boxX = new THREE.Box3(
+        new THREE.Vector3(nextX - 0.28, this.playerPos.y - 1.55, this.playerPos.z - 0.28),
+        new THREE.Vector3(nextX + 0.28, this.playerPos.y + 0.15, this.playerPos.z + 0.28)
+      )
+      for (const block of this.solidBoxes) {
+        if (boxX.intersectsBox(block)) {
+          if (this.playerVel.x > 0) {
+            nextX = block.min.x - 0.281
+          } else if (this.playerVel.x < 0) {
+            nextX = block.max.x + 0.281
+          }
+          this.playerVel.x = 0
+          break
+        }
+      }
+    }
+    this.playerPos.x = nextX
+
+    // 2. Resolve Z Axis
+    let nextZ = this.playerPos.z + this.playerVel.z * delta
+    if (Math.abs(this.playerVel.z) > 0.0001) {
+      const boxZ = new THREE.Box3(
+        new THREE.Vector3(this.playerPos.x - 0.28, this.playerPos.y - 1.55, nextZ - 0.28),
+        new THREE.Vector3(this.playerPos.x + 0.28, this.playerPos.y + 0.15, nextZ + 0.28)
+      )
+      for (const block of this.solidBoxes) {
+        if (boxZ.intersectsBox(block)) {
+          if (this.playerVel.z > 0) {
+            nextZ = block.min.z - 0.281
+          } else if (this.playerVel.z < 0) {
+            nextZ = block.max.z + 0.281
+          }
+          this.playerVel.z = 0
+          break
+        }
+      }
+    }
+    this.playerPos.z = nextZ
+
+    // 3. Resolve Y Axis (Vertical & Ground Check)
+    let nextY = this.playerPos.y + this.playerVel.y * delta
+    let landed = false
+
+    const boxY = new THREE.Box3(
+      new THREE.Vector3(this.playerPos.x - 0.28, nextY - 1.6, this.playerPos.z - 0.28),
+      new THREE.Vector3(this.playerPos.x + 0.28, nextY + 0.18, this.playerPos.z + 0.28)
     )
 
-    this.isGrounded = false
-    // Collision against solid voxel boxes
-    for (const box of this.solidBoxes) {
-      if (playerBox.intersectsBox(box)) {
-        // Check vertical collision (ground / ceiling)
-        if (this.playerVel.y < 0 && this.playerPos.y - 1.6 >= box.max.y - 0.2) {
-          nextPos.y = box.max.y + 1.6
+    for (const block of this.solidBoxes) {
+      if (boxY.intersectsBox(block)) {
+        if (this.playerVel.y <= 0) {
+          // Landing on top of block
+          nextY = block.max.y + 1.6
           this.playerVel.y = 0
-          this.isGrounded = true
-        } else if (this.playerVel.y > 0 && this.playerPos.y + 0.2 <= box.min.y + 0.2) {
-          nextPos.y = box.min.y - 0.21
+          landed = true
+          break
+        } else {
+          // Bonking head on ceiling
+          nextY = block.min.y - 0.19
           this.playerVel.y = 0
+          break
         }
       }
     }
 
-    // Fall into void safety reset
-    if (nextPos.y < -8) {
-      nextPos.set(this.currentWorld.playerSpawn[0], this.currentWorld.playerSpawn[1], this.currentWorld.playerSpawn[2])
-      this.playerVel.set(0, 0, 0)
-      probAudio.playPortal()
+    // Downward floor probe for continuous contact stability
+    if (!landed && this.playerVel.y <= 0) {
+      const feetProbe = new THREE.Box3(
+        new THREE.Vector3(this.playerPos.x - 0.26, nextY - 1.68, this.playerPos.z - 0.26),
+        new THREE.Vector3(this.playerPos.x + 0.26, nextY - 1.55, this.playerPos.z + 0.26)
+      )
+      for (const block of this.solidBoxes) {
+        if (feetProbe.intersectsBox(block)) {
+          nextY = block.max.y + 1.6
+          this.playerVel.y = 0
+          landed = true
+          break
+        }
+      }
     }
 
-    this.playerPos.copy(nextPos)
+    this.isGrounded = landed
+    this.playerPos.y = nextY
+
+    // Fall into void safety reset: smoothly teleport back to spawn
+    if (this.playerPos.y < -12) {
+      this.playerPos.set(
+        this.currentWorld.playerSpawn[0],
+        this.currentWorld.playerSpawn[1],
+        this.currentWorld.playerSpawn[2]
+      )
+      this.playerVel.set(0, 0, 0)
+      this.isGrounded = true
+      probAudio.playPortal()
+    }
 
     // Camera update (head position at playerPos)
     this.camera.position.copy(this.playerPos)
@@ -465,7 +585,7 @@ export class ProbCraftEngine {
 
   private animate = () => {
     const now = performance.now()
-    const delta = Math.min((now - this.lastTime) / 1000, 0.1) // clamp delta to prevent tunneling
+    const delta = Math.min((now - this.lastTime) / 1000, 0.05) // clamp delta to 50ms to prevent tunneling
     this.lastTime = now
 
     this.updatePhysics(delta)
@@ -485,6 +605,7 @@ export class ProbCraftEngine {
     window.removeEventListener("mousemove", this.onMouseMove)
     this.renderer.domElement.removeEventListener("mousedown", this.onMouseDown)
     window.removeEventListener("mouseup", this.onMouseUp)
+    document.removeEventListener("pointerlockchange", this.onPointerLockChange)
     this.renderer.domElement.removeEventListener("touchstart", this.onTouchStart)
     this.renderer.domElement.removeEventListener("touchmove", this.onTouchMove)
 
