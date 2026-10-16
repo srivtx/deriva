@@ -4,6 +4,11 @@
 // → wllama runs multi-threaded (big Ghost inference speedup on Chrome).
 // credentialless (not require-corp) so cross-origin no-CORS subresources like
 // Google Fonts keep loading; Safari without support simply stays single-thread.
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
@@ -11,6 +16,9 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  turbopack: {
+    root: __dirname,
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }]
   },

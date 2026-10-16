@@ -129,7 +129,7 @@ export class ProbCraftEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.shadowMap.type = THREE.PCFShadowMap
     container.appendChild(this.renderer.domElement)
 
     // 3. Lighting Setup
@@ -195,7 +195,7 @@ export class ProbCraftEngine {
         metalness: 0.1,
         transparent: opacity < 1,
         opacity,
-        emissive: emissive ? new THREE.Color(emissive) : undefined,
+        emissive: emissive ? new THREE.Color(emissive) : new THREE.Color(0x000000),
         emissiveIntensity: emissive ? 0.35 : 0,
       })
 

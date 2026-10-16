@@ -227,7 +227,7 @@ export function ProbCraftHUD({
       {!isHudHidden && (
         <>
           {/* 2. Top Banner: Realm Title, Teleport, Scientific Stats */}
-          <header className="hud-top-bar">
+          <header className="hud-top-bar" suppressHydrationWarning>
             <div className="world-badge-group">
               <button
                 type="button"
@@ -569,7 +569,7 @@ export function ProbCraftHUD({
           </div>
 
           {/* 7. Realm Navigation (Bottom Right) */}
-          <div className="hud-nav-buttons">
+          <div className="hud-nav-buttons" suppressHydrationWarning>
             <button
               type="button"
               onClick={onPrevWorld}
